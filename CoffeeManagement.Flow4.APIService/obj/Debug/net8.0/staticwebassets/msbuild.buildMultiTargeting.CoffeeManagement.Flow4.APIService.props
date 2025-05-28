@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\CoffeeManagement.Flow4.APIService.props" />
-</Project>
