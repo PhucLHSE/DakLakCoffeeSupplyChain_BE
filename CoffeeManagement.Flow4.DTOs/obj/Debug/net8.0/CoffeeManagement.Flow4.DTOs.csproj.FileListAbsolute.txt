@@ -1,0 +1,14 @@
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\bin\Debug\net8.0\CoffeeManagement.Flow4.DTOs.exe
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\bin\Debug\net8.0\CoffeeManagement.Flow4.DTOs.deps.json
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\bin\Debug\net8.0\CoffeeManagement.Flow4.DTOs.runtimeconfig.json
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\bin\Debug\net8.0\CoffeeManagement.Flow4.DTOs.dll
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\bin\Debug\net8.0\CoffeeManagement.Flow4.DTOs.pdb
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.AssemblyInfoInputs.cache
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.AssemblyInfo.cs
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.csproj.CoreCompileInputs.cache
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.dll
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\refint\CoffeeManagement.Flow4.DTOs.dll
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.pdb
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\CoffeeManagement.Flow4.DTOs.genruntimeconfig.cache
+C:\Users\namta\source\repos\CoffeeManagement\CoffeeManagement.Flow4.DTOs\obj\Debug\net8.0\ref\CoffeeManagement.Flow4.DTOs.dll

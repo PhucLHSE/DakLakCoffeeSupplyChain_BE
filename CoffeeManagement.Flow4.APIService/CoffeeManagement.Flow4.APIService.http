@@ -1,0 +1,6 @@
+@CoffeeManagement.Flow4.APIService_HostAddress = http://localhost:5269
+
+GET {{CoffeeManagement.Flow4.APIService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
