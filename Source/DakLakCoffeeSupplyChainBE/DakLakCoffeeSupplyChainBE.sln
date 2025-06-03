@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35806.99 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DakLakCoffeeSupplyChain.Repositories", "DakLakCoffeeSupplyChain.Repositories\DakLakCoffeeSupplyChain.Repositories.csproj", "{5FDDF525-B9F4-49C5-9D2A-5465D42C0812}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DakLakCoffeeSupplyChain.Common", "DakLakCoffeeSupplyChain.Common\DakLakCoffeeSupplyChain.Common.csproj", "{25454C34-2350-45CC-80E5-6464FBCA8E5D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DakLakCoffeeSupplyChain.Services", "DakLakCoffeeSupplyChain.Services\DakLakCoffeeSupplyChain.Services.csproj", "{A3D6B590-3406-4320-A215-1BBFB5557EDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DakLakCoffeeSupplyChain.APIService", "DakLakCoffeeSupplyChain.APIService\DakLakCoffeeSupplyChain.APIService.csproj", "{CE2211DF-EE92-491B-9C92-911512CC436F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5FDDF525-B9F4-49C5-9D2A-5465D42C0812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FDDF525-B9F4-49C5-9D2A-5465D42C0812}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FDDF525-B9F4-49C5-9D2A-5465D42C0812}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FDDF525-B9F4-49C5-9D2A-5465D42C0812}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25454C34-2350-45CC-80E5-6464FBCA8E5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25454C34-2350-45CC-80E5-6464FBCA8E5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25454C34-2350-45CC-80E5-6464FBCA8E5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25454C34-2350-45CC-80E5-6464FBCA8E5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3D6B590-3406-4320-A215-1BBFB5557EDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3D6B590-3406-4320-A215-1BBFB5557EDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3D6B590-3406-4320-A215-1BBFB5557EDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3D6B590-3406-4320-A215-1BBFB5557EDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE2211DF-EE92-491B-9C92-911512CC436F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE2211DF-EE92-491B-9C92-911512CC436F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE2211DF-EE92-491B-9C92-911512CC436F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE2211DF-EE92-491B-9C92-911512CC436F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {95F1ECB1-E298-409C-A921-D1B5F3A16BA1}
+	EndGlobalSection
+EndGlobal

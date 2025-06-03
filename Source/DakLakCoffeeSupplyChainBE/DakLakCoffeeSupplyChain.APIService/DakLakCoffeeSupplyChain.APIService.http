@@ -1,0 +1,6 @@
+@DakLakCoffeeSupplyChain.APIService_HostAddress = http://localhost:5077
+
+GET {{DakLakCoffeeSupplyChain.APIService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

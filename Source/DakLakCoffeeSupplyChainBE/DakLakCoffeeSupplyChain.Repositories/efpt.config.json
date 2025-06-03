@@ -1,0 +1,233 @@
+﻿{
+   "CodeGenerationMode": 4,
+   "ContextClassName": "DakLakCoffee_SCMContext",
+   "ContextNamespace": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": true,
+   "ModelNamespace": null,
+   "OutputContextPath": null,
+   "OutputPath": "Models",
+   "PreserveCasingWithRegex": true,
+   "ProjectRootNamespace": "DakLakCoffeeSupplyChain.Repositories",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 2,
+   "SelectedToBeGenerated": 0,
+   "T4TemplatePath": null,
+   "Tables": [
+      {
+         "Name": "[dbo].[AgriculturalExperts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[BusinessBuyers]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[BusinessManagers]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[BusinessStaffs]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ContractItems]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Contracts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConversationMessages]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConversationParticipants]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Conversations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CropProgresses]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CropSeasonDetails]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CropSeasons]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CropStages]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CultivationRegistrations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CultivationRegistrationsDetail]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ExpertAdvice]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Farmers]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[FarmingCommitments]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[GeneralFarmerReports]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Inventories]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InventoryLogs]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[MediaFiles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[OrderComplaints]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[OrderItems]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Orders]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingBatches]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingBatchEvaluations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingBatchProgresses]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingBatchWastes]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingMethods]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingParameters]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingStages]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcessingWasteDisposals]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcurementPlans]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProcurementPlansDetails]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Products]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Roles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ShipmentDetails]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Shipments]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SystemNotificationRecipients]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SystemNotifications]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserAccounts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WarehouseInboundRequests]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WarehouseOutboundReceipts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WarehouseOutboundRequests]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WarehouseReceipts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Warehouses]",
+         "ObjectType": 0
+      }
+   ],
+   "UiHint": null,
+   "UncountableWords": null,
+   "UseAsyncStoredProcedureCalls": true,
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": false,
+   "UseDatabaseNamesForRoutines": true,
+   "UseDateOnlyTimeOnly": true,
+   "UseDbContextSplitting": false,
+   "UseDecimalDataAnnotationForSprocResult": true,
+   "UseFluentApiOnly": true,
+   "UseHandleBars": false,
+   "UseHierarchyId": false,
+   "UseInflector": true,
+   "UseInternalAccessModifiersForSprocsAndFunctions": false,
+   "UseLegacyPluralizer": false,
+   "UseManyToManyEntity": false,
+   "UseNoDefaultConstructor": false,
+   "UseNoNavigations": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UsePrefixNavigationNaming": false,
+   "UseSchemaFolders": false,
+   "UseSchemaNamespaces": false,
+   "UseSpatial": false,
+   "UseT4": false,
+   "UseT4Split": false
+}

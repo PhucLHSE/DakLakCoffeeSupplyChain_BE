@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="IServices\" />
+    <Folder Include="Mappers\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DakLakCoffeeSupplyChain.Common\DakLakCoffeeSupplyChain.Common.csproj" />
+    <ProjectReference Include="..\DakLakCoffeeSupplyChain.Repositories\DakLakCoffeeSupplyChain.Repositories.csproj" />
+  </ItemGroup>
+
+</Project>
