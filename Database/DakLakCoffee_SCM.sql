@@ -1143,3 +1143,61 @@ CREATE TABLE MediaFiles (
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo dòng dữ liệu
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP           -- Ngày cập nhật cuối
 );
+
+GO
+
+-- Insert vào bảng Roles
+INSERT INTO Roles (RoleName, Description)
+VALUES 
+(N'Admin', N'Quản trị toàn hệ thống'),
+(N'BusinessManager', N'Người quản lý doanh nghiệp'),
+(N'BusinessStaff', N'Nhân viên doanh nghiệp'),
+(N'Farmer', N'Nông dân tham gia chuỗi cung ứng'),
+(N'AgriculturalExpert', N'Chuyên gia nông nghiệp'),
+(N'DeliveryStaff', N'Nhân viên giao hàng');
+
+GO
+
+-- Insert mẫu vào bảng UserAccounts
+-- Admin
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', 'admin123', 1);
+
+-- Business Manager
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0002', 'businessmanager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'businessmanager123', 2);
+
+-- Farmer
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', 'farmer123', 4);
+
+-- Expert
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', 'expert123', 5);
+
+GO
+
+-- Insert vào bảng BusinessManagers
+-- Lấy UserID của Business Manager
+DECLARE @BMUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com');
+
+INSERT INTO BusinessManagers (UserID, ManagerCode, CompanyName, Position, Department, CompanyAddress, TaxID, Website, ContactEmail)
+VALUES (@BMUserID, 'BM-2025-0001', N'Công ty Cà Phê DakLak', N'Giám đốc điều hành', N'Phòng điều phối', N'15 Lê Duẩn, BMT, Đắk Lắk', '6001234567', 'https://daklakcoffee.vn', 'lehoangphuc14122003@gmail.com');
+
+GO
+
+-- Insert vào bảng Farmers
+-- Lấy UserID của Farmer
+DECLARE @FarmerUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com');
+
+INSERT INTO Farmers (UserID, FarmerCode, FarmLocation, FarmSize, CertificationStatus)
+VALUES (@FarmerUserID, 'FRM-2025-0001', N'Xã Ea Tu, TP. Buôn Ma Thuột', 2.5, N'VietGAP');
+
+GO
+
+-- Insert vào bảng AgriculturalExperts
+-- Lấy UserID của Expert
+DECLARE @ExpertUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'expert@gmail.com');
+
+INSERT INTO AgriculturalExperts (UserID, ExpertCode, ExpertiseArea, Qualifications, YearsOfExperience, AffiliatedOrganization, Bio, Rating)
+VALUES (@ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8);
