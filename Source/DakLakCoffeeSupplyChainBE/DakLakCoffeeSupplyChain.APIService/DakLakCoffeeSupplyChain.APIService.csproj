@@ -11,10 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\DakLakCoffeeSupplyChain.Common\DakLakCoffeeSupplyChain.Common.csproj" />
     <ProjectReference Include="..\DakLakCoffeeSupplyChain.Services\DakLakCoffeeSupplyChain.Services.csproj" />
   </ItemGroup>
 

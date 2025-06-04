@@ -1,8 +1,24 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
+using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+// Dependency Injection
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 
-builder.Services.AddControllers();
+// JSON Settings
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

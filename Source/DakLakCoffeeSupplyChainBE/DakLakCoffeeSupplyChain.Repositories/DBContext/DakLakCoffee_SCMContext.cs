@@ -1556,7 +1556,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .IsRequired()
                 .HasMaxLength(255);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-            entity.Property(e => e.ProfilePicture).HasMaxLength(2000);
+            entity.Property(e => e.ProfilePictureUrl).HasMaxLength(500);
             entity.Property(e => e.RegistrationDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
