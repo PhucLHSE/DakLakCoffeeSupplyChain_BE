@@ -39,7 +39,7 @@ CREATE TABLE UserAccounts (
   Gender NVARCHAR(20),                                          -- Giới tính (Male/Female/Other)
   DateOfBirth DATE,                                             -- Ngày sinh
   Address NVARCHAR(255),                                        -- Địa chỉ cư trú
-  ProfilePicture VARBINARY(2000),                               -- Ảnh đại diện nhị phân
+  ProfilePictureUrl NVARCHAR(500),                              -- Ảnh đại diện nhị phân
   PasswordHash NVARCHAR(255) NOT NULL,                          -- Mật khẩu mã hóa
   RegistrationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Ngày đăng ký tài khoản
   LastLogin DATETIME,                                           -- Lần đăng nhập gần nhất
