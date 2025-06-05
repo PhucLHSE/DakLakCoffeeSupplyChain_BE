@@ -27,6 +27,8 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
     public virtual DbSet<BusinessStaff> BusinessStaffs { get; set; }
 
+    public virtual DbSet<CoffeeType> CoffeeTypes { get; set; }
+
     public virtual DbSet<Contract> Contracts { get; set; }
 
     public virtual DbSet<ContractItem> ContractItems { get; set; }
@@ -287,6 +289,32 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasConstraintName("FK_BusinessStaffs_UserID");
         });
 
+        modelBuilder.Entity<CoffeeType>(entity =>
+        {
+            entity.HasKey(e => e.CoffeeTypeId).HasName("PK__CoffeeTy__3B5BEB64BAD34A71");
+
+            entity.HasIndex(e => e.TypeCode, "UQ__CoffeeTy__3E1CDC7C47963C9D").IsUnique();
+
+            entity.Property(e => e.CoffeeTypeId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("CoffeeTypeID");
+            entity.Property(e => e.BotanicalName).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.SpecialtyLevel).HasMaxLength(50);
+            entity.Property(e => e.TypeCode)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TypeName)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.TypicalRegion).HasMaxLength(255);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+        });
+
         modelBuilder.Entity<Contract>(entity =>
         {
             entity.HasKey(e => e.ContractId).HasName("PK__Contract__C90D3409492A7E36");
@@ -539,6 +567,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.CropSeasonDetails)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CropSeasonDetails_CoffeeTypeID");
 
             entity.HasOne(d => d.CropSeason).WithMany(p => p.CropSeasonDetails)
                 .HasForeignKey(d => d.CropSeasonId)
@@ -1043,6 +1076,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.ProcessingBatches)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcessingBatches_CoffeeTypeID");
+
             entity.HasOne(d => d.CropSeason).WithMany(p => p.ProcessingBatches)
                 .HasForeignKey(d => d.CropSeasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1328,6 +1366,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.ProcurementPlansDetails)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcurementPlansDetails_CoffeeTypeID");
+
             entity.HasOne(d => d.Plan).WithMany(p => p.ProcurementPlansDetails)
                 .HasForeignKey(d => d.PlanId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1381,6 +1424,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasForeignKey(d => d.BatchId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_BatchID");
+
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.Products)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Products_CoffeeType");
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Products)
                 .HasForeignKey(d => d.CreatedBy)

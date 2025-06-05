@@ -47,6 +47,8 @@ public partial class ProcurementPlansDetail
 
     public DateTime UpdatedAt { get; set; }
 
+    public virtual CoffeeType CoffeeType { get; set; }
+
     public virtual ICollection<CultivationRegistrationsDetail> CultivationRegistrationsDetails { get; set; } = new List<CultivationRegistrationsDetail>();
 
     public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();

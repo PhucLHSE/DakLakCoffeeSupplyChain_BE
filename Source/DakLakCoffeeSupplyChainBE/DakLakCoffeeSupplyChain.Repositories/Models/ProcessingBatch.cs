@@ -31,6 +31,8 @@ public partial class ProcessingBatch
 
     public string Status { get; set; }
 
+    public virtual CoffeeType CoffeeType { get; set; }
+
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 
     public virtual CropSeason CropSeason { get; set; }

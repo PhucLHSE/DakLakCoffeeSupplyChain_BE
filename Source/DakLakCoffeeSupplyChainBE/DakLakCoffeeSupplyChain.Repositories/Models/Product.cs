@@ -57,6 +57,8 @@ public partial class Product
 
     public virtual ProcessingBatch Batch { get; set; }
 
+    public virtual CoffeeType CoffeeType { get; set; }
+
     public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
 
     public virtual BusinessManager CreatedByNavigation { get; set; }
