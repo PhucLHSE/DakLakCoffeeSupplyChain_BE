@@ -67,5 +67,31 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+
+        // Mapper UserAccountCreateDto
+        public static UserAccount MapToUserAccountCreateDto(this UserAccountCreateDto dto, string passwordHash, string userCode, int RoleId)
+        {
+            return new UserAccount
+            {
+                UserId = Guid.NewGuid(),
+                UserCode = userCode, // Được sinh từ Service
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                Name = dto.Name,
+                Gender = dto.Gender.ToString(), // enum → string
+                DateOfBirth = dto.DateOfBirth,
+                Address = dto.Address,
+                ProfilePictureUrl = dto.ProfilePictureUrl,
+                PasswordHash = passwordHash,
+                LoginType = dto.LoginType.ToString(), // enum → string
+                Status = dto.Status.ToString(),       // enum → string
+                RoleId = RoleId,
+                RegistrationDate = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                EmailVerified = true,         // Admin tạo thì email được xem là xác thực
+                IsVerified = true,            // Có thể xem như đã duyệt
+                VerificationCode = null,      // Không cần tạo mã xác minh
+            };
+        }
     }
 }

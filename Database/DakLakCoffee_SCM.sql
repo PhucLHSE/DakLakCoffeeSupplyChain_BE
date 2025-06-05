@@ -32,7 +32,7 @@ GO
 -- Table Users
 CREATE TABLE UserAccounts (
   UserID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- ID người dùng
-  UserCode VARCHAR(20) UNIQUE,                                  -- Auto-gen như USR-20240601-0012 để phục vụ QR/mã truy xuất nếu cần hiển thị công khai.
+  UserCode VARCHAR(20) UNIQUE,                                  -- Auto-gen như USR-2024-0012 để phục vụ QR/mã truy xuất nếu cần hiển thị công khai.
   Email NVARCHAR(255) UNIQUE NOT NULL,                          -- Email
   PhoneNumber NVARCHAR(20) UNIQUE,                              -- SĐT (nếu đăng ký số)
   Name NVARCHAR(255) NOT NULL,                                  -- Họ tên đầy đủ
@@ -1191,19 +1191,19 @@ GO
 -- Insert mẫu vào bảng UserAccounts
 -- Admin
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', 'admin123', 1);
+VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', 'Admin@12345', 1);
 
 -- Business Manager
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0002', 'businessmanager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'businessmanager123', 2);
+VALUES ('USR-2025-0002', 'businessmanager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'BusinessManager@12345', 2);
 
 -- Farmer
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', 'farmer123', 4);
+VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', 'Farmer@12345', 4);
 
 -- Expert
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', 'expert123', 5);
+VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', 'Expert@12345', 5);
 
 GO
 
