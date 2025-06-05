@@ -21,5 +21,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             return await _userAccountService.GetAll();
         }
+
+        // GET api/<UserAccountsController>/{userId}
+        [HttpGet("{userId}")]
+        public async Task<IServiceResult> GetById(Guid userId)
+        {
+            return await _userAccountService.GetById(userId);
+        }
     }
 }

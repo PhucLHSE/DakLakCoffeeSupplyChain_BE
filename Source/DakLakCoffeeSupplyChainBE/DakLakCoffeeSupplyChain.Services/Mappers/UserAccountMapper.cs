@@ -14,6 +14,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         // Mapper UserAccountViewAllDto
         public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount entity)
         {
+            // Parse Status string to enum
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, true, out var parsedStatus)
+                ? parsedStatus
+                : UserAccountStatus.Unknown;
+
             return new UserAccountViewAllDto
             {
                 UserId = entity.UserId,
@@ -24,11 +29,42 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RoleName = entity.Role?.RoleName ?? string.Empty,
                 LastLogin = entity.LastLogin,
                 RegistrationDate = entity.RegistrationDate,
+                Status = status
+            };
+        }
 
-                // Parse string to enum, fallback to Unknown
-                Status = Enum.TryParse<UserAccountStatus>(entity.Status, true, out var parsedStatus)
-                    ? parsedStatus
-                    : UserAccountStatus.Unknown
+        // Mapper UserAccountViewDetailsDto
+        public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(this UserAccount entity)
+        {
+            // Parse Gender string to enum
+            Gender gender = Enum.TryParse<Gender>(entity.Gender, true, out var parsedGender)
+                ? parsedGender
+                : Gender.Unknown;
+
+            // Parse Status string to enum
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, true, out var parsedStatus)
+                ? parsedStatus
+                : UserAccountStatus.Unknown;
+
+            return new UserAccountViewDetailsDto
+            {
+                UserId = entity.UserId,
+                UserCode = entity.UserCode ?? string.Empty,
+                Email = entity.Email ?? string.Empty,
+                PhoneNumber = entity.PhoneNumber ?? string.Empty,
+                Name = entity.Name ?? string.Empty,
+                Gender = gender,
+                DateOfBirth = entity.DateOfBirth,
+                Address = entity.Address ?? string.Empty,
+                ProfilePictureUrl = entity.ProfilePictureUrl ?? string.Empty,
+                EmailVerified = entity.EmailVerified,
+                IsVerified = entity.IsVerified,
+                LoginType = entity.LoginType ?? string.Empty,
+                Status = status,
+                RoleName = entity.Role?.RoleName ?? string.Empty,
+                RegistrationDate = entity.RegistrationDate,
+                LastLogin = entity.LastLogin,
+                UpdatedAt = entity.UpdatedAt
             };
         }
     }
