@@ -13,6 +13,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
     public class UserAccountRepository : GenericRepository<UserAccount>, IUserAccountRepository
     {
+        public UserAccountRepository() { }
+        
         public UserAccountRepository(DakLakCoffee_SCMContext context)
             => _context = context;
 
@@ -35,6 +37,26 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .FirstOrDefaultAsync(u => u.UserId == userId);
 
             return user;
+        }
+
+        public async Task<UserAccount?> GetUserAccountByEmailAsync(string email)
+        {
+            return await _context.UserAccounts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<UserAccount?> GetUserAccountByPhoneAsync(string phoneNumber)
+        {
+            return await _context.UserAccounts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
+        public async Task<int> CountUsersRegisteredInYearAsync(int year)
+        {
+            return await _context.UserAccounts
+                .CountAsync(u => u.RegistrationDate.Year == year);
         }
     }
 }

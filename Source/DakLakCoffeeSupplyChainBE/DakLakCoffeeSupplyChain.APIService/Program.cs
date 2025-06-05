@@ -1,11 +1,15 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
+﻿using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 
 // Add services to the container.
 // Dependency Injection

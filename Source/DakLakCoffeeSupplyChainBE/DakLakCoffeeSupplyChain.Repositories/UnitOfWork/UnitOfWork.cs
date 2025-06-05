@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
     {
         private readonly DakLakCoffee_SCMContext context;
 
+        private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
 
         public UnitOfWork()
@@ -23,6 +24,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return userAccountRepository ??= new UserAccountRepository(context);
+            }
+        }
+
+        public IRoleRepository RoleRepository
+        {
+            get
+            {
+                return roleRepository ??= new RoleRepository(context);
             }
         }
     }

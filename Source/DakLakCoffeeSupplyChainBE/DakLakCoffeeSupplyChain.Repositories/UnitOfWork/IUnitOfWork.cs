@@ -9,6 +9,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
     public interface IUnitOfWork
     {
+        IRoleRepository RoleRepository { get; }
+
         IUserAccountRepository UserAccountRepository { get; }
     }
 }

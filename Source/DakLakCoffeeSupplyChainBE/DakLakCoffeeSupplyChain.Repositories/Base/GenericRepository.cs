@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Base
 {
-    public class GenericRepository<T> where T : class
+    public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         protected DakLakCoffee_SCMContext _context;
 
