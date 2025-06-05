@@ -11,6 +11,8 @@ public partial class ProcessingBatch
 
     public string SystemBatchCode { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public Guid CropSeasonId { get; set; }
 
     public Guid FarmerId { get; set; }
@@ -28,6 +30,8 @@ public partial class ProcessingBatch
     public DateTime? UpdatedAt { get; set; }
 
     public string Status { get; set; }
+
+    public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 

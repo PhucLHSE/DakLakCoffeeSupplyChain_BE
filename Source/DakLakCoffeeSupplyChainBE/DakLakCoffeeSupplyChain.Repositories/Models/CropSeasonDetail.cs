@@ -11,7 +11,7 @@ public partial class CropSeasonDetail
 
     public Guid CropSeasonId { get; set; }
 
-    public string CropType { get; set; }
+    public Guid CoffeeTypeId { get; set; }
 
     public DateOnly? ExpectedHarvestStart { get; set; }
 
@@ -32,6 +32,8 @@ public partial class CropSeasonDetail
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 

@@ -27,6 +27,8 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
     public virtual DbSet<BusinessStaff> BusinessStaffs { get; set; }
 
+    public virtual DbSet<CoffeeType> CoffeeTypes { get; set; }
+
     public virtual DbSet<Contract> Contracts { get; set; }
 
     public virtual DbSet<ContractItem> ContractItems { get; set; }
@@ -138,11 +140,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
     {
         modelBuilder.Entity<AgriculturalExpert>(entity =>
         {
-            entity.HasKey(e => e.ExpertId).HasName("PK__Agricult__7EDB3A38CF5C0E12");
+            entity.HasKey(e => e.ExpertId).HasName("PK__Agricult__7EDB3A38638399D1");
 
-            entity.HasIndex(e => e.UserId, "UQ__Agricult__1788CCAD0C807D3B").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Agricult__1788CCADA0B4DDFD").IsUnique();
 
-            entity.HasIndex(e => e.ExpertCode, "UQ__Agricult__FAAD20A7141312EB").IsUnique();
+            entity.HasIndex(e => e.ExpertCode, "UQ__Agricult__FAAD20A791A8A003").IsUnique();
 
             entity.Property(e => e.ExpertId)
                 .HasDefaultValueSql("(newid())")
@@ -170,9 +172,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<BusinessBuyer>(entity =>
         {
-            entity.HasKey(e => e.BuyerId).HasName("PK__Business__4B81C1CA7D20D168");
+            entity.HasKey(e => e.BuyerId).HasName("PK__Business__4B81C1CA65369763");
 
-            entity.HasIndex(e => e.BuyerCode, "UQ__Business__F658F18776722F41").IsUnique();
+            entity.HasIndex(e => e.BuyerCode, "UQ__Business__F658F187EC10DD6E").IsUnique();
 
             entity.Property(e => e.BuyerId)
                 .HasDefaultValueSql("(newid())")
@@ -207,9 +209,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<BusinessManager>(entity =>
         {
-            entity.HasKey(e => e.ManagerId).HasName("PK__Business__3BA2AA815670EBF0");
+            entity.HasKey(e => e.ManagerId).HasName("PK__Business__3BA2AA811AF96692");
 
-            entity.HasIndex(e => e.ManagerCode, "UQ__Business__634BE7D175CD8EE1").IsUnique();
+            entity.HasIndex(e => e.ManagerCode, "UQ__Business__634BE7D158776107").IsUnique();
 
             entity.Property(e => e.ManagerId)
                 .HasDefaultValueSql("(newid())")
@@ -248,11 +250,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<BusinessStaff>(entity =>
         {
-            entity.HasKey(e => e.StaffId).HasName("PK__Business__96D4AAF74ED1C9B1");
+            entity.HasKey(e => e.StaffId).HasName("PK__Business__96D4AAF73D795C08");
 
-            entity.HasIndex(e => e.UserId, "UQ__Business__1788CCAD58BAC974").IsUnique();
+            entity.HasIndex(e => e.UserId, "UQ__Business__1788CCADBB56C601").IsUnique();
 
-            entity.HasIndex(e => e.StaffCode, "UQ__Business__D83AD812CCAAB89E").IsUnique();
+            entity.HasIndex(e => e.StaffCode, "UQ__Business__D83AD812BB7E9B67").IsUnique();
 
             entity.Property(e => e.StaffId)
                 .HasDefaultValueSql("(newid())")
@@ -287,11 +289,37 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasConstraintName("FK_BusinessStaffs_UserID");
         });
 
+        modelBuilder.Entity<CoffeeType>(entity =>
+        {
+            entity.HasKey(e => e.CoffeeTypeId).HasName("PK__CoffeeTy__3B5BEB64BAD34A71");
+
+            entity.HasIndex(e => e.TypeCode, "UQ__CoffeeTy__3E1CDC7C47963C9D").IsUnique();
+
+            entity.Property(e => e.CoffeeTypeId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("CoffeeTypeID");
+            entity.Property(e => e.BotanicalName).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.SpecialtyLevel).HasMaxLength(50);
+            entity.Property(e => e.TypeCode)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TypeName)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.TypicalRegion).HasMaxLength(255);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+        });
+
         modelBuilder.Entity<Contract>(entity =>
         {
-            entity.HasKey(e => e.ContractId).HasName("PK__Contract__C90D3409BB7B743C");
+            entity.HasKey(e => e.ContractId).HasName("PK__Contract__C90D3409492A7E36");
 
-            entity.HasIndex(e => e.ContractCode, "UQ__Contract__CBECF83351818961").IsUnique();
+            entity.HasIndex(e => e.ContractCode, "UQ__Contract__CBECF833ADB150C3").IsUnique();
 
             entity.Property(e => e.ContractId)
                 .HasDefaultValueSql("(newid())")
@@ -330,7 +358,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ContractItem>(entity =>
         {
-            entity.HasKey(e => e.ContractItemId).HasName("PK__Contract__18D3521594FF6861");
+            entity.HasKey(e => e.ContractItemId).HasName("PK__Contract__18D3521528C89096");
 
             entity.Property(e => e.ContractItemId)
                 .HasDefaultValueSql("(newid())")
@@ -358,7 +386,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Conversation>(entity =>
         {
-            entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D897A8330646");
+            entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D89729091182");
 
             entity.Property(e => e.ConversationId)
                 .HasDefaultValueSql("(newid())")
@@ -385,7 +413,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ConversationMessage>(entity =>
         {
-            entity.HasKey(e => e.MessageId).HasName("PK__Conversa__C87C037CBC337D63");
+            entity.HasKey(e => e.MessageId).HasName("PK__Conversa__C87C037C82FEA3B5");
 
             entity.Property(e => e.MessageId)
                 .HasDefaultValueSql("(newid())")
@@ -417,7 +445,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ConversationParticipant>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Conversa__3214EC275C1FFCC7");
+            entity.HasKey(e => e.Id).HasName("PK__Conversa__3214EC270C378207");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
@@ -441,7 +469,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CropProgress>(entity =>
         {
-            entity.HasKey(e => e.ProgressId).HasName("PK__CropProg__BAE29C85AB413C24");
+            entity.HasKey(e => e.ProgressId).HasName("PK__CropProg__BAE29C85379E6131");
 
             entity.Property(e => e.ProgressId)
                 .HasDefaultValueSql("(newid())")
@@ -479,9 +507,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CropSeason>(entity =>
         {
-            entity.HasKey(e => e.CropSeasonId).HasName("PK__CropSeas__675AF5E05AB7DD57");
+            entity.HasKey(e => e.CropSeasonId).HasName("PK__CropSeas__675AF5E0EE601826");
 
-            entity.HasIndex(e => e.CropSeasonCode, "UQ__CropSeas__D31201513E2EEFC5").IsUnique();
+            entity.HasIndex(e => e.CropSeasonCode, "UQ__CropSeas__D31201518ABB48C1").IsUnique();
 
             entity.Property(e => e.CropSeasonId)
                 .HasDefaultValueSql("(newid())")
@@ -521,18 +549,16 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CropSeasonDetail>(entity =>
         {
-            entity.HasKey(e => e.DetailId).HasName("PK__CropSeas__135C314D7FE57185");
+            entity.HasKey(e => e.DetailId).HasName("PK__CropSeas__135C314DC0041160");
 
             entity.Property(e => e.DetailId)
                 .HasDefaultValueSql("(newid())")
                 .HasColumnName("DetailID");
+            entity.Property(e => e.CoffeeTypeId).HasColumnName("CoffeeTypeID");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.CropSeasonId).HasColumnName("CropSeasonID");
-            entity.Property(e => e.CropType)
-                .IsRequired()
-                .HasMaxLength(100);
             entity.Property(e => e.PlannedQuality).HasMaxLength(50);
             entity.Property(e => e.QualityGrade).HasMaxLength(50);
             entity.Property(e => e.Status)
@@ -542,6 +568,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.CropSeasonDetails)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CropSeasonDetails_CoffeeTypeID");
+
             entity.HasOne(d => d.CropSeason).WithMany(p => p.CropSeasonDetails)
                 .HasForeignKey(d => d.CropSeasonId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -550,9 +581,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CropStage>(entity =>
         {
-            entity.HasKey(e => e.StageId).HasName("PK__CropStag__03EB7AF880137AF5");
+            entity.HasKey(e => e.StageId).HasName("PK__CropStag__03EB7AF8EE5EB73E");
 
-            entity.HasIndex(e => e.StageCode, "UQ__CropStag__7BFA4BE3973C3676").IsUnique();
+            entity.HasIndex(e => e.StageCode, "UQ__CropStag__7BFA4BE3783F1B65").IsUnique();
 
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.CreatedAt)
@@ -572,9 +603,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CultivationRegistration>(entity =>
         {
-            entity.HasKey(e => e.RegistrationId).HasName("PK__Cultivat__6EF588305954C416");
+            entity.HasKey(e => e.RegistrationId).HasName("PK__Cultivat__6EF5883087A5F96D");
 
-            entity.HasIndex(e => e.RegistrationCode, "UQ__Cultivat__A94D9FEDFC86641A").IsUnique();
+            entity.HasIndex(e => e.RegistrationCode, "UQ__Cultivat__A94D9FED41932EA0").IsUnique();
 
             entity.Property(e => e.RegistrationId)
                 .HasDefaultValueSql("(newid())")
@@ -611,7 +642,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<CultivationRegistrationsDetail>(entity =>
         {
-            entity.HasKey(e => e.CultivationRegistrationDetailId).HasName("PK__Cultivat__B9AC84A63DF2EB3F");
+            entity.HasKey(e => e.CultivationRegistrationDetailId).HasName("PK__Cultivat__B9AC84A649D580C7");
 
             entity.ToTable("CultivationRegistrationsDetail");
 
@@ -648,7 +679,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ExpertAdvice>(entity =>
         {
-            entity.HasKey(e => e.AdviceId).HasName("PK__ExpertAd__4C842CE958BFD699");
+            entity.HasKey(e => e.AdviceId).HasName("PK__ExpertAd__4C842CE90E4F13EE");
 
             entity.ToTable("ExpertAdvice");
 
@@ -684,9 +715,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Farmer>(entity =>
         {
-            entity.HasKey(e => e.FarmerId).HasName("PK__Farmers__731B88E8C1D82A20");
+            entity.HasKey(e => e.FarmerId).HasName("PK__Farmers__731B88E8B7B0F849");
 
-            entity.HasIndex(e => e.FarmerCode, "UQ__Farmers__F4EF7062278A7CA3").IsUnique();
+            entity.HasIndex(e => e.FarmerCode, "UQ__Farmers__F4EF7062FB963984").IsUnique();
 
             entity.Property(e => e.FarmerId)
                 .HasDefaultValueSql("(newid())")
@@ -716,9 +747,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<FarmingCommitment>(entity =>
         {
-            entity.HasKey(e => e.CommitmentId).HasName("PK__FarmingC__5360E8970751ABB6");
+            entity.HasKey(e => e.CommitmentId).HasName("PK__FarmingC__5360E89710283B32");
 
-            entity.HasIndex(e => e.CommitmentCode, "UQ__FarmingC__04FF056665B72181").IsUnique();
+            entity.HasIndex(e => e.CommitmentCode, "UQ__FarmingC__04FF0566B6CA6516").IsUnique();
 
             entity.Property(e => e.CommitmentId)
                 .HasDefaultValueSql("(newid())")
@@ -771,9 +802,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<GeneralFarmerReport>(entity =>
         {
-            entity.HasKey(e => e.ReportId).HasName("PK__GeneralF__D5BD48E598228B60");
+            entity.HasKey(e => e.ReportId).HasName("PK__GeneralF__D5BD48E53E327B05");
 
-            entity.HasIndex(e => e.ReportCode, "UQ__GeneralF__0EDCD614F7BBF521").IsUnique();
+            entity.HasIndex(e => e.ReportCode, "UQ__GeneralF__0EDCD614C51DBC0E").IsUnique();
 
             entity.Property(e => e.ReportId)
                 .HasDefaultValueSql("(newid())")
@@ -819,9 +850,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Inventory>(entity =>
         {
-            entity.HasKey(e => e.InventoryId).HasName("PK__Inventor__F5FDE6D3B3233F60");
+            entity.HasKey(e => e.InventoryId).HasName("PK__Inventor__F5FDE6D31E530B0B");
 
-            entity.HasIndex(e => e.InventoryCode, "UQ__Inventor__E1E5B5D8089BD980").IsUnique();
+            entity.HasIndex(e => e.InventoryCode, "UQ__Inventor__E1E5B5D8AC426C9A").IsUnique();
 
             entity.Property(e => e.InventoryId)
                 .ValueGeneratedNever()
@@ -854,7 +885,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<InventoryLog>(entity =>
         {
-            entity.HasKey(e => e.LogId).HasName("PK__Inventor__5E5499A8FC8B2190");
+            entity.HasKey(e => e.LogId).HasName("PK__Inventor__5E5499A83F5F7C22");
 
             entity.Property(e => e.LogId)
                 .ValueGeneratedNever()
@@ -876,7 +907,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<MediaFile>(entity =>
         {
-            entity.HasKey(e => e.MediaId).HasName("PK__MediaFil__B2C2B5AFB0BEDBE0");
+            entity.HasKey(e => e.MediaId).HasName("PK__MediaFil__B2C2B5AF4648F713");
 
             entity.Property(e => e.MediaId)
                 .HasDefaultValueSql("(newid())")
@@ -908,9 +939,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BAFF393ECEA");
+            entity.HasKey(e => e.OrderId).HasName("PK__Orders__C3905BAFCFE80921");
 
-            entity.HasIndex(e => e.OrderCode, "UQ__Orders__999B52293E2F768E").IsUnique();
+            entity.HasIndex(e => e.OrderCode, "UQ__Orders__999B5229C314342B").IsUnique();
 
             entity.Property(e => e.OrderId)
                 .HasDefaultValueSql("(newid())")
@@ -950,9 +981,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<OrderComplaint>(entity =>
         {
-            entity.HasKey(e => e.ComplaintId).HasName("PK__OrderCom__740D89AFADC37292");
+            entity.HasKey(e => e.ComplaintId).HasName("PK__OrderCom__740D89AFE63FBB71");
 
-            entity.HasIndex(e => e.ComplaintCode, "UQ__OrderCom__8144A1BAD406B76A").IsUnique();
+            entity.HasIndex(e => e.ComplaintCode, "UQ__OrderCom__8144A1BA347EE826").IsUnique();
 
             entity.Property(e => e.ComplaintId)
                 .HasDefaultValueSql("(newid())")
@@ -993,7 +1024,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<OrderItem>(entity =>
         {
-            entity.HasKey(e => e.OrderItemId).HasName("PK__OrderIte__57ED06A1D20F3AEE");
+            entity.HasKey(e => e.OrderItemId).HasName("PK__OrderIte__57ED06A1C5B7823E");
 
             entity.Property(e => e.OrderItemId)
                 .HasDefaultValueSql("(newid())")
@@ -1021,9 +1052,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingBatch>(entity =>
         {
-            entity.HasKey(e => e.BatchId).HasName("PK__Processi__5D55CE38371777AB");
+            entity.HasKey(e => e.BatchId).HasName("PK__Processi__5D55CE38D686A846");
 
-            entity.HasIndex(e => e.SystemBatchCode, "UQ__Processi__6C2C6F5B64CEBA0E").IsUnique();
+            entity.HasIndex(e => e.SystemBatchCode, "UQ__Processi__6C2C6F5B045EF037").IsUnique();
 
             entity.Property(e => e.BatchId)
                 .ValueGeneratedNever()
@@ -1031,6 +1062,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.BatchCode)
                 .IsRequired()
                 .HasMaxLength(50);
+            entity.Property(e => e.CoffeeTypeId).HasColumnName("CoffeeTypeID");
             entity.Property(e => e.CreatedAt).HasColumnType("datetime");
             entity.Property(e => e.CropSeasonId).HasColumnName("CropSeasonID");
             entity.Property(e => e.FarmerId).HasColumnName("FarmerID");
@@ -1043,6 +1075,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.ProcessingBatches)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcessingBatches_CoffeeTypeID");
 
             entity.HasOne(d => d.CropSeason).WithMany(p => p.ProcessingBatches)
                 .HasForeignKey(d => d.CropSeasonId)
@@ -1062,9 +1099,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingBatchEvaluation>(entity =>
         {
-            entity.HasKey(e => e.EvaluationId).HasName("PK__Processi__36AE68D345C76408");
+            entity.HasKey(e => e.EvaluationId).HasName("PK__Processi__36AE68D3C42A8408");
 
-            entity.HasIndex(e => e.EvaluationCode, "UQ__Processi__62264CFD9E311C9D").IsUnique();
+            entity.HasIndex(e => e.EvaluationCode, "UQ__Processi__62264CFD992503AB").IsUnique();
 
             entity.Property(e => e.EvaluationId)
                 .ValueGeneratedNever()
@@ -1090,7 +1127,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingBatchProgress>(entity =>
         {
-            entity.HasKey(e => e.ProgressId).HasName("PK__Processi__BAE29C850A865D91");
+            entity.HasKey(e => e.ProgressId).HasName("PK__Processi__BAE29C85A4453576");
 
             entity.Property(e => e.ProgressId)
                 .ValueGeneratedNever()
@@ -1128,9 +1165,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingBatchWaste>(entity =>
         {
-            entity.HasKey(e => e.WasteId).HasName("PK__Processi__716E55216366BA07");
+            entity.HasKey(e => e.WasteId).HasName("PK__Processi__716E55214397281B");
 
-            entity.HasIndex(e => e.WasteCode, "UQ__Processi__424CD36EDA150133").IsUnique();
+            entity.HasIndex(e => e.WasteCode, "UQ__Processi__424CD36E0070798F").IsUnique();
 
             entity.Property(e => e.WasteId)
                 .ValueGeneratedNever()
@@ -1159,9 +1196,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingMethod>(entity =>
         {
-            entity.HasKey(e => e.MethodId).HasName("PK__Processi__FC681FB134270D04");
+            entity.HasKey(e => e.MethodId).HasName("PK__Processi__FC681FB119B52979");
 
-            entity.HasIndex(e => e.MethodCode, "UQ__Processi__11E9210D4BC63232").IsUnique();
+            entity.HasIndex(e => e.MethodCode, "UQ__Processi__11E9210DDF926670").IsUnique();
 
             entity.Property(e => e.MethodId).HasColumnName("MethodID");
             entity.Property(e => e.CreatedAt)
@@ -1181,7 +1218,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingParameter>(entity =>
         {
-            entity.HasKey(e => e.ParameterId).HasName("PK__Processi__F80C6297DAF2BBB4");
+            entity.HasKey(e => e.ParameterId).HasName("PK__Processi__F80C6297388253C3");
 
             entity.Property(e => e.ParameterId)
                 .ValueGeneratedNever()
@@ -1206,7 +1243,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingStage>(entity =>
         {
-            entity.HasKey(e => e.StageId).HasName("PK__Processi__03EB7AF8EC07F960");
+            entity.HasKey(e => e.StageId).HasName("PK__Processi__03EB7AF8E212542B");
 
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.CreatedAt)
@@ -1233,9 +1270,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcessingWasteDisposal>(entity =>
         {
-            entity.HasKey(e => e.DisposalId).HasName("PK__Processi__206044C32E9299A3");
+            entity.HasKey(e => e.DisposalId).HasName("PK__Processi__206044C347D41E61");
 
-            entity.HasIndex(e => e.DisposalCode, "UQ__Processi__68D7C9736BE8EABB").IsUnique();
+            entity.HasIndex(e => e.DisposalCode, "UQ__Processi__68D7C973CD9EF690").IsUnique();
 
             entity.Property(e => e.DisposalId)
                 .ValueGeneratedNever()
@@ -1267,9 +1304,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcurementPlan>(entity =>
         {
-            entity.HasKey(e => e.PlanId).HasName("PK__Procurem__755C22D73133C69B");
+            entity.HasKey(e => e.PlanId).HasName("PK__Procurem__755C22D72B33B31F");
 
-            entity.HasIndex(e => e.PlanCode, "UQ__Procurem__DDC8069BA85C86BD").IsUnique();
+            entity.HasIndex(e => e.PlanCode, "UQ__Procurem__DDC8069B0FD6CD78").IsUnique();
 
             entity.Property(e => e.PlanId)
                 .HasDefaultValueSql("(newid())")
@@ -1299,9 +1336,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ProcurementPlansDetail>(entity =>
         {
-            entity.HasKey(e => e.PlanDetailsId).HasName("PK__Procurem__ECEDC4CC0ED8E630");
+            entity.HasKey(e => e.PlanDetailsId).HasName("PK__Procurem__ECEDC4CCD44B045B");
 
-            entity.HasIndex(e => e.PlanDetailCode, "UQ__Procurem__020415ACDC069476").IsUnique();
+            entity.HasIndex(e => e.PlanDetailCode, "UQ__Procurem__020415AC73D458AD").IsUnique();
 
             entity.Property(e => e.PlanDetailsId)
                 .HasDefaultValueSql("(newid())")
@@ -1309,6 +1346,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.BeanColor).HasMaxLength(50);
             entity.Property(e => e.BeanColorImageUrl).HasMaxLength(255);
             entity.Property(e => e.BeanSize).HasMaxLength(50);
+            entity.Property(e => e.CoffeeTypeId).HasColumnName("CoffeeTypeID");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -1328,6 +1366,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.ProcurementPlansDetails)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcurementPlansDetails_CoffeeTypeID");
+
             entity.HasOne(d => d.Plan).WithMany(p => p.ProcurementPlansDetails)
                 .HasForeignKey(d => d.PlanId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1336,9 +1379,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6ED5CB2C481");
+            entity.HasKey(e => e.ProductId).HasName("PK__Products__B40CC6ED0C081B99");
 
-            entity.HasIndex(e => e.ProductCode, "UQ__Products__2F4E024F990E0F57").IsUnique();
+            entity.HasIndex(e => e.ProductCode, "UQ__Products__2F4E024F800B1AD5").IsUnique();
 
             entity.Property(e => e.ProductId)
                 .HasDefaultValueSql("(newid())")
@@ -1348,6 +1391,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.CertificationUrl)
                 .HasMaxLength(255)
                 .HasColumnName("CertificationURL");
+            entity.Property(e => e.CoffeeTypeId).HasColumnName("CoffeeTypeID");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -1381,6 +1425,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_BatchID");
 
+            entity.HasOne(d => d.CoffeeType).WithMany(p => p.Products)
+                .HasForeignKey(d => d.CoffeeTypeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Products_CoffeeType");
+
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Products)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1394,7 +1443,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE3A6C07513A");
+            entity.HasKey(e => e.RoleId).HasName("PK__Roles__8AFACE3A7C99DC77");
 
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
             entity.Property(e => e.CreatedAt)
@@ -1414,9 +1463,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Shipment>(entity =>
         {
-            entity.HasKey(e => e.ShipmentId).HasName("PK__Shipment__5CAD378D9878A893");
+            entity.HasKey(e => e.ShipmentId).HasName("PK__Shipment__5CAD378DC9A6162B");
 
-            entity.HasIndex(e => e.ShipmentCode, "UQ__Shipment__E1167C21F43F41B7").IsUnique();
+            entity.HasIndex(e => e.ShipmentCode, "UQ__Shipment__E1167C216BC1CF04").IsUnique();
 
             entity.Property(e => e.ShipmentId)
                 .HasDefaultValueSql("(newid())")
@@ -1451,7 +1500,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<ShipmentDetail>(entity =>
         {
-            entity.HasKey(e => e.ShipmentDetailId).HasName("PK__Shipment__047142C07C8C785E");
+            entity.HasKey(e => e.ShipmentDetailId).HasName("PK__Shipment__047142C0D613ABE4");
 
             entity.Property(e => e.ShipmentDetailId)
                 .HasDefaultValueSql("(newid())")
@@ -1481,9 +1530,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<SystemNotification>(entity =>
         {
-            entity.HasKey(e => e.NotificationId).HasName("PK__SystemNo__20CF2E3211F72F85");
+            entity.HasKey(e => e.NotificationId).HasName("PK__SystemNo__20CF2E328588C028");
 
-            entity.HasIndex(e => e.NotificationCode, "UQ__SystemNo__098D65DE9A6B2078").IsUnique();
+            entity.HasIndex(e => e.NotificationCode, "UQ__SystemNo__098D65DE092AA720").IsUnique();
 
             entity.Property(e => e.NotificationId)
                 .HasDefaultValueSql("(newid())")
@@ -1504,7 +1553,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<SystemNotificationRecipient>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__SystemNo__3214EC2709A9D86D");
+            entity.HasKey(e => e.Id).HasName("PK__SystemNo__3214EC27E9365377");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("(newid())")
@@ -1527,13 +1576,13 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<UserAccount>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("PK__UserAcco__1788CCAC9BFDD953");
+            entity.HasKey(e => e.UserId).HasName("PK__UserAcco__1788CCAC821F6A2F");
 
-            entity.HasIndex(e => e.UserCode, "UQ__UserAcco__1DF52D0C7D9927D0").IsUnique();
+            entity.HasIndex(e => e.UserCode, "UQ__UserAcco__1DF52D0CE1332A64").IsUnique();
 
-            entity.HasIndex(e => e.PhoneNumber, "UQ__UserAcco__85FB4E38B1427704").IsUnique();
+            entity.HasIndex(e => e.PhoneNumber, "UQ__UserAcco__85FB4E38E36EB7EC").IsUnique();
 
-            entity.HasIndex(e => e.Email, "UQ__UserAcco__A9D10534D6A43D8A").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__UserAcco__A9D10534D53CE97D").IsUnique();
 
             entity.Property(e => e.UserId)
                 .HasDefaultValueSql("(newid())")
@@ -1582,9 +1631,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<Warehouse>(entity =>
         {
-            entity.HasKey(e => e.WarehouseId).HasName("PK__Warehous__2608AFD942F2D5FB");
+            entity.HasKey(e => e.WarehouseId).HasName("PK__Warehous__2608AFD9C43A491A");
 
-            entity.HasIndex(e => e.WarehouseCode, "UQ__Warehous__1686A056C855AC3A").IsUnique();
+            entity.HasIndex(e => e.WarehouseCode, "UQ__Warehous__1686A056B0B78791").IsUnique();
 
             entity.Property(e => e.WarehouseId)
                 .ValueGeneratedNever()
@@ -1612,9 +1661,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<WarehouseInboundRequest>(entity =>
         {
-            entity.HasKey(e => e.InboundRequestId).HasName("PK__Warehous__70929FF58A780512");
+            entity.HasKey(e => e.InboundRequestId).HasName("PK__Warehous__70929FF5C540CDF5");
 
-            entity.HasIndex(e => e.InboundRequestCode, "UQ__Warehous__4EB81AC59D16593E").IsUnique();
+            entity.HasIndex(e => e.InboundRequestCode, "UQ__Warehous__4EB81AC5A5933478").IsUnique();
 
             entity.Property(e => e.InboundRequestId)
                 .ValueGeneratedNever()
@@ -1653,9 +1702,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<WarehouseOutboundReceipt>(entity =>
         {
-            entity.HasKey(e => e.OutboundReceiptId).HasName("PK__Warehous__0E3C50EE1D62748B");
+            entity.HasKey(e => e.OutboundReceiptId).HasName("PK__Warehous__0E3C50EEC6DBB06D");
 
-            entity.HasIndex(e => e.OutboundReceiptCode, "UQ__Warehous__CD7763FC478A1098").IsUnique();
+            entity.HasIndex(e => e.OutboundReceiptCode, "UQ__Warehous__CD7763FCC7A6FC14").IsUnique();
 
             entity.Property(e => e.OutboundReceiptId)
                 .ValueGeneratedNever()
@@ -1703,9 +1752,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<WarehouseOutboundRequest>(entity =>
         {
-            entity.HasKey(e => e.OutboundRequestId).HasName("PK__Warehous__49E124901F859895");
+            entity.HasKey(e => e.OutboundRequestId).HasName("PK__Warehous__49E124901A4CCACB");
 
-            entity.HasIndex(e => e.OutboundRequestCode, "UQ__Warehous__DEE1D82232E7126F").IsUnique();
+            entity.HasIndex(e => e.OutboundRequestCode, "UQ__Warehous__DEE1D82267A6F248").IsUnique();
 
             entity.Property(e => e.OutboundRequestId)
                 .HasDefaultValueSql("(newid())")
@@ -1752,9 +1801,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
         modelBuilder.Entity<WarehouseReceipt>(entity =>
         {
-            entity.HasKey(e => e.ReceiptId).HasName("PK__Warehous__CC08C400F243ACFE");
+            entity.HasKey(e => e.ReceiptId).HasName("PK__Warehous__CC08C400D307EC87");
 
-            entity.HasIndex(e => e.ReceiptCode, "UQ__Warehous__1AB76D005ACD8390").IsUnique();
+            entity.HasIndex(e => e.ReceiptCode, "UQ__Warehous__1AB76D000EF5DE71").IsUnique();
 
             entity.Property(e => e.ReceiptId)
                 .ValueGeneratedNever()

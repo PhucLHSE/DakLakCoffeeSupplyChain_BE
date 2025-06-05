@@ -13,6 +13,8 @@ public partial class ProcurementPlansDetail
 
     public Guid PlanId { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public string CropType { get; set; }
 
     public double? TargetQuantity { get; set; }
@@ -44,6 +46,8 @@ public partial class ProcurementPlansDetail
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ICollection<CultivationRegistrationsDetail> CultivationRegistrationsDetails { get; set; } = new List<CultivationRegistrationsDetail>();
 

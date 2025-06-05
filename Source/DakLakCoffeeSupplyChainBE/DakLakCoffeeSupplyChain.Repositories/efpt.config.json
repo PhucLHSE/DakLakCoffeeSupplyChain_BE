@@ -31,6 +31,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[CoffeeTypes]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ContractItems]",
          "ObjectType": 0
       },

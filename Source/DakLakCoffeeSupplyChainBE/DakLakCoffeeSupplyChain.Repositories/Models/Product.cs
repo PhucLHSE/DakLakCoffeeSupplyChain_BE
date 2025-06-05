@@ -27,6 +27,8 @@ public partial class Product
 
     public Guid InventoryId { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public string OriginRegion { get; set; }
 
     public string OriginFarmLocation { get; set; }
@@ -54,6 +56,8 @@ public partial class Product
     public virtual UserAccount ApprovedByNavigation { get; set; }
 
     public virtual ProcessingBatch Batch { get; set; }
+
+    public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
 
