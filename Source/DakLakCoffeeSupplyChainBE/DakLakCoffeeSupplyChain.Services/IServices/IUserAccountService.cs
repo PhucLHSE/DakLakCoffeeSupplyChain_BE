@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IUserAccountService
     {
         Task<IServiceResult> GetAll();
+
+        Task<IServiceResult> GetById(Guid userId);
     }
 }

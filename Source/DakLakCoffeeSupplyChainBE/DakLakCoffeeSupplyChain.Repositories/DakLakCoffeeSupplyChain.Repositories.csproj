@@ -17,8 +17,4 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DakLakCoffeeSupplyChain.Common\DakLakCoffeeSupplyChain.Common.csproj" />
-  </ItemGroup>
-
 </Project>

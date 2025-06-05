@@ -25,7 +25,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll()
         {
 
-            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllUserAccountAsync();
+            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllUserAccountsAsync();
 
             if (userAccounts == null || !userAccounts.Any())
             {
@@ -45,6 +45,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     userAccountDtos
+                );
+            }
+        }
+
+        public async Task<IServiceResult> GetById(Guid userId)
+        {
+            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
+
+            if (user == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new UserAccountViewDetailsDto()
+                );
+            }
+            else
+            {
+                var userDto = user.MapToUserAccountViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    userDto
                 );
             }
         }

@@ -9,6 +9,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IUserAccountRepository
     {
-        Task<List<UserAccount>> GetAllUserAccountAsync();
+        Task<List<UserAccount>> GetAllUserAccountsAsync();
+
+        Task<UserAccount?> GetUserAccountByIdAsync(Guid userId);
     }
 }
