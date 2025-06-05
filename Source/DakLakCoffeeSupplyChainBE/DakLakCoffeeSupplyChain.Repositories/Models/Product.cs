@@ -27,6 +27,8 @@ public partial class Product
 
     public Guid InventoryId { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public string OriginRegion { get; set; }
 
     public string OriginFarmLocation { get; set; }

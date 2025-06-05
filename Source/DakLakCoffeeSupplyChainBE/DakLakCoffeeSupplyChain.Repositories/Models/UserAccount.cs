@@ -23,6 +23,8 @@ public partial class UserAccount
 
     public string Address { get; set; }
 
+    public string ProfilePictureUrl { get; set; }
+
     public string PasswordHash { get; set; }
 
     public DateTime RegistrationDate { get; set; }
@@ -42,8 +44,6 @@ public partial class UserAccount
     public int RoleId { get; set; }
 
     public DateTime UpdatedAt { get; set; }
-
-    public string ProfilePictureUrl { get; set; }
 
     public virtual AgriculturalExpert AgriculturalExpert { get; set; }
 

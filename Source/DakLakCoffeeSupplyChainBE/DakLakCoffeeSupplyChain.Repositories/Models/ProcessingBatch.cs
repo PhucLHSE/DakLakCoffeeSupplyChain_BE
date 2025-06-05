@@ -11,6 +11,8 @@ public partial class ProcessingBatch
 
     public string SystemBatchCode { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public Guid CropSeasonId { get; set; }
 
     public Guid FarmerId { get; set; }

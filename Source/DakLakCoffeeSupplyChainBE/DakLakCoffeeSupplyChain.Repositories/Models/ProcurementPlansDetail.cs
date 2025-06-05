@@ -13,6 +13,8 @@ public partial class ProcurementPlansDetail
 
     public Guid PlanId { get; set; }
 
+    public Guid CoffeeTypeId { get; set; }
+
     public string CropType { get; set; }
 
     public double? TargetQuantity { get; set; }

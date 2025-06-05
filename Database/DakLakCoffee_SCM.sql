@@ -147,6 +147,21 @@ CREATE TABLE BusinessBuyers (
 
 GO
 
+-- CoffeeTypes – Các loại cà phê được công nhận
+CREATE TABLE CoffeeTypes (
+  CoffeeTypeID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID loại cà phê
+  TypeCode VARCHAR(20) UNIQUE,                                    -- CODE-ARABICA-001
+  TypeName NVARCHAR(100) NOT NULL,                                -- Arabica, Robusta, Culi, Moka, Catimor,...
+  BotanicalName NVARCHAR(255),                                    -- Tên khoa học nếu có
+  Description NVARCHAR(MAX),                                      -- Mô tả đặc điểm: hương, vị, độ đậm,...
+  TypicalRegion NVARCHAR(255),                                    -- Vùng trồng phổ biến: Buôn Ma Thuột, Lâm Đồng,...
+  SpecialtyLevel NVARCHAR(50),                                    -- Specialty, Fine Robusta,...
+  CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+GO
+
 -- ProcurementPlans – Bảng kế hoạch thu mua tổng quan
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
@@ -174,6 +189,7 @@ CREATE TABLE ProcurementPlansDetails (
     PlanDetailsID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                        -- ID chi tiết kế hoạch
 	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-A001
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
+	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
     CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
@@ -193,7 +209,10 @@ CREATE TABLE ProcurementPlansDetails (
 
 	-- Foreign Keys
     CONSTRAINT FK_ProcurementPlansDetails_PlanID 
-	    FOREIGN KEY (PlanID) REFERENCES ProcurementPlans(PlanID)
+	    FOREIGN KEY (PlanID) REFERENCES ProcurementPlans(PlanID),
+
+	CONSTRAINT FK_ProcurementPlansDetails_CoffeeTypeID 
+        FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO
@@ -326,7 +345,7 @@ GO
 CREATE TABLE CropSeasonDetails (
     DetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID chi tiết mùa vụ
     CropSeasonID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến mùa vụ
-    CropType NVARCHAR(100) NOT NULL,                                   -- Loại cà phê: Arabica, Robusta,...
+    CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                            -- Liên kết loại cà phê chính xác
     ExpectedHarvestStart DATE,                                         -- Ngày bắt đầu thu hoạch dự kiến
     ExpectedHarvestEnd DATE,                                           -- Ngày kết thúc thu hoạch dự kiến
     EstimatedYield FLOAT,                                              -- Sản lượng dự kiến
@@ -340,7 +359,10 @@ CREATE TABLE CropSeasonDetails (
 
 	-- Foreign Keys
     CONSTRAINT FK_CropSeasonDetails_CropSeasonID 
-	    FOREIGN KEY (CropSeasonID) REFERENCES CropSeasons(CropSeasonID)
+	    FOREIGN KEY (CropSeasonID) REFERENCES CropSeasons(CropSeasonID),
+
+	CONSTRAINT FK_CropSeasonDetails_CoffeeTypeID 
+        FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO
@@ -420,6 +442,7 @@ GO
 CREATE TABLE ProcessingBatches (
   BatchID UNIQUEIDENTIFIER PRIMARY KEY,                        -- ID định danh lô sơ chế
   SystemBatchCode  VARCHAR(20) UNIQUE,                         -- BATCH-2025-0010
+  CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                      -- Loại cà phê được sơ chế
   CropSeasonID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến mùa vụ
   FarmerID UNIQUEIDENTIFIER NOT NULL,                          -- FK đến nông dân thực hiện sơ chế
   BatchCode NVARCHAR(50) NOT NULL,                             -- Mã lô do người dùng tự đặt
@@ -438,7 +461,10 @@ CREATE TABLE ProcessingBatches (
       FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
   CONSTRAINT FK_ProcessingBatches_Method 
-      FOREIGN KEY (MethodID) REFERENCES ProcessingMethods(MethodID)
+      FOREIGN KEY (MethodID) REFERENCES ProcessingMethods(MethodID),
+
+  CONSTRAINT FK_ProcessingBatches_CoffeeTypeID
+      FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO
@@ -753,6 +779,7 @@ CREATE TABLE Products (
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                              -- Người tạo sản phẩm
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Mẻ sơ chế gốc
   InventoryID UNIQUEIDENTIFIER NOT NULL,                            -- Gắn với kho để lấy hàng
+  CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                           -- Loại cà phê của sản phẩm
   OriginRegion NVARCHAR(100),                                       -- Vùng sản xuất
   OriginFarmLocation NVARCHAR(255),                                 -- Vị trí nông trại gốc
   GeographicalIndicationCode NVARCHAR(100),                         -- Chỉ dẫn địa lý
@@ -777,7 +804,10 @@ CREATE TABLE Products (
       FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
 
   CONSTRAINT FK_Products_ApprovedBy 
-      FOREIGN KEY (ApprovedBy) REFERENCES UserAccounts(UserID)
+      FOREIGN KEY (ApprovedBy) REFERENCES UserAccounts(UserID),
+
+  CONSTRAINT FK_Products_CoffeeType                         
+      FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO

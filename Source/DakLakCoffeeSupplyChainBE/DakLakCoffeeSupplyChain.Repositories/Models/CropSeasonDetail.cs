@@ -11,7 +11,7 @@ public partial class CropSeasonDetail
 
     public Guid CropSeasonId { get; set; }
 
-    public string CropType { get; set; }
+    public Guid CoffeeTypeId { get; set; }
 
     public DateOnly? ExpectedHarvestStart { get; set; }
 
