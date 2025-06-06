@@ -1176,6 +1176,43 @@ CREATE TABLE MediaFiles (
 
 GO
 
+-- SystemConfiguration - Bảng lưu các tham số hệ thống để phục vụ validation động theo phạm vi áp dụng.
+CREATE TABLE SystemConfiguration (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,                 -- Mã định danh tham số
+    Description NVARCHAR(255),                   -- Mô tả ý nghĩa tham số
+    MinValue DECIMAL(18,2),                      -- Giá trị tối thiểu (nếu có)
+    MaxValue DECIMAL(18,2),                      -- Giá trị tối đa (nếu có)
+    Unit NVARCHAR(20),                           -- Đơn vị đo (kg, %, times,...)
+    IsActive BIT NOT NULL DEFAULT 1,             -- Còn hiệu lực không?
+    EffectedDateFrom DATETIME NOT NULL,          -- Thời điểm bắt đầu áp dụng
+    EffectedDateTo DATETIME NULL,                -- Thời điểm kết thúc áp dụng (nếu có)
+    CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+    UpdatedAt DATETIME NULL DEFAULT GETDATE()
+);
+
+GO
+
+-- SystemConfigurationUsers – Liên kết người dùng cụ thể với quyền quản lý tham số hệ thống
+CREATE TABLE SystemConfigurationUsers (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    SystemConfigurationID INT NOT NULL,                  -- FK đến bảng SystemConfiguration
+    UserID UNIQUEIDENTIFIER NOT NULL,                    -- Người dùng có quyền chỉnh sửa
+    PermissionLevel NVARCHAR(50) DEFAULT 'manage',       -- Quyền: manage / view / approve (nếu mở rộng sau)
+    GrantedAt DATETIME NOT NULL DEFAULT GETDATE(),       -- Thời điểm gán quyền
+    RevokedAt DATETIME NULL,                             -- Nếu bị thu hồi
+	UpdatedAt DATETIME NULL DEFAULT GETDATE()
+
+    -- Foreign Keys
+    CONSTRAINT FK_SystemConfigUsers_ConfigID 
+        FOREIGN KEY (SystemConfigurationID) REFERENCES SystemConfiguration(Id),
+
+    CONSTRAINT FK_SystemConfigUsers_UserID 
+        FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
+);
+
+GO
+
 -- Insert vào bảng Roles
 INSERT INTO Roles (RoleName, Description)
 VALUES 
@@ -1231,3 +1268,24 @@ DECLARE @ExpertUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE 
 
 INSERT INTO AgriculturalExperts (UserID, ExpertCode, ExpertiseArea, Qualifications, YearsOfExperience, AffiliatedOrganization, Bio, Rating)
 VALUES (@ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8);
+
+GO
+
+-- Insert vào bảng SystemConfiguration
+-- Tuổi tối thiểu để đăng ký tài khoản người dùng
+INSERT INTO SystemConfiguration 
+    (Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom)
+VALUES 
+    ('MIN_AGE_FOR_REGISTRATION', N'Tuổi tối thiểu để đăng ký tài khoản', 18, NULL, 'years', 1, GETDATE());
+
+GO
+
+-- Insert vào bảng SystemConfigurationUsers
+-- Lấy ID của tham số "MIN_AGE_FOR_REGISTRATION"
+DECLARE @MinAgeConfigID INT = (SELECT Id FROM SystemConfiguration WHERE Name = 'MIN_AGE_FOR_REGISTRATION');
+
+-- Gán quyền 'manage' cho admin (giả sử admin là Phạm Huỳnh Xuân Đăng)
+DECLARE @AdminID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com');
+
+INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
+VALUES (@MinAgeConfigID, @AdminID, 'manage');
