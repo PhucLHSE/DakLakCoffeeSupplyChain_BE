@@ -67,6 +67,8 @@ public partial class UserAccount
 
     public virtual ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 
+    public virtual ICollection<SystemConfigurationUser> SystemConfigurationUsers { get; set; } = new List<SystemConfigurationUser>();
+
     public virtual ICollection<SystemNotificationRecipient> SystemNotificationRecipients { get; set; } = new List<SystemNotificationRecipient>();
 
     public virtual ICollection<SystemNotification> SystemNotifications { get; set; } = new List<SystemNotification>();

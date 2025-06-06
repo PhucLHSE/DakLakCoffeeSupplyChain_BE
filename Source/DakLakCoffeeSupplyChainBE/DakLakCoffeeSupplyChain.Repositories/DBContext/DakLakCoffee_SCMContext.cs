@@ -99,6 +99,10 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
     public virtual DbSet<ShipmentDetail> ShipmentDetails { get; set; }
 
+    public virtual DbSet<SystemConfiguration> SystemConfigurations { get; set; }
+
+    public virtual DbSet<SystemConfigurationUser> SystemConfigurationUsers { get; set; }
+
     public virtual DbSet<SystemNotification> SystemNotifications { get; set; }
 
     public virtual DbSet<SystemNotificationRecipient> SystemNotificationRecipients { get; set; }
@@ -1526,6 +1530,58 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasForeignKey(d => d.ShipmentId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ShipmentDetails_ShipmentID");
+        });
+
+        modelBuilder.Entity<SystemConfiguration>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__SystemCo__3214EC07E3CDAEB4");
+
+            entity.ToTable("SystemConfiguration");
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.Description).HasMaxLength(255);
+            entity.Property(e => e.EffectedDateFrom).HasColumnType("datetime");
+            entity.Property(e => e.EffectedDateTo).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.MaxValue).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.MinValue).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<SystemConfigurationUser>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__SystemCo__3214EC077FDA4F8E");
+
+            entity.Property(e => e.GrantedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.PermissionLevel)
+                .HasMaxLength(50)
+                .HasDefaultValue("manage");
+            entity.Property(e => e.RevokedAt).HasColumnType("datetime");
+            entity.Property(e => e.SystemConfigurationId).HasColumnName("SystemConfigurationID");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.SystemConfiguration).WithMany(p => p.SystemConfigurationUsers)
+                .HasForeignKey(d => d.SystemConfigurationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SystemConfigUsers_ConfigID");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SystemConfigurationUsers)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SystemConfigUsers_UserID");
         });
 
         modelBuilder.Entity<SystemNotification>(entity =>

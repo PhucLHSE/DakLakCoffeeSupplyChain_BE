@@ -175,6 +175,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[SystemConfiguration]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SystemConfigurationUsers]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[SystemNotificationRecipients]",
          "ObjectType": 0
       },

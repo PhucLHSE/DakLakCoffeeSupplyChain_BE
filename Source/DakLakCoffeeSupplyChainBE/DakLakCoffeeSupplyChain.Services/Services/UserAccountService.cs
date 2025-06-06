@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -112,6 +113,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "Số điện thoại đã được đăng ký."
                         );
                     }
+                }
+
+                // Kiểm tra ngày sinh có hợp lệ không
+                if (userDto.DateOfBirth == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Vui lòng nhập ngày sinh."
+                    );
+                }
+
+                // Lấy cấu hình tuổi tối thiểu
+                var config = await _unitOfWork.SystemConfigurationRepository.GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
+
+                // Mặc định 18 nếu chưa có cấu hình
+                int minAge = (int)(config?.MinValue ?? 18);
+
+                int actualAge = DateHelper.CalculateAge(userDto.DateOfBirth.Value);
+
+                if (actualAge < minAge)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Người dùng phải từ {minAge} tuổi trở lên."
+                    );
                 }
 
                 // Generate password hash và user code
