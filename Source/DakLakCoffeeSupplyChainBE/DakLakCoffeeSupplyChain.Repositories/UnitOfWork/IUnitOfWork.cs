@@ -12,5 +12,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IRoleRepository RoleRepository { get; }
 
         IUserAccountRepository UserAccountRepository { get; }
+
+        ISystemConfigurationRepository SystemConfigurationRepository { get; }
     }
 }

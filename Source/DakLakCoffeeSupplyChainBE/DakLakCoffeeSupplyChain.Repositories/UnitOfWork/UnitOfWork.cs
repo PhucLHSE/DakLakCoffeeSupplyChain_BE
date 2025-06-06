@@ -15,9 +15,18 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
+        private ISystemConfigurationRepository? systemConfigurationRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
+
+        public IRoleRepository RoleRepository
+        {
+            get
+            {
+                return roleRepository ??= new RoleRepository(context);
+            }
+        }
 
         public IUserAccountRepository UserAccountRepository
         {
@@ -27,11 +36,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             }
         }
 
-        public IRoleRepository RoleRepository
+        public ISystemConfigurationRepository SystemConfigurationRepository
         {
             get
             {
-                return roleRepository ??= new RoleRepository(context);
+                return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
             }
         }
     }
