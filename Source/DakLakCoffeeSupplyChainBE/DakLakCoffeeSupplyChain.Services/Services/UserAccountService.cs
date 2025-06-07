@@ -148,7 +148,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var newUser = userDto.MapToUserAccountCreateDto(passwordHash, userCode, role.RoleId);
 
                 // Save data to database
-                var result = await _unitOfWork.UserAccountRepository.CreateAsync(newUser);
+                await _unitOfWork.UserAccountRepository.CreateAsync(newUser);
+                var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
                 {
