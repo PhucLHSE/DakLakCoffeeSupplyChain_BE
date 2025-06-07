@@ -20,6 +20,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
+        public async Task<int> SaveChangesAsync()
+        {
+            return await context.SaveChangesAsync();
+        }
+
         public IRoleRepository RoleRepository
         {
             get

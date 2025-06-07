@@ -35,30 +35,42 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         public void Create(T entity)
         {
             _context.Add(entity);
-            _context.SaveChanges();
+            //_context.SaveChanges();
         }
 
-        public async Task<int> CreateAsync(T entity)
+        public async Task CreateAsync(T entity)
         {
-            _context.Add(entity);
-
-            return await _context.SaveChangesAsync();
+            await _context.Set<T>().AddAsync(entity);
         }
+
+        //public async Task<int> CreateAsync(T entity)
+        //{
+        //    _context.Add(entity);
+
+        //    return await _context.SaveChangesAsync();
+        //}
 
         public void Update(T entity)
         {
             var tracker = _context.Attach(entity);
             tracker.State = EntityState.Modified;
-            _context.SaveChanges();
+            //_context.SaveChanges();
         }
 
-        public async Task<int> UpdateAsync(T entity)
+        public async Task UpdateAsync(T entity)
         {
+            await Task.Yield();                     // để tránh warning "method lacks 'await'"
             var tracker = _context.Attach(entity);
             tracker.State = EntityState.Modified;
-
-            return await _context.SaveChangesAsync();
         }
+
+        //public async Task<int> UpdateAsync(T entity)
+        //{
+        //    var tracker = _context.Attach(entity);
+        //    tracker.State = EntityState.Modified;
+
+        //    return await _context.SaveChangesAsync();
+        //}
 
         public bool Remove(T entity)
         {
@@ -68,13 +80,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
             return true;
         }
 
-        public async Task<bool> RemoveAsync(T entity)
+        public async Task RemoveAsync(T entity)
         {
+            await Task.Yield();
             _context.Remove(entity);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
+
+        //public async Task<bool> RemoveAsync(T entity)
+        //{
+        //    _context.Remove(entity);
+        //    await _context.SaveChangesAsync();
+
+        //    return true;
+        //}
 
         public T GetById(int id)
         {
