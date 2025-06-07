@@ -1,11 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -16,32 +11,27 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
+        private IWarehouseInboundRequestRepository? warehouseInboundRequestRepository; // ✅ THÊM DÒNG NÀY
 
-        public UnitOfWork()
-            => context ??= new DakLakCoffee_SCMContext();
-
-        public IRoleRepository RoleRepository
+        public UnitOfWork(DakLakCoffee_SCMContext context) // ✅ dùng DI chuẩn
         {
-            get
-            {
-                return roleRepository ??= new RoleRepository(context);
-            }
+            this.context = context;
         }
 
-        public IUserAccountRepository UserAccountRepository
-        {
-            get
-            {
-                return userAccountRepository ??= new UserAccountRepository(context);
-            }
-        }
+        public IRoleRepository RoleRepository => roleRepository ??= new RoleRepository(context);
 
-        public ISystemConfigurationRepository SystemConfigurationRepository
+        public IUserAccountRepository UserAccountRepository => userAccountRepository ??= new UserAccountRepository(context);
+
+        public ISystemConfigurationRepository SystemConfigurationRepository => systemConfigurationRepository ??= new SystemConfigurationRepository(context);
+
+        public IWarehouseInboundRequestRepository WarehouseInboundRequests => warehouseInboundRequestRepository ??= new WarehouseInboundRequestRepository(context);
+
+        public async Task<int> CompleteAsync()
         {
-            get
-            {
-                return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
-            }
+            return await context.SaveChangesAsync();
         }
+        private IFarmerRepository? farmerRepository;
+
+        public IFarmerRepository Farmers => farmerRepository ??= new FarmerRepository(context);
     }
 }

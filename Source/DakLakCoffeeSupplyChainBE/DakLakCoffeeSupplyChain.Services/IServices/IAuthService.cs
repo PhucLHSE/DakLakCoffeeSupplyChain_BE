@@ -8,13 +8,8 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.IServices
 {
-    public interface IUserAccountService
+    public interface IAuthService
     {
-        Task<IServiceResult> GetAll();
-
-        Task<IServiceResult> GetById(Guid userId);
-
-        Task<IServiceResult> Create(UserAccountCreateDto userDto);
-
+        Task<IServiceResult> LoginAsync(LoginRequestDto request);
     }
 }

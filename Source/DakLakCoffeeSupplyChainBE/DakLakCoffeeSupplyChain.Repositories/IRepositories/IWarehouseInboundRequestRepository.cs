@@ -1,0 +1,16 @@
+﻿using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
+{
+    public interface IWarehouseInboundRequestRepository : IGenericRepository<WarehouseInboundRequest>
+    {
+        Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id);
+        Task<List<WarehouseInboundRequest>> GetAllPendingAsync();
+    }
+}
