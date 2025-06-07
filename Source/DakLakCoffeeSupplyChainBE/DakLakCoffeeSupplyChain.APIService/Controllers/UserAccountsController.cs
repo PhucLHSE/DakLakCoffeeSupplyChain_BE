@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<UserAccountsController>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] UserAccountCreateDto userDto)
+        public async Task<IActionResult> CreateUserAccountAsync([FromBody] UserAccountCreateDto userDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState); // Validate thất bại
@@ -64,6 +64,30 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Conflict(result.Message); // Trùng email/phone...
 
             return StatusCode(500, result.Message);
+        }
+
+        // DELETE api/<UserAccountsController>/{userId}
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteUserAccountByIdAsync(Guid userId)
+        {
+            var result = await _userAccountService.DeleteById(userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy người dùng.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        private async Task<bool> UserAccountExistsAsync(Guid userId)
+        {
+            var result = await _userAccountService.GetById(userId);
+            return result.Status == Const.SUCCESS_READ_CODE;
         }
     }
 }
