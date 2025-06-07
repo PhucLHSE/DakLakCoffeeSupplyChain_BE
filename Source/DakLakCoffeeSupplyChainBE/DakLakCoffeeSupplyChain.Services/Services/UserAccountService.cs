@@ -179,5 +179,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> DeleteById(Guid userId)
+        {
+            try
+            {
+
+                var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    await _unitOfWork.UserAccountRepository.RemoveAsync(user);
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    if (result == Const.SUCCESS_DELETE_CODE)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }

@@ -11,17 +11,17 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs
 {
     public class UserAccountCreateDto
     {
-        [Required]
-        [EmailAddress]
-        [MaxLength(255)]
+        [Required(ErrorMessage = "Email không được để trống.")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+        [MaxLength(255, ErrorMessage = "Email không được vượt quá 255 ký tự.")]
         public string Email { get; set; } = string.Empty;
 
         [Phone]
         [StringLength(15, MinimumLength = 10, ErrorMessage = "Số điện thoại phải từ 10 đến 15 ký tự.")]
         public string PhoneNumber { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(255)]
+        [Required(ErrorMessage = "Tên không được để trống.")]
+        [MaxLength(255, ErrorMessage = "Tên không được vượt quá 255 ký tự.")]
         public string Name { get; set; } = string.Empty;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -35,7 +35,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs
         [Url]
         public string? ProfilePictureUrl { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Mật khẩu không được để trống.")]
         [StringLength(255, MinimumLength = 10, ErrorMessage = "Mật khẩu phải từ 10 đến 255 ký tự.")]
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-_#])[A-Za-z\d@$!%*?&\-_#]{10,}$",
             ErrorMessage = "Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa, 1 chữ số, 1 ký tự đặc biệt và tối thiểu 10 ký tự.")]
@@ -47,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserAccountStatus Status { get; set; } = UserAccountStatus.Unknown;
 
-        [Required]
+        [Required(ErrorMessage = "Tên vai trò không được để trống.")]
         public string RoleName { get; set; } = string.Empty;
     }
 }
