@@ -149,8 +149,8 @@ GO
 
 -- CoffeeTypes – Các loại cà phê được công nhận
 CREATE TABLE CoffeeTypes (
-  CoffeeTypeID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID loại cà phê
-  TypeCode VARCHAR(20) UNIQUE,                                    -- CODE-ARABICA-001
+  CoffeeTypeID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),      -- ID loại cà phê
+  TypeCode VARCHAR(20) UNIQUE,                                    -- CFT-2025-0001
   TypeName NVARCHAR(100) NOT NULL,                                -- Arabica, Robusta, Culi, Moka, Catimor,...
   BotanicalName NVARCHAR(255),                                    -- Tên khoa học nếu có
   Description NVARCHAR(MAX),                                      -- Mô tả đặc điểm: hương, vị, độ đậm,...
@@ -1232,7 +1232,7 @@ VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân
 
 -- Business Manager
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0002', 'businessmanager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'BusinessManager@12345', 2);
+VALUES ('USR-2025-0002', 'businessManager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'BusinessManager@12345', 2);
 
 -- Farmer
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
@@ -1241,6 +1241,10 @@ VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Min
 -- Expert
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
 VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', 'Expert@12345', 5);
+
+-- Business Staff
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', '1999-09-12', N'Đắk Lắk', 'BusinessStaff@12345', 3);
 
 GO
 
@@ -1268,6 +1272,179 @@ DECLARE @ExpertUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE 
 
 INSERT INTO AgriculturalExperts (UserID, ExpertCode, ExpertiseArea, Qualifications, YearsOfExperience, AffiliatedOrganization, Bio, Rating)
 VALUES (@ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8);
+
+GO
+
+-- CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
+-- Định dạng TypeCode: CFT-2025-0001++
+
+-- Arabica (vùng cao Đắk Lắk như M'Đrắk, Krông Bông)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0001', N'Arabica', N'Coffea Arabica',
+  N'Cà phê Arabica có vị chua thanh, hương thơm đặc trưng và hàm lượng caffeine thấp hơn Robusta.',
+  N'M''Đrắk, Krông Bông – Đắk Lắk (vùng cao)',
+  N'Specialty'
+);
+
+-- Robusta (chủ lực tại Đắk Lắk)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0002', N'Robusta', N'Coffea Canephora',
+  N'Robusta có vị đậm đắng, hậu vị mạnh, hàm lượng caffeine cao, phù hợp espresso hoặc cà phê truyền thống Việt.',
+  N'Buôn Ma Thuột, Krông Pắc, Ea Kar – Đắk Lắk',
+  N'Fine Robusta'
+);
+
+-- Culi (Robusta dạng đột biến, phổ biến tại Đắk Lắk)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0003', N'Culi', NULL,
+  N'Hạt cà phê tròn đều do đột biến tự nhiên, thường mạnh và đậm hơn Arabica và Robusta thông thường.',
+  N'Đắk Lắk',
+  N'Premium'
+);
+
+-- Robusta Honey (phương pháp sơ chế đặc biệt)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0004', N'Robusta Honey', N'Coffea Canephora (Honey Processed)',
+  N'Cà phê Robusta được sơ chế theo phương pháp honey để giữ lại vị ngọt và hương trái cây tự nhiên.',
+  N'Ea H’leo, Cư M’gar – Đắk Lắk',
+  N'Fine Robusta'
+);
+
+-- Robusta Natural (phơi nguyên trái)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0005', N'Robusta Natural', N'Coffea Canephora (Natural Processed)',
+  N'Sơ chế tự nhiên (phơi nguyên trái), giữ được vị ngọt hậu, phù hợp thị trường rang xay cao cấp.',
+  N'Ea H’leo, Krông Năng – Đắk Lắk',
+  N'Fine Robusta'
+);
+
+-- Typica (giống Arabica nguyên thủy, đang thử nghiệm tại Đắk Lắk)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0006', N'Typica', N'Coffea Arabica Typica',
+  N'Một trong những giống cà phê Arabica nguyên thủy, đang được thử nghiệm tại vùng cao Krông Bông.',
+  N'Krông Bông – Đắk Lắk',
+  N'Specialty'
+);
+
+-- Robusta Washed (sơ chế ướt, phổ biến cho xuất khẩu cao cấp)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0007', N'Robusta Washed', N'Coffea Canephora (Washed Processed)',
+  N'Cà phê Robusta được sơ chế ướt giúp vị trong trẻo hơn, hậu vị sạch, được ưa chuộng bởi thị trường châu Âu.',
+  N'Krông Pắc, Buôn Ma Thuột – Đắk Lắk',
+  N'Fine Robusta'
+);
+
+-- Robusta TR9 (giống chọn lọc năng suất cao tại Đắk Lắk)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+VALUES (
+  'CFT-2025-0008', N'Robusta TR9', N'Coffea Canephora TR9',
+  N'Giống Robusta cao sản được Viện Eakmat chọn tạo, phù hợp điều kiện Đắk Lắk, cho năng suất vượt trội.',
+  N'Ea Kar, Krông Ana – Đắk Lắk',
+  N'Standard'
+);
+
+GO
+
+-- Insert vào bảng ProcurementPlans
+-- Lấy ManagerID
+DECLARE @BMID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers 
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Kế hoạch 1: Thu mua Arabica & Typica
+DECLARE @PlanID1 UNIQUEIDENTIFIER = NEWID();
+INSERT INTO ProcurementPlans (
+  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status
+)
+VALUES (
+  @PlanID1, 'PLAN-2025-0001', N'Thu mua cà phê Arabica chất lượng cao mùa vụ 2025',
+  N'Kế hoạch thu mua Arabica và Typica từ vùng cao Krông Bông, yêu cầu chất lượng đạt chuẩn Specialty.',
+  6000, @BMID, '2025-06-07', '2025-06-21', 'open'
+);
+
+-- Kế hoạch 2: Thu mua Robusta Honey & TR9
+DECLARE @PlanID2 UNIQUEIDENTIFIER = NEWID();
+INSERT INTO ProcurementPlans (
+  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status
+)
+VALUES (
+  @PlanID2, 'PLAN-2025-0002', N'Thu mua Robusta sơ chế đặc biệt khu vực Ea H’leo',
+  N'Ưu tiên Robusta Honey và Robusta TR9, phục vụ thị trường xuất khẩu châu Âu.',
+  12000, @BMID, '2025-06-14', '2025-06-28', 'open'
+);
+
+GO
+
+-- Insert vào bảng ProcurementPlansDetails
+-- Lấy PlanID từ mã kế hoạch
+DECLARE @PlanID1 UNIQUEIDENTIFIER = (
+  SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
+);
+DECLARE @PlanID2 UNIQUEIDENTIFIER = (
+  SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0002'
+);
+
+-- Lấy CoffeeTypeID theo TypeCode mới
+DECLARE @CoffeeID_Arabica UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+);
+DECLARE @CoffeeID_Typica UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0006'
+);
+DECLARE @CoffeeID_Honey UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0004'
+);
+DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0008'
+);
+
+-- Chi tiết 1: Arabica
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, N'Arabica', 3000, N'Krông Bông',
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty'
+);
+
+-- Chi tiết 2: Typica
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, N'Typica', 3000, N'M''Đrắk',
+  150, N'16+', N'Nâu vàng', 11.5, 3, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025'
+);
+
+-- Chi tiết 3: Robusta Honey
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, N'Robusta', 7000, N'Cư M’gar',
+  200, N'18+', N'Nâu sẫm', 12.0, 4, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi'
+);
+
+-- Chi tiết 4: Robusta TR9
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, N'Robusta', 5000, N'Ea Kar',
+  300, N'17–18', N'Nâu đen', 13.0, 6, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
+);
 
 GO
 
