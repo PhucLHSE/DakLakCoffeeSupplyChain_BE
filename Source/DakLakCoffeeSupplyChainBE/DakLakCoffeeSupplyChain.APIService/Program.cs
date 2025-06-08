@@ -1,10 +1,14 @@
 ﻿using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Services;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +19,8 @@ builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 // Dependency Injection
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
-
+builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
+//builder.Services.AddScoped<ICropSeasonRepository, CropSeasonRepository>();
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
