@@ -38,5 +38,39 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchCode = product.Batch?.BatchCode ?? string.Empty
             };
         }
+
+        // Mapper ProductViewAllDto
+        public static ProductViewDetailsDto MapToProductViewDetailsDto(this Product product)
+        {
+            ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, out var parsedStatus)
+                ? parsedStatus
+                : ProductStatus.Pending;
+
+            return new ProductViewDetailsDto
+            {
+                ProductId = product.ProductId,
+                ProductCode = product.ProductCode,
+                ProductName = product.ProductName,
+                Description = product.Description,
+                UnitPrice = product.UnitPrice,
+                QuantityAvailable = product.QuantityAvailable,
+                Unit = product.Unit,
+                OriginRegion = product.OriginRegion,
+                OriginFarmLocation = product.OriginFarmLocation,
+                GeographicalIndicationCode = product.GeographicalIndicationCode,
+                CertificationUrl = product.CertificationUrl,
+                EvaluatedQuality = product.EvaluatedQuality,
+                EvaluationScore = product.EvaluationScore,
+                Status = status,
+                ApprovalNote = product.ApprovalNote,
+                ApprovedByName = product.ApprovedByNavigation?.Name ?? string.Empty,
+                ApprovedAt = product.ApprovedAt,
+                CreatedAt = product.CreatedAt,
+                UpdatedAt = product.UpdatedAt,
+                CoffeeTypeName = product.CoffeeType?.TypeName ?? string.Empty,
+                InventoryLocation = product.Inventory?.Warehouse?.Location ?? string.Empty,
+                BatchCode = product.Batch?.BatchCode ?? string.Empty
+            };
+        }
     }
 }

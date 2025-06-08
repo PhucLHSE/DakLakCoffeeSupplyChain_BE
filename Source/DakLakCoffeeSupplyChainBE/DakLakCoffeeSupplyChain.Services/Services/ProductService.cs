@@ -50,5 +50,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> GetById(Guid productId)
+        {
+            var product = await _unitOfWork.ProductRepository.GetProductByIdAsync(productId);
+
+            if (product == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new ProductViewDetailsDto()
+                );
+            }
+            else
+            {
+                var productDto = product.MapToProductViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    productDto
+                );
+            }
+        }
     }
 }

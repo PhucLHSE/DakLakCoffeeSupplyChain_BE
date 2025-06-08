@@ -31,5 +31,18 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             return products;
         }
+
+        public async Task<Product?> GetProductByIdAsync(Guid productId)
+        {
+            var product = await _context.Products
+                .AsNoTracking()
+                .Include(p => p.CoffeeType)
+                .Include(p => p.Batch)
+                .Include(p => p.Inventory)
+                   .ThenInclude(p => p.Warehouse)
+                .FirstOrDefaultAsync(p => p.ProductId == productId);
+
+            return product;
+        }
     }
 }
