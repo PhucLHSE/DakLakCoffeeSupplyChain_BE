@@ -31,5 +31,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Farmer)
                 .ToListAsync();
         }
+        public void Update(WarehouseInboundRequest entity)
+        {
+            _context.Set<WarehouseInboundRequest>().Update(entity);
+        }
     }
 }

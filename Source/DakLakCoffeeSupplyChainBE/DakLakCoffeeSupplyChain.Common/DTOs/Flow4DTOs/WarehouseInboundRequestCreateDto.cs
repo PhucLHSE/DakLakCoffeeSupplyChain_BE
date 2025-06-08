@@ -12,6 +12,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.Flow4DTOs
         public double RequestedQuantity { get; set; }
         public DateOnly PreferredDeliveryDate { get; set; }
         public string? Note { get; set; }
-        public Guid BusinessManagerId { get; set; }
+       
     }
 }

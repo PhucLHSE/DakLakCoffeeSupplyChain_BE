@@ -17,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IWarehouseInboundRequestRepository WarehouseInboundRequests { get; }
         IFarmerRepository Farmers { get; }
+        IBusinessStaffRepository BusinessStaffs { get; }
         Task<int> CompleteAsync();
     }
 }

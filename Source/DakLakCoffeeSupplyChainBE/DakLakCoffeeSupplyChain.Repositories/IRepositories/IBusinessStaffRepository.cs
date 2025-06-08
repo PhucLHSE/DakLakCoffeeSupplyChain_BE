@@ -8,10 +8,8 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface IWarehouseInboundRequestRepository : IGenericRepository<WarehouseInboundRequest>
+    public interface IBusinessStaffRepository : IGenericRepository<BusinessStaff>
     {
-        Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id);
-        Task<List<WarehouseInboundRequest>> GetAllPendingAsync();
-        void Update(WarehouseInboundRequest entity);
+        Task<BusinessStaff?> FindByUserIdAsync(Guid userId);
     }
 }

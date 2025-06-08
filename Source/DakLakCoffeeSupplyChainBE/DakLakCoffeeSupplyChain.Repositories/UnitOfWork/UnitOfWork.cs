@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -33,5 +34,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IFarmerRepository? farmerRepository;
 
         public IFarmerRepository Farmers => farmerRepository ??= new FarmerRepository(context);
+        private IBusinessStaffRepository? businessStaffRepository;
+        public IBusinessStaffRepository BusinessStaffs => businessStaffRepository ??= new BusinessStaffRepository(context);
     }
 }

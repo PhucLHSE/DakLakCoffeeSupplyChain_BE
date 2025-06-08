@@ -34,7 +34,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 InboundRequestId = Guid.NewGuid(),
                 InboundRequestCode = "IR-" + DateTime.UtcNow.Ticks, // ✅ thêm dòng này để tránh lỗi duplicate NULL
                 FarmerId = farmer.FarmerId,
-                BusinessManagerId = dto.BusinessManagerId,
+               
                 BatchId = (Guid)dto.BatchId,
                 RequestedQuantity = dto.RequestedQuantity,
                 PreferredDeliveryDate = dto.PreferredDeliveryDate,
@@ -52,5 +52,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(201, "Yêu cầu nhập kho đã được tạo", newRequest.InboundRequestId);
         }
+        public async Task<IServiceResult> ApproveInboundRequestAsync(Guid requestId, Guid staffUserId)
+        {
+            var staff = await _unitOfWork.BusinessStaffs.FindByUserIdAsync(staffUserId);
+            if (staff == null)
+                return new ServiceResult(404, "Không tìm thấy nhân viên doanh nghiệp.");
+
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            if (request == null)
+                return new ServiceResult(404, "Không tìm thấy yêu cầu nhập kho.");
+
+            if (request.Status != "Pending")
+                return new ServiceResult(400, "Yêu cầu này không ở trạng thái chờ duyệt.");
+
+            request.Status = "Approved";
+            request.BusinessStaffId = staff.StaffId;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            // ✅ THÊM DÒNG NÀY
+            _unitOfWork.WarehouseInboundRequests.Update(request);
+
+            await _unitOfWork.CompleteAsync();
+            return new ServiceResult(200, "Đã duyệt yêu cầu nhập kho.");
+        }
+        public async Task<IServiceResult> GetAllRequestsAsync()
+        {
+            var requests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync();
+
+            var result = requests.Select(r => new WarehouseInboundRequestViewDto
+            {
+                InboundRequestId = r.InboundRequestId,
+                InboundRequestCode = r.InboundRequestCode,
+                FarmerId = r.FarmerId,
+                BusinessStaffId = r.BusinessStaffId,
+                RequestedQuantity = r.RequestedQuantity,
+                PreferredDeliveryDate = r.PreferredDeliveryDate,
+                Status = r.Status,
+                CreatedAt = r.CreatedAt
+            }).ToList();
+
+            return new ServiceResult(200, "Lấy danh sách yêu cầu nhập kho thành công", result);
+        }
+
+
+
     }
 }
