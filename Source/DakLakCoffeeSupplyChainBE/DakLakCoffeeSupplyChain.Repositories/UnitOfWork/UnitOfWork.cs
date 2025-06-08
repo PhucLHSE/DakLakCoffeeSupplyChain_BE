@@ -1,11 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -17,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IUserAccountRepository? userAccountRepository;
         private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
+        private IProcurementPlanRepository? procurementPlanRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -55,6 +51,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
+            }
+        }
+        public IProcurementPlanRepository ProcurementPlanRepository
+        {
+            get
+            {
+                return procurementPlanRepository ??= new ProcurementPlanRepository(context);
             }
         }
     }
