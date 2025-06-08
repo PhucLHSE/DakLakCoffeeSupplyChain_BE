@@ -15,6 +15,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
+        private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
 
         public UnitOfWork()
@@ -38,6 +39,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return userAccountRepository ??= new UserAccountRepository(context);
+            }
+        }
+
+        public IProductRepository ProductRepository
+        {
+            get
+            {
+                return productRepository ??= new ProductRepository(context);
             }
         }
 

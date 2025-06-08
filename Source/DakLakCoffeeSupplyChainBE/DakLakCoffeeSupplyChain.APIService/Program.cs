@@ -15,6 +15,7 @@ builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 // Dependency Injection
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
