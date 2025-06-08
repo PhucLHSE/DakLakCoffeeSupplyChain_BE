@@ -87,6 +87,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         private async Task<bool> UserAccountExistsAsync(Guid userId)
         {
             var result = await _userAccountService.GetById(userId);
+
             return result.Status == Const.SUCCESS_READ_CODE;
         }
     }

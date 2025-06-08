@@ -12,5 +12,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll();
 
         Task<IServiceResult> GetById(Guid productId);
+
+        Task<IServiceResult> DeleteById(Guid productId);
     }
 }
