@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IProductRepository : IGenericRepository<Product>
     {
         Task<List<Product>> GetAllProductsAsync();
+
+        Task<Product?> GetProductByIdAsync(Guid productId);
     }
 }
