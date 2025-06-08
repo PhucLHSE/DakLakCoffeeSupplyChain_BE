@@ -44,6 +44,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> GetById(Guid planId)
+        {
+            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+            ICollection<Guid> planDetails = new HashSet<Guid>();
+
+            if (plan == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new ProcurementPlanViewDetailsDto()
+                );
+            }
+            else
+            {
+                var planDto = plan.MapToProcurementPlanViewDetailsDto(planDetails);
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    planDto
+                );
+            }
+        }
         public async Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto)
         {
             try

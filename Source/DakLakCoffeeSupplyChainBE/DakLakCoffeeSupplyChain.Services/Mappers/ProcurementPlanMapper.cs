@@ -31,6 +31,31 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+        // Mapper ProcurementPlanViewDetailsDto
+        public static ProcurementPlanViewDetailsDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan entity, ICollection<Guid> detailList)
+        {
+
+            // Parse Status string to enum
+            ProcurementPlanStatus status = Enum.TryParse<ProcurementPlanStatus>(entity.Status, true, out var parsedStatus)
+                ? parsedStatus
+                : ProcurementPlanStatus.Draft;
+
+            return new ProcurementPlanViewDetailsDto
+            {
+                PlanCode = entity.PlanCode ?? string.Empty,
+                Title = entity.Title ?? string.Empty,
+                Description = entity.Description ?? string.Empty,
+                TotalQuantity = entity.TotalQuantity,
+                CreatedBy = entity.CreatedBy,
+                StartDate = entity.StartDate,
+                EndDate = entity.EndDate,
+                Status = status,
+                ProgressPercentage = entity.ProgressPercentage,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                ProcurementPlansDetails = detailList
+            };
+        }
 
         // Mapper ProcurementPlanViewAllDto
         public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, Guid BusinessManager)

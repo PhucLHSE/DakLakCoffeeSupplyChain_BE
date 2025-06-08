@@ -5,5 +5,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IProcurementPlanService
     {
         Task<IServiceResult> GetAll();
+        Task<IServiceResult> GetById(Guid planId);
     }
 }

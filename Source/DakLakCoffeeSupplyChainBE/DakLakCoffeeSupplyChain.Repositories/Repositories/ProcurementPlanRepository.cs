@@ -22,6 +22,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             return procurementPlans;
         }
+        public async Task<ProcurementPlan?> GetProcurementPlanByIdAsync(Guid procurementPlanId)
+        {
+            var procurementPlan = await _context.ProcurementPlans
+                .AsNoTracking()
+                .Include(p => p.ProcurementPlansDetails)
+                .FirstOrDefaultAsync(p => p.PlanId == procurementPlanId);
+
+            return procurementPlan;
+        }
         public async Task<ProcurementPlan> CreateProcurementPlanAsync(ProcurementPlan procurementPlan)
         {
             _context.ProcurementPlans.Add(procurementPlan);
