@@ -15,7 +15,7 @@ public partial class WarehouseInboundRequest
 
     public Guid FarmerId { get; set; }
 
-    public Guid BusinessManagerId { get; set; }
+    public Guid BusinessStaffId { get; set; }
 
     public double? RequestedQuantity { get; set; }
 
@@ -33,7 +33,7 @@ public partial class WarehouseInboundRequest
 
     public virtual ProcessingBatch Batch { get; set; }
 
-    public virtual BusinessManager BusinessManager { get; set; }
+    public virtual BusinessStaff BusinessStaff { get; set; }
 
     public virtual Farmer Farmer { get; set; }
 

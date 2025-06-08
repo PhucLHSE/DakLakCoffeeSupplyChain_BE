@@ -440,7 +440,7 @@ GO
 
 -- Hồ sơ lô sơ chế (Batch sơ chế của từng Farmer)
 CREATE TABLE ProcessingBatches (
-  BatchID UNIQUEIDENTIFIER PRIMARY KEY,                        -- ID định danh lô sơ chế
+  BatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),        -- ID định danh lô sơ chế
   SystemBatchCode  VARCHAR(20) UNIQUE,                         -- BATCH-2025-0010
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                      -- Loại cà phê được sơ chế
   CropSeasonID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến mùa vụ
@@ -471,7 +471,7 @@ GO
 
 -- Ghi nhận tiến trình từng bước trong sơ chế (drying, dehulling...)
 CREATE TABLE ProcessingBatchProgresses (
-  ProgressID UNIQUEIDENTIFIER PRIMARY KEY,                     -- ID từng bước sơ chế
+  ProgressID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID từng bước sơ chế
   BatchID UNIQUEIDENTIFIER NOT NULL,                           -- FK tới lô sơ chế
   StepIndex INT NOT NULL,                                      -- Thứ tự tiến trình trong batch
   StageID INT NOT NULL,                                        -- FK đến bảng chuẩn `ProcessingStages`
@@ -497,7 +497,7 @@ GO
 
 -- Ghi nhận thông số kỹ thuật từng bước (nếu có nhập tay)
 CREATE TABLE ProcessingParameters (
-  ParameterID UNIQUEIDENTIFIER PRIMARY KEY,                    -- ID thông số
+  ParameterID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- ID thông số
   ProgressID UNIQUEIDENTIFIER NOT NULL,                        -- FK tới bước sơ chế cụ thể
   ParameterName NVARCHAR(100),                                 -- Tên thông số: humidity, temperature...
   ParameterValue NVARCHAR(100) NULL,                           -- Giá trị đo được
@@ -628,7 +628,7 @@ GO
 
 -- Warehouses – Danh sách kho thuộc doanh nghiệp
 CREATE TABLE Warehouses (
-    WarehouseID UNIQUEIDENTIFIER PRIMARY KEY,                       -- ID kho
+    WarehouseID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- ID kho
 	WarehouseCode VARCHAR(20) UNIQUE,                               -- WH-2025-DL001
     ManagerID UNIQUEIDENTIFIER NOT NULL,                            -- Người quản lý chính (BusinessManager)
     Name NVARCHAR(100) NOT NULL,                                    -- Tên kho (VD: "Kho Cư M’gar")
@@ -672,7 +672,7 @@ GO
 
 -- Inventories – Ghi nhận tồn kho theo từng batch
 CREATE TABLE Inventories (
-    InventoryID UNIQUEIDENTIFIER PRIMARY KEY,                       -- Mã dòng tồn kho
+    InventoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- Mã dòng tồn kho
 	InventoryCode VARCHAR(20) UNIQUE,                               -- INV-2025-0056
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
     BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
@@ -693,7 +693,7 @@ GO
 
 -- InventoryLogs – Lịch sử thay đổi tồn kho
 CREATE TABLE InventoryLogs (
-    LogID UNIQUEIDENTIFIER PRIMARY KEY,                             -- Mã nhật ký
+    LogID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- Mã nhật ký
     InventoryID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với dòng tồn kho nào
     ActionType NVARCHAR(50) NOT NULL,                               -- Loại hành động: increase, decrease, correction
     QuantityChanged FLOAT NOT NULL,                                 -- Lượng thay đổi (+/-)
@@ -711,11 +711,11 @@ GO
 
 -- WarehouseInboundRequests – Yêu cầu nhập kho từ Farmer
 CREATE TABLE WarehouseInboundRequests (
-  InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY,                    -- Mã yêu cầu nhập kho,
+  InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã yêu cầu nhập kho,
   InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0008
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Gắn với mẻ sơ chế
   FarmerID UNIQUEIDENTIFIER NOT NULL,                               -- Người gửi yêu cầu (Farmer)
-  BusinessManagerID UNIQUEIDENTIFIER NOT NULL,                      -- Người đại diện doanh nghiệp nhận
+  BusinessStaffID UNIQUEIDENTIFIER NOT NULL,                        -- Người đại diện doanh nghiệp nhận
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
@@ -732,14 +732,14 @@ CREATE TABLE WarehouseInboundRequests (
     FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
   CONSTRAINT FK_WarehouseInboundRequests_Manager 
-    FOREIGN KEY (BusinessManagerID) REFERENCES BusinessManagers(ManagerID)
+    FOREIGN KEY (BusinessStaffID) REFERENCES BusinessStaffs(StaffID)
 );
 
 GO
 
 -- WarehouseReceipts – Phiếu nhập kho
 CREATE TABLE WarehouseReceipts (
-  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY,                           -- Mã phiếu nhập kho
+  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã phiếu nhập kho
   ReceiptCode VARCHAR(20) UNIQUE,                                   -- RECEIPT-2025-0145
   InboundRequestID UNIQUEIDENTIFIER NOT NULL,                       -- Gắn với yêu cầu nhập kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                            -- Kho tiếp nhận
@@ -951,7 +951,7 @@ GO
 
 -- WarehouseOutboundReceipts – Phiếu xuất kho
 CREATE TABLE WarehouseOutboundReceipts (
-  OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY,                  -- Mã phiếu xuất kho
+  OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),  -- Mã phiếu xuất kho
   OutboundReceiptCode VARCHAR(20) UNIQUE,                          -- OUT-RECEIPT-2025-0078 (Format: OUT-RECEIPT-YYYY-####)
   OutboundRequestID UNIQUEIDENTIFIER NOT NULL,                     -- Gắn với yêu cầu xuất kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                           -- Kho xuất
