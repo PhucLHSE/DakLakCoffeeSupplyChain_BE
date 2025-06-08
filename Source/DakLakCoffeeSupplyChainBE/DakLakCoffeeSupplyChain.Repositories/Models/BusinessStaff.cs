@@ -33,6 +33,8 @@ public partial class BusinessStaff
 
     public virtual UserAccount User { get; set; }
 
+    public virtual ICollection<WarehouseInboundRequest> WarehouseInboundRequests { get; set; } = new List<WarehouseInboundRequest>();
+
     public virtual ICollection<WarehouseOutboundReceipt> WarehouseOutboundReceipts { get; set; } = new List<WarehouseOutboundReceipt>();
 
     public virtual ICollection<WarehouseOutboundRequest> WarehouseOutboundRequests { get; set; } = new List<WarehouseOutboundRequest>();
