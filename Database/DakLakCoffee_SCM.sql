@@ -1578,13 +1578,14 @@ VALUES
 GO
 
 -- Insert vào bảng CropProgresses
-DECLARE @StageID INT = (SELECT StageID FROM CropStages WHERE StageCode = 'planting');
-
 DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
 
 DECLARE @FarmerID UNIQUEIDENTIFIER = (
     SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
 );
+
+-- planting - Trồng
+DECLARE @StageID INT = (SELECT StageID FROM CropStages WHERE StageCode = 'planting');
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -1595,6 +1596,126 @@ VALUES (
     N'Đã hoàn tất trồng 1.8ha Arabica tại Krông Bông, cây giống khỏe mạnh.',
     '2025-07-05', NULL, NULL, N'Gieo trồng đầu mùa', 1
 );
+
+-- flowering – Ra hoa
+DECLARE @StageID_Flowering INT = (SELECT StageID FROM CropStages WHERE StageCode = 'flowering');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Flowering,
+    N'Cây bắt đầu ra hoa đồng loạt sau 2 tháng trồng. Sinh trưởng tốt.',
+    '2025-09-10', NULL, NULL, N'Bón phân vi sinh hỗ trợ ra hoa', 2
+);
+
+-- fruiting – Kết trái
+DECLARE @StageID_Fruiting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'fruiting');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Fruiting,
+    N'Quả bắt đầu phát triển rõ. Dự kiến năng suất khả quan.',
+    '2025-10-25', NULL, NULL, N'Dự định phun bổ sung vi lượng giai đoạn đầu trái.', 3
+);
+
+-- ripening – Chín
+DECLARE @StageID_Ripening INT = (SELECT StageID FROM CropStages WHERE StageCode = 'ripening');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Ripening,
+    N'Trái cà phê chuyển màu đỏ đều, đạt độ chín thu hoạch.',
+    '2026-01-05', NULL, NULL, N'Tiến hành kiểm tra ngẫu nhiên độ ẩm trước thu hoạch.', 4
+);
+
+-- harvesting – Thu hoạch
+DECLARE @StageID_Harvesting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'harvesting');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Harvesting,
+    N'Đã hoàn tất thu hoạch toàn bộ diện tích Arabica.',
+    '2026-01-18', NULL, NULL, N'Chuyển mẻ sơ chế về khu vực phơi.', 5
+);
+
+GO
+
+-- Insert vào bảng ProcessingMethods
+INSERT INTO ProcessingMethods (MethodCode, Name, Description)
+VALUES 
+-- Phơi tự nhiên (natural/dry)
+('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
+-- Sơ chế ướt (washed)
+('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
+-- Sơ chế mật ong (honey)
+('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
+-- Semi-washed (bán ướt)
+('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
+-- Carbonic maceration (hiếm)
+('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
+
+GO
+
+DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
+DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
+DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
+DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
+DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+
+-- Các bước cho phương pháp natural
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Natural, 'harvest', N'Thu hoạch', N'Hái trái cà phê chín tại vườn.', 1),
+(@Natural, 'drying', N'Phơi', N'Phơi nguyên trái từ 10–25 ngày tùy thời tiết.', 2),
+(@Natural, 'hulling', N'Xay vỏ', N'Xay tách vỏ khô để lấy nhân.', 3),
+(@Natural, 'grading', N'Phân loại', N'Phân loại theo kích thước, trọng lượng và màu sắc.', 4);
+
+-- Các bước cho phương pháp washed
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Washed, 'harvest', N'Thu hoạch', N'Hái trái cà phê chín.', 1),
+(@Washed, 'pulping', N'Xát vỏ', N'Loại bỏ lớp vỏ quả bên ngoài.', 2),
+(@Washed, 'fermentation', N'Lên men', N'Lên men loại bỏ lớp nhớt trong 12–36h.', 3),
+(@Washed, 'washing', N'Rửa sạch', N'Rửa kỹ bằng nước sạch.', 4),
+(@Washed, 'drying', N'Phơi khô', N'Phơi hạt nhân đến khi đạt độ ẩm 11–12%.', 5),
+(@Washed, 'hulling', N'Xay vỏ trấu', N'Loại bỏ lớp vỏ trấu bảo vệ.', 6);
+
+-- Các bước cho phương pháp honey
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Honey, 'harvest', N'Thu hoạch', N'Thu hoạch thủ công trái chín.', 1),
+(@Honey, 'pulping', N'Xát vỏ', N'Xát lớp vỏ ngoài nhưng giữ lại nhớt.', 2),
+(@Honey, 'drying', N'Phơi', N'Phơi hạt có nhớt trên bề mặt.', 3),
+(@Honey, 'hulling', N'Xay vỏ', N'Tách vỏ trấu sau khi khô.', 4);
+
+-- Các bước cho phương pháp semi-washed
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@SemiWashed, 'harvest',     N'Thu hoạch',     N'Thu hoạch trái chín bằng tay hoặc máy.', 1),
+(@SemiWashed, 'pulping',     N'Xát vỏ',        N'Loại bỏ vỏ quả nhưng không lên men.', 2),
+(@SemiWashed, 'partial-wash',N'Rửa sơ',        N'Rửa nhẹ loại bỏ chất nhầy mà không lên men sâu.', 3),
+(@SemiWashed, 'drying',      N'Phơi khô',      N'Phơi hạt đến khi đạt độ ẩm 11–12%.', 4),
+(@SemiWashed, 'hulling',     N'Xay vỏ',        N'Tách lớp trấu bảo vệ sau khi khô.', 5);
+
+-- Các bước cho phương pháp carbonic (lên men yếm khí)
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Carbonic, 'harvest',        N'Thu hoạch',         N'Chọn lọc trái cà phê chín đều.', 1),
+(@Carbonic, 'carbonic-ferment',N'Lên men yếm khí', N'Ủ trái trong bồn kín chứa CO₂ trong 24–72 giờ.', 2),
+(@Carbonic, 'drying',         N'Phơi',              N'Phơi nguyên trái dưới nắng hoặc sấy nhẹ.', 3),
+(@Carbonic, 'hulling',        N'Xay vỏ',            N'Xay vỏ sau khi khô để lấy nhân.', 4),
+(@Carbonic, 'grading',        N'Phân loại',         N'Phân loại theo kích cỡ, màu và trọng lượng.', 5);
 
 GO
 
