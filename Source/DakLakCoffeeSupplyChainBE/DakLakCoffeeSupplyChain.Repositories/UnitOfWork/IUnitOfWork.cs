@@ -9,9 +9,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
     public interface IUnitOfWork
     {
+        Task<int> SaveChangesAsync();
+
         IRoleRepository RoleRepository { get; }
 
         IUserAccountRepository UserAccountRepository { get; }
+
+        IProductRepository ProductRepository { get; }
 
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
 

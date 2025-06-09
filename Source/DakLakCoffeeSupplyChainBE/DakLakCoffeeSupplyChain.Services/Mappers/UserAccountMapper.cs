@@ -15,7 +15,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount entity)
         {
             // Parse Status string to enum
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, true, out var parsedStatus)
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 
@@ -37,12 +37,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(this UserAccount entity)
         {
             // Parse Gender string to enum
-            Gender gender = Enum.TryParse<Gender>(entity.Gender, true, out var parsedGender)
+            Gender gender = Enum.TryParse<Gender>(entity.Gender, ignoreCase: true, out var parsedGender)
                 ? parsedGender
                 : Gender.Unknown;
 
             // Parse Status string to enum
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, true, out var parsedStatus)
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 

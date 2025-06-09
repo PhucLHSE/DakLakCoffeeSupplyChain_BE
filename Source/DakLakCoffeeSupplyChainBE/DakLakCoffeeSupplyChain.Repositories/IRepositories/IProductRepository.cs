@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface ISystemConfigurationRepository : IGenericRepository<SystemConfiguration>
+    public interface IProductRepository : IGenericRepository<Product>
     {
-        Task<SystemConfiguration?> GetActiveByNameAsync(string name);
+        Task<List<Product>> GetAllProductsAsync();
+
+        Task<Product?> GetProductByIdAsync(Guid productId);
     }
 }

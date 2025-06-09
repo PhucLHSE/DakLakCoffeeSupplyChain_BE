@@ -32,33 +32,36 @@
 
 | Role                | Description                                                  |
 |---------------------|--------------------------------------------------------------|
-| **Farmer**          | Register crops, update seasons, submit harvests              |
-| **Business Manager**| Plan procurement, manage inventory, products, confirm orders |
-| **Trader**          | Search and place B2B coffee orders                           |
-| **Delivery Staff**  | Update order delivery status (picked up, delivered)          |
-| **Expert**          | Analyze crop issues and share advice                         |
-| **Admin**           | Approve users/products, view system metrics                  |
+| **Farmer**          | Register crop applications, manage crop seasons, submit batches |
+| **Business Manager**| Plan procurement, manage contracts, confirm registrations     |
+| **Business Staff**  | Handle warehouse inbound/outbound, oversee stock levels       |
+| **Expert**          | Evaluate crop progress and processing batches                 |
+| **Delivery Staff**  | Update shipment delivery status                               |
+| **Admin**           | Verify accounts and monitor platform usage                    |
 
 ---
 
 ## 🔁 Business Flows Implemented (Activity Modules)
 
 1. **Procurement Planning & Cultivation Registration**  
-   → Business creates seasonal coffee demand plans, approves farmer registration.
+   → Business creates seasonal procurement plans. Farmers apply for participation and commit production.  
+   → System tracks registration details and confirmed farming commitments.
 
-2. **Crop Season Management & Expert Consultation**  
-   → Farmer tracks crop progress, experts provide technical guidance.
+2. **Crop Season Monitoring & Expert Consultation**  
+   → Farmers update crop season progress and report issues. Experts provide technical diagnosis and support.
 
 3. **Post-Harvest Coffee Processing**  
-   → Farmers submit batches for processing, issues tracked, quality rated.
+   → Farmers log processing batches (e.g., dry, wet method). Quality and issues are reviewed by experts.
 
-4. **Coffee Warehouse Management**  
-   → Business receives inventory, generates receipts, tracks stock levels.
+4. **Green Coffee Warehouse & Inventory Management**  
+   → Businesses approve batches for storage, manage warehouse stock, and initiate outbound processes.
 
-5. **Selling Products & B2B Order Delivery Tracking**  
-   → Business lists products, handles B2B orders, delivery staff updates progress.
+5. **Contract-Based B2B Sales & Delivery Tracking**  
+   → Businesses list products, create B2B sales contracts, assign delivery staff. Shipment progress is tracked.
 
-> 🔎 *Activity Diagrams and ERDs available in `/docs/diagrams/`*
+---
+
+> 🔎 *Activity Diagrams, Use Cases, and ERDs available in `/docs/diagrams/` folder*
 
 ---
 
@@ -70,4 +73,6 @@ This repository contains the **backend** implementation of the system, including
 - Entity models  
 - Database schema and migrations  
 
-> Frontend and mobile clients are handled in separate repositories.
+> 🎨 Frontend (React) and potential mobile interface are handled in a separate repository.
+
+---

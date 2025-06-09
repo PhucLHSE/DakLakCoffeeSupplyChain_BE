@@ -11,13 +11,22 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
+        private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
         private IWarehouseInboundRequestRepository? warehouseInboundRequestRepository;
         private IFarmerRepository? farmerRepository;
         private IBusinessStaffRepository? businessStaffRepository;
         private IWarehouseReceiptRepository? warehouseReceiptRepository; // ✅ Thêm biến tạm
 
-        public UnitOfWork(DakLakCoffee_SCMContext context)
+        public UnitOfWork()
+            => context ??= new DakLakCoffee_SCMContext();
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await context.SaveChangesAsync();
+        }
+
+        public IRoleRepository RoleRepository
         {
             this.context = context;
         }
@@ -39,4 +48,20 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         }
     }
 
+        public IProductRepository ProductRepository
+        {
+            get
+            {
+                return productRepository ??= new ProductRepository(context);
+            }
+        }
+
+        public ISystemConfigurationRepository SystemConfigurationRepository
+        {
+            get
+            {
+                return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
+            }
+        }
+    }
 }

@@ -26,11 +26,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
 
         Task<T> GetByIdAsync(Guid id);
 
-        Task<int> CreateAsync(T entity);
+        Task CreateAsync(T entity);
 
-        Task<int> UpdateAsync(T entity);
+        //Task<int> CreateAsync(T entity);
 
-        Task<bool> RemoveAsync(T entity);
+        Task UpdateAsync(T entity);
+
+        //Task<int> UpdateAsync(T entity);
+
+        Task RemoveAsync(T entity);
+
+        //Task<bool> RemoveAsync(T entity);
 
         void PrepareCreate(T entity);
 

@@ -16,5 +16,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Create(UserAccountCreateDto userDto);
 
+        Task<IServiceResult> DeleteById(Guid userId);
     }
 }

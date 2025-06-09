@@ -15,7 +15,10 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Đăng ký service hash password
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+// Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserAccountRepository, UserAccountRepository>();
@@ -29,7 +32,11 @@ builder.Services.AddScoped<IWarehouseReceiptRepository, WarehouseReceiptReposito
 // Add services to the container.
 // Dependency Injection
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Đăng ký các service nghiệp vụ
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -109,6 +116,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Áp dụng CORS cho toàn bộ hệ thống (áp dụng policy phía trên)
 app.UseCors("AllowAllOrigins");
 app.UseAuthentication();
 
