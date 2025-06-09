@@ -12,29 +12,31 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
-        private IWarehouseInboundRequestRepository? warehouseInboundRequestRepository; // ✅ THÊM DÒNG NÀY
+        private IWarehouseInboundRequestRepository? warehouseInboundRequestRepository;
+        private IFarmerRepository? farmerRepository;
+        private IBusinessStaffRepository? businessStaffRepository;
+        private IWarehouseReceiptRepository? warehouseReceiptRepository; // ✅ Thêm biến tạm
 
-        public UnitOfWork(DakLakCoffee_SCMContext context) // ✅ dùng DI chuẩn
+        public UnitOfWork(DakLakCoffee_SCMContext context)
         {
             this.context = context;
         }
 
         public IRoleRepository RoleRepository => roleRepository ??= new RoleRepository(context);
-
         public IUserAccountRepository UserAccountRepository => userAccountRepository ??= new UserAccountRepository(context);
-
         public ISystemConfigurationRepository SystemConfigurationRepository => systemConfigurationRepository ??= new SystemConfigurationRepository(context);
-
         public IWarehouseInboundRequestRepository WarehouseInboundRequests => warehouseInboundRequestRepository ??= new WarehouseInboundRequestRepository(context);
+        public IFarmerRepository Farmers => farmerRepository ??= new FarmerRepository(context);
+        public IBusinessStaffRepository BusinessStaffs => businessStaffRepository ??= new BusinessStaffRepository(context);
+
+        public IWarehouseReceiptRepository WarehouseReceiptRepository => warehouseReceiptRepository ??= new WarehouseReceiptRepository(context); // ✅ Gán đúng cách
+        private IInventoryRepository? inventoryRepository;
+        public IInventoryRepository InventoryRepository => inventoryRepository ??= new InventoryRepository(context);
 
         public async Task<int> CompleteAsync()
         {
             return await context.SaveChangesAsync();
         }
-        private IFarmerRepository? farmerRepository;
-
-        public IFarmerRepository Farmers => farmerRepository ??= new FarmerRepository(context);
-        private IBusinessStaffRepository? businessStaffRepository;
-        public IBusinessStaffRepository BusinessStaffs => businessStaffRepository ??= new BusinessStaffRepository(context);
     }
+
 }

@@ -18,6 +18,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IWarehouseInboundRequestRepository WarehouseInboundRequests { get; }
         IFarmerRepository Farmers { get; }
         IBusinessStaffRepository BusinessStaffs { get; }
+        IWarehouseReceiptRepository WarehouseReceiptRepository { get; }
+        IInventoryRepository InventoryRepository { get; }
         Task<int> CompleteAsync();
     }
 }

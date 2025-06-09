@@ -15,24 +15,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _authService = authService;
         }
 
+       
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             var result = await _authService.LoginAsync(request);
-            if (result.Status != 200)
-                return StatusCode(result.Status, new
-                {
-                    status = result.Status,
-                    message = result.Message,
-                    token = result.Data
-                });
-
-            return StatusCode(result.Status, new
-            {
-                status = result.Status,
-                message = result.Message,
-                token = result.Data
-            });
+            return StatusCode(result.Status, result);
         }
     }
 }

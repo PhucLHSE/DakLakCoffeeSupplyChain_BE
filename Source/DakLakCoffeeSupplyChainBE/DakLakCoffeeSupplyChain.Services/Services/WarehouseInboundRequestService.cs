@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.Flow4DTOs;
+﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.Flow4DTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -6,7 +7,6 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
@@ -18,23 +18,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public WarehouseInboundRequestService(IUnitOfWork unitOfWork, INotificationService notificationService)
         {
-            _unitOfWork = unitOfWork;
-            _notificationService = notificationService;
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         public async Task<IServiceResult> CreateRequestAsync(Guid userId, WarehouseInboundRequestCreateDto dto)
         {
             var farmer = await _unitOfWork.Farmers.FindByUserIdAsync(userId);
-
             if (farmer == null)
-                return new ServiceResult(404, "Không tìm thấy Farmer tương ứng với User.");
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng với User.");
 
             var newRequest = new WarehouseInboundRequest
             {
                 InboundRequestId = Guid.NewGuid(),
-                InboundRequestCode = "IR-" + DateTime.UtcNow.Ticks, // ✅ thêm dòng này để tránh lỗi duplicate NULL
+                InboundRequestCode = "IR-" + DateTime.UtcNow.Ticks,
                 FarmerId = farmer.FarmerId,
-               
                 BatchId = (Guid)dto.BatchId,
                 RequestedQuantity = dto.RequestedQuantity,
                 PreferredDeliveryDate = dto.PreferredDeliveryDate,
@@ -47,37 +45,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
             await _unitOfWork.CompleteAsync();
 
-            // Gửi email và thông báo nội bộ
             await _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
 
-            return new ServiceResult(201, "Yêu cầu nhập kho đã được tạo", newRequest.InboundRequestId);
+            return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
+
         public async Task<IServiceResult> ApproveInboundRequestAsync(Guid requestId, Guid staffUserId)
         {
             var staff = await _unitOfWork.BusinessStaffs.FindByUserIdAsync(staffUserId);
             if (staff == null)
-                return new ServiceResult(404, "Không tìm thấy nhân viên doanh nghiệp.");
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nhân viên doanh nghiệp.");
 
             var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
             if (request == null)
-                return new ServiceResult(404, "Không tìm thấy yêu cầu nhập kho.");
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy yêu cầu nhập kho.");
 
             if (request.Status != "Pending")
-                return new ServiceResult(400, "Yêu cầu này không ở trạng thái chờ duyệt.");
+                return new ServiceResult(Const.FAIL_VALIDATE_CODE, "Yêu cầu này không ở trạng thái chờ duyệt.");
 
             request.Status = "Approved";
             request.BusinessStaffId = staff.StaffId;
             request.UpdatedAt = DateTime.UtcNow;
 
-            // ✅ THÊM DÒNG NÀY
             _unitOfWork.WarehouseInboundRequests.Update(request);
-
             await _unitOfWork.CompleteAsync();
-            return new ServiceResult(200, "Đã duyệt yêu cầu nhập kho.");
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Duyệt yêu cầu thành công.");
         }
+
         public async Task<IServiceResult> GetAllRequestsAsync()
         {
             var requests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync();
+
+            if (requests == null || !requests.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu nhập kho nào.", new List<WarehouseInboundRequestViewDto>());
 
             var result = requests.Select(r => new WarehouseInboundRequestViewDto
             {
@@ -91,10 +92,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 CreatedAt = r.CreatedAt
             }).ToList();
 
-            return new ServiceResult(200, "Lấy danh sách yêu cầu nhập kho thành công", result);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", result);
         }
-
-
-
     }
 }

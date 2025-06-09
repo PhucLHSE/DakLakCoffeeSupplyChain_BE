@@ -24,6 +24,8 @@ builder.Services.AddScoped<IWarehouseInboundRequestService, WarehouseInboundRequ
 builder.Services.AddScoped<IFarmerRepository, FarmerRepository>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
+builder.Services.AddScoped<IWarehouseReceiptRepository, WarehouseReceiptRepository>();
 // Add services to the container.
 // Dependency Injection
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

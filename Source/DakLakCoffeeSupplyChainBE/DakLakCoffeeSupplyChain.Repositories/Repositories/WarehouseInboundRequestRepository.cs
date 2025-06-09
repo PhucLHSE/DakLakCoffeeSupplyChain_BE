@@ -31,6 +31,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Farmer)
                 .ToListAsync();
         }
+        public async Task<WarehouseInboundRequest?> GetByIdWithBatchAsync(Guid id)
+        {
+            return await _context.WarehouseInboundRequests
+                .Include(r => r.Batch) // 👈 Load cả thông tin lô sơ chế
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+        }
         public void Update(WarehouseInboundRequest entity)
         {
             _context.Set<WarehouseInboundRequest>().Update(entity);
