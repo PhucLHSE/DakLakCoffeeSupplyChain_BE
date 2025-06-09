@@ -26,19 +26,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetAll()
         {
-
+            // Lấy danh sách sản phẩm từ repository
             var products = await _unitOfWork.ProductRepository.GetAllProductsAsync();
 
+            // Kiểm tra nếu không có dữ liệu
             if (products == null || !products.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new List<ProductViewAllDto>()
+                    new List<ProductViewAllDto>()  // Trả về danh sách rỗng
                 );
             }
             else
             {
+                // Chuyển đổi sang danh sách DTO để trả về cho client
                 var productDtos = products
                     .Select(products => products.MapToProductViewAllDto())
                     .ToList();
@@ -53,18 +55,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetById(Guid productId)
         {
+            // Tìm sản phẩm theo ID
             var product = await _unitOfWork.ProductRepository.GetProductByIdAsync(productId);
 
+            // Kiểm tra nếu không tìm thấy sản phẩm
             if (product == null)
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new ProductViewDetailsDto()
+                    new ProductViewDetailsDto()  // Trả về DTO rỗng
                 );
             }
             else
             {
+                // Map sang DTO chi tiết để trả về
                 var productDto = product.MapToProductViewDetailsDto();
 
                 return new ServiceResult(
@@ -79,9 +84,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-
+                // Tìm sản phẩm theo ID
                 var product = await _unitOfWork.ProductRepository.GetProductByIdAsync(productId);
 
+                // Kiểm tra nếu không tồn tại
                 if (product == null)
                 {
                     return new ServiceResult(
@@ -91,9 +97,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Xóa sản phẩm khỏi repository
                     await _unitOfWork.ProductRepository.RemoveAsync(product);
+
+                    // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
 
+                    // Kiểm tra kết quả
                     if (result == Const.SUCCESS_DELETE_CODE)
                     {
                         return new ServiceResult(
@@ -112,6 +122,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Trả về lỗi nếu có exception
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
