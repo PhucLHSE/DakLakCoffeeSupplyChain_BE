@@ -1362,12 +1362,12 @@ DECLARE @BMID UNIQUEIDENTIFIER = (
 -- Kế hoạch 1: Thu mua Arabica & Typica
 DECLARE @PlanID1 UNIQUEIDENTIFIER = NEWID();
 INSERT INTO ProcurementPlans (
-  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status
+  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status, ProgressPercentage
 )
 VALUES (
   @PlanID1, 'PLAN-2025-0001', N'Thu mua cà phê Arabica chất lượng cao mùa vụ 2025',
   N'Kế hoạch thu mua Arabica và Typica từ vùng cao Krông Bông, yêu cầu chất lượng đạt chuẩn Specialty.',
-  6000, @BMID, '2025-06-07', '2025-06-21', 'open'
+  6000, @BMID, '2025-06-07', '2025-06-21', 'open', 36.67
 );
 
 -- Kế hoạch 2: Thu mua Robusta Honey & TR9
@@ -1409,11 +1409,11 @@ DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
 )
 VALUES (
   'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, N'Arabica', 3000, N'Krông Bông',
-  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty'
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
 );
 
 -- Chi tiết 2: Typica
@@ -1444,6 +1444,79 @@ INSERT INTO ProcurementPlansDetails (
 VALUES (
   'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, N'Robusta', 5000, N'Ea Kar',
   300, N'17–18', N'Nâu đen', 13.0, 6, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
+);
+
+GO
+
+-- Insert vào bảng CultivationRegistrations
+-- Lấy FarmerID & PlanID để đăng ký
+DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
+DECLARE @PlanID UNIQUEIDENTIFIER = (SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001');
+
+-- Tạo đơn đăng ký
+DECLARE @RegistrationID UNIQUEIDENTIFIER = NEWID();
+INSERT INTO CultivationRegistrations (
+    RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, WantedPrice, Note
+)
+VALUES (
+    @RegistrationID, 'REG-2025-0001', @PlanID, @FarmerID, 1.8, 95, N'Đăng ký trồng cà phê Arabica với kỹ thuật tưới nhỏ giọt'
+);
+
+GO
+
+-- Insert vào bảng CultivationRegistrationsDetail
+-- Lấy PlanDetailID của Arabica trong kế hoạch PLAN-2025-0001
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (
+    SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
+);
+DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+);
+DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrationsDetail (
+    CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+    ExpectedHarvestStart, ExpectedHarvestEnd, Note
+)
+VALUES (
+    @RegistrationDetailID, @RegistrationID, @PlanDetailID, 2200,
+    '2025-11-01', '2026-01-15',
+    N'Dự kiến sử dụng phân bón hữu cơ và công nghệ AI kiểm tra sâu bệnh'
+);
+
+GO
+
+-- Insert vào bảng FarmingCommitments
+-- Lấy PlanID, PlanDetailID và ManagerID để hoàn tất cam kết
+DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
+    SELECT CultivationRegistrationDetailID FROM CultivationRegistrationsDetail
+    WHERE RegistrationID = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001')
+    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001')
+);
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+DECLARE @PlanID UNIQUEIDENTIFIER = (
+    SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
+);
+DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+);
+DECLARE @ManagerID UNIQUEIDENTIFIER = (
+    SELECT ManagerID FROM BusinessManagers 
+    WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+INSERT INTO FarmingCommitments (
+    CommitmentCode, RegistrationDetailID, PlanID, PlanDetailID, FarmerID,
+    ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
+    ApprovedBy, ApprovedAt, Note
+)
+VALUES (
+    'COMMIT-2025-0001', @RegistrationDetailID, @PlanID, @PlanDetailID, @FarmerID,
+    96.5, 2100, '2026-01-20', '2026-01-30', @ManagerID, GETDATE(),
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
 );
 
 GO
