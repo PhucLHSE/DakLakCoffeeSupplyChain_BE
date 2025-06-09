@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.Models;
+﻿using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface ISystemConfigurationRepository
+    public interface ISystemConfigurationRepository : IGenericRepository<SystemConfiguration>
     {
         Task<SystemConfiguration?> GetActiveByNameAsync(string name);
     }
