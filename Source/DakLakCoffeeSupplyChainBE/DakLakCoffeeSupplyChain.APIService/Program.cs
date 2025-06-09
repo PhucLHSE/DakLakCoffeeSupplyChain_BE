@@ -20,6 +20,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserAccountRepository, UserAccountRepository>();
 builder.Services.AddScoped<IWarehouseInboundRequestRepository, WarehouseInboundRequestRepository>();
@@ -31,6 +32,10 @@ builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
 builder.Services.AddScoped<IWarehouseReceiptRepository, WarehouseReceiptRepository>();
 // Add services to the container.
 // Dependency Injection
+
+
+// Unit of Work pattern: quản lý Transaction + Repository access
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Đăng ký các service nghiệp vụ
