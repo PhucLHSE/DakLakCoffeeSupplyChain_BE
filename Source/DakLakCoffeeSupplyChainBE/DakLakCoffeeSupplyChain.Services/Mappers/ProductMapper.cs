@@ -16,7 +16,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static ProductViewAllDto MapToProductViewAllDto(this Product product)
         {
             // Parse Status string to enum
-            ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, out var parsedStatus)
+            ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, ignoreCase: true, out var parsedStatus)
                    ? parsedStatus
                    : ProductStatus.Pending;
 
@@ -39,10 +39,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ProductViewAllDto
+        // Mapper ProductViewDetailsDto
         public static ProductViewDetailsDto MapToProductViewDetailsDto(this Product product)
         {
-            ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, out var parsedStatus)
+            ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ProductStatus.Pending;
 
