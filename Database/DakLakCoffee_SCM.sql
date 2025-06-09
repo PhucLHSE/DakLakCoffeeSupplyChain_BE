@@ -1469,9 +1469,11 @@ GO
 DECLARE @RegistrationID UNIQUEIDENTIFIER = (
     SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
 );
+
 DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
     SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
 );
+
 DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO CultivationRegistrationsDetail (
@@ -1497,12 +1499,15 @@ DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
 DECLARE @FarmerID UNIQUEIDENTIFIER = (
     SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
 );
+
 DECLARE @PlanID UNIQUEIDENTIFIER = (
     SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
 );
+
 DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
     SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
 );
+
 DECLARE @ManagerID UNIQUEIDENTIFIER = (
     SELECT ManagerID FROM BusinessManagers 
     WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
@@ -1517,6 +1522,78 @@ VALUES (
     'COMMIT-2025-0001', @RegistrationDetailID, @PlanID, @PlanDetailID, @FarmerID,
     96.5, 2100, '2026-01-20', '2026-01-30', @ManagerID, GETDATE(),
     N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
+);
+
+GO
+
+-- Insert vào bảng CropSeasons
+-- Lấy các ID cần thiết
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001');
+DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
+DECLARE @CommitmentID UNIQUEIDENTIFIER = (SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'COMMIT-2025-0001');
+
+INSERT INTO CropSeasons (
+    CropSeasonCode, RegistrationID, FarmerID, CommitmentID,
+    SeasonName, Area, StartDate, EndDate, Note
+)
+VALUES (
+    'SEASON-2025-0001', @RegistrationID, @FarmerID, @CommitmentID,
+    N'Mùa vụ Arabica Krông Bông 2025', 1.8, '2025-07-01', '2026-01-20',
+    N'Mùa vụ đầu tiên với công nghệ giám sát AI và tưới nhỏ giọt'
+);
+
+GO
+
+-- Insert vào bảng CropSeasonDetails
+DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+);
+
+DECLARE @CropSeasonID UNIQUEIDENTIFIER = (
+    SELECT CropSeasonID FROM CropSeasons WHERE CropSeasonCode = 'SEASON-2025-0001'
+);
+
+DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
+
+INSERT INTO CropSeasonDetails (
+    DetailID, CropSeasonID, CoffeeTypeID, ExpectedHarvestStart, ExpectedHarvestEnd,
+    EstimatedYield, ActualYield, AreaAllocated, PlannedQuality, QualityGrade
+)
+VALUES (
+    @CropSeasonDetailID, @CropSeasonID, @CoffeeTypeID, '2025-11-01', '2026-01-15',
+    2200, 0, 1.8, N'Specialty', NULL
+);
+
+GO
+
+-- Insert vào bảng CropStages
+INSERT INTO CropStages (StageCode, StageName, Description, OrderIndex)
+VALUES 
+('planting', 'Gieo trồng', N'Bắt đầu trồng cây giống', 1),
+('flowering', 'Ra hoa', N'Cây bắt đầu ra hoa', 2),
+('fruiting', 'Kết trái', N'Giai đoạn nuôi quả', 3),
+('ripening', 'Chín', N'Trái chín sẵn sàng thu hoạch', 4),
+('harvesting', 'Thu hoạch', N'Tiến hành thu hoạch cà phê', 5);
+
+GO
+
+-- Insert vào bảng CropProgresses
+DECLARE @StageID INT = (SELECT StageID FROM CropStages WHERE StageCode = 'planting');
+
+DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID, 
+    N'Đã hoàn tất trồng 1.8ha Arabica tại Krông Bông, cây giống khỏe mạnh.',
+    '2025-07-05', NULL, NULL, N'Gieo trồng đầu mùa', 1
 );
 
 GO
