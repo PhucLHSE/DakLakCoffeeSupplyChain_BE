@@ -43,6 +43,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Const.SUCCESS_READ_MSG,
                 methodDtos
             );
-        }      
+        }
+        public async Task<IServiceResult> GetById(int methodId)
+        {
+            var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(methodId);
+
+            if (method == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG
+                );
+            }
+
+            var dto = method.MapToProcessingMethodDetailDto();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                dto
+            );
+        }
     }
 }
