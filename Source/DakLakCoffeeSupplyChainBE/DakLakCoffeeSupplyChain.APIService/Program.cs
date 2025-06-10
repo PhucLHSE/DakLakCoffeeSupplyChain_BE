@@ -1,5 +1,7 @@
 using DakLakCoffeeSupplyChain.APIService;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.Repositories;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -27,6 +29,8 @@ builder.Services.AddScoped<ICropStageService, CropStageService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
 builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserAccountRepository, UserAccountRepository>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>

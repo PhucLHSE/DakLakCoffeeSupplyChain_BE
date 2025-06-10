@@ -19,5 +19,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<UserAccount?> GetUserAccountByPhoneAsync(string phoneNumber);
 
         Task<int> CountUsersRegisteredInYearAsync(int year);
+        Task<UserAccount?> GetUserByCredentialsAsync(string email, string password);
     }
 }
