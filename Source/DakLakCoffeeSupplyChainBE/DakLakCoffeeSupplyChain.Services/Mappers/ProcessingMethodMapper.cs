@@ -21,5 +21,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Description = method.Description
             };
         }
+        public static ProcessingMethodDetailDto MapToProcessingMethodDetailDto(this ProcessingMethod method)
+        {
+            return new ProcessingMethodDetailDto
+            {
+                MethodId = method.MethodId,
+                MethodCode = method.MethodCode,
+                Name = method.Name,
+                Description = method.Description,
+                StageCount = method.ProcessingStages?.Count ?? 0
+            };
+        }
     }
 }
