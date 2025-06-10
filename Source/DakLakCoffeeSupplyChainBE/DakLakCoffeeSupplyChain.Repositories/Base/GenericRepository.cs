@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,6 +31,26 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         public async Task<List<T>> GetAllAsync()
         {
             return await _context.Set<T>().ToListAsync();
+        }
+
+        public async Task<List<T>> GetAllAsync(
+            Func<IQueryable<T>, IQueryable<T>> include = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            bool asNoTracking = true
+        )
+        {
+            IQueryable<T> query = _context.Set<T>();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (include != null)
+                query = include(query);
+
+            if (orderBy != null)
+                query = orderBy(query);
+
+            return await query.ToListAsync();
         }
 
         public void Create(T entity)
@@ -165,6 +186,24 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
 
             return entity;
         }
+
+        public async Task<T?> GetByIdAsync(
+            Expression<Func<T, bool>> predicate,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            bool asNoTracking = true
+        )
+        {
+            IQueryable<T> query = _context.Set<T>();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (include != null)
+                query = include(query);
+
+            return await query.FirstOrDefaultAsync(predicate); // EF dịch được thành SQL
+        }
+
 
         #region Separating asigned entity and save operators        
 

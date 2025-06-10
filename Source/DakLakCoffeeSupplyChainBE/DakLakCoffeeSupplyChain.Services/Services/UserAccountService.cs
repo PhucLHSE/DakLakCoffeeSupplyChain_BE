@@ -8,6 +8,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +33,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll()
         {
             // Truy vấn tất cả người dùng từ repository
-            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllUserAccountsAsync();
+            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                include: query => query.Include(u => u.Role),
+                orderBy: u => u.OrderBy(u => u.UserCode),
+                asNoTracking: true
+            );
 
             // Kiểm tra nếu không có dữ liệu
             if (userAccounts == null || !userAccounts.Any())
@@ -61,7 +66,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetById(Guid userId)
         {
             // Tìm tài khoản người dùng theo ID
-            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
+            var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                predicate: u => u.UserId == userId,
+                include: q => q.Include(u => u.Role),
+                asNoTracking: true
+            );
 
             // Trả về cảnh báo nếu không tìm thấy
             if (user == null)
@@ -190,7 +199,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Tìm tài khoản người dùng theo ID từ repository
-                var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.UserId == userId,
+                    include: q => q.Include(u => u.Role),
+                    asNoTracking: true
+                );
 
                 // Nếu không tìm thấy người dùng, trả về cảnh báo không có dữ liệu
                 if (user == null)
