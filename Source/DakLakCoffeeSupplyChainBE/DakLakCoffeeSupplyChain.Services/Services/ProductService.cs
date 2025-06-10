@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -27,7 +28,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll()
         {
             // Lấy danh sách sản phẩm từ repository
-            var products = await _unitOfWork.ProductRepository.GetAllProductsAsync();
+            var products = await _unitOfWork.ProductRepository.GetAllAsync(
+                include: query => query
+                   .Include(p => p.CoffeeType)
+                   .Include(p => p.Batch)
+                   .Include(p => p.Inventory)
+                      .ThenInclude(i => i.Warehouse),
+                orderBy: query => query.OrderBy(p => p.ProductCode),
+                asNoTracking: true
+            );
 
             // Kiểm tra nếu không có dữ liệu
             if (products == null || !products.Any())
@@ -56,7 +65,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetById(Guid productId)
         {
             // Tìm sản phẩm theo ID
-            var product = await _unitOfWork.ProductRepository.GetProductByIdAsync(productId);
+            var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                predicate: p => p.ProductId == productId,
+                include: q => q
+                   .Include(p => p.CoffeeType)
+                   .Include(p => p.Batch)
+                   .Include(p => p.Inventory)
+                      .ThenInclude(i => i.Warehouse),
+                asNoTracking: true
+            );
 
             // Kiểm tra nếu không tìm thấy sản phẩm
             if (product == null)
@@ -85,7 +102,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Tìm sản phẩm theo ID
-                var product = await _unitOfWork.ProductRepository.GetProductByIdAsync(productId);
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                    predicate: p => p.ProductId == productId,
+                    include: q => q
+                       .Include(p => p.CoffeeType)
+                       .Include(p => p.Batch)
+                       .Include(p => p.Inventory)
+                       .ThenInclude(i => i.Warehouse),
+                    asNoTracking: true
+                );
 
                 // Kiểm tra nếu không tồn tại
                 if (product == null)
