@@ -34,8 +34,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         }
 
         public async Task<List<T>> GetAllAsync(
-            Func<IQueryable<T>, IQueryable<T>> include = null,
-            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            Expression<Func<T, bool>>? predicate = null,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
             bool asNoTracking = true
         )
         {
@@ -49,6 +50,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
 
             if (orderBy != null)
                 query = orderBy(query);
+
+            if (predicate != null)
+                return await query.Where(predicate).ToListAsync();
 
             return await query.ToListAsync();
         }

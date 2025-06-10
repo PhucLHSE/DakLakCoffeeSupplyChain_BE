@@ -42,5 +42,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+        // DELETE api/<ProcurementPlansController>/{planId}
+        [HttpDelete("{planId}")]
+        public async Task<IActionResult> DeleteProcurementPlanByIdAsync(Guid planId)
+        {
+            var result = await _procurementPlanService.DeleteById(planId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy kế hoạch.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
