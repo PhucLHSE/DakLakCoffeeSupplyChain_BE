@@ -42,4 +42,6 @@ public partial class ProcessingBatchProgress
     public virtual ICollection<ProcessingParameter> ProcessingParameters { get; set; } = new List<ProcessingParameter>();
 
     public virtual ProcessingStage Stage { get; set; }
+
+    public virtual Farmer UpdatedByNavigation { get; set; }
 }
