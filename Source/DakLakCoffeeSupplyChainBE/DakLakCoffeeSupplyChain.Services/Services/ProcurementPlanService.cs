@@ -28,7 +28,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new List<UserAccountViewAllDto>()
+                    new List<ProcurementPlanViewAllDto>()
                 );
             }
             else
@@ -47,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetById(Guid planId)
         {
             var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-            ICollection<Guid> planDetails = new HashSet<Guid>();
+            ICollection<Guid> planDetails = new HashSet<Guid>(); //Cần sửa lại sau, để tạm
 
             if (plan == null)
             {
@@ -116,5 +116,101 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        //Xóa cứng
+        public async Task<IServiceResult> DeleteById(Guid planId)
+        {
+            try
+            {
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+                var planDetails = await _unitOfWork.ProcurementPlanDetailsRepository.
+                    GetAllAsync(predicate: p => p.PlanId == planId, asNoTracking: true);
+                if (plan == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    if (planDetails.Count != 0)
+                    {
+                        foreach (var item in planDetails)
+                            await _unitOfWork.ProcurementPlanDetailsRepository.RemoveAsync(item);
+                    }
+                    await _unitOfWork.ProcurementPlanRepository.RemoveAsync(plan);
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        //Xóa mềm
+        //public async Task<IServiceResult> DeleteById(Guid planId)
+        //{
+        //    try
+        //    {
+
+        //        var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+
+        //        if (plan == null)
+        //        {
+        //            return new ServiceResult(
+        //                Const.WARNING_NO_DATA_CODE,
+        //                Const.WARNING_NO_DATA_MSG
+        //            );
+        //        }
+        //        else
+        //        {
+        //            plan.Status = "Deleted";
+        //            await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+        //            var result = await _unitOfWork.SaveChangesAsync();
+
+        //            if (result == Const.SUCCESS_DELETE_CODE)
+        //            {
+        //                return new ServiceResult(
+        //                    Const.SUCCESS_DELETE_CODE,
+        //                    Const.SUCCESS_DELETE_MSG
+        //                );
+        //            }
+        //            else
+        //            {
+        //                return new ServiceResult(
+        //                    Const.FAIL_DELETE_CODE,
+        //                    Const.FAIL_DELETE_MSG
+        //                );
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ServiceResult(
+        //            Const.ERROR_EXCEPTION,
+        //            ex.ToString()
+        //        );
+        //    }
+        //}
     }
 }

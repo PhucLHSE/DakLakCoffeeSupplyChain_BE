@@ -20,5 +20,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
 
         IProcurementPlanRepository ProcurementPlanRepository { get; }
+        IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
     }
 }

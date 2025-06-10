@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
         private IProcurementPlanRepository? procurementPlanRepository;
+        private IProcurementPlanDetailsRepository? procurementPlanDetailsRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -58,6 +59,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return procurementPlanRepository ??= new ProcurementPlanRepository(context);
+            }
+        }
+        public IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository
+        {
+            get
+            {
+                return procurementPlanDetailsRepository ??= new ProcurementPlanDetailsRepository(context);
             }
         }
     }
