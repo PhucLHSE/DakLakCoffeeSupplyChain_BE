@@ -1,9 +1,9 @@
-﻿using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+﻿using DakLakCoffeeSupplyChain.APIService;
+using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +21,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
