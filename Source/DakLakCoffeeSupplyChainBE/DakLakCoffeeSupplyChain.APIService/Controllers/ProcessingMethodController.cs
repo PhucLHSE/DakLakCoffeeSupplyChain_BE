@@ -29,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
+
         [HttpGet("{methodId}")]
         public async Task<IActionResult> GetById(int methodId)
         {
@@ -42,5 +43,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        [HttpDelete("{methodId}")]
+        public async Task<IActionResult> DeleteById(int methodId)
+        {
+            var result = await _procesingMethodService.DeleteById(methodId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_DELETE_CODE || result.Status == Const.WARNING_NO_DATA_CODE)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
