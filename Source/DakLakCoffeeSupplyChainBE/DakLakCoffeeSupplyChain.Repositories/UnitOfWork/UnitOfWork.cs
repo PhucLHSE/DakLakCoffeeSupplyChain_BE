@@ -17,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IUserAccountRepository? userAccountRepository;
         private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
+        private IProcessingMethodRepository? processingMethodRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -55,6 +56,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
+            }
+        }
+        public IProcessingMethodRepository ProcessingMethodRepository
+        {
+            get
+            {
+                return processingMethodRepository ??= new ProcessingMethodRepository(context);
             }
         }
     }

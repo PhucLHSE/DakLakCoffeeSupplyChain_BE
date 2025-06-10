@@ -1,4 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Repositories.DBContext;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.Repositories;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -7,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<DakLakCoffee_SCMContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
@@ -16,6 +21,8 @@ builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
+builder.Services.AddScoped<IProcessingMethodRepository, ProcessingMethodRepository>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
