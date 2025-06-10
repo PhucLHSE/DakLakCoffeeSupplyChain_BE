@@ -22,6 +22,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
+builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
