@@ -45,5 +45,30 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+
+        // DELETE api/<RolesController>/{roleId}
+        [HttpDelete("{roleId}")]
+        public async Task<IActionResult> DeleteRoleByIdAsync(int roleId)
+        {
+            var result = await _roleService.DeleteById(roleId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy người dùng.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        private async Task<bool> RoleExistsAsync(int roleId)
+        {
+            var result = await _roleService.GetById(roleId);
+
+            return result.Status == Const.SUCCESS_READ_CODE;
+        }
     }
 }
