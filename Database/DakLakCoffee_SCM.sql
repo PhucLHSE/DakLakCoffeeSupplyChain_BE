@@ -371,7 +371,7 @@ GO
 CREATE TABLE CropStages (
     StageID INT PRIMARY KEY IDENTITY(1,1), 
     StageCode VARCHAR(50) UNIQUE NOT NULL,    -- Mã giai đoạn: planting, harvesting,...
-    StageName VARCHAR(100),                   -- Tên hiển thị: Gieo trồng, Ra hoa,...
+    StageName NVARCHAR(100),                  -- Tên hiển thị: Gieo trồng, Ra hoa,...
     Description NVARCHAR(MAX),                -- Mô tả chi tiết giai đoạn
     OrderIndex INT,                           -- Thứ tự giai đoạn
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -479,7 +479,7 @@ CREATE TABLE ProcessingBatchProgresses (
   ProgressDate DATE,                                           -- Ngày thực hiện bước
   OutputQuantity FLOAT,                                        -- Sản lượng thu được (nếu có)
   OutputUnit NVARCHAR(20) DEFAULT 'kg',                        -- Đơn vị sản lượng
-  UpdatedBy UNIQUEIDENTIFIER NOT NULL,                         -- Người ghi nhận bước này (Farmer / Manager)
+  UpdatedBy UNIQUEIDENTIFIER NOT NULL,                         -- Người ghi nhận bước này (Farmer)
   PhotoURL VARCHAR(255),                                       -- Link ảnh (nếu có)
   VideoURL VARCHAR(255),                                       -- Link video (tùy chọn)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Thời điểm tạo
@@ -490,7 +490,10 @@ CREATE TABLE ProcessingBatchProgresses (
       FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
 
   CONSTRAINT FK_BatchProgresses_ProcessingStages 
-      FOREIGN KEY (StageID) REFERENCES ProcessingStages(StageID)
+      FOREIGN KEY (StageID) REFERENCES ProcessingStages(StageID),
+
+  CONSTRAINT FK_BatchProgresses_Farmer 
+      FOREIGN KEY (UpdatedBy) REFERENCES Farmers(FarmerID)
 );
 
 GO
@@ -1569,11 +1572,11 @@ GO
 -- Insert vào bảng CropStages
 INSERT INTO CropStages (StageCode, StageName, Description, OrderIndex)
 VALUES 
-('planting', 'Gieo trồng', N'Bắt đầu trồng cây giống', 1),
-('flowering', 'Ra hoa', N'Cây bắt đầu ra hoa', 2),
-('fruiting', 'Kết trái', N'Giai đoạn nuôi quả', 3),
-('ripening', 'Chín', N'Trái chín sẵn sàng thu hoạch', 4),
-('harvesting', 'Thu hoạch', N'Tiến hành thu hoạch cà phê', 5);
+('planting', N'Gieo trồng', N'Bắt đầu trồng cây giống', 1),
+('flowering', N'Ra hoa', N'Cây bắt đầu ra hoa', 2),
+('fruiting', N'Kết trái', N'Giai đoạn nuôi quả', 3),
+('ripening', N'Chín', N'Trái chín sẵn sàng thu hoạch', 4),
+('harvesting', N'Thu hoạch', N'Tiến hành thu hoạch cà phê', 5);
 
 GO
 
@@ -1716,6 +1719,125 @@ VALUES
 (@Carbonic, 'drying',         N'Phơi',              N'Phơi nguyên trái dưới nắng hoặc sấy nhẹ.', 3),
 (@Carbonic, 'hulling',        N'Xay vỏ',            N'Xay vỏ sau khi khô để lấy nhân.', 4),
 (@Carbonic, 'grading',        N'Phân loại',         N'Phân loại theo kích cỡ, màu và trọng lượng.', 5);
+
+GO
+
+-- Insert vào bảng ProcessingBatches
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+  SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001' -- Arabica
+);
+
+DECLARE @CropSeasonID UNIQUEIDENTIFIER = (
+  SELECT CropSeasonID FROM CropSeasons WHERE CropSeasonCode = 'SEASON-2025-0001'
+);
+
+DECLARE @MethodID INT = (
+  SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
+);
+
+DECLARE @UserID UNIQUEIDENTIFIER = @FarmerID; -- người cập nhật
+
+INSERT INTO ProcessingBatches (
+  SystemBatchCode, CoffeeTypeID, CropSeasonID, FarmerID,
+  BatchCode, MethodID, InputQuantity, InputUnit, CreatedAt, UpdatedAt, Status
+)
+VALUES (
+  'BATCH-2025-0001', @CoffeeTypeID, @CropSeasonID, @FarmerID,
+  N'Lô Arabica đầu mùa', @MethodID, 1500.0, N'kg', GETDATE(), GETDATE(), N'processing'
+);
+
+GO
+
+-- Insert vào bảng ProcessingBatchProgresses
+DECLARE @MethodID INT = (
+  SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
+);
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+  SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+-- Step 1: Harvest
+DECLARE @ProgressID1 UNIQUEIDENTIFIER = NEWID();
+DECLARE @StageID1 INT = (
+  SELECT StageID FROM ProcessingStages 
+  WHERE MethodID = @MethodID AND StageCode = 'harvest'
+);
+
+INSERT INTO ProcessingBatchProgresses (
+  ProgressID, BatchID, StepIndex, StageID, StageDescription,
+  ProgressDate, OutputQuantity, OutputUnit, UpdatedBy, PhotoURL, VideoURL
+)
+VALUES (
+  @ProgressID1, @BatchID, 1, @StageID1, N'Hái trái cà phê chín tại vườn.',
+  GETDATE(), 1410, N'kg', @FarmerID, NULL, NULL
+);
+
+-- Step 2: Drying
+DECLARE @ProgressID2 UNIQUEIDENTIFIER = NEWID();
+DECLARE @StageID2 INT = (
+  SELECT StageID FROM ProcessingStages 
+  WHERE MethodID = @MethodID AND StageCode = 'drying'
+);
+
+INSERT INTO ProcessingBatchProgresses (
+  ProgressID, BatchID, StepIndex, StageID, StageDescription,
+  ProgressDate, OutputQuantity, OutputUnit, UpdatedBy, PhotoURL, VideoURL
+)
+VALUES (
+  @ProgressID2, @BatchID, 2, @StageID2, N'Phơi nguyên trái từ 10–25 ngày tùy thời tiết.',
+  GETDATE(), 1420, N'kg', @FarmerID, NULL, NULL
+);
+
+-- Step 3: Hulling
+DECLARE @ProgressID3 UNIQUEIDENTIFIER = NEWID();
+DECLARE @StageID3 INT = (
+  SELECT StageID FROM ProcessingStages 
+  WHERE MethodID = @MethodID AND StageCode = 'hulling'
+);
+
+INSERT INTO ProcessingBatchProgresses (
+  ProgressID, BatchID, StepIndex, StageID, StageDescription,
+  ProgressDate, OutputQuantity, OutputUnit, UpdatedBy, PhotoURL, VideoURL
+)
+VALUES (
+  @ProgressID3, @BatchID, 3, @StageID3, N'Xay tách vỏ khô để lấy nhân.',
+  GETDATE(), 1430, N'kg', @FarmerID, NULL, NULL
+);
+
+-- Step 4: Grading
+DECLARE @ProgressID4 UNIQUEIDENTIFIER = NEWID();
+DECLARE @StageID4 INT = (
+  SELECT StageID FROM ProcessingStages 
+  WHERE MethodID = @MethodID AND StageCode = 'grading'
+);
+
+INSERT INTO ProcessingBatchProgresses (
+  ProgressID, BatchID, StepIndex, StageID, StageDescription,
+  ProgressDate, OutputQuantity, OutputUnit, UpdatedBy, PhotoURL, VideoURL
+)
+VALUES (
+  @ProgressID4, @BatchID, 4, @StageID4, N'Phân loại theo kích thước, trọng lượng và màu sắc.',
+  GETDATE(), 1440, N'kg', @FarmerID, NULL, NULL
+);
+
+-- Insert vào bảng ProcessingParameters
+INSERT INTO ProcessingParameters (ParameterID, ProgressID, ParameterName, ParameterValue, Unit, RecordedAt)
+VALUES 
+(NEWID(), @ProgressID1, N'humidity', '13.5', N'%', GETDATE()),
+(NEWID(), @ProgressID2, N'humidity', '12.8', N'%', GETDATE()),
+(NEWID(), @ProgressID3, N'humidity', '12.1', N'%', GETDATE()),
+(NEWID(), @ProgressID4, N'humidity', '11.4', N'%', GETDATE()),
+(NEWID(), @ProgressID2, N'temperature', '36.5', N'°C', GETDATE()),
+(NEWID(), @ProgressID3, N'pH', '5.2', N'', GETDATE());
 
 GO
 
