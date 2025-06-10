@@ -12,14 +12,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         Task<int> SaveChangesAsync();
 
         IRoleRepository RoleRepository { get; }
-
         IUserAccountRepository UserAccountRepository { get; }
-
         IProductRepository ProductRepository { get; }
-
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
-
         IProcurementPlanRepository ProcurementPlanRepository { get; }
+        IProcessingMethodRepository ProcessingMethodRepository { get; }
         IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
     }
 }
