@@ -18,6 +18,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
             return new ProcurementPlanViewAllDto
             {
+                PlanId = entity.PlanId,
                 PlanCode = entity.PlanCode ?? string.Empty,
                 Title = entity.Title ?? string.Empty,
                 Description = entity.Description ?? string.Empty,
@@ -42,6 +43,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
             return new ProcurementPlanViewDetailsDto
             {
+                PlanId = entity.PlanId,
                 PlanCode = entity.PlanCode ?? string.Empty,
                 Title = entity.Title ?? string.Empty,
                 Description = entity.Description ?? string.Empty,

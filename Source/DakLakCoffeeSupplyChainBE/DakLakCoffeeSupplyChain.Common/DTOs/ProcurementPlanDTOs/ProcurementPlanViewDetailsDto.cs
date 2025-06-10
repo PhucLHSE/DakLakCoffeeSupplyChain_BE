@@ -5,6 +5,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
 {
     public class ProcurementPlanViewDetailsDto
     {
+        public Guid PlanId { get; set; }
         public string PlanCode { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
