@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IRoleService
     {
         Task<IServiceResult> GetAll();
+
+        Task<IServiceResult> GetById(int roleId);
     }
 }

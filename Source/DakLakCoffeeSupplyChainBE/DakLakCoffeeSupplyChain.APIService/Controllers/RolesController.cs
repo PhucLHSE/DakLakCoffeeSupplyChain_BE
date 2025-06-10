@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -28,6 +29,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 + message
 
             return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
+        // GET api/<RolesController>/{roleId}
+        [HttpGet("{roleId}")]
+        public async Task<IActionResult> GetById(int roleId)
+        {
+            var result = await _roleService.GetById(roleId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
     }
 }
