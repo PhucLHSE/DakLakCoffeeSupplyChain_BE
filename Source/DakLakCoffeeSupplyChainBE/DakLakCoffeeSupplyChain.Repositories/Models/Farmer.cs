@@ -35,6 +35,8 @@ public partial class Farmer
 
     public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
 
+    public virtual ICollection<ProcessingBatchProgress> ProcessingBatchProgresses { get; set; } = new List<ProcessingBatchProgress>();
+
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();
 
     public virtual UserAccount User { get; set; }
