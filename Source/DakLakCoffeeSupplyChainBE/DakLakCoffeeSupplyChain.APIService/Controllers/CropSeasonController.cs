@@ -62,10 +62,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] CropSeasonUpdateDto dto)
+        [HttpPut("{cropSeasonId}")]
+        public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
         {
-            if (id != dto.CropSeasonId)
+            if (cropSeasonId != dto.CropSeasonId)
                 return BadRequest("Id không khớp.");
 
             var result = await _cropSeasonService.Update(dto);
