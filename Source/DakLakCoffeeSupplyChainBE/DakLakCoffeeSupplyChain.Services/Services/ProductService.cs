@@ -129,7 +129,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var result = await _unitOfWork.SaveChangesAsync();
 
                     // Kiểm tra kết quả
-                    if (result == Const.SUCCESS_DELETE_CODE)
+                    if (result > 0)
                     {
                         return new ServiceResult(
                             Const.SUCCESS_DELETE_CODE,
