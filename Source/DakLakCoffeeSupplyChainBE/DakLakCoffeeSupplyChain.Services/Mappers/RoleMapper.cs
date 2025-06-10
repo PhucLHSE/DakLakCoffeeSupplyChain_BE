@@ -1,4 +1,6 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -24,6 +26,24 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RoleId = role.RoleId,
                 RoleName = role.RoleName,
                 Status = status
+            };
+        }
+
+        // Mapper RoleViewDetailsDto
+        public static RoleViewDetailsDto MapToRoleViewDetailsDto(this Role role)
+        {
+            RoleStatus status = Enum.TryParse<RoleStatus>(role.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : RoleStatus.Inactive;
+
+            return new RoleViewDetailsDto
+            {
+                RoleId = role.RoleId,
+                RoleName = role.RoleName,
+                Description = role.Description,
+                Status = status,
+                CreatedAt = role.CreatedAt,
+                UpdatedAt = role.UpdatedAt
             };
         }
     }

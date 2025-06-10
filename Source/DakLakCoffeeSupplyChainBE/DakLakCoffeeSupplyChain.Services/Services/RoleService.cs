@@ -50,5 +50,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> GetById(int roleId)
+        {
+            // Tìm role theo ID
+            var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId);
+
+            // Kiểm tra nếu không tìm thấy role
+            if (role == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new RoleViewDetailsDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Map sang DTO chi tiết để trả về
+                var roleDto = role.MapToRoleViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    roleDto
+                );
+            }
+        }
     }
 }
