@@ -13,13 +13,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
+        private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
-        private ICropSeasonRepository? cropSeasonRepository; 
         private IFarmerRepository? farmerRepository; 
         private ICultivationRegistrationRepository? cultivationRegistrationRepository; 
         private IFarmingCommitmentRepository? farmingCommitmentRepository; 
+        private ICropSeasonRepository? cropSeasonRepository; 
         private ICropStageRepository cropStageRepository;
-
+        private IProcurementPlanRepository? procurementPlanRepository;
+        private IProcessingMethodRepository? processingMethodRepository;
+        private IProcurementPlanDetailsRepository? procurementPlanDetailsRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -45,6 +48,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             }
         }
 
+        public IProductRepository ProductRepository
+        {
+            get
+            {
+                return productRepository ??= new ProductRepository(context);
+            }
+        }
+
         public ISystemConfigurationRepository SystemConfigurationRepository
         {
             get
@@ -52,14 +63,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
             }
         }
-
-        public ICropSeasonRepository CropSeasonRepository
-        {
-            get
-            {
-                return cropSeasonRepository ??= new CropSeasonRepository(context);
-            }
-        }
+        
         public IFarmerRepository FarmerRepository
         {
             get
@@ -67,6 +71,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return farmerRepository ??= new FarmerRepository(context);
             }
         }
+        
         public ICultivationRegistrationRepository CultivationRegistrationRepository
         {
             get
@@ -74,6 +79,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cultivationRegistrationRepository ??= new CultivationRegistrationRepository(context);
             }
         }
+        
         public IFarmingCommitmentRepository FarmingCommitmentRepository
         {
             get
@@ -81,11 +87,44 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return farmingCommitmentRepository ??= new FarmingCommitmentRepository(context);
             }
         }
+        
+        public ICropSeasonRepository CropSeasonRepository
+        {
+            get
+            {
+                return cropSeasonRepository ??= new CropSeasonRepository(context);
+            }
+        }
+        
         public ICropStageRepository CropStageRepository
         {
             get
             {
                 return cropStageRepository ??= new CropStageRepository(context);
+            }
+        }
+        
+        public IProcurementPlanRepository ProcurementPlanRepository
+        {
+            get
+            {
+                return procurementPlanRepository ??= new ProcurementPlanRepository(context);
+            }
+        }
+        
+        public IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository
+        {
+            get
+            {
+                return procurementPlanDetailsRepository ??= new ProcurementPlanDetailsRepository(context);
+            }
+        }
+        
+        public IProcessingMethodRepository ProcessingMethodRepository
+        {
+            get
+            {
+                return processingMethodRepository ??= new ProcessingMethodRepository(context);
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,6 +12,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         List<T> GetAll();
 
         Task<List<T>> GetAllAsync();
+
+        Task<List<T>> GetAllAsync(
+            Expression<Func<T, bool>>? predicate = null,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            bool asNoTracking = true
+        );
 
         IQueryable<T> GetAllQueryable();
 
@@ -25,6 +33,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         T GetById(Guid id);
 
         Task<T> GetByIdAsync(Guid id);
+
+        Task<T?> GetByIdAsync(
+            Expression<Func<T, bool>> predicate,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            bool asNoTracking = true
+        );
 
         Task CreateAsync(T entity);
 

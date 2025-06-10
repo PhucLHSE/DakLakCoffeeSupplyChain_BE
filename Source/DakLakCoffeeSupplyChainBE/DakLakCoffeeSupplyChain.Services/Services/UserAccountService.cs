@@ -8,6 +8,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,19 +32,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetAll()
         {
+            // Truy vấn tất cả người dùng từ repository
+            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                include: query => query.Include(u => u.Role),
+                orderBy: u => u.OrderBy(u => u.UserCode),
+                asNoTracking: true
+            );
 
-            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllUserAccountsAsync();
-
+            // Kiểm tra nếu không có dữ liệu
             if (userAccounts == null || !userAccounts.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new List<UserAccountViewAllDto>()
+                    new List<UserAccountViewAllDto>()   // Trả về danh sách rỗng
                 );
             }
             else
             {
+                // Map danh sách entity sang DTO
                 var userAccountDtos = userAccounts
                     .Select(userAccounts => userAccounts.MapToUserAccountViewAllDto())
                     .ToList();
@@ -58,18 +65,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetById(Guid userId)
         {
-            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
+            // Tìm tài khoản người dùng theo ID
+            var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                predicate: u => u.UserId == userId,
+                include: q => q.Include(u => u.Role),
+                asNoTracking: true
+            );
 
+            // Trả về cảnh báo nếu không tìm thấy
             if (user == null)
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new UserAccountViewDetailsDto()
+                    new UserAccountViewDetailsDto()   // Trả về DTO rỗng
                 );
             }
             else
             {
+                // Map entity sang DTO chi tiết
                 var userDto = user.MapToUserAccountViewDetailsDto();
 
                 return new ServiceResult(
@@ -184,9 +198,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                // Tìm tài khoản người dùng theo ID từ repository
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.UserId == userId,
+                    include: q => q.Include(u => u.Role),
+                    asNoTracking: true
+                );
 
-                var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(userId);
-
+                // Nếu không tìm thấy người dùng, trả về cảnh báo không có dữ liệu
                 if (user == null)
                 {
                     return new ServiceResult(
@@ -196,10 +215,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Xóa người dùng ra khỏi repository
                     await _unitOfWork.UserAccountRepository.RemoveAsync(user);
+
+                    // Lưu thay đổi vào database
                     var result = await _unitOfWork.SaveChangesAsync();
 
-                    if (result == Const.SUCCESS_DELETE_CODE)
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
                     {
                         return new ServiceResult(
                             Const.SUCCESS_DELETE_CODE,
@@ -217,6 +240,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()

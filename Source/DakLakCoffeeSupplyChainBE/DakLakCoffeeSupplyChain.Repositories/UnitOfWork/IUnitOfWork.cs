@@ -1,4 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,15 +12,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         Task<int> SaveChangesAsync();
 
         IRoleRepository RoleRepository { get; }
-
         IUserAccountRepository UserAccountRepository { get; }
-
+        IProductRepository ProductRepository { get; }
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
-        ICropSeasonRepository CropSeasonRepository { get; }
         IFarmerRepository FarmerRepository { get; }
         ICultivationRegistrationRepository CultivationRegistrationRepository { get; }
         IFarmingCommitmentRepository FarmingCommitmentRepository { get; }
+        ICropSeasonRepository CropSeasonRepository { get; }
         ICropStageRepository CropStageRepository { get; }
-
+        IProcurementPlanRepository ProcurementPlanRepository { get; }
+        IProcessingMethodRepository ProcessingMethodRepository { get; }
+        IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
     }
 }

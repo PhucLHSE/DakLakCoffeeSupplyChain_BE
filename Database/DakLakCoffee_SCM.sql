@@ -440,7 +440,7 @@ GO
 
 -- Hồ sơ lô sơ chế (Batch sơ chế của từng Farmer)
 CREATE TABLE ProcessingBatches (
-  BatchID UNIQUEIDENTIFIER PRIMARY KEY,                        -- ID định danh lô sơ chế
+  BatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),        -- ID định danh lô sơ chế
   SystemBatchCode  VARCHAR(20) UNIQUE,                         -- BATCH-2025-0010
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                      -- Loại cà phê được sơ chế
   CropSeasonID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến mùa vụ
@@ -471,7 +471,7 @@ GO
 
 -- Ghi nhận tiến trình từng bước trong sơ chế (drying, dehulling...)
 CREATE TABLE ProcessingBatchProgresses (
-  ProgressID UNIQUEIDENTIFIER PRIMARY KEY,                     -- ID từng bước sơ chế
+  ProgressID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID từng bước sơ chế
   BatchID UNIQUEIDENTIFIER NOT NULL,                           -- FK tới lô sơ chế
   StepIndex INT NOT NULL,                                      -- Thứ tự tiến trình trong batch
   StageID INT NOT NULL,                                        -- FK đến bảng chuẩn `ProcessingStages`
@@ -497,7 +497,7 @@ GO
 
 -- Ghi nhận thông số kỹ thuật từng bước (nếu có nhập tay)
 CREATE TABLE ProcessingParameters (
-  ParameterID UNIQUEIDENTIFIER PRIMARY KEY,                    -- ID thông số
+  ParameterID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- ID thông số
   ProgressID UNIQUEIDENTIFIER NOT NULL,                        -- FK tới bước sơ chế cụ thể
   ParameterName NVARCHAR(100),                                 -- Tên thông số: humidity, temperature...
   ParameterValue NVARCHAR(100) NULL,                           -- Giá trị đo được
@@ -628,7 +628,7 @@ GO
 
 -- Warehouses – Danh sách kho thuộc doanh nghiệp
 CREATE TABLE Warehouses (
-    WarehouseID UNIQUEIDENTIFIER PRIMARY KEY,                       -- ID kho
+    WarehouseID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- ID kho
 	WarehouseCode VARCHAR(20) UNIQUE,                               -- WH-2025-DL001
     ManagerID UNIQUEIDENTIFIER NOT NULL,                            -- Người quản lý chính (BusinessManager)
     Name NVARCHAR(100) NOT NULL,                                    -- Tên kho (VD: "Kho Cư M’gar")
@@ -672,7 +672,7 @@ GO
 
 -- Inventories – Ghi nhận tồn kho theo từng batch
 CREATE TABLE Inventories (
-    InventoryID UNIQUEIDENTIFIER PRIMARY KEY,                       -- Mã dòng tồn kho
+    InventoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- Mã dòng tồn kho
 	InventoryCode VARCHAR(20) UNIQUE,                               -- INV-2025-0056
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
     BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
@@ -693,7 +693,7 @@ GO
 
 -- InventoryLogs – Lịch sử thay đổi tồn kho
 CREATE TABLE InventoryLogs (
-    LogID UNIQUEIDENTIFIER PRIMARY KEY,                             -- Mã nhật ký
+    LogID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- Mã nhật ký
     InventoryID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với dòng tồn kho nào
     ActionType NVARCHAR(50) NOT NULL,                               -- Loại hành động: increase, decrease, correction
     QuantityChanged FLOAT NOT NULL,                                 -- Lượng thay đổi (+/-)
@@ -711,11 +711,11 @@ GO
 
 -- WarehouseInboundRequests – Yêu cầu nhập kho từ Farmer
 CREATE TABLE WarehouseInboundRequests (
-  InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY,                    -- Mã yêu cầu nhập kho,
+  InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã yêu cầu nhập kho,
   InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0008
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Gắn với mẻ sơ chế
   FarmerID UNIQUEIDENTIFIER NOT NULL,                               -- Người gửi yêu cầu (Farmer)
-  BusinessManagerID UNIQUEIDENTIFIER NOT NULL,                      -- Người đại diện doanh nghiệp nhận
+  BusinessStaffID UNIQUEIDENTIFIER NOT NULL,                        -- Người đại diện doanh nghiệp nhận
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
@@ -732,14 +732,14 @@ CREATE TABLE WarehouseInboundRequests (
     FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
   CONSTRAINT FK_WarehouseInboundRequests_Manager 
-    FOREIGN KEY (BusinessManagerID) REFERENCES BusinessManagers(ManagerID)
+    FOREIGN KEY (BusinessStaffID) REFERENCES BusinessStaffs(StaffID)
 );
 
 GO
 
 -- WarehouseReceipts – Phiếu nhập kho
 CREATE TABLE WarehouseReceipts (
-  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY,                           -- Mã phiếu nhập kho
+  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã phiếu nhập kho
   ReceiptCode VARCHAR(20) UNIQUE,                                   -- RECEIPT-2025-0145
   InboundRequestID UNIQUEIDENTIFIER NOT NULL,                       -- Gắn với yêu cầu nhập kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                            -- Kho tiếp nhận
@@ -951,7 +951,7 @@ GO
 
 -- WarehouseOutboundReceipts – Phiếu xuất kho
 CREATE TABLE WarehouseOutboundReceipts (
-  OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY,                  -- Mã phiếu xuất kho
+  OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),  -- Mã phiếu xuất kho
   OutboundReceiptCode VARCHAR(20) UNIQUE,                          -- OUT-RECEIPT-2025-0078 (Format: OUT-RECEIPT-YYYY-####)
   OutboundRequestID UNIQUEIDENTIFIER NOT NULL,                     -- Gắn với yêu cầu xuất kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                           -- Kho xuất
@@ -1362,12 +1362,12 @@ DECLARE @BMID UNIQUEIDENTIFIER = (
 -- Kế hoạch 1: Thu mua Arabica & Typica
 DECLARE @PlanID1 UNIQUEIDENTIFIER = NEWID();
 INSERT INTO ProcurementPlans (
-  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status
+  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status, ProgressPercentage
 )
 VALUES (
   @PlanID1, 'PLAN-2025-0001', N'Thu mua cà phê Arabica chất lượng cao mùa vụ 2025',
   N'Kế hoạch thu mua Arabica và Typica từ vùng cao Krông Bông, yêu cầu chất lượng đạt chuẩn Specialty.',
-  6000, @BMID, '2025-06-07', '2025-06-21', 'open'
+  6000, @BMID, '2025-06-07', '2025-06-21', 'open', 36.67
 );
 
 -- Kế hoạch 2: Thu mua Robusta Honey & TR9
@@ -1409,11 +1409,11 @@ DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
 )
 VALUES (
   'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, N'Arabica', 3000, N'Krông Bông',
-  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty'
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
 );
 
 -- Chi tiết 2: Typica
@@ -1445,6 +1445,277 @@ VALUES (
   'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, N'Robusta', 5000, N'Ea Kar',
   300, N'17–18', N'Nâu đen', 13.0, 6, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
 );
+
+GO
+
+-- Insert vào bảng CultivationRegistrations
+-- Lấy FarmerID & PlanID để đăng ký
+DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
+DECLARE @PlanID UNIQUEIDENTIFIER = (SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001');
+
+-- Tạo đơn đăng ký
+DECLARE @RegistrationID UNIQUEIDENTIFIER = NEWID();
+INSERT INTO CultivationRegistrations (
+    RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, WantedPrice, Note
+)
+VALUES (
+    @RegistrationID, 'REG-2025-0001', @PlanID, @FarmerID, 1.8, 95, N'Đăng ký trồng cà phê Arabica với kỹ thuật tưới nhỏ giọt'
+);
+
+GO
+
+-- Insert vào bảng CultivationRegistrationsDetail
+-- Lấy PlanDetailID của Arabica trong kế hoạch PLAN-2025-0001
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (
+    SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
+);
+
+DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+);
+
+DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrationsDetail (
+    CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+    ExpectedHarvestStart, ExpectedHarvestEnd, Note
+)
+VALUES (
+    @RegistrationDetailID, @RegistrationID, @PlanDetailID, 2200,
+    '2025-11-01', '2026-01-15',
+    N'Dự kiến sử dụng phân bón hữu cơ và công nghệ AI kiểm tra sâu bệnh'
+);
+
+GO
+
+-- Insert vào bảng FarmingCommitments
+-- Lấy PlanID, PlanDetailID và ManagerID để hoàn tất cam kết
+DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
+    SELECT CultivationRegistrationDetailID FROM CultivationRegistrationsDetail
+    WHERE RegistrationID = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001')
+    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001')
+);
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+DECLARE @PlanID UNIQUEIDENTIFIER = (
+    SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
+);
+
+DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+);
+
+DECLARE @ManagerID UNIQUEIDENTIFIER = (
+    SELECT ManagerID FROM BusinessManagers 
+    WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+INSERT INTO FarmingCommitments (
+    CommitmentCode, RegistrationDetailID, PlanID, PlanDetailID, FarmerID,
+    ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
+    ApprovedBy, ApprovedAt, Note
+)
+VALUES (
+    'COMMIT-2025-0001', @RegistrationDetailID, @PlanID, @PlanDetailID, @FarmerID,
+    96.5, 2100, '2026-01-20', '2026-01-30', @ManagerID, GETDATE(),
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
+);
+
+GO
+
+-- Insert vào bảng CropSeasons
+-- Lấy các ID cần thiết
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001');
+DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
+DECLARE @CommitmentID UNIQUEIDENTIFIER = (SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'COMMIT-2025-0001');
+
+INSERT INTO CropSeasons (
+    CropSeasonCode, RegistrationID, FarmerID, CommitmentID,
+    SeasonName, Area, StartDate, EndDate, Note
+)
+VALUES (
+    'SEASON-2025-0001', @RegistrationID, @FarmerID, @CommitmentID,
+    N'Mùa vụ Arabica Krông Bông 2025', 1.8, '2025-07-01', '2026-01-20',
+    N'Mùa vụ đầu tiên với công nghệ giám sát AI và tưới nhỏ giọt'
+);
+
+GO
+
+-- Insert vào bảng CropSeasonDetails
+DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+);
+
+DECLARE @CropSeasonID UNIQUEIDENTIFIER = (
+    SELECT CropSeasonID FROM CropSeasons WHERE CropSeasonCode = 'SEASON-2025-0001'
+);
+
+DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
+
+INSERT INTO CropSeasonDetails (
+    DetailID, CropSeasonID, CoffeeTypeID, ExpectedHarvestStart, ExpectedHarvestEnd,
+    EstimatedYield, ActualYield, AreaAllocated, PlannedQuality, QualityGrade
+)
+VALUES (
+    @CropSeasonDetailID, @CropSeasonID, @CoffeeTypeID, '2025-11-01', '2026-01-15',
+    2200, 0, 1.8, N'Specialty', NULL
+);
+
+GO
+
+-- Insert vào bảng CropStages
+INSERT INTO CropStages (StageCode, StageName, Description, OrderIndex)
+VALUES 
+('planting', 'Gieo trồng', N'Bắt đầu trồng cây giống', 1),
+('flowering', 'Ra hoa', N'Cây bắt đầu ra hoa', 2),
+('fruiting', 'Kết trái', N'Giai đoạn nuôi quả', 3),
+('ripening', 'Chín', N'Trái chín sẵn sàng thu hoạch', 4),
+('harvesting', 'Thu hoạch', N'Tiến hành thu hoạch cà phê', 5);
+
+GO
+
+-- Insert vào bảng CropProgresses
+DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+-- planting - Trồng
+DECLARE @StageID INT = (SELECT StageID FROM CropStages WHERE StageCode = 'planting');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID, 
+    N'Đã hoàn tất trồng 1.8ha Arabica tại Krông Bông, cây giống khỏe mạnh.',
+    '2025-07-05', NULL, NULL, N'Gieo trồng đầu mùa', 1
+);
+
+-- flowering – Ra hoa
+DECLARE @StageID_Flowering INT = (SELECT StageID FROM CropStages WHERE StageCode = 'flowering');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Flowering,
+    N'Cây bắt đầu ra hoa đồng loạt sau 2 tháng trồng. Sinh trưởng tốt.',
+    '2025-09-10', NULL, NULL, N'Bón phân vi sinh hỗ trợ ra hoa', 2
+);
+
+-- fruiting – Kết trái
+DECLARE @StageID_Fruiting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'fruiting');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Fruiting,
+    N'Quả bắt đầu phát triển rõ. Dự kiến năng suất khả quan.',
+    '2025-10-25', NULL, NULL, N'Dự định phun bổ sung vi lượng giai đoạn đầu trái.', 3
+);
+
+-- ripening – Chín
+DECLARE @StageID_Ripening INT = (SELECT StageID FROM CropStages WHERE StageCode = 'ripening');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Ripening,
+    N'Trái cà phê chuyển màu đỏ đều, đạt độ chín thu hoạch.',
+    '2026-01-05', NULL, NULL, N'Tiến hành kiểm tra ngẫu nhiên độ ẩm trước thu hoạch.', 4
+);
+
+-- harvesting – Thu hoạch
+DECLARE @StageID_Harvesting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'harvesting');
+
+INSERT INTO CropProgresses (
+    CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
+    ProgressDate, PhotoUrl, VideoUrl, Note, StepIndex
+)
+VALUES (
+    @CropSeasonDetailID, @FarmerID, @StageID_Harvesting,
+    N'Đã hoàn tất thu hoạch toàn bộ diện tích Arabica.',
+    '2026-01-18', NULL, NULL, N'Chuyển mẻ sơ chế về khu vực phơi.', 5
+);
+
+GO
+
+-- Insert vào bảng ProcessingMethods
+INSERT INTO ProcessingMethods (MethodCode, Name, Description)
+VALUES 
+-- Phơi tự nhiên (natural/dry)
+('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
+-- Sơ chế ướt (washed)
+('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
+-- Sơ chế mật ong (honey)
+('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
+-- Semi-washed (bán ướt)
+('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
+-- Carbonic maceration (hiếm)
+('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
+
+GO
+
+DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
+DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
+DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
+DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
+DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+
+-- Các bước cho phương pháp natural
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Natural, 'harvest', N'Thu hoạch', N'Hái trái cà phê chín tại vườn.', 1),
+(@Natural, 'drying', N'Phơi', N'Phơi nguyên trái từ 10–25 ngày tùy thời tiết.', 2),
+(@Natural, 'hulling', N'Xay vỏ', N'Xay tách vỏ khô để lấy nhân.', 3),
+(@Natural, 'grading', N'Phân loại', N'Phân loại theo kích thước, trọng lượng và màu sắc.', 4);
+
+-- Các bước cho phương pháp washed
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Washed, 'harvest', N'Thu hoạch', N'Hái trái cà phê chín.', 1),
+(@Washed, 'pulping', N'Xát vỏ', N'Loại bỏ lớp vỏ quả bên ngoài.', 2),
+(@Washed, 'fermentation', N'Lên men', N'Lên men loại bỏ lớp nhớt trong 12–36h.', 3),
+(@Washed, 'washing', N'Rửa sạch', N'Rửa kỹ bằng nước sạch.', 4),
+(@Washed, 'drying', N'Phơi khô', N'Phơi hạt nhân đến khi đạt độ ẩm 11–12%.', 5),
+(@Washed, 'hulling', N'Xay vỏ trấu', N'Loại bỏ lớp vỏ trấu bảo vệ.', 6);
+
+-- Các bước cho phương pháp honey
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Honey, 'harvest', N'Thu hoạch', N'Thu hoạch thủ công trái chín.', 1),
+(@Honey, 'pulping', N'Xát vỏ', N'Xát lớp vỏ ngoài nhưng giữ lại nhớt.', 2),
+(@Honey, 'drying', N'Phơi', N'Phơi hạt có nhớt trên bề mặt.', 3),
+(@Honey, 'hulling', N'Xay vỏ', N'Tách vỏ trấu sau khi khô.', 4);
+
+-- Các bước cho phương pháp semi-washed
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@SemiWashed, 'harvest',     N'Thu hoạch',     N'Thu hoạch trái chín bằng tay hoặc máy.', 1),
+(@SemiWashed, 'pulping',     N'Xát vỏ',        N'Loại bỏ vỏ quả nhưng không lên men.', 2),
+(@SemiWashed, 'partial-wash',N'Rửa sơ',        N'Rửa nhẹ loại bỏ chất nhầy mà không lên men sâu.', 3),
+(@SemiWashed, 'drying',      N'Phơi khô',      N'Phơi hạt đến khi đạt độ ẩm 11–12%.', 4),
+(@SemiWashed, 'hulling',     N'Xay vỏ',        N'Tách lớp trấu bảo vệ sau khi khô.', 5);
+
+-- Các bước cho phương pháp carbonic (lên men yếm khí)
+INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
+VALUES 
+(@Carbonic, 'harvest',        N'Thu hoạch',         N'Chọn lọc trái cà phê chín đều.', 1),
+(@Carbonic, 'carbonic-ferment',N'Lên men yếm khí', N'Ủ trái trong bồn kín chứa CO₂ trong 24–72 giờ.', 2),
+(@Carbonic, 'drying',         N'Phơi',              N'Phơi nguyên trái dưới nắng hoặc sấy nhẹ.', 3),
+(@Carbonic, 'hulling',        N'Xay vỏ',            N'Xay vỏ sau khi khô để lấy nhân.', 4),
+(@Carbonic, 'grading',        N'Phân loại',         N'Phân loại theo kích cỡ, màu và trọng lượng.', 5);
 
 GO
 

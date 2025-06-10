@@ -1,30 +1,33 @@
-﻿using DakLakCoffeeSupplyChain.Common.Helpers.Security;
-using DakLakCoffeeSupplyChain.Repositories.Base;
-using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.APIService;
+using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Đăng ký service hash password
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
+// Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
 builder.Services.AddScoped<ICropSeasonCodeGenerator, CropSeasonCodeGenerator>();
 
-// Add services to the container.
-// Dependency Injection
+// Unit of Work pattern: quản lý Transaction + Repository access
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Đăng ký các service nghiệp vụ
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
+builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
 
-
-//builder.Services.AddScoped<ICropSeasonRepository, CropSeasonRepository>();
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -59,6 +62,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Áp dụng CORS cho toàn bộ hệ thống (áp dụng policy phía trên)
 app.UseCors("AllowAllOrigins");
 
 app.UseAuthorization();
