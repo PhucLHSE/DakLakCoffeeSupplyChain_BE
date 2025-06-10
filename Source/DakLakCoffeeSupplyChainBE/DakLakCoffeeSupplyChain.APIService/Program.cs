@@ -1,6 +1,7 @@
-﻿using DakLakCoffeeSupplyChain.APIService;
+using DakLakCoffeeSupplyChain.APIService;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Services;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -13,6 +14,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
+builder.Services.AddScoped<ICropSeasonCodeGenerator, CropSeasonCodeGenerator>();
 
 // Unit of Work pattern: quản lý Transaction + Repository access
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -20,6 +22,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Đăng ký các service nghiệp vụ
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
+builder.Services.AddScoped<ICropStageService, CropStageService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
 builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
