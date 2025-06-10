@@ -18,19 +18,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public UserAccountsController(IUserAccountService userAccountService)
             => _userAccountService = userAccountService;
 
-        // GET: api/<UserAccountsController>
         [HttpGet]
         public async Task<IActionResult> GetAllUserAccountsAsync()
         {
             var result = await _userAccountService.GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);              // Trả đúng dữ liệu
+                return Ok(result.Data);         
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);     // Trả 404 + message
+                return NotFound(result.Message);     
 
-            return StatusCode(500, result.Message);  // Trả 500 + message
+            return StatusCode(500, result.Message); 
         }
 
         // GET api/<UserAccountsController>/{userId}
@@ -40,12 +39,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _userAccountService.GetById(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);              // Trả object chi tiết
+                return Ok(result.Data);              
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+                return NotFound(result.Message);     
 
-            return StatusCode(500, result.Message);  // Lỗi hệ thống
+            return StatusCode(500, result.Message);  
         }
 
         // POST api/<UserAccountsController>
@@ -53,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> CreateUserAccountAsync([FromBody] UserAccountCreateDto userDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState); // Validate thất bại
+                return BadRequest(ModelState); 
 
             var result = await _userAccountService.Create(userDto);
 
@@ -61,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return CreatedAtAction(nameof(GetById), new { userId = ((UserAccountViewDetailsDto)result.Data).UserId }, result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(result.Message); // Trùng email/phone...
+                return Conflict(result.Message); 
 
             return StatusCode(500, result.Message);
         }

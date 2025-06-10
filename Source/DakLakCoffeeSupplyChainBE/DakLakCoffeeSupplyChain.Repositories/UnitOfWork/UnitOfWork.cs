@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Repositories;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -13,7 +14,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IRoleRepository? roleRepository;
         private IUserAccountRepository? userAccountRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
-        private ICropSeasonRepository? cropSeasonRepository; // ✅ thêm trường này
+        private ICropSeasonRepository? cropSeasonRepository; 
+        private IFarmerRepository? farmerRepository; 
+        private ICultivationRegistrationRepository? cultivationRegistrationRepository; 
+        private IFarmingCommitmentRepository? farmingCommitmentRepository; 
+        private ICropStageRepository cropStageRepository;
+
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -51,7 +57,35 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         {
             get
             {
-                return cropSeasonRepository ??= new CropSeasonRepository(context); // ✅ khởi tạo ở đây
+                return cropSeasonRepository ??= new CropSeasonRepository(context);
+            }
+        }
+        public IFarmerRepository FarmerRepository
+        {
+            get
+            {
+                return farmerRepository ??= new FarmerRepository(context);
+            }
+        }
+        public ICultivationRegistrationRepository CultivationRegistrationRepository
+        {
+            get
+            {
+                return cultivationRegistrationRepository ??= new CultivationRegistrationRepository(context);
+            }
+        }
+        public IFarmingCommitmentRepository FarmingCommitmentRepository
+        {
+            get
+            {
+                return farmingCommitmentRepository ??= new FarmingCommitmentRepository(context);
+            }
+        }
+        public ICropStageRepository CropStageRepository
+        {
+            get
+            {
+                return cropStageRepository ??= new CropStageRepository(context);
             }
         }
     }

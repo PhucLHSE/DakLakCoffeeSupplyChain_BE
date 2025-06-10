@@ -14,12 +14,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
+builder.Services.AddScoped<ICropSeasonCodeGenerator, CropSeasonCodeGenerator>();
 
 // Add services to the container.
 // Dependency Injection
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
+builder.Services.AddScoped<ICropStageService, CropStageService>();
+
+
 //builder.Services.AddScoped<ICropSeasonRepository, CropSeasonRepository>();
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>

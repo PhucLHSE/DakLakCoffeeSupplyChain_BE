@@ -23,27 +23,61 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _cropSeasonService.GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data); // Trả về danh sách mùa vụ
+                return Ok(result.Data);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message); // Không có dữ liệu
+                return NotFound(result.Message); 
 
-            return StatusCode(500, result.Message); // Lỗi hệ thống
+            return StatusCode(500, result.Message); 
         }
 
         // GET: api/CropSeasons/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetCropSeasonByIdAsync(Guid id)
+        [HttpGet("{cropSeasonId}")]
+        public async Task<IActionResult> GetById(Guid cropSeasonId)
         {
-            var result = await _cropSeasonService.GetById(id);
+            var result = await _cropSeasonService.GetById(cropSeasonId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data); // Trả về mùa vụ chi tiết
+                return Ok(result.Data); 
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message); // Không tìm thấy
+                return NotFound(result.Message); 
 
-            return StatusCode(500, result.Message); // Lỗi hệ thống
+            return StatusCode(500, result.Message);
         }
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _cropSeasonService.Create(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { cropSeasonId = ((CropSeasonViewDetailsDto)result.Data).CropSeasonId }, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] CropSeasonUpdateDto dto)
+        {
+            if (id != dto.CropSeasonId)
+                return BadRequest("Id không khớp.");
+
+            var result = await _cropSeasonService.Update(dto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return NotFound(result.Message);
+        }
+
     }
 }

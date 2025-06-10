@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRepository
 {
-    public CropSeasonRepository(DakLakCoffee_SCMContext context) : base(context)
-    {
-    }
+    public CropSeasonRepository(DakLakCoffee_SCMContext context)
+            => _context = context;
 
     public async Task<List<CropSeason>> GetAllCropSeasonsAsync()
     {
         return await _context.CropSeasons
             .AsNoTracking()
             .Include(c => c.Farmer)
+                .ThenInclude(f => f.User)
             .OrderBy(c => c.StartDate)
             .ToListAsync();
     }
@@ -24,6 +24,19 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
         return await _context.CropSeasons
             .AsNoTracking()
             .Include(c => c.Farmer)
+              .ThenInclude(f => f.User)
             .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId);
     }
+    public async Task<int> CountByYearAsync(int year)
+    {
+        return await _context.CropSeasons
+            .CountAsync(c => c.StartDate.HasValue && c.StartDate.Value.Year == year);
+    }
+    public async Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId)
+    {
+        return await _context.CropSeasons
+            .Include(cs => cs.CropSeasonDetails)
+            .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId);
+    }
+
 }

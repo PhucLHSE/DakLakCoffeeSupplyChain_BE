@@ -1,5 +1,6 @@
-﻿// File: Common/DTOs/CropSeasonDTOs/CropSeasonViewAllDto.cs
+﻿using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using System;
+using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
 {
@@ -11,5 +12,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
         public DateOnly? EndDate { get; set; }
         public double? Area { get; set; }
         public string FarmerName { get; set; } = string.Empty;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CropSeasonStatus Status { get; set; }
     }
 }

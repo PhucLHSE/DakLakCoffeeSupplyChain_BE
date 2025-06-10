@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Generators
 {
-    public interface ICodeGenerator
+    public interface ICropSeasonCodeGenerator
     {
-        Task<string> GenerateUserCodeAsync();
-
+        Task<string> GenerateCropSeasonCodeAsync(int year);
     }
 }

@@ -1,5 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Repositories;
-using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+﻿using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +17,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
         ICropSeasonRepository CropSeasonRepository { get; }
+        IFarmerRepository FarmerRepository { get; }
+        ICultivationRegistrationRepository CultivationRegistrationRepository { get; }
+        IFarmingCommitmentRepository FarmingCommitmentRepository { get; }
+        ICropStageRepository CropStageRepository { get; }
 
     }
 }
