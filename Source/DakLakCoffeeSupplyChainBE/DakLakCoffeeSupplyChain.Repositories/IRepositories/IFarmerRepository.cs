@@ -6,5 +6,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IFarmerRepository : IGenericRepository<Farmer>
     {
         Task<Farmer?> GetByIdAsync(Guid id);
+        Task<Farmer?> FindByUserIdAsync(Guid userId);
     }
 }
