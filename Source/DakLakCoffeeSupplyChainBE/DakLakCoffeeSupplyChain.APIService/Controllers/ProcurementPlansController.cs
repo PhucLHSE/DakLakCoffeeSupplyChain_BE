@@ -14,7 +14,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public ProcurementPlansController(IProcurementPlanService procurementPlanService)
             => _procurementPlanService = procurementPlanService;
 
-        // GET: api/<ProcurementPlansController>
+        // GET: api/<ProcurementPlans>
         [HttpGet]
         public async Task<IActionResult> GetAllProcurementPlansAsync()
         {
@@ -28,7 +28,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
-        // GET api/<ProcurementPlansController>/{planId}
+
+        // GET: api/<ProcurementPlans/Available>
+        [HttpGet("Available")]
+        public async Task<IActionResult> GetAllProcurementPlansAvailableAsync()
+        {
+            var result = await _procurementPlanService.GetAllProcurementPlansAvailable();
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả đúng dữ liệu
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 + message
+
+            return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
+        // GET api/<ProcurementPlans>/{planId}
         [HttpGet("{planId}")]
         public async Task<IActionResult> GetById(Guid planId)
         {
@@ -42,7 +58,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
-        // DELETE api/<ProcurementPlansController>/{planId}
+        // DELETE api/<ProcurementPlans>/{planId}
         [HttpDelete("{planId}")]
         public async Task<IActionResult> DeleteProcurementPlanByIdAsync(Guid planId)
         {

@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
@@ -10,7 +11,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public double? TotalQuantity { get; set; }
-        public Guid CreatedBy { get; set; }
+        public BusinessManagerSummaryDto? CreatedBy { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
