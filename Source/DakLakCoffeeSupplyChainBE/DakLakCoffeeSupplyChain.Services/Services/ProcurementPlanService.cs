@@ -1,12 +1,10 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
-using DakLakCoffeeSupplyChain.Common.Helpers;
-using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -18,12 +16,47 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
+        //Hiển thị toàn bộ plan đang mở ở màn hình public
+        public async Task<IServiceResult> GetAllProcurementPlansAvailable()
+        {
+
+            var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
+                predicate: p => p.Status == "open",
+                include: p => p.Include(p => p.CreatedByNavigation),
+                orderBy: p => p.OrderBy(p => p.PlanCode),
+                asNoTracking: true);
+
+            if (procurementPlans == null || procurementPlans.Count == 0)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new List<ProcurementPlanViewAllDto>()
+                );
+            }
+            else
+            {
+                var procurementPlansDtos = procurementPlans
+                    .Select(procurementPlans => procurementPlans.MapToProcurementPlanViewAllDto())
+                    .ToList();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    procurementPlansDtos
+                );
+            }
+        }
+        //Hiển thị toàn bộ plan ở màn hình dashboard của BM
         public async Task<IServiceResult> GetAll()
         {
 
-            var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync();
+            var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
+                include: p => p.Include(p => p.CreatedByNavigation),
+                orderBy: p => p.OrderBy(p => p.PlanCode), 
+                asNoTracking: true);
 
-            if (procurementPlans == null || !procurementPlans.Any())
+            if (procurementPlans == null || procurementPlans.Count == 0)
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,

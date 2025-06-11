@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
@@ -23,7 +24,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Title = entity.Title ?? string.Empty,
                 Description = entity.Description ?? string.Empty,
                 TotalQuantity = entity.TotalQuantity,
-                CreatedBy = entity.CreatedBy,
+                CreatedBy = entity.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
+                {
+                    ManagerId = entity.CreatedByNavigation.ManagerId,
+                    UserId = entity.CreatedByNavigation.UserId,
+                    ManagerCode = entity.CreatedByNavigation.ManagerCode,
+                    CompanyName = entity.CreatedByNavigation.CompanyName,
+                    CompanyAddress = entity.CreatedByNavigation.CompanyAddress,
+                    Website = entity.CreatedByNavigation.Website,
+                    ContactEmail = entity.CreatedByNavigation.ContactEmail
+                },
                 StartDate = entity.StartDate,
                 EndDate = entity.EndDate,
                 Status = status,

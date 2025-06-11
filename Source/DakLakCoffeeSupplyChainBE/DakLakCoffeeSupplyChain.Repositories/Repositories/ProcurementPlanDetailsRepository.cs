@@ -11,16 +11,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
     {
         public ProcurementPlanDetailsRepository(DakLakCoffee_SCMContext context) => _context = context;
 
-        //Lấy toàn bộ plan details có chung plan chính
-        public async Task<List<ProcurementPlansDetail>> GetAllProcurementPlanDetailsInSamePlanAsync(Guid planId)
-        {
-            var procurementPlanDetails = await _context.ProcurementPlansDetails
-                .AsNoTracking()
-                .Where(p => p.PlanId == planId)
-                .ToListAsync();
-
-            return procurementPlanDetails;
-        }
-
     }
 }
