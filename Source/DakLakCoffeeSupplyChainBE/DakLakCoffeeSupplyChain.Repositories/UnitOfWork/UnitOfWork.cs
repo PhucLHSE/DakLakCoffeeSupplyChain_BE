@@ -23,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProcurementPlanRepository? procurementPlanRepository;
         private IProcessingMethodRepository? processingMethodRepository;
         private IProcurementPlanDetailsRepository? procurementPlanDetailsRepository;
+        private ICropProgressRepository? cropProgressRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -125,6 +126,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingMethodRepository ??= new ProcessingMethodRepository(context);
+            }
+        }
+
+        public ICropProgressRepository CropProgressRepository
+        {
+            get
+            {
+                return cropProgressRepository ??= new CropProgressRepository(context);
             }
         }
     }

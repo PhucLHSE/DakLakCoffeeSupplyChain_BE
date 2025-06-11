@@ -23,5 +23,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IProcurementPlanRepository ProcurementPlanRepository { get; }
         IProcessingMethodRepository ProcessingMethodRepository { get; }
         IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
+        ICropProgressRepository CropProgressRepository { get; }
+
     }
 }
