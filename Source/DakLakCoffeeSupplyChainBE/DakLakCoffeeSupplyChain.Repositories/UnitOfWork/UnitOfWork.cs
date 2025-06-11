@@ -24,6 +24,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProcessingMethodRepository? processingMethodRepository;
         private IProcurementPlanDetailsRepository? procurementPlanDetailsRepository;
         private ICropProgressRepository? cropProgressRepository;
+        private IWarehouseInboundRequestRepository? warehouseInboundRequestRepository;
+        private ISystemNotificationRepository? systemNotificationRepository;
+        private ISystemNotificationRecipientRepository? systemNotificationRecipientRepository;
+        private IBusinessStaffRepository? businessStaffRepository;
+
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -134,6 +139,36 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return cropProgressRepository ??= new CropProgressRepository(context);
+            }
+        }
+        public IWarehouseInboundRequestRepository WarehouseInboundRequests
+        {
+            get
+            {
+                return warehouseInboundRequestRepository ??= new WarehouseInboundRequestRepository(context);
+            }
+        }
+        public ISystemNotificationRepository SystemNotificationRepository
+        {
+            get
+            {
+                return systemNotificationRepository ??= new SystemNotificationRepository(context);
+            }
+        }
+
+        public ISystemNotificationRecipientRepository SystemNotificationRecipientRepository
+        {
+            get
+            {
+                return systemNotificationRecipientRepository ??= new SystemNotificationRecipientRepository(context);
+            }
+        }
+
+        public IBusinessStaffRepository BusinessStaffRepository
+        {
+            get
+            {
+                return businessStaffRepository ??= new BusinessStaffRepository(context);
             }
         }
     }
