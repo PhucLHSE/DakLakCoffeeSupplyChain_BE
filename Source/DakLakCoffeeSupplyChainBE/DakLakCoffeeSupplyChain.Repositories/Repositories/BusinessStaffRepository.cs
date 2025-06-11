@@ -14,10 +14,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
     public class BusinessStaffRepository : GenericRepository<BusinessStaff>, IBusinessStaffRepository
     {
         public BusinessStaffRepository(DakLakCoffee_SCMContext context) : base(context) { }
-
         public async Task<List<BusinessStaff>> GetAllWithUserAsync()
         {
-            return await _context.BusinessStaffs.Include(x => x.User).ToListAsync();
+            return await _context.BusinessStaffs
+                .Include(bs => bs.User)
+                .ToListAsync();
         }
+
+
     }
 }

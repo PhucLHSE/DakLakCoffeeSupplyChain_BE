@@ -36,7 +36,7 @@ public class NotificationService : INotificationService
         await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
 
         // Lấy danh sách nhân viên doanh nghiệp để gửi thông báo
-        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllAsync();
+        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
 
         foreach (var staff in businessStaffs)
         {
