@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         private readonly ICropSeasonCodeGenerator _codeCropSeasonGenerator;
 
 
-        public CropSeasonService(IUnitOfWork unitOfWork,ICropSeasonCodeGenerator cropSeasonCodeGenerator)
+        public CropSeasonService(IUnitOfWork unitOfWork, ICropSeasonCodeGenerator cropSeasonCodeGenerator)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _codeCropSeasonGenerator = cropSeasonCodeGenerator ?? throw new ArgumentNullException(nameof(cropSeasonCodeGenerator));
@@ -77,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-               
+
                 if (dto.Details == null || !dto.Details.Any())
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Phải có ít nhất 1 dòng cà phê.");
 
@@ -96,7 +96,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (dto.StartDate >= dto.EndDate)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-                
+
                 string code = await _codeCropSeasonGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
 
 
