@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.Extensions.Configuration;
@@ -15,18 +16,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly IUserAccountRepository _userRepo;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _config;
 
-        public AuthService(IUserAccountRepository userRepo, IConfiguration config)
+        public AuthService(IUnitOfWork unitOfWork, IConfiguration config)
         {
-            _userRepo = userRepo ?? throw new ArgumentNullException(nameof(userRepo));
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _unitOfWork = unitOfWork;
+            _config = config;
         }
 
         public async Task<IServiceResult> LoginAsync(LoginRequestDto request)
         {
-            var user = await _userRepo.GetUserByCredentialsAsync(request.Email, request.Password);
+            var user = await _unitOfWork.UserAccountRepository.GetUserByCredentialsAsync(request.Email, request.Password);
             if (user == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs
+namespace DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs
 {
     public class LoginRequestDto
     {

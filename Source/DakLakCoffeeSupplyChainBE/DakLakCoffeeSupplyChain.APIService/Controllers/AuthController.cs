@@ -1,4 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Mvc;
 

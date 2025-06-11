@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -9,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         // Mapper UserAccountViewAllDto
         public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount entity)
         {
-            // Parse Status string to enum
+            
             UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
@@ -103,5 +104,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             userAccount.RoleId = roleId;
             userAccount.UpdatedAt = DateTime.UtcNow;
         }
+        
     }
 }
