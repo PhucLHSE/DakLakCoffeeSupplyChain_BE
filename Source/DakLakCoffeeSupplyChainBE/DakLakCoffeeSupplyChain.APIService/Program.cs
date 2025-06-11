@@ -33,7 +33,6 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserAccountRepository, UserAccountRepository>();
 builder.Services.AddScoped<ICropProgressService, CropProgressService>();
 
-
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
