@@ -29,37 +29,37 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountViewDetailsDto
-        public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(this UserAccount entity)
+        public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(this UserAccount userAccount)
         {
             // Parse Gender string to enum
-            Gender gender = Enum.TryParse<Gender>(entity.Gender, ignoreCase: true, out var parsedGender)
+            Gender gender = Enum.TryParse<Gender>(userAccount.Gender, ignoreCase: true, out var parsedGender)
                 ? parsedGender
                 : Gender.Unknown;
 
             // Parse Status string to enum
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, ignoreCase: true, out var parsedStatus)
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(userAccount.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 
             return new UserAccountViewDetailsDto
             {
-                UserId = entity.UserId,
-                UserCode = entity.UserCode ?? string.Empty,
-                Email = entity.Email ?? string.Empty,
-                PhoneNumber = entity.PhoneNumber ?? string.Empty,
-                Name = entity.Name ?? string.Empty,
+                UserId = userAccount.UserId,
+                UserCode = userAccount.UserCode ?? string.Empty,
+                Email = userAccount.Email ?? string.Empty,
+                PhoneNumber = userAccount.PhoneNumber ?? string.Empty,
+                Name = userAccount.Name ?? string.Empty,
                 Gender = gender,
-                DateOfBirth = entity.DateOfBirth,
-                Address = entity.Address ?? string.Empty,
-                ProfilePictureUrl = entity.ProfilePictureUrl ?? string.Empty,
-                EmailVerified = entity.EmailVerified,
-                IsVerified = entity.IsVerified,
-                LoginType = entity.LoginType ?? string.Empty,
+                DateOfBirth = userAccount.DateOfBirth,
+                Address = userAccount.Address ?? string.Empty,
+                ProfilePictureUrl = userAccount.ProfilePictureUrl ?? string.Empty,
+                EmailVerified = userAccount.EmailVerified,
+                IsVerified = userAccount.IsVerified,
+                LoginType = userAccount.LoginType ?? string.Empty,
                 Status = status,
-                RoleName = entity.Role?.RoleName ?? string.Empty,
-                RegistrationDate = entity.RegistrationDate,
-                LastLogin = entity.LastLogin,
-                UpdatedAt = entity.UpdatedAt
+                RoleName = userAccount.Role?.RoleName ?? string.Empty,
+                RegistrationDate = userAccount.RegistrationDate,
+                LastLogin = userAccount.LastLogin,
+                UpdatedAt = userAccount.UpdatedAt
             };
         }
 
@@ -87,6 +87,21 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsVerified = true,            // Có thể xem như đã duyệt
                 VerificationCode = null,      // Không cần tạo mã xác minh
             };
+        }
+
+        // Mapper UserAccountUpdateDto
+        public static void MapToUserAccountUpdateDto(this UserAccountUpdateDto dto, UserAccount userAccount, int roleId)
+        {
+            userAccount.Email = dto.Email;
+            userAccount.PhoneNumber = dto.PhoneNumber;
+            userAccount.Name = dto.Name;
+            userAccount.Gender = dto.Gender.ToString(); // enum → string
+            userAccount.DateOfBirth = dto.DateOfBirth;
+            userAccount.Address = dto.Address;
+            userAccount.ProfilePictureUrl = dto.ProfilePictureUrl;
+            userAccount.Status = dto.Status.ToString(); // enum → string
+            userAccount.RoleId = roleId;
+            userAccount.UpdatedAt = DateTime.UtcNow;
         }
     }
 }
