@@ -161,8 +161,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Map DTO to Entity
                 var newUser = userDto.MapToUserAccountCreateDto(passwordHash, userCode, role.RoleId);
 
-                // Save data to database
+                // Tạo người dùng ở repository
                 await _unitOfWork.UserAccountRepository.CreateAsync(newUser);
+
+                // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
@@ -182,6 +184,120 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(UserAccountUpdateDto userDto)
+        {
+            try
+            {
+                // Kiểm tra User tồn tại
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userDto.UserId);
+
+                if (user == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Người dùng không tồn tại."
+                    );
+                }
+
+                // Kiểm tra RoleName → RoleId
+                var role = await _unitOfWork.RoleRepository.GetRoleByNameAsync(userDto.RoleName);
+
+                if (role == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE, 
+                        "Vai trò không hợp lệ."
+                    );
+                }
+
+                // Kiểm tra Email đã tồn tại ở người khác chưa
+                var emailUser = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(userDto.Email);
+
+                if (emailUser != null && emailUser.UserId != user.UserId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE, 
+                        "Email đã được sử dụng bởi tài khoản khác."
+                    );
+                }
+
+                // Kiểm tra SĐT đã tồn tại ở người khác chưa
+                if (!string.IsNullOrWhiteSpace(userDto.PhoneNumber))
+                {
+                    var phoneUser = await _unitOfWork.UserAccountRepository.GetUserAccountByPhoneAsync(userDto.PhoneNumber);
+
+                    if (phoneUser != null && phoneUser.UserId != user.UserId)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE, 
+                            "Số điện thoại đã được sử dụng bởi tài khoản khác."
+                        );
+                    }
+                }
+
+                // Kiểm tra ngày sinh có hợp lệ không
+                if (userDto.DateOfBirth == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Vui lòng nhập ngày sinh."
+                    );
+                }
+
+                // Lấy cấu hình tuổi tối thiểu
+                var config = await _unitOfWork.SystemConfigurationRepository.GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
+
+                // Mặc định 18 nếu chưa có cấu hình
+                int minAge = (int)(config?.MinValue ?? 18);
+
+                int actualAge = DateHelper.CalculateAge(userDto.DateOfBirth.Value);
+
+                if (actualAge < minAge)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Người dùng phải từ {minAge} tuổi trở lên."
+                    );
+                }
+
+                //Map DTO to Entity
+                userDto.MapToUserAccountUpdateDto(user, role.RoleId);
+
+                // Cập nhật người dùng ở repository
+                await _unitOfWork.UserAccountRepository.UpdateAsync(user);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = user.MapToUserAccountViewDetailsDto();
+                    responseDto.RoleName = role.RoleName;
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }
