@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id);
         Task<WarehouseInboundRequest?> GetByIdWithBatchAsync(Guid id);
         Task<List<WarehouseInboundRequest>> GetAllPendingAsync();
+        Task<List<WarehouseInboundRequest>> GetAllWithIncludesAsync();
 
         void Update(WarehouseInboundRequest entity);
         void Delete(WarehouseInboundRequest entity);
