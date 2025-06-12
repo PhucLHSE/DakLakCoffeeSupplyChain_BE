@@ -55,35 +55,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
         public async Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId)
         {
-            // 1. Tìm yêu cầu nhập kho
+            // Tìm yêu cầu nhập kho
             var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
             if (request == null)
-                return new ServiceResult(404, "Không tìm thấy yêu cầu nhập kho.");
+            {
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy yêu cầu nhập kho.");
+            }
 
-            // ✅ So sánh enum bằng string an toàn
+            // Kiểm tra trạng thái
             if (request.Status != InboundRequestStatus.Pending.ToString())
-                return new ServiceResult(400, "Yêu cầu đã được xử lý.");
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu đã được xử lý hoặc không hợp lệ.");
+            }
 
-            // 2. Tìm thông tin nhân viên
+            // 3. Tìm thông tin nhân viên
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
             if (staff == null)
-                return new ServiceResult(403, "Tài khoản không hợp lệ.");
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên xử lý.");
+            }
 
-            // 3. Cập nhật thông tin yêu cầu
-            request.Status = InboundRequestStatus.Approved.ToString(); // ✅ dùng enum
+            // Cập nhật trạng thái và nhân viên xử lý
+            request.Status = InboundRequestStatus.Approved.ToString();
             request.BusinessStaffId = staff.StaffId;
             request.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.WarehouseInboundRequests.Update(request);
             await _unitOfWork.SaveChangesAsync();
 
-            // 4. Gửi thông báo cho Farmer
-            await _notificationService.NotifyInboundRequestApprovedAsync(
-                request.InboundRequestId,
-                request.Farmer.UserId // đảm bảo đã Include Farmer.User
-            );
+            // Gửi thông báo cho Farmer
+            if (request.Farmer?.User != null)
+            {
+                await _notificationService.NotifyInboundRequestApprovedAsync(
+                    request.InboundRequestId,
+                    request.Farmer.User.UserId
+                );
+            }
 
-            return new ServiceResult(200, "Duyệt yêu cầu thành công");
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Duyệt yêu cầu nhập kho thành công.");
+        }
+
+
+        public async Task<IServiceResult> GetAllAsync()
+        {
+            var requests = await _unitOfWork.WarehouseInboundRequests.GetAllWithIncludesAsync();
+            if (requests == null || !requests.Any())
+            {
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu nhập kho nào.", new List<WarehouseInboundRequestViewDto>());
+            }
+
+            var result = requests.Select(r => r.ToViewDto()).ToList();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu nhập kho thành công", result);
         }
 
 

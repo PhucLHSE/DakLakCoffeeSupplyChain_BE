@@ -43,6 +43,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Farmer)
                 .ToListAsync();
         }
+        public async Task<List<WarehouseInboundRequest>> GetAllWithIncludesAsync()
+        {
+            return await _context.WarehouseInboundRequests
+                .Include(r => r.Farmer).ThenInclude(f => f.User)
+                .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
+                .Include(r => r.Batch)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
 
         public void Update(WarehouseInboundRequest entity)
         {
