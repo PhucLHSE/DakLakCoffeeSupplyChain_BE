@@ -9,6 +9,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid id);
         Task<IServiceResult> Create(CropSeasonCreateDto dto);
         Task<IServiceResult> Update(CropSeasonUpdateDto dto);
-
+        Task<IServiceResult> DeleteById(Guid cropSeasonId);
     }
 }

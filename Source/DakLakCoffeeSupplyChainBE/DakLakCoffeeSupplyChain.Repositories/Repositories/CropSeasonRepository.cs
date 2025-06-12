@@ -39,4 +39,13 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId);
     }
 
+    public async Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId)
+    {
+        var details = await _context.CropSeasonDetails
+            .Where(d => d.CropSeasonId == cropSeasonId)
+            .ToListAsync();
+
+        _context.CropSeasonDetails.RemoveRange(details);
+    }
+
 }

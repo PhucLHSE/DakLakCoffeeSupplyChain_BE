@@ -79,5 +79,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return NotFound(result.Message);
         }
 
+        [HttpDelete("{cropSeasonId}")]
+        public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
+        {
+            var result = await _cropSeasonService.DeleteById(cropSeasonId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
     }
 }
