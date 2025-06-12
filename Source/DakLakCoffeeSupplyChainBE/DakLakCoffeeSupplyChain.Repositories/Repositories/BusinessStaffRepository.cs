@@ -20,6 +20,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(bs => bs.User)
                 .ToListAsync();
         }
+        public async Task<BusinessStaff?> FindByUserIdAsync(Guid userId)
+        {
+            return await _context.BusinessStaffs
+                .Include(bs => bs.User)
+                .FirstOrDefaultAsync(bs => bs.UserId == userId);
+        }
 
 
     }

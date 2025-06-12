@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IBusinessStaffRepository : IGenericRepository<BusinessStaff>
     {
         Task<List<BusinessStaff>> GetAllWithUserAsync();
+        Task<BusinessStaff?> FindByUserIdAsync(Guid userId);
+
     }
 }
