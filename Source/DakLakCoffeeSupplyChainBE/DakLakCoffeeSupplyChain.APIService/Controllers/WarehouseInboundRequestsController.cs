@@ -26,12 +26,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.CreateRequestAsync(farmerId, dto);
             return StatusCode(result.Status, result);
         }
+        [HttpPut("{id}/approve")]
+        [Authorize(Roles = "BusinessStaff")]
+        public async Task<IActionResult> ApproveRequest(Guid id)
+        {
+            var staffUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _service.ApproveRequestAsync(id, staffUserId);
+            return StatusCode(result.Status, result);
+        }
 
-      
-       
 
-       
 
-    
+
+
+
+
     }
 }

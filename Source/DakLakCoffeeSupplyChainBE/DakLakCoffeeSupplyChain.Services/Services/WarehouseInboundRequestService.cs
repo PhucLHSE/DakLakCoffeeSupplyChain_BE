@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.WarehouseInboundRequestEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -52,9 +53,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
+        public async Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId)
+        {
+            // 1. Tìm yêu cầu nhập kho
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            if (request == null)
+                return new ServiceResult(404, "Không tìm thấy yêu cầu nhập kho.");
 
-     
+            // ✅ So sánh enum bằng string an toàn
+            if (request.Status != InboundRequestStatus.Pending.ToString())
+                return new ServiceResult(400, "Yêu cầu đã được xử lý.");
 
-       
+            // 2. Tìm thông tin nhân viên
+            var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
+            if (staff == null)
+                return new ServiceResult(403, "Tài khoản không hợp lệ.");
+
+            // 3. Cập nhật thông tin yêu cầu
+            request.Status = InboundRequestStatus.Approved.ToString(); // ✅ dùng enum
+            request.BusinessStaffId = staff.StaffId;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.WarehouseInboundRequests.Update(request);
+            await _unitOfWork.SaveChangesAsync();
+
+            // 4. Gửi thông báo cho Farmer
+            await _notificationService.NotifyInboundRequestApprovedAsync(
+                request.InboundRequestId,
+                request.Farmer.UserId // đảm bảo đã Include Farmer.User
+            );
+
+            return new ServiceResult(200, "Duyệt yêu cầu thành công");
+        }
+
+
+
+
     }
 }

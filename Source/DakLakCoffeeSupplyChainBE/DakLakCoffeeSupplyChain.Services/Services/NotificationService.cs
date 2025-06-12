@@ -61,4 +61,47 @@ public class NotificationService : INotificationService
 
         return notification;
     }
+    public async Task<SystemNotification> NotifyInboundRequestApprovedAsync(Guid requestId, Guid farmerId)
+    {
+        var title = "✅ Yêu cầu nhập kho đã được duyệt";
+        var message = $"Yêu cầu nhập kho mã {requestId} của bạn đã được duyệt.";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = "NT-" + DateTime.UtcNow.Ticks,
+            Title = title,
+            Message = message,
+            Type = "WarehouseInbound",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = null
+        };
+
+        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+
+        var farmerUser = await _unitOfWork.UserAccountRepository.GetByIdAsync(farmerId);
+        if (farmerUser != null)
+        {
+            var recipient = new SystemNotificationRecipient
+            {
+                Id = Guid.NewGuid(),
+                NotificationId = notification.NotificationId,
+                RecipientId = farmerUser.UserId,
+                IsRead = false,
+                ReadAt = null
+            };
+
+            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+
+            if (!string.IsNullOrWhiteSpace(farmerUser.Email))
+            {
+                await _emailService.SendEmailAsync(farmerUser.Email, title, message);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
 }
