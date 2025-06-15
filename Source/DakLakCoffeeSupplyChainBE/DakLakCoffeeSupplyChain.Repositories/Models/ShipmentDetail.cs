@@ -11,7 +11,7 @@ public partial class ShipmentDetail
 
     public Guid ShipmentId { get; set; }
 
-    public Guid ProductId { get; set; }
+    public Guid OrderItemId { get; set; }
 
     public double? Quantity { get; set; }
 
@@ -23,7 +23,7 @@ public partial class ShipmentDetail
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual Product Product { get; set; }
+    public virtual OrderItem OrderItem { get; set; }
 
     public virtual Shipment Shipment { get; set; }
 }

@@ -35,23 +35,19 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ContractDeliveryBatches]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ContractDeliveryItems]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ContractItems]",
          "ObjectType": 0
       },
       {
          "Name": "[dbo].[Contracts]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[ConversationMessages]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[ConversationParticipants]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[Conversations]",
          "ObjectType": 0
       },
       {

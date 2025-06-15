@@ -11,6 +11,8 @@ public partial class OrderItem
 
     public Guid OrderId { get; set; }
 
+    public Guid ContractDeliveryItemId { get; set; }
+
     public Guid ProductId { get; set; }
 
     public double? Quantity { get; set; }
@@ -27,11 +29,15 @@ public partial class OrderItem
 
     public DateTime UpdatedAt { get; set; }
 
+    public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
+
     public virtual Order Order { get; set; }
 
     public virtual ICollection<OrderComplaint> OrderComplaints { get; set; } = new List<OrderComplaint>();
 
     public virtual Product Product { get; set; }
+
+    public virtual ICollection<ShipmentDetail> ShipmentDetails { get; set; } = new List<ShipmentDetail>();
 
     public virtual ICollection<WarehouseOutboundRequest> WarehouseOutboundRequests { get; set; } = new List<WarehouseOutboundRequest>();
 }

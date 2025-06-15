@@ -11,17 +11,11 @@ public partial class Order
 
     public string OrderCode { get; set; }
 
-    public Guid ContractId { get; set; }
-
-    public Guid BuyerId { get; set; }
-
-    public Guid SellerId { get; set; }
+    public Guid DeliveryBatchId { get; set; }
 
     public int? DeliveryRound { get; set; }
 
     public DateTime? OrderDate { get; set; }
-
-    public DateOnly? ExpectedDeliveryDate { get; set; }
 
     public DateOnly? ActualDeliveryDate { get; set; }
 
@@ -37,13 +31,9 @@ public partial class Order
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual BusinessBuyer Buyer { get; set; }
-
-    public virtual Contract Contract { get; set; }
+    public virtual ContractDeliveryBatch DeliveryBatch { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
-    public virtual BusinessManager Seller { get; set; }
 
     public virtual ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 }

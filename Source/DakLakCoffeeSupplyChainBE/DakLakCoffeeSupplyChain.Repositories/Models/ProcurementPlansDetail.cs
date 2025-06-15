@@ -41,6 +41,8 @@ public partial class ProcurementPlansDetail
 
     public double? ProgressPercentage { get; set; }
 
+    public Guid? ContractItemId { get; set; }
+
     public string Status { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -48,6 +50,8 @@ public partial class ProcurementPlansDetail
     public DateTime UpdatedAt { get; set; }
 
     public virtual CoffeeType CoffeeType { get; set; }
+
+    public virtual ContractItem ContractItem { get; set; }
 
     public virtual ICollection<CultivationRegistrationsDetail> CultivationRegistrationsDetails { get; set; } = new List<CultivationRegistrationsDetail>();
 

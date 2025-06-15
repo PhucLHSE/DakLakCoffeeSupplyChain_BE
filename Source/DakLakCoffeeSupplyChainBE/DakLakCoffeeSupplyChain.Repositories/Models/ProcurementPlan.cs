@@ -35,7 +35,5 @@ public partial class ProcurementPlan
 
     public virtual ICollection<CultivationRegistration> CultivationRegistrations { get; set; } = new List<CultivationRegistration>();
 
-    public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
-
     public virtual ICollection<ProcurementPlansDetail> ProcurementPlansDetails { get; set; } = new List<ProcurementPlansDetail>();
 }

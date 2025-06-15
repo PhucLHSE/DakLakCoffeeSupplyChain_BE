@@ -43,9 +43,9 @@ public partial class Contract
 
     public virtual BusinessBuyer Buyer { get; set; }
 
-    public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
+    public virtual ICollection<ContractDeliveryBatch> ContractDeliveryBatches { get; set; } = new List<ContractDeliveryBatch>();
 
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
 
     public virtual BusinessManager Seller { get; set; }
 }

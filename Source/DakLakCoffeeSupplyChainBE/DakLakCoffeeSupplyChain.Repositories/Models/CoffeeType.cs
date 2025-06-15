@@ -25,6 +25,8 @@ public partial class CoffeeType
 
     public DateTime? UpdatedAt { get; set; }
 
+    public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
+
     public virtual ICollection<CropSeasonDetail> CropSeasonDetails { get; set; } = new List<CropSeasonDetail>();
 
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();

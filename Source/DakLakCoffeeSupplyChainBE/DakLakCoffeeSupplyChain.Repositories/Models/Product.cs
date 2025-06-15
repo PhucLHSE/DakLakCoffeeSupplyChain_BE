@@ -59,13 +59,9 @@ public partial class Product
 
     public virtual CoffeeType CoffeeType { get; set; }
 
-    public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
-
     public virtual BusinessManager CreatedByNavigation { get; set; }
 
     public virtual Inventory Inventory { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
-    public virtual ICollection<ShipmentDetail> ShipmentDetails { get; set; } = new List<ShipmentDetail>();
 }
