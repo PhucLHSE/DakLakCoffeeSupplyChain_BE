@@ -162,6 +162,98 @@ CREATE TABLE CoffeeTypes (
 
 GO
 
+-- Contracts – Hợp đồng B2B giữa doanh nghiệp bán và bên mua
+CREATE TABLE Contracts (
+  ContractID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- Mã hợp đồng
+  ContractCode VARCHAR(20) UNIQUE,                                  -- CTR-2025-0023
+  SellerID UNIQUEIDENTIFIER NOT NULL,                               -- Bên bán (doanh nghiệp)
+  BuyerID UNIQUEIDENTIFIER NOT NULL,                                -- Bên mua (Trader)
+  ContractNumber NVARCHAR(100),                                     -- Số hợp đồng
+  ContractTitle NVARCHAR(255),                                      -- Tiêu đề hợp đồng
+  ContractFileURL NVARCHAR(255),                                    -- File scan PDF
+  DeliveryRounds INT,                                               -- Số đợt giao hàng
+  TotalQuantity FLOAT,                                              -- Tổng khối lượng
+  TotalValue FLOAT,                                                 -- Tổng trị giá
+  StartDate DATE,                                                   -- Ngày bắt đầu
+  EndDate DATE,                                                     -- Ngày hết hạn
+  SignedAt DATETIME,                                                -- Ngày ký kết
+  Status NVARCHAR(50) DEFAULT 'active',                             -- Trạng thái
+  CancelReason NVARCHAR(MAX),                                       -- Lý do hủy
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật
+
+  -- FOREIGN KEYS
+  CONSTRAINT FK_Contracts_SellerID FOREIGN KEY (SellerID) 
+      REFERENCES BusinessManagers(ManagerID),
+
+  CONSTRAINT FK_Contracts_BuyerID FOREIGN KEY (BuyerID) 
+      REFERENCES BusinessBuyers(BuyerID)
+);
+
+GO
+
+-- ContractItems – Chi tiết sản phẩm trong hợp đồng
+CREATE TABLE ContractItems (
+  ContractItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- Mã dòng sản phẩm trong hợp đồng
+  ContractItemCode VARCHAR(20) UNIQUE,                             -- CTI-2025-0150
+  ContractID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến hợp đồng
+  CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với loại cà phê, không phải sản phẩm cụ thể
+  Quantity FLOAT,                                                  -- Số lượng đặt mua
+  UnitPrice FLOAT,                                                 -- Đơn giá
+  DiscountAmount FLOAT DEFAULT 0.0,                                -- Giảm giá dòng này
+  Note NVARCHAR(MAX),                                              -- Ghi chú (nếu có)
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày tạo
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày cập nhật
+
+  -- FOREIGN KEYS
+  CONSTRAINT FK_ContractItems_ContractID 
+      FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID),
+
+  CONSTRAINT FK_ContractItems_CoffeeTypeID 
+      FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
+);
+
+GO
+
+-- ContractDeliveryBatches – đại diện từng đợt giao trong hợp đồng
+CREATE TABLE ContractDeliveryBatches (
+  DeliveryBatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+  DeliveryBatchCode VARCHAR(20) UNIQUE,          -- DELB-2025-0012
+  ContractID UNIQUEIDENTIFIER NOT NULL,
+  DeliveryRound INT NOT NULL,                    -- Đợt giao hàng số mấy (1, 2, 3...)
+  ExpectedDeliveryDate DATE,                     -- Ngày dự kiến giao
+  TotalPlannedQuantity FLOAT,                    -- Tổng sản lượng cần giao đợt này
+  Status NVARCHAR(50) DEFAULT 'planned',         -- planned, in_progress, fulfilled
+  CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT FK_ContractDeliveryBatches_ContractID 
+    FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID)
+);
+
+GO
+
+-- ContractDeliveryItems – chi tiết mặt hàng của từng đợt giao
+CREATE TABLE ContractDeliveryItems (
+  DeliveryItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+  DeliveryItemCode VARCHAR(20) UNIQUE,          -- DLI-2025-0231
+  DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
+  ContractItemID UNIQUEIDENTIFIER NOT NULL,
+  PlannedQuantity FLOAT NOT NULL,               -- Số lượng mặt hàng cần giao trong đợt
+  FulfilledQuantity FLOAT DEFAULT 0,            -- Đã giao bao nhiêu
+  Note NVARCHAR(MAX),
+  CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT FK_ContractDeliveryItems_BatchID 
+    FOREIGN KEY (DeliveryBatchID) REFERENCES ContractDeliveryBatches(DeliveryBatchID),
+
+  CONSTRAINT FK_ContractDeliveryItems_ContractItemID 
+    FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID)
+);
+
+GO
+
 -- ProcurementPlans – Bảng kế hoạch thu mua tổng quan
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
@@ -203,6 +295,7 @@ CREATE TABLE ProcurementPlansDetails (
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
     BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
+	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
     Status NVARCHAR(50) DEFAULT 'active',                                              -- Trạng thái: active, closed, disabled
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
@@ -212,7 +305,10 @@ CREATE TABLE ProcurementPlansDetails (
 	    FOREIGN KEY (PlanID) REFERENCES ProcurementPlans(PlanID),
 
 	CONSTRAINT FK_ProcurementPlansDetails_CoffeeTypeID 
-        FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
+        FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID),
+
+	CONSTRAINT FK_ProcurementPlansDetails_ContractItemID
+        FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID)
 );
 
 GO
@@ -277,7 +373,6 @@ CREATE TABLE FarmingCommitments (
     CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
 	CommitmentCode VARCHAR(20) UNIQUE,                                 -- COMMIT-2025-0038
     RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
-    PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch tổng thể
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
     ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
@@ -290,15 +385,13 @@ CREATE TABLE FarmingCommitments (
     Status NVARCHAR(50) DEFAULT 'active',                              -- Trạng thái cam kết
     RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
     Note NVARCHAR(MAX),                                                -- Ghi chú thêm
+	ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Foreign Keys
     CONSTRAINT FK_FarmingCommitments_RegistrationDetailID 
 	    FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
-
-    CONSTRAINT FK_FarmingCommitments_PlanID 
-	    FOREIGN KEY (PlanID) REFERENCES ProcurementPlans(PlanID),
 
     CONSTRAINT FK_FarmingCommitments_PlanDetailID 
 	    FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
@@ -307,7 +400,10 @@ CREATE TABLE FarmingCommitments (
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
     CONSTRAINT FK_FarmingCommitments_ApprovedBy 
-	    FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID)
+	    FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID),
+
+	CONSTRAINT FK_FarmingCommitments_ContractDeliveryItem 
+        FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
 );
 
 GO
@@ -815,67 +911,13 @@ CREATE TABLE Products (
 
 GO
 
--- Contracts – Hợp đồng B2B giữa doanh nghiệp bán và bên mua
-CREATE TABLE Contracts (
-  ContractID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- Mã hợp đồng
-  ContractCode VARCHAR(20) UNIQUE,                                  -- CTR-2025-0023
-  SellerID UNIQUEIDENTIFIER NOT NULL,                               -- Bên bán (doanh nghiệp)
-  BuyerID UNIQUEIDENTIFIER NOT NULL,                                -- Bên mua (Trader)
-  ContractNumber NVARCHAR(100),                                     -- Số hợp đồng
-  ContractTitle NVARCHAR(255),                                      -- Tiêu đề hợp đồng
-  ContractFileURL NVARCHAR(255),                                    -- File scan PDF
-  DeliveryRounds INT,                                               -- Số đợt giao hàng
-  TotalQuantity FLOAT,                                              -- Tổng khối lượng
-  TotalValue FLOAT,                                                 -- Tổng trị giá
-  StartDate DATE,                                                   -- Ngày bắt đầu
-  EndDate DATE,                                                     -- Ngày hết hạn
-  SignedAt DATETIME,                                                -- Ngày ký kết
-  Status NVARCHAR(50) DEFAULT 'active',                             -- Trạng thái
-  CancelReason NVARCHAR(MAX),                                       -- Lý do hủy
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật
-
-  -- FOREIGN KEYS
-  CONSTRAINT FK_Contracts_SellerID FOREIGN KEY (SellerID) 
-      REFERENCES BusinessManagers(ManagerID),
-  CONSTRAINT FK_Contracts_BuyerID FOREIGN KEY (BuyerID) 
-      REFERENCES BusinessBuyers(BuyerID)
-);
-
-GO
-
--- ContractItems – Chi tiết sản phẩm trong hợp đồng
-CREATE TABLE ContractItems (
-  ContractItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- Mã dòng sản phẩm trong hợp đồng
-  ContractID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến hợp đồng
-  ProductID UNIQUEIDENTIFIER NOT NULL,                             -- Sản phẩm cụ thể
-  Quantity FLOAT,                                                  -- Số lượng đặt mua
-  UnitPrice FLOAT,                                                 -- Đơn giá
-  DiscountAmount FLOAT DEFAULT 0.0,                                -- Giảm giá dòng này
-  Note NVARCHAR(MAX),                                              -- Ghi chú (nếu có)
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày tạo
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày cập nhật
-
-  -- FOREIGN KEYS
-  CONSTRAINT FK_ContractItems_ContractID 
-      FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID),
-
-  CONSTRAINT FK_ContractItems_ProductID 
-      FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
-);
-
-GO
-
 -- Orders – Thông tin đơn hàng theo hợp đồng
 CREATE TABLE Orders (
   OrderID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã đơn hàng
   OrderCode VARCHAR(20) UNIQUE,                                   -- ORD-2025-0452
-  ContractID UNIQUEIDENTIFIER NOT NULL,                           -- Gắn với hợp đồng
-  BuyerID UNIQUEIDENTIFIER NOT NULL,                              -- Trader
-  SellerID UNIQUEIDENTIFIER NOT NULL,                             -- Business Manager
+  DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
   DeliveryRound INT,                                              -- Đợt giao lần mấy
   OrderDate DATETIME,                                             -- Ngày đặt hàng
-  ExpectedDeliveryDate DATE,                                      -- Ngày dự kiến giao
   ActualDeliveryDate DATE,                                        -- Ngày giao thực tế
   TotalAmount FLOAT,                                              -- Tổng tiền đơn hàng
   Note NVARCHAR(MAX),                                             -- Ghi chú giao hàng
@@ -885,14 +927,8 @@ CREATE TABLE Orders (
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
 
   -- FOREIGN KEYS
-  CONSTRAINT FK_Orders_ContractID 
-      FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID),
-
-  CONSTRAINT FK_Orders_BuyerID 
-      FOREIGN KEY (BuyerID) REFERENCES BusinessBuyers(BuyerID),
-
-  CONSTRAINT FK_Orders_SellerID 
-      FOREIGN KEY (SellerID) REFERENCES BusinessManagers(ManagerID)
+  CONSTRAINT FK_Orders_DeliveryBatchID 
+      FOREIGN KEY (DeliveryBatchID) REFERENCES ContractDeliveryBatches(DeliveryBatchID),
 );
 
 GO
@@ -901,6 +937,7 @@ GO
 CREATE TABLE OrderItems (
   OrderItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- Mã dòng sản phẩm trong đơn
   OrderID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với đơn hàng
+  ContractDeliveryItemID UNIQUEIDENTIFIER NOT NULL,               -- Dòng đợt giao nào của hợp đồng
   ProductID UNIQUEIDENTIFIER NOT NULL,                            -- Sản phẩm cụ thể
   Quantity FLOAT,                                                 -- Số lượng được giao
   UnitPrice FLOAT,                                                -- Đơn giá đã áp dụng
@@ -913,6 +950,9 @@ CREATE TABLE OrderItems (
   -- FOREIGN KEYS
   CONSTRAINT FK_OrderItems_OrderID 
       FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
+
+  CONSTRAINT FK_OrderItems_ContractDeliveryItemID 
+      FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
 
   CONSTRAINT FK_OrderItems_ProductID 
       FOREIGN KEY (ProductID) REFERENCES Products(ProductID),
@@ -1014,7 +1054,7 @@ GO
 CREATE TABLE ShipmentDetails (
   ShipmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(), -- Mã dòng sản phẩm trong shipment
   ShipmentID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với chuyến hàng
-  ProductID UNIQUEIDENTIFIER NOT NULL,                           -- Sản phẩm được giao
+  OrderItemID UNIQUEIDENTIFIER NOT NULL,                         -- Gắn với dòng sản phẩm cụ thể trong đơn
   Quantity FLOAT,                                                -- Số lượng giao
   Unit NVARCHAR(20) DEFAULT 'kg',                                -- Đơn vị tính
   Note NVARCHAR(MAX),                                            -- Ghi chú riêng dòng hàng
@@ -1025,8 +1065,8 @@ CREATE TABLE ShipmentDetails (
   CONSTRAINT FK_ShipmentDetails_ShipmentID 
       FOREIGN KEY (ShipmentID) REFERENCES Shipments(ShipmentID),
 
-  CONSTRAINT FK_ShipmentDetails_ProductID 
-      FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+  CONSTRAINT FK_ShipmentDetails_OrderItemID 
+      FOREIGN KEY (OrderItemID) REFERENCES OrderItems(OrderItemID)
 );
 
 GO
@@ -1056,67 +1096,6 @@ CREATE TABLE OrderComplaints (
 
   CONSTRAINT FK_OrderComplaints_ResolvedBy 
       FOREIGN KEY (ResolvedBy) REFERENCES BusinessManagers(ManagerID)
-);
-
-GO
-
--- Conversations – Chủ đề trao đổi
-CREATE TABLE Conversations (
-  ConversationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),        -- ID cuộc hội thoại
-  Topic NVARCHAR(255),                                                -- Chủ đề (VD: "Tư vấn sâu bệnh vụ M001")
-  CropProgressID UNIQUEIDENTIFIER,                                    -- Gắn với tiến độ mùa vụ (nếu có)
-  BatchID UNIQUEIDENTIFIER,                                           -- Gắn với mẻ sơ chế (nếu có)
-  CreatedBy UNIQUEIDENTIFIER,                                         -- Người tạo cuộc trò chuyện
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày tạo
-
-  -- FOREIGN KEYS (nullable theo business logic)
-  CONSTRAINT FK_Conversations_CropProgress 
-    FOREIGN KEY (CropProgressID) REFERENCES CropProgresses(ProgressID),
-
-  CONSTRAINT FK_Conversations_Batch 
-    FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
-
-  CONSTRAINT FK_Conversations_CreatedBy 
-    FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID)
-);
-
-GO
-
--- ConversationParticipants – Người tham gia hội thoại
-CREATE TABLE ConversationParticipants (
-  ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                   -- Mã dòng
-  ConversationID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn cuộc hội thoại
-  UserID UNIQUEIDENTIFIER NOT NULL,                                  -- Người tham gia
-  JoinedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm tham gia
-
-  -- FOREIGN KEYS
-  CONSTRAINT FK_ConversationParticipants_Conversation 
-    FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID),
-
-  CONSTRAINT FK_ConversationParticipants_User 
-    FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
-);
-
-GO
-
--- Messages – Tin nhắn trong hội thoại
-CREATE TABLE ConversationMessages (
-  MessageID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),            -- Mã tin nhắn
-  ConversationID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn hội thoại
-  SenderID UNIQUEIDENTIFIER NOT NULL,                                -- Người gửi
-  MessageText NVARCHAR(MAX),                                         -- Nội dung tin nhắn
-  ImageURL NVARCHAR(255),                                            -- Link ảnh (nếu có)
-  VideoURL NVARCHAR(255),                                            -- Link video (nếu có)
-  IsRead BIT DEFAULT 0,                                              -- Đã đọc hay chưa
-  ReadAt DATETIME,                                                   -- Thời gian đọc
-  SentAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                -- Thời điểm gửi
-
-  -- FOREIGN KEYS
-  CONSTRAINT FK_Messages_Conversation 
-    FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID),
-
-  CONSTRAINT FK_Messages_Sender 
-    FOREIGN KEY (SenderID) REFERENCES UserAccounts(UserID)
 );
 
 GO
@@ -1278,6 +1257,26 @@ VALUES (@ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ N�
 
 GO
 
+-- Lấy ManagerID
+DECLARE @BMID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers 
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Insert Business Buyer: CTCP Thương Mại Xuất Khẩu VinCafé
+INSERT INTO BusinessBuyers (
+    BuyerID, BuyerCode, CreatedBy, CompanyName, ContactPerson, Position, 
+    CompanyAddress, TaxID, Email, Phone, CreatedAt, UpdatedAt
+)
+VALUES (
+    'ED49B648-F170-48AC-8535-823C80381179', 'BUY-2025-0001', @BMID, N'CTCP Thương Mại Xuất Khẩu VinCafé',
+    N'Nguyễn Văn Hậu', N'Tổng Giám Đốc', N'123 Đường Cà Phê, P. Tân Lợi, TP. Buôn Ma Thuột, Đắk Lắk',
+    '6001234567', 'vincafe@coffee.com.vn', '02623779999',
+    '2025-06-15 11:37:11', '2025-06-15 11:37:11'
+);
+
+GO
+
 -- CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
 -- Định dạng TypeCode: CFT-2025-0001++
 
@@ -1355,6 +1354,256 @@ VALUES (
 
 GO
 
+-- Insert bảng Contracts
+-- Giả định SellerID (BusinessManagerID) và BuyerID đã có
+DECLARE @SellerID UNIQUEIDENTIFIER = (SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001');
+DECLARE @BuyerID UNIQUEIDENTIFIER = (SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BUY-2025-0001');
+
+-- Tạo hợp đồng
+DECLARE @ContractID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO Contracts (
+    ContractID, ContractCode, SellerID, BuyerID, ContractNumber, ContractTitle,
+    DeliveryRounds, TotalQuantity, TotalValue, StartDate, EndDate,
+    SignedAt, Status, CreatedAt, UpdatedAt
+) VALUES (
+    @ContractID, 'CTR-2025-0001', @SellerID, @BuyerID, N'HĐ-2025-001-VINCAFE',
+    N'Hợp đồng cung ứng 100 tấn cà phê Đắk Lắk trong 3 năm',
+    4, 100000, 500000000,
+    '2025-06-15', '2028-06-15', '2025-06-10 14:00:00', N'active',
+    GETDATE(), GETDATE()
+);
+
+GO
+
+-- Insert bảng ContractItems
+DECLARE @ContractID UNIQUEIDENTIFIER = (
+    SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001'
+);
+
+-- Arabica
+DECLARE @ArabicaID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Arabica'
+);
+
+-- Robusta
+DECLARE @RobustaID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta'
+);
+
+-- Robusta Honey
+DECLARE @HoneyID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta Honey'
+);
+
+-- Robusta Washed
+DECLARE @WashedID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta Washed'
+);
+
+-- Robusta Natural
+DECLARE @NaturalID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta Natural'
+);
+
+-- Culi
+DECLARE @CuliID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Culi'
+);
+
+-- Typica
+DECLARE @TypicaID UNIQUEIDENTIFIER = (
+    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Typica'
+);
+
+-- Thêm dòng hợp đồng: Arabica 20.000 kg
+INSERT INTO ContractItems (
+    ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
+    DiscountAmount, Note, CreatedAt, UpdatedAt
+) VALUES (
+    'CTI-2025-0001', @ContractID, @ArabicaID, 20000, 65000, 0,
+    N'Cà phê Arabica chất lượng cao', GETDATE(), GETDATE()
+);
+
+-- Thêm dòng hợp đồng: Robusta 50.000 kg
+INSERT INTO ContractItems (
+    ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
+    DiscountAmount, Note, CreatedAt, UpdatedAt
+) VALUES (
+    'CTI-2025-0002', @ContractID, @RobustaID, 50000, 50000, 0,
+    N'Cà phê Robusta xuất khẩu', GETDATE(), GETDATE()
+);
+
+INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
+VALUES 
+('CTI-2025-0003', @ContractID, @HoneyID,   10000, 57000, 0, N'Robusta xử lý mật ong (Honey)',        GETDATE(), GETDATE()),
+('CTI-2025-0004', @ContractID, @WashedID,  8000,  56000, 0, N'Robusta sơ chế ướt (Washed)',          GETDATE(), GETDATE()),
+('CTI-2025-0005', @ContractID, @CuliID,    5000,  60000, 0, N'Cà phê Culi đậm vị, đột biến tự nhiên', GETDATE(), GETDATE()),
+('CTI-2025-0006', @ContractID, @NaturalID, 5000,  53000, 0, N'Robusta sơ chế tự nhiên (Natural)',     GETDATE(), GETDATE()),
+('CTI-2025-0007', @ContractID, @TypicaID,  2000,  68000, 0, N'Giống Arabica Typica quý hiếm',         GETDATE(), GETDATE());
+
+GO
+
+-- Insert ContractDeliveryBatches và ContractDeliveryItems
+-- Đợt 1 – Giao 30,000 kg (Arabica, Robusta, Honey)
+DECLARE @ContractID UNIQUEIDENTIFIER = (SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001');
+DECLARE @Batch1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
+) VALUES (
+    @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'planned', GETDATE(), GETDATE()
+);
+
+DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0001');
+DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0002');
+DECLARE @CTI_Honey UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003');
+
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note, CreatedAt, UpdatedAt
+) VALUES 
+(NEWID(), 'DLI-2025-0001', @Batch1, @CTI_Arabica, 5000, 0, N'Arabica đợt 1', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0002', @Batch1, @CTI_Robusta, 20000, 0, N'Robusta đợt 1', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0003', @Batch1, @CTI_Honey,   5000, 0, N'Honey đợt 1', GETDATE(), GETDATE());
+
+-- Đợt 2 – Giao 20,000 kg (Robusta Washed, Culi)
+DECLARE @Batch2 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
+) VALUES (
+    @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'planned', GETDATE(), GETDATE()
+);
+
+DECLARE @CTI_Washed UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0004');
+DECLARE @CTI_Culi UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0005');
+
+INSERT INTO ContractDeliveryItems VALUES 
+(NEWID(), 'DLI-2025-0004', @Batch2, @CTI_Washed, 12000, 0, N'Robusta Washed đợt 2', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0005', @Batch2, @CTI_Culi,   8000,  0, N'Culi đợt 2', GETDATE(), GETDATE());
+
+-- Đợt 3 – Giao 25,000 kg (Robusta Natural, Arabica, Robusta)
+DECLARE @Batch3 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
+) VALUES (
+    @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'planned', GETDATE(), GETDATE()
+);
+
+DECLARE @CTI_Natural UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0006');
+
+INSERT INTO ContractDeliveryItems VALUES 
+(NEWID(), 'DLI-2025-0006', @Batch3, @CTI_Natural, 10000, 0, N'Robusta Natural đợt 3', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0007', @Batch3, @CTI_Arabica, 5000,  0, N'Arabica đợt 3', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0008', @Batch3, @CTI_Robusta, 10000, 0, N'Robusta đợt 3', GETDATE(), GETDATE());
+
+-- Đợt 4 – Giao 25,000 kg (Typica, Robusta, Robusta Washed)
+DECLARE @Batch4 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
+) VALUES (
+    @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'planned', GETDATE(), GETDATE()
+);
+
+DECLARE @CTI_Typica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0007');
+
+INSERT INTO ContractDeliveryItems VALUES 
+(NEWID(), 'DLI-2025-0009', @Batch4, @CTI_Typica, 2000,  0, N'Typica đợt 4', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0010', @Batch4, @CTI_Robusta, 18000, 0, N'Robusta đợt 4', GETDATE(), GETDATE()),
+(NEWID(), 'DLI-2025-0011', @Batch4, @CTI_Washed, 5000,  0, N'Robusta Washed đợt 4', GETDATE(), GETDATE());
+
+GO
+
+-- Insert vào bảng ProcurementPlans và ProcurementPlansDetails
+-- Lấy ManagerID (nếu chưa có)
+DECLARE @BMID UNIQUEIDENTIFIER = (
+  SELECT ManagerID 
+  FROM BusinessManagers 
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Tạo kế hoạch thu mua lần 1
+DECLARE @PlanID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ProcurementPlans (
+  PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status, ProgressPercentage
+)
+VALUES (
+  @PlanID, 'PLAN-2025-0003', 
+  N'Kế hoạch thu mua cà phê cho đợt giao lần 1 của hợp đồng CTR-2025-0001',
+  N'Gồm Arabica, Robusta và Robusta Honey, phục vụ giao hàng lần đầu cho VinCafé theo hợp đồng B2B.',
+  25000, @BMID, '2025-06-10', '2025-06-25', 'open', 0
+);
+
+-- Lấy CoffeeTypeID
+DECLARE @CoffeeID_Arabica UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Arabica'
+);
+
+DECLARE @CoffeeID_Robusta UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta'
+);
+
+DECLARE @CoffeeID_Honey UNIQUEIDENTIFIER   = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta Honey'
+);
+
+-- Arabica
+DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (
+  SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0001'
+);
+
+-- Robusta
+DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (
+  SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0002'
+);
+
+-- Robusta Honey
+DECLARE @CTI_Honey UNIQUEIDENTIFIER = (
+  SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003'
+);
+
+-- Chi tiết: Arabica 5,000 kg
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, BeanSize, BeanColor, MoistureContent, DefectRate,
+  MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage
+)
+VALUES (
+  'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, N'Arabica', 5000, N'Krông Bông',
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 75, 95,
+  N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0
+);
+
+-- Chi tiết: Robusta 12,500 kg
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, N'Robusta', 12500, N'Ea Kar',
+  150, N'18+', N'Nâu sẫm', 13.0, 6, 50, 65, N'Robusta thông thường – giao lần 1'
+);
+
+-- Chi tiết: Robusta Honey 2,500 kg
+INSERT INTO ProcurementPlansDetails (
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+)
+VALUES (
+  'PLD-2025-C003', @PlanID, @CoffeeID_Honey, N'Robusta', 2500, N'Cư M’gar',
+  100, N'18+', N'Nâu đậm', 12.0, 4, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên'
+);
+
+GO
+
 -- Insert vào bảng ProcurementPlans
 -- Lấy ManagerID
 DECLARE @BMID UNIQUEIDENTIFIER = (
@@ -1364,6 +1613,7 @@ DECLARE @BMID UNIQUEIDENTIFIER = (
 
 -- Kế hoạch 1: Thu mua Arabica & Typica
 DECLARE @PlanID1 UNIQUEIDENTIFIER = NEWID();
+
 INSERT INTO ProcurementPlans (
   PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status, ProgressPercentage
 )
@@ -1375,6 +1625,7 @@ VALUES (
 
 -- Kế hoạch 2: Thu mua Robusta Honey & TR9
 DECLARE @PlanID2 UNIQUEIDENTIFIER = NEWID();
+
 INSERT INTO ProcurementPlans (
   PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status
 )
@@ -1391,6 +1642,7 @@ GO
 DECLARE @PlanID1 UNIQUEIDENTIFIER = (
   SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
 );
+
 DECLARE @PlanID2 UNIQUEIDENTIFIER = (
   SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0002'
 );
@@ -1399,12 +1651,15 @@ DECLARE @PlanID2 UNIQUEIDENTIFIER = (
 DECLARE @CoffeeID_Arabica UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
 );
+
 DECLARE @CoffeeID_Typica UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0006'
 );
+
 DECLARE @CoffeeID_Honey UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0004'
 );
+
 DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0008'
 );
@@ -1458,6 +1713,7 @@ DECLARE @PlanID UNIQUEIDENTIFIER = (SELECT PlanID FROM ProcurementPlans WHERE Pl
 
 -- Tạo đơn đăng ký
 DECLARE @RegistrationID UNIQUEIDENTIFIER = NEWID();
+
 INSERT INTO CultivationRegistrations (
     RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, WantedPrice, Note
 )
@@ -1503,10 +1759,6 @@ DECLARE @FarmerID UNIQUEIDENTIFIER = (
     SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
 );
 
-DECLARE @PlanID UNIQUEIDENTIFIER = (
-    SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
-);
-
 DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
     SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
 );
@@ -1517,12 +1769,12 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 );
 
 INSERT INTO FarmingCommitments (
-    CommitmentCode, RegistrationDetailID, PlanID, PlanDetailID, FarmerID,
+    CommitmentCode, RegistrationDetailID, PlanDetailID, FarmerID,
     ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
     ApprovedBy, ApprovedAt, Note
 )
 VALUES (
-    'COMMIT-2025-0001', @RegistrationDetailID, @PlanID, @PlanDetailID, @FarmerID,
+    'COMMIT-2025-0001', @RegistrationDetailID, @PlanDetailID, @FarmerID,
     96.5, 2100, '2026-01-20', '2026-01-30', @ManagerID, GETDATE(),
     N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
 );
