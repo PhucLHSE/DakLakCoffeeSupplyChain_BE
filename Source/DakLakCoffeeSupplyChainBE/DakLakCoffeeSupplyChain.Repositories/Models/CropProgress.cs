@@ -31,8 +31,6 @@ public partial class CropProgress
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
-
     public virtual CropSeasonDetail CropSeasonDetail { get; set; }
 
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();

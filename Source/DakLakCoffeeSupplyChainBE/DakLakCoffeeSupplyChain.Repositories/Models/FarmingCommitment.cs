@@ -13,8 +13,6 @@ public partial class FarmingCommitment
 
     public Guid RegistrationDetailId { get; set; }
 
-    public Guid PlanId { get; set; }
-
     public Guid PlanDetailId { get; set; }
 
     public Guid FarmerId { get; set; }
@@ -39,17 +37,19 @@ public partial class FarmingCommitment
 
     public string Note { get; set; }
 
+    public Guid? ContractDeliveryItemId { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
+    public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
+
     public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
 
     public virtual Farmer Farmer { get; set; }
-
-    public virtual ProcurementPlan Plan { get; set; }
 
     public virtual ProcurementPlansDetail PlanDetail { get; set; }
 

@@ -9,9 +9,11 @@ public partial class ContractItem
 {
     public Guid ContractItemId { get; set; }
 
+    public string ContractItemCode { get; set; }
+
     public Guid ContractId { get; set; }
 
-    public Guid ProductId { get; set; }
+    public Guid CoffeeTypeId { get; set; }
 
     public double? Quantity { get; set; }
 
@@ -25,7 +27,11 @@ public partial class ContractItem
 
     public DateTime UpdatedAt { get; set; }
 
+    public virtual CoffeeType CoffeeType { get; set; }
+
     public virtual Contract Contract { get; set; }
 
-    public virtual Product Product { get; set; }
+    public virtual ICollection<ContractDeliveryItem> ContractDeliveryItems { get; set; } = new List<ContractDeliveryItem>();
+
+    public virtual ICollection<ProcurementPlansDetail> ProcurementPlansDetails { get; set; } = new List<ProcurementPlansDetail>();
 }

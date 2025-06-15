@@ -51,12 +51,6 @@ public partial class UserAccount
 
     public virtual BusinessStaff BusinessStaff { get; set; }
 
-    public virtual ICollection<ConversationMessage> ConversationMessages { get; set; } = new List<ConversationMessage>();
-
-    public virtual ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();
-
-    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
-
     public virtual ICollection<Farmer> Farmers { get; set; } = new List<Farmer>();
 
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();

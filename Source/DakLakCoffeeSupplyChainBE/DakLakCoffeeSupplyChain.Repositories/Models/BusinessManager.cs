@@ -47,8 +47,6 @@ public partial class BusinessManager
 
     public virtual ICollection<OrderComplaint> OrderComplaints { get; set; } = new List<OrderComplaint>();
 
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-
     public virtual ICollection<ProcurementPlan> ProcurementPlans { get; set; } = new List<ProcurementPlan>();
 
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();

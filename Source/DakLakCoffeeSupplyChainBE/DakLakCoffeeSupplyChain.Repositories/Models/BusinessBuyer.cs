@@ -38,6 +38,4 @@ public partial class BusinessBuyer
     public virtual BusinessManager CreatedByNavigation { get; set; }
 
     public virtual ICollection<OrderComplaint> OrderComplaints { get; set; } = new List<OrderComplaint>();
-
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }
