@@ -59,5 +59,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow
             };
         }
+
+        // Mapper RoleUpdateDto
+        public static void MapToUpdateRole(this RoleUpdateDto dto, Role role)
+        {
+            role.RoleName = dto.RoleName;
+            role.Description = dto.Description;
+            role.Status = dto.Status.ToString();  // enum → string
+            role.UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

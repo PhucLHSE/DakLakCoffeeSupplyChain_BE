@@ -273,7 +273,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 //Map DTO to Entity
-                userDto.MapToUserAccountUpdateDto(user, role.RoleId);
+                userDto.MapToUpdateUserAccount(user, role.RoleId);
 
                 // Cập nhật người dùng ở repository
                 await _unitOfWork.UserAccountRepository.UpdateAsync(user);
