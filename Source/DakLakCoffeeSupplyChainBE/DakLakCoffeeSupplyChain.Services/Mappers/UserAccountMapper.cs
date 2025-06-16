@@ -8,23 +8,23 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class UserAccountMapper
     {
         // Mapper UserAccountViewAllDto
-        public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount entity)
+        public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount userAccount)
         {
-            
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(entity.Status, ignoreCase: true, out var parsedStatus)
+            // Parse Status string to enum
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(userAccount.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 
             return new UserAccountViewAllDto
             {
-                UserId = entity.UserId,
-                UserCode = entity.UserCode ?? string.Empty,
-                Name = entity.Name ?? string.Empty,
-                Email = entity.Email ?? string.Empty,
-                PhoneNumber = entity.PhoneNumber ?? string.Empty,
-                RoleName = entity.Role?.RoleName ?? string.Empty,
-                LastLogin = entity.LastLogin,
-                RegistrationDate = entity.RegistrationDate,
+                UserId = userAccount.UserId,
+                UserCode = userAccount.UserCode ?? string.Empty,
+                Name = userAccount.Name ?? string.Empty,
+                Email = userAccount.Email ?? string.Empty,
+                PhoneNumber = userAccount.PhoneNumber ?? string.Empty,
+                RoleName = userAccount.Role?.RoleName ?? string.Empty,
+                LastLogin = userAccount.LastLogin,
+                RegistrationDate = userAccount.RegistrationDate,
                 Status = status
             };
         }
