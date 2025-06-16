@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -18,6 +20,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/<ProductsController>
         [HttpGet]
+        [EnableQuery]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetAllProductsAsync()
         {
             var result = await _productService.GetAll();
@@ -33,6 +37,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/<ProductsController>/{productId}
         [HttpGet("{productId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetById(Guid productId)
         {
             var result = await _productService.GetById(productId);
@@ -48,6 +53,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // DELETE api/<ProductsController>/{productId}
         [HttpDelete("{productId}")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> DeleteProductByIdAsync(Guid productId)
         {
             var result = await _productService.DeleteById(productId);
@@ -56,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok("Xóa thành công.");
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy người dùng.");
+                return NotFound("Không tìm thấy sản phẩm.");
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa thất bại.");

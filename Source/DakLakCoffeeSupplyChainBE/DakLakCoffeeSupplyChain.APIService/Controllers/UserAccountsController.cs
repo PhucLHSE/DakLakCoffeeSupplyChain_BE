@@ -3,7 +3,9 @@ using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -19,6 +21,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             => _userAccountService = userAccountService;
 
         [HttpGet]
+        [EnableQuery]
+        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> GetAllUserAccountsAsync()
         {
             var result = await _userAccountService.GetAll();
@@ -34,6 +38,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/<UserAccountsController>/{userId}
         [HttpGet("{userId}")]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer,DeliveryStaff")]
         public async Task<IActionResult> GetById(Guid userId)
         {
             var result = await _userAccountService.GetById(userId);
@@ -49,6 +54,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<UserAccountsController>
         [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> CreateUserAccountAsync([FromBody] UserAccountCreateDto userDto)
         {
             if (!ModelState.IsValid)
@@ -67,6 +73,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<UserAccountsController>/{userId}
         [HttpPut("{userId}")]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer,DeliveryStaff")]
         public async Task<IActionResult> UpdateUserAccountAsync(Guid userId, [FromBody] UserAccountUpdateDto userDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
@@ -92,6 +99,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // DELETE api/<UserAccountsController>/{userId}
         [HttpDelete("{userId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> DeleteUserAccountByIdAsync(Guid userId)
         {
             var result = await _userAccountService.DeleteById(userId);

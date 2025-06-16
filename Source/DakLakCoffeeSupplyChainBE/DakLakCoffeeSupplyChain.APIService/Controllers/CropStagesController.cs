@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -15,6 +16,7 @@ public class CropStagesController : ControllerBase
     }
 
     [HttpGet]
+    [EnableQuery]
     public async Task<IActionResult> GetAll()
     {
         var result = await _cropStageService.GetAll();
