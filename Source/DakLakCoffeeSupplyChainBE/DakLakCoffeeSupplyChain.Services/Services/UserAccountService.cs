@@ -159,7 +159,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 string userCode = await _codeGenerator.GenerateUserCodeAsync(); // ví dụ: "USR-YYYY-####" hoặc Guid, tuỳ bạn
 
                 // Map DTO to Entity
-                var newUser = userDto.MapToUserAccountCreateDto(passwordHash, userCode, role.RoleId);
+                var newUser = userDto.MapToNewUserAccount(passwordHash, userCode, role.RoleId);
 
                 // Tạo người dùng ở repository
                 await _unitOfWork.UserAccountRepository.CreateAsync(newUser);

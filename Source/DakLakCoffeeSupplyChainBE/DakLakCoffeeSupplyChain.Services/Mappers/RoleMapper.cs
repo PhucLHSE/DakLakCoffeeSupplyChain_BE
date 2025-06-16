@@ -46,5 +46,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = role.UpdatedAt
             };
         }
+
+        // Mapper RoleCreateDto
+        public static Role MapToNewRole(this RoleCreateDto dto)
+        {
+            return new Role
+            {
+                RoleName = dto.RoleName,
+                Description = dto.Description,
+                Status = dto.Status.ToString(), // enum → string
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
     }
 }
