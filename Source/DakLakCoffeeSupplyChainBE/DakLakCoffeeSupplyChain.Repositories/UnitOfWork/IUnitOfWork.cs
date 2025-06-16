@@ -12,22 +12,39 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         Task<int> SaveChangesAsync();
 
         IRoleRepository RoleRepository { get; }
+
         IUserAccountRepository UserAccountRepository { get; }
-        IProductRepository ProductRepository { get; }
-        ISystemConfigurationRepository SystemConfigurationRepository { get; }
+
         IFarmerRepository FarmerRepository { get; }
-        ICultivationRegistrationRepository CultivationRegistrationRepository { get; }
-        IFarmingCommitmentRepository FarmingCommitmentRepository { get; }
-        ICropSeasonRepository CropSeasonRepository { get; }
-        ICropStageRepository CropStageRepository { get; }
+
+        IContractRepository ContractRepository { get; }
+
         IProcurementPlanRepository ProcurementPlanRepository { get; }
-        IProcessingMethodRepository ProcessingMethodRepository { get; }
+
         IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
+
+        ICultivationRegistrationRepository CultivationRegistrationRepository { get; }
+
+        IFarmingCommitmentRepository FarmingCommitmentRepository { get; }
+
+        ICropSeasonRepository CropSeasonRepository { get; }
+
+        ICropStageRepository CropStageRepository { get; }
+
         ICropProgressRepository CropProgressRepository { get; }
+
+        IProcessingMethodRepository ProcessingMethodRepository { get; }
+
         IWarehouseInboundRequestRepository WarehouseInboundRequests { get; }
-        ISystemNotificationRepository SystemNotificationRepository { get; }
-        ISystemNotificationRecipientRepository SystemNotificationRecipientRepository { get; }
+
         IBusinessStaffRepository BusinessStaffRepository { get; }
 
+        IProductRepository ProductRepository { get; }
+
+        ISystemConfigurationRepository SystemConfigurationRepository { get; }
+
+        ISystemNotificationRepository SystemNotificationRepository { get; }
+
+        ISystemNotificationRecipientRepository SystemNotificationRecipientRepository { get; }
     }
 }

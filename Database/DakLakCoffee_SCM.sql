@@ -177,7 +177,7 @@ CREATE TABLE Contracts (
   StartDate DATE,                                                   -- Ngày bắt đầu
   EndDate DATE,                                                     -- Ngày hết hạn
   SignedAt DATETIME,                                                -- Ngày ký kết
-  Status NVARCHAR(50) DEFAULT 'active',                             -- Trạng thái
+  Status NVARCHAR(50) DEFAULT 'NotStarted',                         -- Trạng thái
   CancelReason NVARCHAR(MAX),                                       -- Lý do hủy
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật
@@ -1370,7 +1370,7 @@ INSERT INTO Contracts (
     @ContractID, 'CTR-2025-0001', @SellerID, @BuyerID, N'HĐ-2025-001-VINCAFE',
     N'Hợp đồng cung ứng 100 tấn cà phê Đắk Lắk trong 3 năm',
     4, 100000, 500000000,
-    '2025-06-15', '2028-06-15', '2025-06-10 14:00:00', N'active',
+    '2025-06-15', '2028-06-15', '2025-06-10 14:00:00', N'PreparingDelivery',
     GETDATE(), GETDATE()
 );
 
