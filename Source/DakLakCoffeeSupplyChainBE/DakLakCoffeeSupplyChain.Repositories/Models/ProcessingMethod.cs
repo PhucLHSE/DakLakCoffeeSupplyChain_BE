@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class ProcessingMethod
 {
+    [Key]
     public int MethodId { get; set; }
 
     public string MethodCode { get; set; }

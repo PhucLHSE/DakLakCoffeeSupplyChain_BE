@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -16,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/<ProcurementPlans>
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAllProcurementPlansAsync()
         {
             var result = await _procurementPlanService.GetAll();

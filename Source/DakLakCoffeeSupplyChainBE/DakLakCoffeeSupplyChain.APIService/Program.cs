@@ -12,6 +12,10 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
+using DakLakCoffeeSupplyChain.Repositories.Models;
+using Microsoft.AspNetCore.OData;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,6 +67,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
     });
+
+//ODATA
+static IEdmModel GetEdmModel()
+{
+    var odataBuilder = new ODataConventionModelBuilder();
+
+    odataBuilder.EntitySet<Role>("Role");
+    odataBuilder.EntitySet<UserAccount>("UserAccount");
+    odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
+    odataBuilder.EntitySet<CropStage>("CropStage");
+    odataBuilder.EntitySet<CropSeason>("CropSeason");
+    odataBuilder.EntitySet<CropProgress>("CropProgress");
+    odataBuilder.EntitySet<ProcessingMethod>("ProcessingMethod");
+    odataBuilder.EntitySet<WarehouseInboundRequest>("WarehouseInboundRequest");
+    odataBuilder.EntitySet<Product>("Product");
+
+
+    return odataBuilder.GetEdmModel();
+}
+builder.Services.AddControllers().AddOData(options =>
+{
+    options.Select().Filter().OrderBy().Expand().SetMaxTop(null).Count();
+    options.AddRouteComponents("odata", GetEdmModel());
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(option =>

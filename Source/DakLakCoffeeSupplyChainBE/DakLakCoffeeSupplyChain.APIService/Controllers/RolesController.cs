@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -9,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class RolesController : ControllerBase
     {
         private readonly IRoleService _roleService;
@@ -18,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/<RolesController>
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAllRolesAsync()
         {
             var result = await _roleService.GetAll();
@@ -56,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok("Xóa thành công.");
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy người dùng.");
+                return NotFound("Không tìm thấy vai trò.");
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa thất bại.");

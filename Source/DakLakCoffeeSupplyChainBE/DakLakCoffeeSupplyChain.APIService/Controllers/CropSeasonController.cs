@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -18,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/CropSeasons
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAllCropSeasonsAsync()
         {
             var result = await _cropSeasonService.GetAll();

@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -18,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/CropProgresses
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAllCropProgressesAsync()
         {
             var result = await _cropProgressService.GetAll();
