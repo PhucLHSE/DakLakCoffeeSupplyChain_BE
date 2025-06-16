@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -75,6 +78,58 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     roleDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(RoleCreateDto roleDto)
+        {
+            try
+            {
+                // Kiểm tra role đã tồn tại chưa
+                var roleExists = await _unitOfWork.RoleRepository.GetRoleByNameAsync(roleDto.RoleName);
+
+                if (roleExists != null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Role đã được đăng ký."
+                    );
+                }
+
+                // Map DTO to Entity
+                var newRole = roleDto.MapToNewRole();
+
+                // Tạo người dùng ở repository
+                await _unitOfWork.RoleRepository.CreateAsync(newRole);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = newRole.MapToRoleViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }

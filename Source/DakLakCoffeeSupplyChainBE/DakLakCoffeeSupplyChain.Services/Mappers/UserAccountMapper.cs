@@ -65,7 +65,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountCreateDto
-        public static UserAccount MapToUserAccountCreateDto(this UserAccountCreateDto dto, string passwordHash, string userCode, int RoleId)
+        public static UserAccount MapToNewUserAccount(this UserAccountCreateDto dto, string passwordHash, string userCode, int RoleId)
         {
             return new UserAccount
             {
@@ -103,7 +103,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             userAccount.Status = dto.Status.ToString(); // enum → string
             userAccount.RoleId = roleId;
             userAccount.UpdatedAt = DateTime.UtcNow;
-        }
-        
+        }  
     }
 }
