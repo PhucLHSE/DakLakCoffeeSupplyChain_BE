@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -65,6 +66,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PUT api/<RolesController>/{roleId}
+        [HttpPut("{roleId}")]
+        public async Task<IActionResult> UpdateUserAccountAsync(int roleId, [FromBody] RoleUpdateDto roleDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (roleId != roleDto.RoleId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _roleService.Update(roleDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy vai trò để cập nhật.");
 
             return StatusCode(500, result.Message);
         }

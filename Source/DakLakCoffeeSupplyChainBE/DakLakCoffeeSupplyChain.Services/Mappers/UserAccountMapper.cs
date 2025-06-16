@@ -91,7 +91,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountUpdateDto
-        public static void MapToUserAccountUpdateDto(this UserAccountUpdateDto dto, UserAccount userAccount, int roleId)
+        public static void MapToUpdateUserAccount(this UserAccountUpdateDto dto, UserAccount userAccount, int roleId)
         {
             userAccount.Email = dto.Email;
             userAccount.PhoneNumber = dto.PhoneNumber;

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(int roleId);
 
         Task<IServiceResult> Create(RoleCreateDto roleDto);
+
+        Task<IServiceResult> Update(RoleUpdateDto roleDto);
 
         Task<IServiceResult> DeleteById(int roleId);
     }

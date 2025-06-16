@@ -93,14 +93,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
-                        "Role đã được đăng ký."
+                        "Vai trò đã được đăng ký."
                     );
                 }
 
                 // Map DTO to Entity
                 var newRole = roleDto.MapToNewRole();
 
-                // Tạo người dùng ở repository
+                // Tạo vai trò ở repository
                 await _unitOfWork.RoleRepository.CreateAsync(newRole);
 
                 // Lưu thay đổi vào database
@@ -122,6 +122,69 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(RoleUpdateDto roleDto)
+        {
+            try
+            {
+                // Kiểm tra Role tồn tại
+                var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleDto.RoleId);
+
+                if (role == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Vai trò không tồn tại."
+                    );
+                }
+
+                // Kiểm tra trùng tên (khác chính nó)
+                var roleExists = await _unitOfWork.RoleRepository.GetRoleByNameAsync(roleDto.RoleName);
+
+                if (roleExists != null && roleExists.RoleId != roleDto.RoleId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Vai trò đã được đăng ký."
+                    );
+                }
+
+                //Map DTO to Entity
+                roleDto.MapToUpdateRole(role);
+
+                // Cập nhật vai trò ở repository
+                await _unitOfWork.RoleRepository.UpdateAsync(role);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = role.MapToRoleViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }
