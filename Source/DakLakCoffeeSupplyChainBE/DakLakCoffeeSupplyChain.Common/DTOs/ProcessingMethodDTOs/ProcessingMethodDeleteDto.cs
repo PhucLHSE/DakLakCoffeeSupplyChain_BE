@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.Flow3DTOs.ProcessingMethod
+namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs
 {
     public class ProcessingMethodDeleteDto
     {

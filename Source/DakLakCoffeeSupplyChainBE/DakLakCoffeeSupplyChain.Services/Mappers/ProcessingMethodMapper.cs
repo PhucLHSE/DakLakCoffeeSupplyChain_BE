@@ -1,4 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.Flow3DTOs.ProcessingMethod;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
