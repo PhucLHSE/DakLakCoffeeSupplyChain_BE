@@ -1,5 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.Flow3DTOs.ProcessingMethod;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;

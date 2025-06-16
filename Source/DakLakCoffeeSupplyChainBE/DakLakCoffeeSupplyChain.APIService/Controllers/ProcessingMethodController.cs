@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -19,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpGet]
         [EnableQuery]
+        [Authorize(Roles = "Admin,Farmer,BusinessManager")]
         public async Task<IActionResult> GetAllProcesingMethodsAsync()
         {
             var result = await _procesingMethodService.GetAll();
@@ -33,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet("{methodId}")]
+        [Authorize(Roles = "Admin,Farmer,BusinessManager")]
         public async Task<IActionResult> GetById(int methodId)
         {
             var result = await _procesingMethodService.GetById(methodId);
@@ -46,6 +49,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpDelete("{methodId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> DeleteById(int methodId)
         {
             var result = await _procesingMethodService.DeleteById(methodId);
