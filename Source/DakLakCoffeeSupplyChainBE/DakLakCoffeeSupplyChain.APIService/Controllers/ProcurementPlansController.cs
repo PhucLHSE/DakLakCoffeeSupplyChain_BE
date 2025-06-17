@@ -60,6 +60,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+
         // DELETE api/<ProcurementPlans>/{planId}
         [HttpDelete("{planId}")]
         public async Task<IActionResult> DeleteProcurementPlanByIdAsync(Guid planId)
