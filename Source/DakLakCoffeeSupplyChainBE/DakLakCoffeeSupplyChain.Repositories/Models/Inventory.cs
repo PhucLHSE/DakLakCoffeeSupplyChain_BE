@@ -23,6 +23,8 @@ public partial class Inventory
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatch Batch { get; set; }
 
     public virtual ICollection<InventoryLog> InventoryLogs { get; set; } = new List<InventoryLog>();

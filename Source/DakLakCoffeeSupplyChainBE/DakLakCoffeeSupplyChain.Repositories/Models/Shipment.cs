@@ -27,6 +27,8 @@ public partial class Shipment
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual UserAccount DeliveryStaff { get; set; }
 
     public virtual Order Order { get; set; }

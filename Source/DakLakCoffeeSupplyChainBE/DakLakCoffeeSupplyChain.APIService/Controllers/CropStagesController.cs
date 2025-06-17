@@ -29,6 +29,7 @@ public class CropStagesController : ControllerBase
 
         return StatusCode(500, result.Message);
     }
+
     [HttpGet("{stageId}")]
     public async Task<IActionResult> GetById(int stageId)
     {
@@ -42,5 +43,4 @@ public class CropStagesController : ControllerBase
 
         return StatusCode(500, result.Message);  
     }
-
 }

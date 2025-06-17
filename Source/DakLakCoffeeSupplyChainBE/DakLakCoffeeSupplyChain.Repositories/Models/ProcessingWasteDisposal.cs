@@ -29,5 +29,7 @@ public partial class ProcessingWasteDisposal
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatchWaste Waste { get; set; }
 }

@@ -21,6 +21,8 @@ public partial class SystemConfigurationUser
 
     public DateTime? UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual SystemConfiguration SystemConfiguration { get; set; }
 
     public virtual UserAccount User { get; set; }

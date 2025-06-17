@@ -21,6 +21,8 @@ public partial class SystemNotification
 
     public DateTime CreatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual UserAccount CreatedByNavigation { get; set; }
 
     public virtual ICollection<SystemNotificationRecipient> SystemNotificationRecipients { get; set; } = new List<SystemNotificationRecipient>();

@@ -27,6 +27,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.CreateRequestAsync(farmerId, dto);
             return StatusCode(result.Status, result);
         }
+
         [HttpPut("{id}/approve")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> ApproveRequest(Guid id)
@@ -35,6 +36,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.ApproveRequestAsync(id, staffUserId);
             return StatusCode(result.Status, result);
         }
+
         [HttpGet]
         [Authorize(Roles = "BusinessStaff,Administrator")]
         [EnableQuery]
@@ -43,6 +45,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.GetAllAsync();
             return StatusCode(result.Status, result);
         }
+
         [HttpGet("{id}")]
         [Authorize(Roles = "BusinessStaff,Administrator,Farmer")]
         public async Task<IActionResult> GetDetail(Guid id)
@@ -50,6 +53,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.GetByIdAsync(id);
             return StatusCode(result.Status, result);
         }
+
         [HttpPut("{id}/cancel")]
         [Authorize(Roles = "Farmer")]
         public async Task<IActionResult> CancelRequest(Guid id)

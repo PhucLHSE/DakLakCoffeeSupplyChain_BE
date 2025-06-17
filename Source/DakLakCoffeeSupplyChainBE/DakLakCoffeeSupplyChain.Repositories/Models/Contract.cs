@@ -43,6 +43,8 @@ public partial class Contract
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual BusinessBuyer Buyer { get; set; }
 
     public virtual ICollection<ContractDeliveryBatch> ContractDeliveryBatches { get; set; } = new List<ContractDeliveryBatch>();

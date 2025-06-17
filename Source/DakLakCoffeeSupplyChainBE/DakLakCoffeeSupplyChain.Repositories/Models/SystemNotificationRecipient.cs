@@ -17,6 +17,8 @@ public partial class SystemNotificationRecipient
 
     public DateTime? ReadAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual SystemNotification Notification { get; set; }
 
     public virtual UserAccount Recipient { get; set; }

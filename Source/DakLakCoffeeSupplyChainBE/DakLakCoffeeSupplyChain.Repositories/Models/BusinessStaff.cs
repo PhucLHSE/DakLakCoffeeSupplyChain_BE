@@ -27,6 +27,8 @@ public partial class BusinessStaff
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual Warehouse AssignedWarehouse { get; set; }
 
     public virtual BusinessManager Supervisor { get; set; }

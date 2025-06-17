@@ -31,6 +31,8 @@ public partial class Order
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ContractDeliveryBatch DeliveryBatch { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

@@ -29,6 +29,8 @@ public partial class WarehouseReceipt
 
     public string QrcodeUrl { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatch Batch { get; set; }
 
     public virtual WarehouseInboundRequest InboundRequest { get; set; }

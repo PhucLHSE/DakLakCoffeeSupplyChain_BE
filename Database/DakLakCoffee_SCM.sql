@@ -24,7 +24,8 @@ CREATE TABLE Roles (
   Description NVARCHAR(2000),                                  -- Mô tả vai trò
   Status NVARCHAR(50) DEFAULT 'Active',                        -- Trạng thái vai trò
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP        -- Ngày cập nhật
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -50,10 +51,95 @@ CREATE TABLE UserAccounts (
   Status NVARCHAR(20) DEFAULT 'active',                         -- Trạng thái tài khoản
   RoleID INT NOT NULL,                                          -- Vai trò người dùng
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                              -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- Foreign Keys
   CONSTRAINT FK_UserAccounts_RoleID 
       FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+
+GO
+
+-- Table PaymentConfigurations
+CREATE TABLE PaymentConfigurations (
+  ConfigID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cấu hình
+  RoleID INT NOT NULL,                                           -- Vai trò áp dụng (Farmer, BusinessManager...)
+  FeeType NVARCHAR(50) NOT NULL,                                 -- Loại phí: 'Registration', 'MonthlyFee', ...
+  Amount FLOAT NOT NULL,                                         -- Số tiền
+  Description NVARCHAR(500),                                     -- Mô tả thêm (nếu có)
+  EffectiveFrom DATE NOT NULL,                                   -- Hiệu lực từ ngày
+  EffectiveTo DATE,                                              -- Hết hiệu lực (null nếu chưa biết)
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  IsActive BIT DEFAULT 1,                                        -- Có đang được áp dụng không
+  CONSTRAINT FK_PaymentConfigurations_Role 
+      FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+
+GO
+
+-- Table Payments
+CREATE TABLE Payments (
+  PaymentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- ID thanh toán (tự sinh UUID) 
+  Email NVARCHAR(255) NOT NULL,                                 -- Email người đăng ký (dùng để xác định tạm khi chưa tạo tài khoản)
+  RoleID INT NOT NULL,                                          -- Vai trò người dùng muốn đăng ký (liên kết tới bảng Roles)
+  UserID UNIQUEIDENTIFIER NULL,                                 -- Liên kết tới UserAccounts sau khi được duyệt (NULL lúc đầu)
+  PaymentCode VARCHAR(20) UNIQUE,                               -- Mã thanh toán duy nhất, ví dụ: PAY-2025-0001
+  PaymentAmount FLOAT NOT NULL,                                 -- Số tiền thanh toán
+  PaymentMethod NVARCHAR(50),                                   -- Phương thức thanh toán (VNPay, Momo, Banking, ...)
+  PaymentPurpose NVARCHAR(100) NOT NULL,                        -- Registration, MonthlyFee,...
+  PaymentStatus NVARCHAR(50) DEFAULT 'pending',                 -- Trạng thái: pending, success, failed, refunded
+  PaymentTime DATETIME,                                         -- Thời điểm thanh toán thành công
+  AdminVerified BIT DEFAULT 0,                                  -- Được admin duyệt chưa: 0 = chưa, 1 = đã duyệt
+  RefundReason NVARCHAR(MAX),                                   -- Lý do hoàn tiền (nếu bị từ chối)
+  RefundTime DATETIME,                                          -- Thời điểm hoàn tiền (nếu có)
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Thời điểm tạo bản ghi
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Thời điểm cập nhật bản ghi gần nhất
+  RelatedEntityID UNIQUEIDENTIFIER,                             -- ID thực thể liên quan nếu có
+  IsDeleted BIT NOT NULL DEFAULT 0,                             -- Xoá mềm: 0 = còn hoạt động, 1 = đã xoá
+
+  -- Foreign Keys
+  CONSTRAINT FK_RegistrationPayments_RoleID 
+    FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),              -- FK tới bảng Roles
+  
+  CONSTRAINT FK_RegistrationPayments_UserID 
+    FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)        -- FK tới bảng UserAccounts (nếu đã tạo tài khoản)
+);
+
+GO
+
+-- Table Wallets
+CREATE TABLE Wallets (
+  WalletID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID ví
+  UserID UNIQUEIDENTIFIER NULL,                              -- NULL nếu là ví hệ thống
+  WalletType NVARCHAR(50) NOT NULL,                          -- 'System', 'Business', 'Farmer', ...
+  TotalBalance FLOAT NOT NULL DEFAULT 0,                     -- Tổng số dư hiện tại
+  LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- Cập nhật gần nhất
+  IsDeleted BIT NOT NULL DEFAULT 0,
+
+  -- FK nếu có user
+  CONSTRAINT FK_Wallets_UserID FOREIGN KEY (UserID)
+    REFERENCES UserAccounts(UserID)
+);
+
+GO
+
+-- Table WalletTransactions
+CREATE TABLE WalletTransactions (
+  TransactionID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(), -- ID giao dịch ví
+  WalletID UNIQUEIDENTIFIER NOT NULL,                         -- Ví bị ảnh hưởng
+  PaymentID UNIQUEIDENTIFIER NULL,                            -- Liên kết đến bảng Payments nếu là giao dịch thanh toán
+  Amount FLOAT NOT NULL,                                      -- Số tiền (dương: cộng, âm: trừ)
+  TransactionType NVARCHAR(50) NOT NULL,                      -- 'TopUp', 'Withdraw', 'TransferIn', 'TransferOut', 'Purchase', 'Fee', ...
+  Description NVARCHAR(500),                                  -- Diễn giải
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  IsDeleted BIT NOT NULL DEFAULT 0,
+
+  CONSTRAINT FK_WalletTransactions_WalletID FOREIGN KEY (WalletID)
+    REFERENCES Wallets(WalletID),
+
+  CONSTRAINT FK_WalletTransactions_PaymentID FOREIGN KEY (PaymentID)
+    REFERENCES Payments(PaymentID)
 );
 
 GO
@@ -73,7 +159,8 @@ CREATE TABLE BusinessManagers (
   BusinessLicenseURL NVARCHAR(255),                             -- Link đến ảnh/PDF giấy phép kinh doanh
   IsCompanyVerified BIT DEFAULT 0,                              -- Trạng thái đã được duyệt bởi admin?
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày tạo
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP         -- Ngày cập nhật
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                              -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- Foreign Keys
   CONSTRAINT FK_BusinessManagers_UserID 
@@ -94,6 +181,7 @@ CREATE TABLE Farmers (
   IsVerified BIT DEFAULT 0,                                          -- Tài khoản nông dân đã xác minh chưa
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Thời điểm tạo bản ghi
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Thời điểm cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- Foreign Keys
   CONSTRAINT FK_Farmers_UserID 
@@ -116,6 +204,7 @@ CREATE TABLE AgriculturalExperts (
     IsVerified BIT DEFAULT 0,                                          -- Đã xác minh bởi hệ thống chưa
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Ngày cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_AgriculturalExperts_UserID 
@@ -139,6 +228,7 @@ CREATE TABLE BusinessBuyers (
   Website NVARCHAR(255),                                           -- Website doanh nghiệp
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                                 -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- Foreign Keys
   CONSTRAINT FK_BusinessBuyers_CreatedBy 
@@ -157,7 +247,8 @@ CREATE TABLE CoffeeTypes (
   TypicalRegion NVARCHAR(255),                                    -- Vùng trồng phổ biến: Buôn Ma Thuột, Lâm Đồng,...
   SpecialtyLevel NVARCHAR(50),                                    -- Specialty, Fine Robusta,...
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -181,6 +272,7 @@ CREATE TABLE Contracts (
   CancelReason NVARCHAR(MAX),                                       -- Lý do hủy
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0,                                 -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Contracts_SellerID FOREIGN KEY (SellerID) 
@@ -204,6 +296,7 @@ CREATE TABLE ContractItems (
   Note NVARCHAR(MAX),                                              -- Ghi chú (nếu có)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                                 -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_ContractItems_ContractID 
@@ -226,6 +319,7 @@ CREATE TABLE ContractDeliveryBatches (
   Status NVARCHAR(50) DEFAULT 'planned',         -- planned, in_progress, fulfilled
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  IsDeleted BIT NOT NULL DEFAULT 0               -- 0 = chưa xoá, 1 = đã xoá mềm
 
   CONSTRAINT FK_ContractDeliveryBatches_ContractID 
     FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID)
@@ -244,6 +338,7 @@ CREATE TABLE ContractDeliveryItems (
   Note NVARCHAR(MAX),
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  IsDeleted BIT NOT NULL DEFAULT 0              -- 0 = chưa xoá, 1 = đã xoá mềm
 
   CONSTRAINT FK_ContractDeliveryItems_BatchID 
     FOREIGN KEY (DeliveryBatchID) REFERENCES ContractDeliveryBatches(DeliveryBatchID),
@@ -268,6 +363,7 @@ CREATE TABLE ProcurementPlans (
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_ProcurementPlans_CreatedBy 
@@ -299,6 +395,7 @@ CREATE TABLE ProcurementPlansDetails (
     Status NVARCHAR(50) DEFAULT 'active',                                              -- Trạng thái: active, closed, disabled
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_ProcurementPlansDetails_PlanID 
@@ -325,7 +422,7 @@ CREATE TABLE CultivationRegistrations (
     Status NVARCHAR(50) DEFAULT 'pending',                         -- Trạng thái: pending, approved,...
     Note NVARCHAR(MAX),                                            -- Ghi chú từ farmer
     SystemNote NVARCHAR(MAX),                                      -- Ghi chú từ hệ thống
-    IsDeleted BIT DEFAULT 0,                                       -- Xóa mềm
+    IsDeleted BIT NOT NULL DEFAULT 0,                              -- 0 = chưa xoá, 1 = đã xoá mềm
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -354,6 +451,7 @@ CREATE TABLE CultivationRegistrationsDetail (
     ApprovedAt DATETIME,                                                          -- Thời gian duyệt
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0                                              -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_CultivationRegistrationsDetail_CultivationRegistrations 
@@ -388,6 +486,7 @@ CREATE TABLE FarmingCommitments (
 	ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_FarmingCommitments_RegistrationDetailID 
@@ -423,6 +522,7 @@ CREATE TABLE CropSeasons (
     Status NVARCHAR(50) DEFAULT 'active',                               -- Trạng thái: active, paused,...
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_CropSeasons_RegistrationID 
@@ -452,6 +552,7 @@ CREATE TABLE CropSeasonDetails (
     Status NVARCHAR(50) DEFAULT 'planned',                             -- planned, in_progress, completed
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_CropSeasonDetails_CropSeasonID 
@@ -472,6 +573,7 @@ CREATE TABLE CropStages (
     OrderIndex INT,                           -- Thứ tự giai đoạn
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0          -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -490,6 +592,7 @@ CREATE TABLE CropProgresses (
 	StepIndex INT,                                                             -- Bước thứ mấy trong mùa vụ
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                     -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                     -- Ngày cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                           -- 0 = chưa xoá, 1 = đã xoá mềm
 
 	-- Foreign Keys
     CONSTRAINT FK_CropProgresses_CropSeasonDetailID 
@@ -511,7 +614,8 @@ CREATE TABLE ProcessingMethods (
   Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
   Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP        -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -526,7 +630,8 @@ CREATE TABLE ProcessingStages (
   OrderIndex INT NOT NULL,                                       -- Thứ tự thực hiện
   IsRequired BIT DEFAULT 1,                                      -- Bước này có bắt buộc không?
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP          -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                               -- 0 = chưa xoá, 1 = đã xoá mềm
 
   CONSTRAINT FK_ProcessingStages_Method 
     FOREIGN KEY (MethodID) REFERENCES ProcessingMethods(MethodID)
@@ -548,6 +653,7 @@ CREATE TABLE ProcessingBatches (
   CreatedAt DATETIME,                                          -- Ngày tạo hồ sơ
   UpdatedAt DATETIME,                                          -- Ngày câp nhật hồ sơ
   Status NVARCHAR(50),                                         -- Trạng thái: pending, processing, completed
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_ProcessingBatches_CropSeason 
@@ -580,6 +686,7 @@ CREATE TABLE ProcessingBatchProgresses (
   VideoURL VARCHAR(255),                                       -- Link video (tùy chọn)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Thời điểm tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Thời điểm cập nhật lần cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_BatchProgresses_Batch 
@@ -604,6 +711,7 @@ CREATE TABLE ProcessingParameters (
   RecordedAt DATETIME,                                         -- Ngày ghi nhận
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_ProcessingParameters_Progress 
@@ -614,8 +722,8 @@ GO
 
 -- GeneralFarmerReports – Bảng báo cáo sự cố chung từ Farmer
 CREATE TABLE GeneralFarmerReports (
-    ReportID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                  -- ID báo cáo chung
-	ReportCode VARCHAR(20) UNIQUE,                                          -- REP-2025-0003
+    ReportID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                 -- ID báo cáo chung
+	ReportCode VARCHAR(20) UNIQUE,                                         -- REP-2025-0003
     ReportType VARCHAR(50) NOT NULL CHECK (ReportType IN ('Crop', 'Processing')),  -- Phân loại
     CropProgressID UNIQUEIDENTIFIER,                                       -- FK nếu là mùa vụ
     ProcessingProgressID UNIQUEIDENTIFIER,                                 -- FK nếu là sơ chế
@@ -629,6 +737,7 @@ CREATE TABLE GeneralFarmerReports (
     ReportedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ResolvedAt DATETIME,
+	IsDeleted BIT NOT NULL DEFAULT 0                                       -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys (chỉ dùng được từng loại tùy theo ReportType)
     CONSTRAINT FK_GeneralReports_CropProgress 
@@ -646,13 +755,14 @@ GO
 -- ExpertAdvice – Bảng phản hồi từ chuyên gia đối với báo cáo
 CREATE TABLE ExpertAdvice (
     AdviceID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             
-    ReportID UNIQUEIDENTIFIER NOT NULL,                                -- FK tới báo cáo chung
-    ExpertID UNIQUEIDENTIFIER NOT NULL,                                -- Ai phản hồi
-    ResponseType VARCHAR(50),                                          -- preventive, corrective, observation
-    AdviceSource VARCHAR(50) DEFAULT 'human',                          -- human hoặc AI
-    AdviceText NVARCHAR(MAX),                                          -- Nội dung tư vấn
+    ReportID UNIQUEIDENTIFIER NOT NULL,                       -- FK tới báo cáo chung
+    ExpertID UNIQUEIDENTIFIER NOT NULL,                       -- Ai phản hồi
+    ResponseType VARCHAR(50),                                 -- preventive, corrective, observation
+    AdviceSource VARCHAR(50) DEFAULT 'human',                 -- human hoặc AI
+    AdviceText NVARCHAR(MAX),                                 -- Nội dung tư vấn
     AttachedFileUrl VARCHAR(255),
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0                          -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_GeneralExpertAdvice_Report 
@@ -672,7 +782,8 @@ CREATE TABLE ProcessingBatchEvaluations (
   Comments NVARCHAR(MAX),                                       -- Nhận xét chi tiết
   EvaluatedAt DATETIME,                                         -- Ngày đánh giá
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP         -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                              -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Evaluations_Batch 
@@ -695,7 +806,8 @@ CREATE TABLE ProcessingBatchWastes (
   IsDisposed BIT DEFAULT 0,                                     -- Cờ đánh dấu đã được xử lý
   DisposedAt DATETIME,                                          -- Ngày xử lý gần nhất (nếu có)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP         -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                              -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Wastes_Progress 
@@ -717,6 +829,7 @@ CREATE TABLE ProcessingWasteDisposals (
   Revenue MONEY,                                          -- Nếu có bán, ghi nhận doanh thu
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                        -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEY
   CONSTRAINT FK_Disposals_Waste 
@@ -735,6 +848,7 @@ CREATE TABLE Warehouses (
     Capacity FLOAT,                                                 -- Dung lượng tối đa (kg, tấn...)
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- FOREIGN KEY
     CONSTRAINT FK_Warehouses_Manager 
@@ -755,6 +869,7 @@ CREATE TABLE BusinessStaffs (
   IsActive BIT DEFAULT 1,                                        -- Nhân viên còn đang làm việc?
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày tạo bản ghi
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày cập nhật gần nhất
+  IsDeleted BIT NOT NULL DEFAULT 0                               -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_BusinessStaffs_UserID 
@@ -779,6 +894,7 @@ CREATE TABLE Inventories (
     Unit NVARCHAR(20) DEFAULT 'kg',                                 -- Đơn vị tính (kg, tấn...)
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời điểm cập nhật
+	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- FOREIGN KEYS
     CONSTRAINT FK_Inventories_Warehouse 
@@ -800,6 +916,7 @@ CREATE TABLE InventoryLogs (
     TriggeredBySystem BIT DEFAULT 0,                                -- Có phải hệ thống tự động ghi không
     Note NVARCHAR(MAX),                                             -- Ghi chú chi tiết
     LoggedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Thời điểm ghi log
+	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- FOREIGN KEY
     CONSTRAINT FK_InventoryLogs_Inventory 
@@ -822,6 +939,7 @@ CREATE TABLE WarehouseInboundRequests (
   Note NVARCHAR(MAX),                                               -- Ghi chú thêm từ Farmer
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                                  -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseInboundRequests_Batch 
@@ -838,17 +956,18 @@ GO
 
 -- WarehouseReceipts – Phiếu nhập kho
 CREATE TABLE WarehouseReceipts (
-  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã phiếu nhập kho
-  ReceiptCode VARCHAR(20) UNIQUE,                                   -- RECEIPT-2025-0145
-  InboundRequestID UNIQUEIDENTIFIER NOT NULL,                       -- Gắn với yêu cầu nhập kho
-  WarehouseID UNIQUEIDENTIFIER NOT NULL,                            -- Kho tiếp nhận
-  BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Mẻ cà phê
-  ReceivedBy UNIQUEIDENTIFIER NOT NULL,                             -- Nhân viên kho tiếp nhận
-  LotCode NVARCHAR(100),                                            -- Mã lô nội bộ (nếu cần)
-  ReceivedQuantity FLOAT,                                           -- Sản lượng thực nhận
-  ReceivedAt DATETIME,                                              -- Thời điểm tiếp nhận
-  Note NVARCHAR(MAX),                                               -- Ghi chú kiểm tra hàng
-  QRCodeURL NVARCHAR(255),                                          -- Link QR truy xuất
+  ReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),      -- Mã phiếu nhập kho
+  ReceiptCode VARCHAR(20) UNIQUE,                              -- RECEIPT-2025-0145
+  InboundRequestID UNIQUEIDENTIFIER NOT NULL,                  -- Gắn với yêu cầu nhập kho
+  WarehouseID UNIQUEIDENTIFIER NOT NULL,                       -- Kho tiếp nhận
+  BatchID UNIQUEIDENTIFIER NOT NULL,                           -- Mẻ cà phê
+  ReceivedBy UNIQUEIDENTIFIER NOT NULL,                        -- Nhân viên kho tiếp nhận
+  LotCode NVARCHAR(100),                                       -- Mã lô nội bộ (nếu cần)
+  ReceivedQuantity FLOAT,                                      -- Sản lượng thực nhận
+  ReceivedAt DATETIME,                                         -- Thời điểm tiếp nhận
+  Note NVARCHAR(MAX),                                          -- Ghi chú kiểm tra hàng
+  QRCodeURL NVARCHAR(255),                                     -- Link QR truy xuất
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseReceipts_Request 
@@ -891,6 +1010,7 @@ CREATE TABLE Products (
   ApprovedAt DATETIME,                                              -- Ngày duyệt
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                                  -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Products_CreatedBy 
@@ -925,6 +1045,7 @@ CREATE TABLE Orders (
   CancelReason NVARCHAR(MAX),                                     -- Lý do hủy (nếu có)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Orders_DeliveryBatchID 
@@ -946,6 +1067,7 @@ CREATE TABLE OrderItems (
   Note NVARCHAR(MAX),                                             -- Ghi chú riêng dòng hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_OrderItems_OrderID 
@@ -975,6 +1097,7 @@ CREATE TABLE WarehouseOutboundRequests (
   Status NVARCHAR(50) DEFAULT 'pending',                              -- Trạng thái: pending, approved, rejected, completed
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseOutboundRequests_Warehouse 
@@ -1007,6 +1130,7 @@ CREATE TABLE WarehouseOutboundReceipts (
   Note NVARCHAR(MAX),                                              -- Ghi chú thêm
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,           -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                                 -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseOutboundReceipts_Request 
@@ -1039,6 +1163,7 @@ CREATE TABLE Shipments (
   ReceivedAt DATETIME,                                            -- Ngày nhận hàng thành công
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Shipments_OrderID 
@@ -1060,6 +1185,7 @@ CREATE TABLE ShipmentDetails (
   Note NVARCHAR(MAX),                                            -- Ghi chú riêng dòng hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày cập nhật cuối
+  IsDeleted BIT NOT NULL DEFAULT 0                               -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_ShipmentDetails_ShipmentID 
@@ -1086,6 +1212,7 @@ CREATE TABLE OrderComplaints (
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo khiếu nại
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối
   ResolvedAt DATETIME,                                         -- Ngày xử lý hoàn tất
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_OrderComplaints_OrderItemID 
@@ -1109,6 +1236,7 @@ CREATE TABLE SystemNotifications (
   Type NVARCHAR(50),                                              -- Loại thông báo: "low_stock", "issue_reported",...
   CreatedBy UNIQUEIDENTIFIER,                                     -- Người khởi tạo (nullable)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời gian tạo
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
   CONSTRAINT FK_SystemNotifications_CreatedBy 
     FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID)
@@ -1123,6 +1251,7 @@ CREATE TABLE SystemNotificationRecipients (
   RecipientID UNIQUEIDENTIFIER NOT NULL,                          -- Người nhận thông báo
   IsRead BIT DEFAULT 0,                                           -- Đã đọc chưa?
   ReadAt DATETIME,                                                -- Thời điểm đọc
+  IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
   CONSTRAINT FK_NotificationRecipients_Notification 
@@ -1153,7 +1282,8 @@ CREATE TABLE MediaFiles (
     Caption NVARCHAR(255),                                          -- Ghi chú
     UploadedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày upload
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo dòng dữ liệu
-    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP           -- Ngày cập nhật cuối
+    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật cuối
+	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -1170,7 +1300,8 @@ CREATE TABLE SystemConfiguration (
     EffectedDateFrom DATETIME NOT NULL,          -- Thời điểm bắt đầu áp dụng
     EffectedDateTo DATETIME NULL,                -- Thời điểm kết thúc áp dụng (nếu có)
     CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
-    UpdatedAt DATETIME NULL DEFAULT GETDATE()
+    UpdatedAt DATETIME NULL DEFAULT GETDATE(),
+	IsDeleted BIT NOT NULL DEFAULT 0             -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -1183,7 +1314,8 @@ CREATE TABLE SystemConfigurationUsers (
     PermissionLevel NVARCHAR(50) DEFAULT 'manage',       -- Quyền: manage / view / approve (nếu mở rộng sau)
     GrantedAt DATETIME NOT NULL DEFAULT GETDATE(),       -- Thời điểm gán quyền
     RevokedAt DATETIME NULL,                             -- Nếu bị thu hồi
-	UpdatedAt DATETIME NULL DEFAULT GETDATE()
+	UpdatedAt DATETIME NULL DEFAULT GETDATE(),
+	IsDeleted BIT NOT NULL DEFAULT 0                     -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_SystemConfigUsers_ConfigID 
@@ -1481,7 +1613,10 @@ INSERT INTO ContractDeliveryBatches (
 DECLARE @CTI_Washed UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0004');
 DECLARE @CTI_Culi UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0005');
 
-INSERT INTO ContractDeliveryItems VALUES 
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note, CreatedAt, UpdatedAt
+) VALUES 
 (NEWID(), 'DLI-2025-0004', @Batch2, @CTI_Washed, 12000, 0, N'Robusta Washed đợt 2', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0005', @Batch2, @CTI_Culi,   8000,  0, N'Culi đợt 2', GETDATE(), GETDATE());
 
@@ -1497,7 +1632,10 @@ INSERT INTO ContractDeliveryBatches (
 
 DECLARE @CTI_Natural UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0006');
 
-INSERT INTO ContractDeliveryItems VALUES 
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note, CreatedAt, UpdatedAt
+) VALUES 
 (NEWID(), 'DLI-2025-0006', @Batch3, @CTI_Natural, 10000, 0, N'Robusta Natural đợt 3', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0007', @Batch3, @CTI_Arabica, 5000,  0, N'Arabica đợt 3', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0008', @Batch3, @CTI_Robusta, 10000, 0, N'Robusta đợt 3', GETDATE(), GETDATE());
@@ -1514,7 +1652,10 @@ INSERT INTO ContractDeliveryBatches (
 
 DECLARE @CTI_Typica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0007');
 
-INSERT INTO ContractDeliveryItems VALUES 
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note, CreatedAt, UpdatedAt
+) VALUES 
 (NEWID(), 'DLI-2025-0009', @Batch4, @CTI_Typica, 2000,  0, N'Typica đợt 4', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0010', @Batch4, @CTI_Robusta, 18000, 0, N'Robusta đợt 4', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0011', @Batch4, @CTI_Washed, 5000,  0, N'Robusta Washed đợt 4', GETDATE(), GETDATE());

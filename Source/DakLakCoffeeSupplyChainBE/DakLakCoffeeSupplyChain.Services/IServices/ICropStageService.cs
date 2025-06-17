@@ -7,7 +7,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface ICropStageService
     {
         Task<IServiceResult> GetAll();
-        Task<IServiceResult> GetById(int id);
 
+        Task<IServiceResult> GetById(int id);
     }
 }
