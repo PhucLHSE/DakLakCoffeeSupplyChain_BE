@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -31,8 +32,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Lấy danh sách vai trò từ repository
             var roles = await _unitOfWork.RoleRepository.GetAllAsync();
 
+            // Lọc ra các vai trò chưa bị xóa mềm
+            var validRoles = roles
+                .Where(role => role.Status != RoleStatus.Inactive.ToString())
+                .ToList();
+
             // Kiểm tra nếu không có dữ liệu
-            if (roles == null || !roles.Any())
+            if (!validRoles.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -43,7 +49,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 // Chuyển đổi sang danh sách DTO để trả về cho client
-                var roleDtos = roles
+                var roleDtos = validRoles
                     .Select(roles => roles.MapToRoleViewAllDto())
                     .ToList();
 
@@ -216,6 +222,59 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Xóa role khỏi repository
                     await _unitOfWork.RoleRepository.RemoveAsync(role);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(int roleId)
+        {
+            try
+            {
+                // Tìm role theo ID
+                var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId);
+
+                // Kiểm tra nếu không tồn tại
+                if (role == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Gán trạng thái Inactive (Xoá mềm)
+                    role.Status = RoleStatus.Inactive.ToString();
+
+                    // Cập nhật vai trò ở repository
+                    await _unitOfWork.RoleRepository.UpdateAsync(role);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
