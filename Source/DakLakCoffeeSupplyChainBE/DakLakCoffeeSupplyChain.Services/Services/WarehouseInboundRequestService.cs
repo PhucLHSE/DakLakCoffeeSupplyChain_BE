@@ -118,6 +118,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var dto = request.ToDetailDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
         }
+        public async Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId)
+        {
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            if (request == null || request.Status != InboundRequestStatus.Pending.ToString())
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc không thể huỷ.");
+            }
+
+            var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(farmerUserId);
+            if (farmer == null || request.FarmerId != farmer.FarmerId)
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không có quyền huỷ yêu cầu này.");
+            }
+
+            request.Status = InboundRequestStatus.Rejected.ToString(); // Nếu có status "Cancelled" thì nên dùng riêng
+            request.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.WarehouseInboundRequests.Update(request);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã huỷ yêu cầu thành công.");
+        }
+
+        public async Task<IServiceResult> RejectRequestAsync(Guid requestId, Guid staffUserId)
+        {
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            if (request == null || request.Status != InboundRequestStatus.Pending.ToString())
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc đã được xử lý.");
+            }
+
+            var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
+            if (staff == null)
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên.");
+            }
+
+            request.Status = InboundRequestStatus.Rejected.ToString();
+            request.BusinessStaffId = staff.StaffId;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.WarehouseInboundRequests.Update(request);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã từ chối yêu cầu thành công.");
+        }
+
+
 
 
 
