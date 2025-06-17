@@ -132,7 +132,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không có quyền huỷ yêu cầu này.");
             }
 
-            request.Status = InboundRequestStatus.Rejected.ToString(); // Nếu có status "Cancelled" thì nên dùng riêng
+            request.Status = InboundRequestStatus.Rejected.ToString(); 
             request.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.WarehouseInboundRequests.Update(request);
