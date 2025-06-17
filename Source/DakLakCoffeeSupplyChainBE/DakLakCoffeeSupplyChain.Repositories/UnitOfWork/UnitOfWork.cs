@@ -29,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private ISystemNotificationRepository? systemNotificationRepository;
         private ISystemNotificationRecipientRepository? systemNotificationRecipientRepository;
         private IBusinessStaffRepository? businessStaffRepository;
+        private IWarehouseReceiptRepository? warehouseReceiptRepository;
 
 
         public UnitOfWork()
@@ -178,6 +179,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return businessStaffRepository ??= new BusinessStaffRepository(context);
+            }
+        }
+        public IWarehouseReceiptRepository WarehouseReceipts
+        {
+            get
+            {
+                return warehouseReceiptRepository ??= new WarehouseReceiptRepository(context);
             }
         }
     }
