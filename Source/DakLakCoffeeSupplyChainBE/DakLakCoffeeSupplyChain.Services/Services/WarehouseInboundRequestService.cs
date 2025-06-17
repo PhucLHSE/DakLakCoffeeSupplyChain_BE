@@ -107,6 +107,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = requests.Select(r => r.ToViewDto()).ToList();
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu nhập kho thành công", result);
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid requestId)
+        {
+            var request = await _unitOfWork.WarehouseInboundRequests.GetDetailByIdAsync(requestId);
+            if (request == null)
+            {
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy yêu cầu.", null);
+            }
+
+            var dto = request.ToDetailDto();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
+        }
 
 
 
