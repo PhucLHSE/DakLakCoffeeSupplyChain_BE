@@ -20,5 +20,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Update(RoleUpdateDto roleDto);
 
         Task<IServiceResult> DeleteById(int roleId);
+
+        Task<IServiceResult> SoftDeleteById(int roleId);
     }
 }

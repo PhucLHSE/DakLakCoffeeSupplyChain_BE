@@ -72,7 +72,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<RolesController>/{roleId}
         [HttpPut("{roleId}")]
-        public async Task<IActionResult> UpdateUserAccountAsync(int roleId, [FromBody] RoleUpdateDto roleDto)
+        public async Task<IActionResult> UpdateRoleAsync(int roleId, [FromBody] RoleUpdateDto roleDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (roleId != roleDto.RoleId)
@@ -109,6 +109,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH: api/<RolesController>/soft-delete/{roleId}
+        [HttpPatch("soft-delete/{roleId}")]
+        public async Task<IActionResult> SoftDeleteRoleByIdAsync(int roleId)
+        {
+            var result = await _roleService.SoftDeleteById(roleId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy vai trò.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
 
             return StatusCode(500, result.Message);
         }
