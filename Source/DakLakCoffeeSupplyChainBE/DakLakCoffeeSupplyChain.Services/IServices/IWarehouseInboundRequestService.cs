@@ -11,11 +11,15 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWarehouseInboundRequestService
     {
         Task<IServiceResult> CreateRequestAsync(Guid farmerId, WarehouseInboundRequestCreateDto dto);
-        Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId);
-        Task<IServiceResult> GetAllAsync();
-        Task<IServiceResult> GetByIdAsync(Guid requestId);
-        Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId);
-        Task<IServiceResult> RejectRequestAsync(Guid requestId, Guid staffUserId);
 
+        Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId);
+
+        Task<IServiceResult> GetAllAsync();
+
+        Task<IServiceResult> GetByIdAsync(Guid requestId);
+
+        Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId);
+
+        Task<IServiceResult> RejectRequestAsync(Guid requestId, Guid staffUserId);
     }
 }

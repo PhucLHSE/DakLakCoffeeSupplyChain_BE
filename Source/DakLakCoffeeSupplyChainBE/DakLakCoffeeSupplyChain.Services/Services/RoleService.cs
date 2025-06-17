@@ -32,9 +32,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Lấy danh sách vai trò từ repository
             var roles = await _unitOfWork.RoleRepository.GetAllAsync();
 
-            // Lọc ra các vai trò chưa bị xóa mềm
+            // Lọc ra các vai trò chưa bị xóa mềm (IsDeleted = false)
             var validRoles = roles
-                .Where(role => role.Status != RoleStatus.Inactive.ToString())
+                .Where(role => !role.IsDeleted)
                 .ToList();
 
             // Kiểm tra nếu không có dữ liệu
@@ -270,8 +270,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // Gán trạng thái Inactive (Xoá mềm)
-                    role.Status = RoleStatus.Inactive.ToString();
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    role.IsDeleted = true;
+                    role.UpdatedAt = DateTime.Now;
 
                     // Cập nhật vai trò ở repository
                     await _unitOfWork.RoleRepository.UpdateAsync(role);
