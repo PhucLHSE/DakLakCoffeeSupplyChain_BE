@@ -29,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Lấy danh sách sản phẩm từ repository
             var products = await _unitOfWork.ProductRepository.GetAllAsync(
+                predicate: p => p.IsDeleted != true,
                 include: query => query
                    .Include(p => p.CoffeeType)
                    .Include(p => p.Batch)
@@ -124,6 +125,60 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Xóa sản phẩm khỏi repository
                     await _unitOfWork.ProductRepository.RemoveAsync(product);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid productId)
+        {
+            try
+            {
+                // Tìm pruduct theo ID
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(productId);
+
+                // Kiểm tra nếu không tồn tại
+                if (product == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    product.IsDeleted = true;
+                    product.UpdatedAt = DateTime.Now;
+
+                    // Cập nhật xoá mềm vai trò ở repository
+                    await _unitOfWork.ProductRepository.UpdateAsync(product);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

@@ -119,6 +119,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PATCH: api/<UserAccountsController>/soft-delete/{userId}
         [HttpPatch("soft-delete/{userId}")]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
         public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid userId)
         {
             var result = await _userAccountService.SoftDeleteById(userId);
