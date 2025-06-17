@@ -50,6 +50,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service.GetByIdAsync(id);
             return StatusCode(result.Status, result);
         }
+        [HttpPut("{id}/cancel")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> CancelRequest(Guid id)
+        {
+            var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _service.CancelRequestAsync(id, farmerId);
+            return StatusCode(result.Status, result);
+        }
+
+        [HttpPut("{id}/reject")]
+        [Authorize(Roles = "BusinessStaff")]
+        public async Task<IActionResult> RejectRequest(Guid id)
+        {
+            var staffId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _service.RejectRequestAsync(id, staffId);
+            return StatusCode(result.Status, result);
+        }
+
 
 
 
