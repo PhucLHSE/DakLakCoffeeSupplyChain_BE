@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -112,6 +113,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH: api/<UserAccountsController>/soft-delete/{userId}
+        [HttpPatch("soft-delete/{userId}")]
+        public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid userId)
+        {
+            var result = await _userAccountService.SoftDeleteById(userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy người dùng.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
 
             return StatusCode(500, result.Message);
         }
