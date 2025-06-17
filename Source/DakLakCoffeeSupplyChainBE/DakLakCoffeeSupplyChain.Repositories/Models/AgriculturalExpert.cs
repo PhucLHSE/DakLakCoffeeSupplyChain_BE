@@ -31,6 +31,8 @@ public partial class AgriculturalExpert
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<ExpertAdvice> ExpertAdvices { get; set; } = new List<ExpertAdvice>();
 
     public virtual UserAccount User { get; set; }

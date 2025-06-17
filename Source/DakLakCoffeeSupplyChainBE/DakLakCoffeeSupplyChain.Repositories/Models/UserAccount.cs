@@ -47,6 +47,8 @@ public partial class UserAccount
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual AgriculturalExpert AgriculturalExpert { get; set; }
 
     public virtual ICollection<BusinessManager> BusinessManagers { get; set; } = new List<BusinessManager>();
@@ -56,6 +58,8 @@ public partial class UserAccount
     public virtual ICollection<Farmer> Farmers { get; set; } = new List<Farmer>();
 
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();
+
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 
@@ -68,4 +72,6 @@ public partial class UserAccount
     public virtual ICollection<SystemNotificationRecipient> SystemNotificationRecipients { get; set; } = new List<SystemNotificationRecipient>();
 
     public virtual ICollection<SystemNotification> SystemNotifications { get; set; } = new List<SystemNotification>();
+
+    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
 }

@@ -29,6 +29,8 @@ public partial class OrderItem
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
 
     public virtual Order Order { get; set; }

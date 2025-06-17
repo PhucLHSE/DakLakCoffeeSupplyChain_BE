@@ -33,6 +33,8 @@ public partial class WarehouseInboundRequest
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatch Batch { get; set; }
 
     public virtual BusinessStaff BusinessStaff { get; set; }

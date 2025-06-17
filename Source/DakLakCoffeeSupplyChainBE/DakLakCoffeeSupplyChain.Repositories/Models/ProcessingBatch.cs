@@ -31,6 +31,8 @@ public partial class ProcessingBatch
 
     public string Status { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual CropSeason CropSeason { get; set; }

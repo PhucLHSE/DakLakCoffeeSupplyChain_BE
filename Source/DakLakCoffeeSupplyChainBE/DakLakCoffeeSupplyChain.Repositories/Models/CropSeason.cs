@@ -35,6 +35,8 @@ public partial class CropSeason
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual FarmingCommitment Commitment { get; set; }
 
     public virtual ICollection<CropSeasonDetail> CropSeasonDetails { get; set; } = new List<CropSeasonDetail>();

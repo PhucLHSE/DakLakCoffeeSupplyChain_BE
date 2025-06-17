@@ -23,5 +23,7 @@ public partial class InventoryLog
 
     public DateTime LoggedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual Inventory Inventory { get; set; }
 }

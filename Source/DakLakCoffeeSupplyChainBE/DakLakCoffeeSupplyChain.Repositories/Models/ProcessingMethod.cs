@@ -21,6 +21,8 @@ public partial class ProcessingMethod
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();
 
     public virtual ICollection<ProcessingStage> ProcessingStages { get; set; } = new List<ProcessingStage>();

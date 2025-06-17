@@ -29,5 +29,7 @@ public partial class SystemConfiguration
 
     public DateTime? UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<SystemConfigurationUser> SystemConfigurationUsers { get; set; } = new List<SystemConfigurationUser>();
 }

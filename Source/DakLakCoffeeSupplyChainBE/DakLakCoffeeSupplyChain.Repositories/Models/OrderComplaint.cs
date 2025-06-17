@@ -33,6 +33,8 @@ public partial class OrderComplaint
 
     public DateTime? ResolvedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual OrderItem OrderItem { get; set; }
 
     public virtual BusinessBuyer RaisedByNavigation { get; set; }

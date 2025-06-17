@@ -23,5 +23,7 @@ public partial class CropStage
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 }
