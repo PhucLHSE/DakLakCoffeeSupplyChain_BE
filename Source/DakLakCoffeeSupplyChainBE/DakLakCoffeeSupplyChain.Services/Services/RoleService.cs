@@ -15,6 +15,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -30,15 +31,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll()
         {
             // Lấy danh sách vai trò từ repository
-            var roles = await _unitOfWork.RoleRepository.GetAllAsync();
-
-            // Lọc ra các vai trò chưa bị xóa mềm (IsDeleted = false)
-            var validRoles = roles
-                .Where(role => !role.IsDeleted)
-                .ToList();
+            var roles = await _unitOfWork.RoleRepository.GetAllAsync(
+                predicate: role => role.IsDeleted != true
+            );
 
             // Kiểm tra nếu không có dữ liệu
-            if (!validRoles.Any())
+            if (roles == null || !roles.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -49,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 // Chuyển đổi sang danh sách DTO để trả về cho client
-                var roleDtos = validRoles
+                var roleDtos = roles
                     .Select(roles => roles.MapToRoleViewAllDto())
                     .ToList();
 
@@ -274,7 +272,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     role.IsDeleted = true;
                     role.UpdatedAt = DateTime.Now;
 
-                    // Cập nhật vai trò ở repository
+                    // Cập nhật xoá mềm vai trò ở repository
                     await _unitOfWork.RoleRepository.UpdateAsync(role);
 
                     // Lưu thay đổi

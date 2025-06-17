@@ -11,6 +11,7 @@ using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Truy vấn tất cả người dùng từ repository
             var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                predicate: u => u.IsDeleted != true,
                 include: query => query.Include(u => u.Role),
                 orderBy: u => u.OrderBy(u => u.UserCode),
                 asNoTracking: true
@@ -333,6 +335,64 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Xóa người dùng ra khỏi repository
                     await _unitOfWork.UserAccountRepository.RemoveAsync(user);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid userId)
+        {
+            try
+            {
+                // Tìm tài khoản người dùng theo ID từ repository
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.UserId == userId,
+                    include: q => q.Include(u => u.Role),
+                    asNoTracking: true
+                );
+
+                // Nếu không tìm thấy người dùng, trả về cảnh báo không có dữ liệu
+                if (user == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    user.IsDeleted = true;
+                    user.UpdatedAt = DateTime.Now;
+
+                    // Cập nhật xoá mềm vai trò ở repository
+                    await _unitOfWork.UserAccountRepository.UpdateAsync(user);
 
                     // Lưu thay đổi vào database
                     var result = await _unitOfWork.SaveChangesAsync();
