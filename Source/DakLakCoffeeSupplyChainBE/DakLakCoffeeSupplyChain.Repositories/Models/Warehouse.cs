@@ -23,6 +23,8 @@ public partial class Warehouse
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<BusinessStaff> BusinessStaffs { get; set; } = new List<BusinessStaff>();
 
     public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();

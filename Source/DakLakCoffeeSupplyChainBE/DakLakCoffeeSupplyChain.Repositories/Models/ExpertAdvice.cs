@@ -23,6 +23,8 @@ public partial class ExpertAdvice
 
     public DateTime CreatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual AgriculturalExpert Expert { get; set; }
 
     public virtual GeneralFarmerReport Report { get; set; }

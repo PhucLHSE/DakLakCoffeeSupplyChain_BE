@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -25,6 +24,8 @@ public partial class ProcessingStage
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public bool IsDeleted { get; set; }
 
     public virtual ProcessingMethod Method { get; set; }
 

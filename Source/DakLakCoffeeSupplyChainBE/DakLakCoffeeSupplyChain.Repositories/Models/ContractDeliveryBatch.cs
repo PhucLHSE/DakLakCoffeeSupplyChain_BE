@@ -25,6 +25,8 @@ public partial class ContractDeliveryBatch
 
     public DateTime? UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual Contract Contract { get; set; }
 
     public virtual ICollection<ContractDeliveryItem> ContractDeliveryItems { get; set; } = new List<ContractDeliveryItem>();

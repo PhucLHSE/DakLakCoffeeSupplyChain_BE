@@ -33,6 +33,8 @@ public partial class CultivationRegistrationsDetail
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
     public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();

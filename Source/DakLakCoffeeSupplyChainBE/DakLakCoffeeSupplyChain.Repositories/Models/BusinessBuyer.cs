@@ -33,6 +33,8 @@ public partial class BusinessBuyer
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
 
     public virtual BusinessManager CreatedByNavigation { get; set; }

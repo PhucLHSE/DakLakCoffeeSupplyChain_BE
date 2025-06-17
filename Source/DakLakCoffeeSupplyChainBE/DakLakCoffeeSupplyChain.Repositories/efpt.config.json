@@ -115,6 +115,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[PaymentConfigurations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Payments]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ProcessingBatches]",
          "ObjectType": 0
       },
@@ -188,6 +196,14 @@
       },
       {
          "Name": "[dbo].[UserAccounts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Wallets]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WalletTransactions]",
          "ObjectType": 0
       },
       {

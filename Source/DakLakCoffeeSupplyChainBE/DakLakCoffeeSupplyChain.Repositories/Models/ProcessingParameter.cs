@@ -23,5 +23,7 @@ public partial class ProcessingParameter
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatchProgress Progress { get; set; }
 }

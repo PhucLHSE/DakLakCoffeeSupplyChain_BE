@@ -33,6 +33,8 @@ public partial class WarehouseOutboundReceipt
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ProcessingBatch Batch { get; set; }
 
     public virtual BusinessStaff ExportedByNavigation { get; set; }

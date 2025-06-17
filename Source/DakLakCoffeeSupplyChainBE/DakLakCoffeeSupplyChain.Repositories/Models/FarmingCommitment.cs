@@ -43,6 +43,8 @@ public partial class FarmingCommitment
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }

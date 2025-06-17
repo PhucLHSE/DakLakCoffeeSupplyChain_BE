@@ -33,6 +33,8 @@ public partial class CropSeasonDetail
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();

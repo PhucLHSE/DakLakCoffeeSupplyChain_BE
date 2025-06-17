@@ -27,6 +27,8 @@ public partial class Farmer
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 
     public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();

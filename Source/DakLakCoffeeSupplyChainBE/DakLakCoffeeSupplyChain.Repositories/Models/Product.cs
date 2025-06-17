@@ -55,6 +55,8 @@ public partial class Product
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual UserAccount ApprovedByNavigation { get; set; }
 
     public virtual ProcessingBatch Batch { get; set; }

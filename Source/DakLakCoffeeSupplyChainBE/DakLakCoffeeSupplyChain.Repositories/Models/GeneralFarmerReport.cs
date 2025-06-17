@@ -37,6 +37,8 @@ public partial class GeneralFarmerReport
 
     public DateTime? ResolvedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual CropProgress CropProgress { get; set; }
 
     public virtual ICollection<ExpertAdvice> ExpertAdvices { get; set; } = new List<ExpertAdvice>();

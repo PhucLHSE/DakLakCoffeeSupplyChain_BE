@@ -33,6 +33,8 @@ public partial class WarehouseOutboundRequest
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual Inventory Inventory { get; set; }
 
     public virtual OrderItem OrderItem { get; set; }

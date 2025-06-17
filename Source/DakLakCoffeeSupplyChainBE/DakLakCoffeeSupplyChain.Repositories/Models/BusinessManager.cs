@@ -35,6 +35,8 @@ public partial class BusinessManager
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<BusinessBuyer> BusinessBuyers { get; set; } = new List<BusinessBuyer>();
 
     public virtual ICollection<BusinessStaff> BusinessStaffs { get; set; } = new List<BusinessStaff>();

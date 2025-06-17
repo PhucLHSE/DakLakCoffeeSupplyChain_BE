@@ -49,6 +49,8 @@ public partial class ProcurementPlansDetail
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual ContractItem ContractItem { get; set; }

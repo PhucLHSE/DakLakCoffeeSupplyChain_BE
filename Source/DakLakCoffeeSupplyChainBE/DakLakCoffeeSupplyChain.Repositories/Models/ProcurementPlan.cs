@@ -33,6 +33,8 @@ public partial class ProcurementPlan
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual BusinessManager CreatedByNavigation { get; set; }
 
     public virtual ICollection<CultivationRegistration> CultivationRegistrations { get; set; } = new List<CultivationRegistration>();

@@ -23,6 +23,8 @@ public partial class ShipmentDetail
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual OrderItem OrderItem { get; set; }
 
     public virtual Shipment Shipment { get; set; }

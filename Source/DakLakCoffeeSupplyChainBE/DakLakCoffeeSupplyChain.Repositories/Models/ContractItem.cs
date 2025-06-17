@@ -27,6 +27,8 @@ public partial class ContractItem
 
     public DateTime UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual CoffeeType CoffeeType { get; set; }
 
     public virtual Contract Contract { get; set; }
