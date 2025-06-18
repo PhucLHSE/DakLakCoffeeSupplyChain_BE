@@ -46,6 +46,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo kho thành công", warehouse.WarehouseId);
         }
+        public async Task<IServiceResult> GetAllAsync()
+        {
+            var warehouses = await _unitOfWork.Warehouses
+                .FindAsync(w => !w.IsDeleted);
+
+            var result = warehouses.Select(w => new WarehouseViewDto
+            {
+                WarehouseId = w.WarehouseId,
+                Name = w.Name,
+                Location = w.Location,
+                Capacity = w.Capacity
+            }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+        }
 
     }
 }
