@@ -56,7 +56,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Description = dto.Description,
                 Status = dto.Status.ToString(), // enum → string
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
             };
         }
 

@@ -11,16 +11,21 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class BusinessManagerService : IBussinessManagerService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public BusinessManagerService(IUnitOfWork unitOfWork)
+        public BusinessManagerService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll()
@@ -86,6 +91,92 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     businessManagerDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(BusinessManagerCreateDto businessManagerDto, Guid userId)
+        {
+            try
+            {
+                // Lấy thông tin người dùng theo userId
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.UserId == userId,
+                    include: query => query
+                       .Include(u => u.Role),
+                    asNoTracking: true
+                );
+
+                // Kiểm tra người dùng có tồn tại, chưa bị xóa và có vai trò "BusinessManager"
+                if (user == null || user.IsDeleted || user.Role == null || user.Role.RoleName != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Người dùng không có quyền tạo doanh nghiệp."
+                    );
+                }
+
+                // Kiểm tra xem người dùng đã là BusinessManager chưa (tránh trùng)
+                var existingManager = await _unitOfWork.BusinessManagerRepository.GetByUserIdAsync(userId);
+
+                if (existingManager != null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE, 
+                        "Người dùng đã là quản lý doanh nghiệp."
+                    );
+                }
+
+                // Kiểm tra doanh nghiệp đã được đăng ký chưa theo mã số thuế
+                var businessManagerExists = await _unitOfWork.BusinessManagerRepository.GetByTaxIdAsync(businessManagerDto.TaxId);
+
+                if (businessManagerExists != null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Doanh nghiệp đã được đăng ký."
+                    );
+                }
+
+                // Sinh mã định danh cho BusinessManager
+                string managerCode = await _codeGenerator.GenerateManagerCodeAsync();
+
+                // Map DTO to Entity
+                var newBusinessManager = businessManagerDto.MapToNewBusinessManager(userId, managerCode);
+
+                // Tạo quản lý doanh nghiệp ở repository
+                await _unitOfWork.BusinessManagerRepository.CreateAsync(newBusinessManager);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = newBusinessManager.MapToBusinessManagerViewDetailsDto();
+                    responseDto.Email = user.Email;
+                    responseDto.FullName = user.Name;
+                    responseDto.PhoneNumber = user.PhoneNumber;
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
