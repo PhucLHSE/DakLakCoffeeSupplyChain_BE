@@ -1,0 +1,30 @@
+﻿using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.DBContext;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DakLakCoffeeSupplyChain.Repositories.Repositories
+{
+    public class InventoryRepository : GenericRepository<Inventory>, IInventoryRepository
+    {
+        public InventoryRepository(DakLakCoffee_SCMContext context) : base(context)
+        {
+        }
+
+        public async Task<Inventory?> FindByWarehouseAndBatchAsync(Guid warehouseId, Guid batchId)
+        {
+            return await _context.Inventories
+                .FirstOrDefaultAsync(inv =>
+                    inv.WarehouseId == warehouseId &&
+                    inv.BatchId == batchId &&
+                    !inv.IsDeleted);
+        }
+    }
+
+}
