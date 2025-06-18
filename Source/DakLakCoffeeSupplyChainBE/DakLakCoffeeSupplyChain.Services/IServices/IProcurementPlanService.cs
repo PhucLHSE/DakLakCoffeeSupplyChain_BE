@@ -8,6 +8,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll();
         Task<IServiceResult> GetById(Guid planId);
         Task<IServiceResult> GetByIdExceptDisablePlanDetails(Guid planId);
-        Task<IServiceResult> DeleteById(Guid planId);
+        Task<IServiceResult> SoftDeleteById(Guid planId);
     }
 }
