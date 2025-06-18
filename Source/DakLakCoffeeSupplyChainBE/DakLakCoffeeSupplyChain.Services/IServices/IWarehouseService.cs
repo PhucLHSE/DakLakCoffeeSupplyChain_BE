@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWarehouseService
     {
         Task<IServiceResult> CreateAsync(WarehouseCreateDto dto);
+        Task<IServiceResult> GetAllAsync();
     }
 }

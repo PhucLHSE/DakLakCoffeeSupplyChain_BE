@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -18,6 +19,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<bool> IsNameExistsAsync(string name)
         {
             return await _context.Warehouses.AnyAsync(w => w.Name == name && !w.IsDeleted);
+        }
+        public async Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate)
+        {
+            return await _context.Warehouses
+                .Where(predicate)
+                .ToListAsync();
         }
     }
 }
