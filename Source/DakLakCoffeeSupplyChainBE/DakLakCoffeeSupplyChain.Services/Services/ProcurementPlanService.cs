@@ -52,8 +52,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
+                predicate: p => p.IsDeleted != true,
                 include: p => p.Include(p => p.CreatedByNavigation),
-                orderBy: p => p.OrderBy(p => p.PlanCode), 
+                orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);
 
             if (procurementPlans == null || procurementPlans.Count == 0)
@@ -188,63 +189,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         //Xóa cứng
-        public async Task<IServiceResult> DeleteById(Guid planId)
-        {
-            try
-            {
-                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-                var planDetails = await _unitOfWork.ProcurementPlanDetailsRepository.
-                    GetAllAsync(predicate: p => p.PlanId == planId, asNoTracking: true);
-                if (plan == null)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        Const.WARNING_NO_DATA_MSG
-                    );
-                }
-                else
-                {
-                    if (planDetails.Count != 0)
-                    {
-                        foreach (var item in planDetails)
-                            await _unitOfWork.ProcurementPlanDetailsRepository.RemoveAsync(item);
-                    }
-                    await _unitOfWork.ProcurementPlanRepository.RemoveAsync(plan);
-                    var result = await _unitOfWork.SaveChangesAsync();
-
-                    if (result > 0)
-                    {
-                        return new ServiceResult(
-                            Const.SUCCESS_DELETE_CODE,
-                            Const.SUCCESS_DELETE_MSG
-                        );
-                    }
-                    else
-                    {
-                        return new ServiceResult(
-                            Const.FAIL_DELETE_CODE,
-                            Const.FAIL_DELETE_MSG
-                        );
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    ex.ToString()
-                );
-            }
-        }
-
-        //Xóa mềm
         //public async Task<IServiceResult> DeleteById(Guid planId)
         //{
         //    try
         //    {
-
         //        var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-
+        //        var planDetails = await _unitOfWork.ProcurementPlanDetailsRepository.
+        //            GetAllAsync(predicate: p => p.PlanId == planId, asNoTracking: true);
         //        if (plan == null)
         //        {
         //            return new ServiceResult(
@@ -254,11 +205,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         //        }
         //        else
         //        {
-        //            plan.Status = "Deleted";
-        //            await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+        //            if (planDetails.Count != 0)
+        //            {
+        //                foreach (var item in planDetails)
+        //                    await _unitOfWork.ProcurementPlanDetailsRepository.RemoveAsync(item);
+        //            }
+        //            await _unitOfWork.ProcurementPlanRepository.RemoveAsync(plan);
         //            var result = await _unitOfWork.SaveChangesAsync();
 
-        //            if (result == Const.SUCCESS_DELETE_CODE)
+        //            if (result > 0)
         //            {
         //                return new ServiceResult(
         //                    Const.SUCCESS_DELETE_CODE,
@@ -282,5 +237,60 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         //        );
         //    }
         //}
+
+        //Xóa mềm
+        public async Task<IServiceResult> SoftDeleteById(Guid planId)
+        {
+            try
+            {
+                // Tìm plan theo ID
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+
+                // Kiểm tra nếu không tồn tại
+                if (plan == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    plan.IsDeleted = true;
+                    plan.UpdatedAt = DateTime.Now;
+
+                    // Cập nhật xoá mềm vai trò ở repository
+                    await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }

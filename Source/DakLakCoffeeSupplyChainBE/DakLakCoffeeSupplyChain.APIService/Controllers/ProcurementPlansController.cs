@@ -1,5 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -17,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/<ProcurementPlans>
         [HttpGet]
         [EnableQuery]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetAllProcurementPlansAsync()
         {
             var result = await _procurementPlanService.GetAll();
@@ -30,6 +33,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
 
+        // Chỉ những plan nào đang mở (status == open), dành cho mọi người
         // GET: api/<ProcurementPlans/Available>
         [HttpGet("Available")]
         public async Task<IActionResult> GetAllProcurementPlansAvailableAsync()
@@ -48,6 +52,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET api/<ProcurementPlans>/{planId}
         [HttpGet("{planId}")]
         [EnableQuery]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetById(Guid planId)
         {
             var result = await _procurementPlanService.GetById(planId);
@@ -77,19 +82,38 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         // DELETE api/<ProcurementPlans>/{planId}
-        [HttpDelete("{planId}")]
-        public async Task<IActionResult> DeleteProcurementPlanByIdAsync(Guid planId)
+        //[HttpDelete("{planId}")]
+        //public async Task<IActionResult> DeleteProcurementPlanByIdAsync(Guid planId)
+        //{
+        //    var result = await _procurementPlanService.DeleteById(planId);
+
+        //    if (result.Status == Const.SUCCESS_DELETE_CODE)
+        //        return Ok("Xóa thành công.");
+
+        //    if (result.Status == Const.WARNING_NO_DATA_CODE)
+        //        return NotFound("Không tìm thấy kế hoạch.");
+
+        //    if (result.Status == Const.FAIL_DELETE_CODE)
+        //        return Conflict("Xóa thất bại.");
+
+        //    return StatusCode(500, result.Message);
+        //}
+
+        // PATCH: api/<ProductsController>/soft-delete/{productId}
+        [HttpPatch("soft-delete/{planId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid planId)
         {
-            var result = await _procurementPlanService.DeleteById(planId);
+            var result = await _procurementPlanService.SoftDeleteById(planId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa thành công.");
+                return Ok("Xóa mềm thành công.");
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy kế hoạch.");
+                return NotFound("Không tìm thấy sản phẩm.");
 
             if (result.Status == Const.FAIL_DELETE_CODE)
-                return Conflict("Xóa thất bại.");
+                return Conflict("Xóa mềm thất bại.");
 
             return StatusCode(500, result.Message);
         }
