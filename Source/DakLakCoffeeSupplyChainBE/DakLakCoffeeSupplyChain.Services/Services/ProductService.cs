@@ -68,7 +68,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm sản phẩm theo ID
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                 predicate: p => p.ProductId == productId,
-                include: q => q
+                include: query => query
                    .Include(p => p.CoffeeType)
                    .Include(p => p.Batch)
                    .Include(p => p.Inventory)
@@ -105,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tìm sản phẩm theo ID
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p => p.ProductId == productId,
-                    include: q => q
+                    include: query => query
                        .Include(p => p.CoffeeType)
                        .Include(p => p.Batch)
                        .Include(p => p.Inventory)

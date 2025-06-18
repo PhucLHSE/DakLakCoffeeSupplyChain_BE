@@ -70,7 +70,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm tài khoản người dùng theo ID
             var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                 predicate: u => u.UserId == userId,
-                include: q => q.Include(u => u.Role),
+                include: query => query.Include(u => u.Role),
                 asNoTracking: true
             );
 
@@ -319,7 +319,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tìm tài khoản người dùng theo ID từ repository
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                     predicate: u => u.UserId == userId,
-                    include: q => q.Include(u => u.Role),
+                    include: query => query.Include(u => u.Role),
                     asNoTracking: true
                 );
 
@@ -373,7 +373,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tìm tài khoản người dùng theo ID từ repository
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                     predicate: u => u.UserId == userId,
-                    include: q => q.Include(u => u.Role),
+                    include: query => query.Include(u => u.Role),
                     asNoTracking: true
                 );
 

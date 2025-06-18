@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -53,6 +54,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     businessManagerDtos
+                );
+            }
+        }
+
+        public async Task<IServiceResult> GetById(Guid managerId)
+        {
+            // Tìm quản lý doanh nghiệp theo ID
+            var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: bm => bm.ManagerId == managerId,
+                include: query => query
+                   .Include(bm => bm.User),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy quản lý doanh nghiệp
+            if (businessManager == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new BusinessManagerViewDetailsDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Map sang DTO chi tiết để trả về
+                var businessManagerDto = businessManager.MapToBusinessManagerViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    businessManagerDto
                 );
             }
         }
