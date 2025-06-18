@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Services.Mappers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -60,6 +61,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }).ToList();
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+        }
+        public async Task<IServiceResult> UpdateAsync(Guid id, WarehouseUpdateDto dto)
+        {
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(id);
+            if (warehouse == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
+
+            if (await _unitOfWork.Warehouses.IsNameExistsAsync(dto.Name))
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tên kho đã tồn tại.");
+
+            // Áp dụng mapper
+            dto.MapToEntity(warehouse);
+
+            _unitOfWork.Warehouses.Update(warehouse);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật kho thành công.");
         }
 
     }

@@ -13,5 +13,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<bool> IsNameExistsAsync(string name);
         Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate);
+        Task<Warehouse?> GetByIdAsync(Guid id);
+        void Update(Warehouse entity);
     }
 }

@@ -26,5 +26,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(predicate)
                 .ToListAsync();
         }
+        public async Task<Warehouse?> GetByIdAsync(Guid id)
+        {
+            return await _context.Warehouses.FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+        }
+        public void Update(Warehouse entity)
+        {
+            _context.Warehouses.Update(entity);
+        }
     }
 }

@@ -30,5 +30,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.GetAllAsync();
             return StatusCode(result.Status, result);
         }
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] WarehouseUpdateDto dto)
+        {
+            var result = await _warehouseService.UpdateAsync(id, dto);
+            return StatusCode(result.Status, result);
+        }
+
     }
 }
