@@ -32,5 +32,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StageCount = method.ProcessingStages?.Count ?? 0
             };
         }
+      public static ProcessingMethod MapToProcessingMethodCreateDto(this ProcessingMethodCreateDto dto)
+        {
+            return new ProcessingMethod
+            {
+                MethodCode = dto.MethodCode.Trim(),
+                Name = dto.Name.Trim(),
+                Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                IsDeleted = false
+            };
+        }
     }
 }

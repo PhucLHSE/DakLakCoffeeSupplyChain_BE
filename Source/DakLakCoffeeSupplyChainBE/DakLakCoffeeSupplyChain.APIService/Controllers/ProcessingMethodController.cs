@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +34,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin,Farmer,BusinessManager")]
+        public async Task<IActionResult> Create([FromBody] ProcessingMethodCreateDto dto)
+        {
+            var result = await _procesingMethodService.CreateAsync(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Message);  // Trả 200 nếu thành công
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return BadRequest(result.Message); // Trả 400 nếu lỗi do input
+
+            return StatusCode(500, result.Message); // Trả 500 nếu exception
+        }
+
 
         [HttpGet("{methodId}")]
         [Authorize(Roles = "Admin,Farmer,BusinessManager")]

@@ -106,5 +106,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> CreateAsync(ProcessingMethodCreateDto input)
+        {
+            try
+            {
+
+                var existing = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(
+                    predicate: m => m.MethodCode == input.MethodCode && !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (existing != null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Mã phương pháp '{input.MethodCode}' đã tồn tại."
+                    );
+                }
+
+                var method = input.MapToProcessingMethodCreateDto();
+                await _unitOfWork.ProcessingMethodRepository.CreateAsync(method);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG)
+                    : new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
     }
 }
