@@ -1,8 +1,10 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
@@ -43,29 +45,65 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
         // Mapper ProcurementPlanViewDetailsDto
-        public static ProcurementPlanViewDetailsDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan entity, ICollection<Guid> detailList)
+        public static ProcurementPlanViewDetailsSumaryDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan entity)
         {
-
-            // Parse Status string to enum
-            ProcurementPlanStatus status = Enum.TryParse<ProcurementPlanStatus>(entity.Status, true, out var parsedStatus)
-                ? parsedStatus
-                : ProcurementPlanStatus.Draft;
-
-            return new ProcurementPlanViewDetailsDto
+            return new ProcurementPlanViewDetailsSumaryDto
             {
                 PlanId = entity.PlanId,
                 PlanCode = entity.PlanCode ?? string.Empty,
                 Title = entity.Title ?? string.Empty,
                 Description = entity.Description ?? string.Empty,
                 TotalQuantity = entity.TotalQuantity,
-                CreatedBy = entity.CreatedBy,
+                CreatedBy = entity.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
+                {
+                    ManagerId = entity.CreatedByNavigation.ManagerId,
+                    UserId = entity.CreatedByNavigation.UserId,
+                    ManagerCode = entity.CreatedByNavigation.ManagerCode,
+                    CompanyName = entity.CreatedByNavigation.CompanyName,
+                    CompanyAddress = entity.CreatedByNavigation.CompanyAddress,
+                    Website = entity.CreatedByNavigation.Website,
+                    ContactEmail = entity.CreatedByNavigation.ContactEmail
+                },
                 StartDate = entity.StartDate,
                 EndDate = entity.EndDate,
-                Status = status,
+                Status = EnumHelper.ParseEnumFromString(entity.Status, ProcurementPlanStatus.Draft),
                 ProgressPercentage = entity.ProgressPercentage,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
-                ProcurementPlansDetails = detailList
+                ProcurementPlansDetails = entity.ProcurementPlansDetails?
+                .OrderBy(p => p.PlanDetailCode)
+                .Select(p => new ProcurementPlanDetailsDto
+                {
+                    PlanDetailsId = p.PlanDetailsId,
+                    PlanDetailCode = p.PlanDetailCode,
+                    PlanId = p.PlanId,
+                    CoffeeType = p.CoffeeType == null ? null : new Common.DTOs.ProcurementPlanDTOs.CoffeeTypeDTOs.CoffeeTypePlanDetailsViewDto
+                    {
+                        CoffeeTypeId = p.CoffeeTypeId,
+                        TypeCode = p.CoffeeType.TypeCode,
+                        TypeName = p.CoffeeType.TypeName,
+                        BotanicalName = p.CoffeeType.BotanicalName,
+                        Description = p.CoffeeType.Description,
+                        TypicalRegion = p.CoffeeType.TypicalRegion,
+                        SpecialtyLevel = p.CoffeeType.SpecialtyLevel
+                    },
+                    //CropType = p.CropType, //Có khả năng field này bị thừa
+                    TargetQuantity = p.TargetQuantity,
+                    TargetRegion = p.TargetRegion,
+                    MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
+                    BeanSize = p.BeanSize,
+                    BeanColor = p.BeanColor,
+                    MoistureContent = p.MoistureContent,
+                    DefectRate = p.DefectRate,
+                    MinPriceRange = p.MinPriceRange,
+                    MaxPriceRange = p.MaxPriceRange,
+                    Note = p.Note,
+                    BeanColorImageUrl = p.BeanColorImageUrl,
+                    ProgressPercentage = p.ProgressPercentage,
+                    Status = EnumHelper.ParseEnumFromString(p.Status, ProcurementPlanDetailsStatus.Disable),
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt
+                }).ToList() ?? []
             };
         }
 
