@@ -24,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Đăng ký service tạo mã định danh
-builder.Services.AddScoped<ICodeGenerator, UserCodeGenerator>();
+builder.Services.AddScoped<ICodeGenerator, CodeGenerator>();
 builder.Services.AddScoped<ICropSeasonCodeGenerator, CropSeasonCodeGenerator>();
 
 // Unit of Work pattern: quản lý Transaction + Repository access

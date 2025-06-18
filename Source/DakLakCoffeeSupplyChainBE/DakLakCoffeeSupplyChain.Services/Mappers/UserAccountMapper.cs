@@ -87,6 +87,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EmailVerified = true,         // Admin tạo thì email được xem là xác thực
                 IsVerified = true,            // Có thể xem như đã duyệt
                 VerificationCode = null,      // Không cần tạo mã xác minh
+                IsDeleted = false
             };
         }
 

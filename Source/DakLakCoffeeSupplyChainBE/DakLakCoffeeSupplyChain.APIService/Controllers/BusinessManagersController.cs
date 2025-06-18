@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -49,6 +51,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // POST api/<BusinessManagersController>
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateBusinessManagerAsync([FromBody] BusinessManagerCreateDto businessManagerCreateDto, [FromQuery] Guid userId)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _bussinessManagerService.Create(businessManagerCreateDto, userId);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById), new { managerId = ((BusinessManagerViewDetailsDto)result.Data).ManagerId }, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
     }
 }

@@ -10,5 +10,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IBusinessManagerRepository : IGenericRepository<BusinessManager>
     {
+        Task<BusinessManager?> GetByUserIdAsync(Guid userId);
+
+        Task<BusinessManager?> GetByTaxIdAsync(string taxId);
+
+        Task<int> CountBusinessManagersRegisteredInYearAsync(int year);
     }
 }

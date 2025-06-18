@@ -1,4 +1,6 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,5 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll();
 
         Task<IServiceResult> GetById(Guid managerId);
+
+        Task<IServiceResult> Create(BusinessManagerCreateDto businessManagerDto, Guid userId);
     }
 }

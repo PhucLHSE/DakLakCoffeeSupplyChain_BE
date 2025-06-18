@@ -49,5 +49,28 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 PhoneNumber = manager.User?.PhoneNumber ?? string.Empty
             };
         }
+
+        // Mapper BusinessManagerCreateDto
+        public static BusinessManager MapToNewBusinessManager(this BusinessManagerCreateDto dto, Guid userId, string managerCode)
+        {
+            return new BusinessManager
+            {
+                ManagerId = Guid.NewGuid(),
+                UserId = userId,
+                ManagerCode = managerCode,
+                CompanyName = dto.CompanyName,
+                Position = dto.Position,
+                Department = dto.Department,
+                CompanyAddress = dto.CompanyAddress,
+                TaxId = dto.TaxId,
+                Website = dto.Website,
+                ContactEmail = dto.ContactEmail,
+                BusinessLicenseUrl = dto.BusinessLicenseUrl,
+                IsCompanyVerified = false,                    // Mặc định khi đăng ký là false
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+        }
     }
 }
