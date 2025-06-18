@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,5 +15,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(int methodId);
 
         Task<IServiceResult> DeleteById(int methodId);
+
+        Task<IServiceResult> CreateAsync(ProcessingMethodCreateDto input);
+
     }
 }
