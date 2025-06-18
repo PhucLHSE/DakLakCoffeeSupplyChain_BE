@@ -34,5 +34,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             _context.Warehouses.Update(entity);
         }
+        public async Task<bool> HasDependenciesAsync(Guid warehouseId)
+        {
+            return await _context.Inventories.AnyAsync(i => i.WarehouseId == warehouseId && !i.IsDeleted)
+                || await _context.WarehouseReceipts.AnyAsync(r => r.WarehouseId == warehouseId && !r.IsDeleted)
+                || await _context.WarehouseOutboundRequests.AnyAsync(r => r.WarehouseId == warehouseId && !r.IsDeleted);
+        }
+        public async Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId)
+        {
+            return await _context.Warehouses
+                .FirstOrDefaultAsync(w => w.WarehouseId == warehouseId && !w.IsDeleted);
+        }
     }
 }

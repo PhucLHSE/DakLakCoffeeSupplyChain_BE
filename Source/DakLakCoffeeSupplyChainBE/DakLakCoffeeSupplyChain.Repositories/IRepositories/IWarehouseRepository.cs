@@ -15,5 +15,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate);
         Task<Warehouse?> GetByIdAsync(Guid id);
         void Update(Warehouse entity);
+        Task<bool> HasDependenciesAsync(Guid warehouseId);
+        Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId);
     }
 }
