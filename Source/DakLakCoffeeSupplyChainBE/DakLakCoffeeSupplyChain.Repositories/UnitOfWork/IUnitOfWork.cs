@@ -15,6 +15,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IUserAccountRepository UserAccountRepository { get; }
 
+        IBusinessManagerRepository BusinessManagerRepository { get; }
+
         IFarmerRepository FarmerRepository { get; }
 
         IContractRepository ContractRepository { get; }
