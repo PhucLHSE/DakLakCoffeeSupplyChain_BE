@@ -1,5 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
-using DakLakCoffeeSupplyChain.Common;
+﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -11,13 +10,12 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class BusinessManagerService : IBussinessManagerService
+    public class BusinessManagerService : IBusinessManagerService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
@@ -45,7 +43,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new List<ProductViewAllDto>()  // Trả về danh sách rỗng
+                    new List<BusinessManagerViewAllDto>()  // Trả về danh sách rỗng
                 );
             }
             else
@@ -174,6 +172,65 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid managerId)
+        {
+            try
+            {
+                // Tìm quản lý doanh nghiệp theo ID
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: bm => bm.ManagerId == managerId,
+                    include: query => query
+                       .Include(bm => bm.User),
+                    asNoTracking: true
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (businessManager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    businessManager.IsDeleted = true;
+                    businessManager.UpdatedAt = DateTime.Now;
+
+                    // Cập nhật xoá mềm quản lý doanh nghiệp ở repository
+                    await _unitOfWork.BusinessManagerRepository.UpdateAsync(businessManager);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()

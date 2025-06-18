@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.IServices
 {
-    public interface IBussinessManagerService
+    public interface IBusinessManagerService
     {
         Task<IServiceResult> GetAll();
 
         Task<IServiceResult> GetById(Guid managerId);
 
         Task<IServiceResult> Create(BusinessManagerCreateDto businessManagerDto, Guid userId);
+
+        Task<IServiceResult> SoftDeleteById(Guid managerId);
     }
 }

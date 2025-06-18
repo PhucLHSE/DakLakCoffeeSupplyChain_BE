@@ -64,7 +64,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _userAccountService.Create(userDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return CreatedAtAction(nameof(GetById), new { userId = ((UserAccountViewDetailsDto)result.Data).UserId }, result.Data);
+                return CreatedAtAction(nameof(GetById), 
+                    new { userId = ((UserAccountViewDetailsDto)result.Data).UserId }, 
+                    result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message); 

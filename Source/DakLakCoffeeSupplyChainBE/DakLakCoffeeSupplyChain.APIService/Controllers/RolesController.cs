@@ -62,7 +62,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _roleService.Create(roleDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return CreatedAtAction(nameof(GetById), new { roleId = ((RoleViewDetailsDto)result.Data).RoleId }, result.Data);
+                return CreatedAtAction(nameof(GetById), 
+                    new { roleId = ((RoleViewDetailsDto)result.Data).RoleId }, 
+                    result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
