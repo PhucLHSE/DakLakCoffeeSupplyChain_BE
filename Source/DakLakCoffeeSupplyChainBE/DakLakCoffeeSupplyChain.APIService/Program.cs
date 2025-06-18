@@ -33,6 +33,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Đăng ký các service nghiệp vụ
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
+builder.Services.AddScoped<IBussinessManagerService, BusinessManagerService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
@@ -76,6 +77,7 @@ static IEdmModel GetEdmModel()
 
     odataBuilder.EntitySet<Role>("Role");
     odataBuilder.EntitySet<UserAccount>("UserAccount");
+    odataBuilder.EntitySet<BusinessManager>("BusinessManager");
     odataBuilder.EntitySet<Contract>("Contract");
     odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
     odataBuilder.EntitySet<CropStage>("CropStage");
