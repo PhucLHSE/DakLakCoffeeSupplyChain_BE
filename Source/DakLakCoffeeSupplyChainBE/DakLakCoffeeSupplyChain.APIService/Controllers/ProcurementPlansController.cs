@@ -1,6 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -48,9 +47,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/<ProcurementPlans>/{planId}
         [HttpGet("{planId}")]
+        [EnableQuery]
         public async Task<IActionResult> GetById(Guid planId)
         {
             var result = await _procurementPlanService.GetById(planId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // GET api/<ProcurementPlans>/Available/{planId}
+        [HttpGet("Available/{planId}")]
+        public async Task<IActionResult> GetByIdExceptDisablePlanDetails(Guid planId)
+        {
+            var result = await _procurementPlanService.GetByIdExceptDisablePlanDetails(planId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết

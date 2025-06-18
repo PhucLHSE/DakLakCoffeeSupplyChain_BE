@@ -79,20 +79,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
         public async Task<IServiceResult> GetById(Guid planId)
         {
-            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-            ICollection<Guid> planDetails = new HashSet<Guid>(); //Cần sửa lại sau, để tạm
+            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                predicate: p => p.PlanId == planId,
+                include: p => p.
+                Include(p => p.CreatedByNavigation).
+                Include(p => p.ProcurementPlansDetails).    //Order ProcurementPlansDetails bên mapper
+                ThenInclude(d => d.CoffeeType), 
+                asNoTracking: true
+                );
 
             if (plan == null)
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new ProcurementPlanViewDetailsDto()
+                    new ProcurementPlanViewDetailsSumaryDto()
                 );
             }
             else
             {
-                var planDto = plan.MapToProcurementPlanViewDetailsDto(planDetails);
+                var planDto = plan.MapToProcurementPlanViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    planDto
+                );
+            }
+        }
+        //Hiển thị chi tiết plan nhưng loại ko trả về các chi tiết plan đã bị khóa (màn hình public)
+        public async Task<IServiceResult> GetByIdExceptDisablePlanDetails(Guid planId)
+        {
+            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                predicate: p => p.PlanId == planId,
+                include: p => p.
+                Include(p => p.CreatedByNavigation).
+                Include(p => p.ProcurementPlansDetails.Where(p => p.Status != "Disable")).    //Order ProcurementPlansDetails bên mapper
+                ThenInclude(d => d.CoffeeType),
+                asNoTracking: true
+                );
+
+            if (plan == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new ProcurementPlanViewDetailsSumaryDto()
+                );
+            }
+            else
+            {
+                var planDto = plan.MapToProcurementPlanViewDetailsDto();
 
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
