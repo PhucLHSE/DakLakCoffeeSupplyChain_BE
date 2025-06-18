@@ -44,6 +44,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.DeleteAsync(id);
             return StatusCode(result.Status, result);
         }
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Admin, BusinessManager")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var result = await _warehouseService.GetByIdAsync(id);
+            return StatusCode(result.Status, result);
+        }
+
 
     }
 }

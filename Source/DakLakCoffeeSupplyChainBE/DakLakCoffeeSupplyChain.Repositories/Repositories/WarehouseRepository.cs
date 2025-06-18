@@ -45,5 +45,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Warehouses
                 .FirstOrDefaultAsync(w => w.WarehouseId == warehouseId && !w.IsDeleted);
         }
+        public async Task<Warehouse?> GetByIdWithManagerAsync(Guid id)
+        {
+            return await _context.Warehouses
+                .Include(w => w.Manager)
+                .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+        }
     }
 }
