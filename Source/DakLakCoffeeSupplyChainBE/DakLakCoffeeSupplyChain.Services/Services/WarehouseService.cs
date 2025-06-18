@@ -98,6 +98,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá kho thành công.");
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid id)
+        {
+            var warehouse = await _unitOfWork.Warehouses.GetByIdWithManagerAsync(id);
+            if (warehouse == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
+
+            var result = warehouse.ToDetailDto();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+        }
 
 
 
