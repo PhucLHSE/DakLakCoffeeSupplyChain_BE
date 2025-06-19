@@ -17,8 +17,6 @@ public partial class FarmingCommitment
 
     public Guid FarmerId { get; set; }
 
-    public Guid? TemplateId { get; set; }
-
     public double? ConfirmedPrice { get; set; }
 
     public double? CommittedQuantity { get; set; }
@@ -26,6 +24,8 @@ public partial class FarmingCommitment
     public DateOnly? EstimatedDeliveryStart { get; set; }
 
     public DateOnly? EstimatedDeliveryEnd { get; set; }
+
+    public DateTime CommitmentDate { get; set; }
 
     public Guid? ApprovedBy { get; set; }
 
@@ -37,14 +37,6 @@ public partial class FarmingCommitment
 
     public string Note { get; set; }
 
-    public string QualityTerms { get; set; }
-
-    public string PaymentTerms { get; set; }
-
-    public string PenaltyTerms { get; set; }
-
-    public DateTime FarmerConfirmedAt { get; set; }
-
     public Guid? ContractDeliveryItemId { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -55,23 +47,13 @@ public partial class FarmingCommitment
 
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
-    public virtual ICollection<CommitmentPayment> CommitmentPayments { get; set; } = new List<CommitmentPayment>();
-
-    public virtual ICollection<CommitmentViolation> CommitmentViolations { get; set; } = new List<CommitmentViolation>();
-
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
 
     public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
 
     public virtual Farmer Farmer { get; set; }
 
-    public virtual ICollection<ManualViolation> ManualViolations { get; set; } = new List<ManualViolation>();
-
     public virtual ProcurementPlansDetail PlanDetail { get; set; }
 
     public virtual CultivationRegistrationsDetail RegistrationDetail { get; set; }
-
-    public virtual ICollection<ReputationHistory> ReputationHistories { get; set; } = new List<ReputationHistory>();
-
-    public virtual CommitmentTemplate Template { get; set; }
 }

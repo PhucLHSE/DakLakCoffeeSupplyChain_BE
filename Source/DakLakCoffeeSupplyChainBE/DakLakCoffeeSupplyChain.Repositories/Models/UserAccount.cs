@@ -55,19 +55,13 @@ public partial class UserAccount
 
     public virtual BusinessStaff BusinessStaff { get; set; }
 
-    public virtual ICollection<CommitmentViolation> CommitmentViolations { get; set; } = new List<CommitmentViolation>();
-
     public virtual ICollection<Farmer> Farmers { get; set; } = new List<Farmer>();
 
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();
 
-    public virtual ICollection<ManualViolation> ManualViolations { get; set; } = new List<ManualViolation>();
-
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
-
-    public virtual ICollection<ReputationHistory> ReputationHistories { get; set; } = new List<ReputationHistory>();
 
     public virtual Role Role { get; set; }
 

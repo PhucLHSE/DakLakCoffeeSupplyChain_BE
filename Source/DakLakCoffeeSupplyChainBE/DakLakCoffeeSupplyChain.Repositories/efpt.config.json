@@ -5,7 +5,7 @@
    "FilterSchemas": false,
    "IncludeConnectionString": true,
    "ModelNamespace": null,
-   "OutputContextPath": "DBContext",
+   "OutputContextPath": null,
    "OutputPath": "Models",
    "PreserveCasingWithRegex": true,
    "ProjectRootNamespace": "DakLakCoffeeSupplyChain.Repositories",
@@ -32,18 +32,6 @@
       },
       {
          "Name": "[dbo].[CoffeeTypes]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[CommitmentPayments]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[CommitmentTemplates]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[CommitmentViolations]",
          "ObjectType": 0
       },
       {
@@ -108,10 +96,6 @@
       },
       {
          "Name": "[dbo].[InventoryLogs]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[ManualViolations]",
          "ObjectType": 0
       },
       {
@@ -183,10 +167,6 @@
          "ObjectType": 0
       },
       {
-         "Name": "[dbo].[ReputationHistory]",
-         "ObjectType": 0
-      },
-      {
          "Name": "[dbo].[Roles]",
          "ObjectType": 0
       },
@@ -212,10 +192,6 @@
       },
       {
          "Name": "[dbo].[SystemNotifications]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[TriggerRules]",
          "ObjectType": 0
       },
       {

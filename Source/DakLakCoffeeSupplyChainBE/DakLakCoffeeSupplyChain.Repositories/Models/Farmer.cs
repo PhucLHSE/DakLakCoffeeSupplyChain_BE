@@ -21,8 +21,6 @@ public partial class Farmer
 
     public string CertificationUrl { get; set; }
 
-    public int? ReputationScore { get; set; }
-
     public bool? IsVerified { get; set; }
 
     public DateTime CreatedAt { get; set; }
