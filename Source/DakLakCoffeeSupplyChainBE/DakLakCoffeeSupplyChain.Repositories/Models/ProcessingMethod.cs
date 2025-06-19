@@ -26,4 +26,6 @@ public partial class ProcessingMethod
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();
 
     public virtual ICollection<ProcessingStage> ProcessingStages { get; set; } = new List<ProcessingStage>();
+
+    public virtual ICollection<ProcurementPlansDetail> ProcurementPlansDetails { get; set; } = new List<ProcurementPlansDetail>();
 }
