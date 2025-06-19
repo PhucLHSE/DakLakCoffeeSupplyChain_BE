@@ -26,9 +26,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public UserAccountService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, ICodeGenerator codeGenerator)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
-            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _passwordHasher = passwordHasher 
+                ?? throw new ArgumentNullException(nameof(passwordHasher));
+
+            _codeGenerator = codeGenerator 
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll()

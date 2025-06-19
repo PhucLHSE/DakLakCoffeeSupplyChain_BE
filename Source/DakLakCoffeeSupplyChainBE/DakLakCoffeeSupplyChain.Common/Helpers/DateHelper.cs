@@ -8,9 +8,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
 {
     public static class DateHelper
     {
-        /// <summary>
-        /// Tính số tuổi từ ngày sinh đến ngày hiện tại hoặc ngày chỉ định.
-        /// </summary>
+        // Tính số tuổi từ ngày sinh đến ngày hiện tại hoặc ngày chỉ định.
         public static int CalculateAge(DateOnly dob, DateOnly? today = null)
         {
             var current = today ?? DateOnly.FromDateTime(DateTime.Today);
@@ -18,6 +16,34 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
             if (dob > current.AddYears(-age)) age--;
 
             return age;
+        }
+
+        // Convert UTC DateTime sang giờ Việt Nam (UTC+7).
+        public static DateTime ConvertToVietnamTime(DateTime utcDateTime)
+        {
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            return TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc),
+                vietnamTimeZone
+            );
+        }
+
+        // Convert UTC sang timezone chỉ định (VD: "Asia/Tokyo", "America/New_York").
+        public static DateTime ConvertToTimeZone(DateTime utcDateTime, string timeZoneId)
+        {
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+
+            return TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc),
+                timeZone
+            );
+        }
+
+        // Trả về giờ hiện tại theo múi giờ Việt Nam.
+        public static DateTime NowVietnamTime()
+        {
+            return ConvertToVietnamTime(DateTime.UtcNow);
         }
     }
 }

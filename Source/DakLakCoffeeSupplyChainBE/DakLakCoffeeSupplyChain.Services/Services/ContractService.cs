@@ -19,7 +19,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public ContractService(IUnitOfWork unitOfWork)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
         public async Task<IServiceResult> GetAll()

@@ -25,7 +25,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public RoleService(IUnitOfWork unitOfWork)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
         public async Task<IServiceResult> GetAll()
