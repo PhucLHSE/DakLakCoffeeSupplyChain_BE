@@ -12,6 +12,7 @@ using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -336,7 +337,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Đánh dấu xoá mềm bằng IsDeleted
                     businessManager.IsDeleted = true;
-                    businessManager.UpdatedAt = DateTime.UtcNow;
+                    businessManager.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm quản lý doanh nghiệp ở repository
                     await _unitOfWork.BusinessManagerRepository.UpdateAsync(businessManager);

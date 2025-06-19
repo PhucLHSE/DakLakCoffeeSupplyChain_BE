@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -55,8 +56,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RoleName = dto.RoleName,
                 Description = dto.Description,
                 Status = dto.Status.ToString(), // enum → string
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false
             };
         }
@@ -67,7 +68,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             role.RoleName = dto.RoleName;
             role.Description = dto.Description;
             role.Status = dto.Status.ToString();  // enum → string
-            role.UpdatedAt = DateTime.UtcNow;
+            role.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

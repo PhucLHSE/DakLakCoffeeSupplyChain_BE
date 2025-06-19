@@ -394,7 +394,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Đánh dấu xoá mềm bằng IsDeleted
                     user.IsDeleted = true;
-                    user.UpdatedAt = DateTime.Now;
+                    user.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm vai trò ở repository
                     await _unitOfWork.UserAccountRepository.UpdateAsync(user);

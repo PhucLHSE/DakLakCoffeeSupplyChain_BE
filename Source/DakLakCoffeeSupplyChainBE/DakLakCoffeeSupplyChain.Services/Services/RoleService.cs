@@ -1,5 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
-using DakLakCoffeeSupplyChain.Common;
+﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
-using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
@@ -271,7 +269,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Đánh dấu xoá mềm bằng IsDeleted
                     role.IsDeleted = true;
-                    role.UpdatedAt = DateTime.Now;
+                    role.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm vai trò ở repository
                     await _unitOfWork.RoleRepository.UpdateAsync(role);
