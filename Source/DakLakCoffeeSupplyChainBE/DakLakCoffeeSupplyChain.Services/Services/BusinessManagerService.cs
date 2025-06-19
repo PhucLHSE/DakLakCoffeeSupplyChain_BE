@@ -179,6 +179,61 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteById(Guid managerId)
+        {
+            try
+            {
+                // Tìm quản lý doanh nghiệp theo ID
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: bm => bm.ManagerId == managerId,
+                    include: query => query
+                       .Include(bm => bm.User),
+                    asNoTracking: true
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (businessManager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa quản lý doanh nghiệp khỏi repository
+                    await _unitOfWork.BusinessManagerRepository.RemoveAsync(businessManager);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteById(Guid managerId)
         {
             try
