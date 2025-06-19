@@ -31,8 +31,6 @@ public partial class BusinessManager
 
     public string BusinessLicenseUrl { get; set; }
 
-    public int? ReputationScore { get; set; }
-
     public bool? IsCompanyVerified { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -44,8 +42,6 @@ public partial class BusinessManager
     public virtual ICollection<BusinessBuyer> BusinessBuyers { get; set; } = new List<BusinessBuyer>();
 
     public virtual ICollection<BusinessStaff> BusinessStaffs { get; set; } = new List<BusinessStaff>();
-
-    public virtual ICollection<CommitmentTemplate> CommitmentTemplates { get; set; } = new List<CommitmentTemplate>();
 
     public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
 

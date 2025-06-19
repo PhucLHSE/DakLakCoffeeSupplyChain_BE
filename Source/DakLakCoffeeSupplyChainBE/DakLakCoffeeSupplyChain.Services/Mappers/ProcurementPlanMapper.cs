@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -85,14 +87,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         TypicalRegion = p.CoffeeType.TypicalRegion,
                         SpecialtyLevel = p.CoffeeType.SpecialtyLevel
                     },
+                    //CropType = p.CropType, //Có khả năng field này bị thừa
                     TargetQuantity = p.TargetQuantity,
                     TargetRegion = p.TargetRegion,
                     MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
-                    FarmerReputationRequiredScore = p.FarmerReputationRequiredScore,
-                    RequiredQuality = p.RequiredQuality,
+                    BeanSize = p.BeanSize,
+                    BeanColor = p.BeanColor,
+                    MoistureContent = p.MoistureContent,
+                    DefectRate = p.DefectRate,
                     MinPriceRange = p.MinPriceRange,
                     MaxPriceRange = p.MaxPriceRange,
                     Note = p.Note,
+                    BeanColorImageUrl = p.BeanColorImageUrl,
                     ProgressPercentage = p.ProgressPercentage,
                     Status = EnumHelper.ParseEnumFromString(p.Status, ProcurementPlanDetailsStatus.Disable),
                     CreatedAt = p.CreatedAt,

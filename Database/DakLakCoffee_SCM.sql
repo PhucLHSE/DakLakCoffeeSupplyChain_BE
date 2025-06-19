@@ -157,7 +157,6 @@ CREATE TABLE BusinessManagers (
   Website NVARCHAR(255),                                        -- Trang web doanh nghiệp
   ContactEmail NVARCHAR(100),                                   -- Email liên hệ doanh nghiệp
   BusinessLicenseURL NVARCHAR(255),                             -- Link đến ảnh/PDF giấy phép kinh doanh
-  ReputationScore INT DEFAULT 0,								-- Điểm tín nhiệm, mặc định là 0, sau đó tăng hoặc giảm, 100 là max
   IsCompanyVerified BIT DEFAULT 0,                              -- Trạng thái đã được duyệt bởi admin?
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật
@@ -179,7 +178,6 @@ CREATE TABLE Farmers (
   FarmSize FLOAT,                                                    -- Diện tích nông trại (hecta)
   CertificationStatus NVARCHAR(100),                                 -- Trạng thái chứng nhận: VietGAP, Organic,...
   CertificationURL NVARCHAR(255),                                    -- Link đến tài liệu chứng nhận
-  ReputationScore INT DEFAULT 0,									 -- Điểm tín nhiệm, mặc định là 0, sau đó tăng hoặc giảm, 100 là max
   IsVerified BIT DEFAULT 0,                                          -- Tài khoản nông dân đã xác minh chưa
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Thời điểm tạo bản ghi
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Thời điểm cập nhật cuối
@@ -351,19 +349,6 @@ CREATE TABLE ContractDeliveryItems (
 
 GO
 
--- Danh mục phương pháp sơ chế (natural, washed,...)
-CREATE TABLE ProcessingMethods (
-  MethodID INT PRIMARY KEY IDENTITY(1,1),                      -- ID nội bộ
-  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'natural', 'washed'...
-  Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
-  Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
-  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
-);
-
-GO
-
 -- ProcurementPlans – Bảng kế hoạch thu mua tổng quan
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
@@ -393,20 +378,18 @@ CREATE TABLE ProcurementPlansDetails (
 	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-A001
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
-	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
+    CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (kg)
-	FarmerReputationRequiredScore INT DEFAULT 0,									   -- Điểm tín nhiệm tối thiểu của farmer
-	RequiredQuality NVARCHAR(MAX),													   -- Chất lượng mong muốn (thông tin này sẽ được copy sang mục điều khoản trong bảng cam kết)
-    --BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
-    --BeanColor NVARCHAR(50),                                                            -- Màu hạt
-    --MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
-    --DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
+    BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
+    BeanColor NVARCHAR(50),                                                            -- Màu hạt
+    MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
+    DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
-    --BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
+    BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
 	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
     Status NVARCHAR(50) DEFAULT 'active',                                              -- Trạng thái: active, closed, disabled
@@ -422,10 +405,7 @@ CREATE TABLE ProcurementPlansDetails (
         FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID),
 
 	CONSTRAINT FK_ProcurementPlansDetails_ContractItemID
-        FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID),
-
-	CONSTRAINT FK_ProcurementPlansDetails_ProcessMethodID
-        FOREIGN KEY (ProcessMethodID) REFERENCES ProcessingMethods(MethodID)
+        FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID)
 );
 
 GO
@@ -486,26 +466,6 @@ CREATE TABLE CultivationRegistrationsDetail (
 
 GO
 
--- CommitmentTemplates - Bảng này cho phép doanh nghiệp thiết lập mẫu hợp đồng mặc định cho các cam kết, hỗ trợ việc tùy chỉnh điều khoản. Mẫu hợp đồng chứa các điều khoản chuẩn mà doanh nghiệp thường sử dụng, sau đó có thể được áp dụng cho các cam kết mới và chỉnh sửa chi tiết nếu cần trước khi gửi cho farmer xác nhận.
-CREATE TABLE CommitmentTemplates (
-    TemplateID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),			-- ID khóa chính
-    BusinessID UNIQUEIDENTIFIER NOT NULL,								-- FK đến Business (doanh nghiệp sở hữu mẫu hợp đồng này). Mỗi doanh nghiệp có thể có một mẫu chuẩn (hoặc nhiều mẫu cho các trường hợp khác nhau).
-    TemplateName NVARCHAR(255),											-- Tên mẫu (ví dụ: "Hợp đồng chuẩn 2025", "Mẫu hợp đồng Arabica chất lượng cao", ...).
-    DefaultQualityTerms NVARCHAR(MAX),									-- Các điều khoản chất lượng mặc định
-    DefaultPaymentTerms NVARCHAR(MAX),									-- Các điều khoản thanh toán mặc định (ví dụ: "30% ngay khi ký, 70% sau khi nhận hàng trong vòng 7 ngày").
-    DefaultPenaltyTerms NVARCHAR(MAX),									-- Các điều khoản vi phạm mặc định (ví dụ: "Phạt 5% giá trị hợp đồng cho mỗi tuần trễ hạn giao hàng", ...).
-    OtherTerms NVARCHAR(MAX),											-- Các điều khoản khác mặc định (điều khoản chung về chấm dứt hợp đồng, giải quyết tranh chấp, v.v.).
-	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0									-- 0 = chưa xoá, 1 = đã xoá mềm
-
-	-- Foreign Keys
-	CONSTRAINT FK_CommitmentTemplates_BusinessID 
-		FOREIGN KEY (BusinessID) REFERENCES BusinessManagers(ManagerID)
-);
-
-GO
-
 -- FarmingCommitments – Cam kết chính thức giữa Farmer và hệ thống
 CREATE TABLE FarmingCommitments (
     CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
@@ -513,20 +473,16 @@ CREATE TABLE FarmingCommitments (
     RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
-	TemplateID UNIQUEIDENTIFIER NULL,								   -- Bản cam kết này được lấy từ mẫu nào
     ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
     CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
     EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
     EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
+    CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
     ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
     ApprovedAt DATETIME,                                               -- Ngày duyệt
-    Status NVARCHAR(50) DEFAULT 'active',                              -- Trạng thái cam kết pending_farmer (chờ farmer duyệt), active, completed, cancelled, breached
-    RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có) do farmer ghi
+    Status NVARCHAR(50) DEFAULT 'active',                              -- Trạng thái cam kết
+    RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
     Note NVARCHAR(MAX),                                                -- Ghi chú thêm
-	QualityTerms NVARCHAR(MAX),										   -- Các điều khoản về chất lượng sản phẩm
-	PaymentTerms NVARCHAR(MAX),										   -- Các điều khoản thanh toán
-	PenaltyTerms NVARCHAR(MAX),										   -- Các điều khoản phạt
-	FarmerConfirmedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,	   -- Ngày farmer xác nhận cam kết
 	ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -546,123 +502,7 @@ CREATE TABLE FarmingCommitments (
 	    FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID),
 
 	CONSTRAINT FK_FarmingCommitments_ContractDeliveryItem 
-        FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
-
-	CONSTRAINT FK_FarmingCommitments_TemplateID 
-        FOREIGN KEY (TemplateID) REFERENCES CommitmentTemplates(TemplateID)
-);
-
-GO
-
--- CommitmentPayments – Thanh toán từng đợt theo cam kết của farmer - business
-CREATE TABLE CommitmentPayments (
-    PaymentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),				-- ID khóa chính
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,								-- ID khóa ngoại bảng cam kết
-	CPCode VARCHAR(20) UNIQUE,											-- CP-2025-0038
-    PaymentStage NVARCHAR(100),											-- Giai đoạn thanh toán, có thể là số thứ tự hoặc mô tả như "tạm ứng", "thanh toán đợt 1",...
-    Amount DECIMAL(18,2) NOT NULL,										-- Số tiền cần thanh toán ở đợt này
-    DueDate DATE,														-- Ngày đến hạn thanh toán của đợt này (business thanh toán)
-    PaidDate DATE,														-- Ngày đã thanh toán
-    Status VARCHAR(50),													-- Trạng thái thanh toán, pending, paid, late
-    PaymentMethod NVARCHAR(255),										-- Phương thức thanh toán
-	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0									-- 0 = chưa xoá, 1 = đã xoá mềm
-
-	-- Foreign Keys
-	CONSTRAINT FK_CommitmentPayments_CommitmentID 
-	    FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID)
-);
-
-GO
-
--- ReputationHistory - Bảng này ghi lại lịch sử thay đổi điểm uy tín của cả nông dân và doanh nghiệp, phục vụ việc theo dõi điểm hiện tại và lý do thay đổi. Mỗi khi có sự kiện tuân thủ/vi phạm cam kết, hệ thống sẽ tạo một bản ghi trong bảng này để cộng hoặc trừ điểm tương ứng cho bên liên quan.
-CREATE TABLE ReputationHistory (
-    ReputationHistoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),			-- ID khóa chính
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,										-- Liên kết với cam kết
-    UserID UNIQUEIDENTIFIER NOT NULL,											-- FK động, có thể là farmer hoặc business
-    UserType VARCHAR(50) CHECK (UserType IN ('farmer', 'business')),			-- Phân biệt role
-    ScoreChange INT,															-- Điểm tăng hoặc giảm (dương nếu tăng, âm nếu giảm). Ví dụ: +5 điểm khi hoàn thành tốt, -10 điểm khi vi phạm giao hàng.
-    NewScore INT,																-- Lưu lại điểm uy tín mới sau khi thay đổi, để tiện tra cứu lịch sử (cũng có thể tính bằng cộng dồn, nhưng lưu sẵn sẽ nhanh hơn).
-    Reason NVARCHAR(MAX),														-- Mô tả lý do thay đổi điểm (ví dụ: "Giao đủ và đúng hạn cam kết COMMIT-2025-0038", "Doanh nghiệp thanh toán trễ 5 ngày", "Hủy cam kết", v.v.)
-	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0											-- 0 = chưa xoá, 1 = đã xoá mềm
-
-	-- Foreign Keys
-	CONSTRAINT FK_ReputationHistory_CommitmentID 
-		FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID),
-
-	CONSTRAINT FK_ReputationHistory_UserID 
-		FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
-);
-
-GO
-
--- CommitmentViolations - Bảng này ghi lại lịch sử vi phạm trong quá trình thực hiện cam kết, cho cả phía farmer và business. Nếu một bên không tuân thủ điều khoản hợp đồng, hệ thống tạo bản ghi vi phạm để làm căn cứ xử lý và tham chiếu trong tương lai (cảnh báo các lần sau, hoặc đánh giá độ uy tín).
-CREATE TABLE CommitmentViolations (
-    ViolationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),					-- ID khóa chính
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,										-- Liên kết với cam kết
-    ViolatorID UNIQUEIDENTIFIER NOT NULL,										-- Người vi phạm
-    ViolatorType VARCHAR(50) CHECK (ViolatorType IN ('farmer', 'business')),	-- Role của người vi phạm
-    ViolationType VARCHAR(100),													-- Loại vi phạm, late_delivery (giao hàng trễ), short_delivery (giao thiếu sản lượng), late_payment (thanh toán trễ), commitment_cancel (hủy cam kết đơn phương), v.v. Có thể dùng enum hoặc bảng từ điển để liệt kê các loại vi phạm được quản lý.
-    Description NVARCHAR(MAX),													-- Mô tả chi tiết về vi phạm (ví dụ: "Farmer giao thiếu 200kg so với cam kết", "Business thanh toán chậm 10 ngày so với kỳ hạn", etc.).
-    PenaltyAction NVARCHAR(MAX),												-- Hành động xử lý hoặc hình phạt áp dụng: ví dụ "Trừ 10 điểm uy tín", "Phạt tiền 5% giá trị hợp đồng", "Cảnh cáo", v.v. (Có thể không lưu nếu đã thể hiện qua ReputationHistory, nhưng nên lưu để biết đã xử lý ra sao).
-    ReportedAt DATETIME DEFAULT GETDATE(),										-- Ngày ghi nhận vi phạm.
-	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0											-- 0 = chưa xoá, 1 = đã xoá mềm
-
-	-- Foreign Keys
-	CONSTRAINT FK_CommitmentViolations_CommitmentID 
-		FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID),
-
-	CONSTRAINT FK_CommitmentViolations_ViolatorID 
-		FOREIGN KEY (ViolatorID) REFERENCES UserAccounts(UserID)
-);
-
-GO 
-
--- TriggerRules - Các trigger dùng để cấu hình các điều khoản của bảng cam kết
-CREATE TABLE TriggerRules (
-	RuleID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),										-- Khóa chính
-	RuleName NVARCHAR(255) NOT NULL,																	-- Tên của trigger
-	TargetType VARCHAR(20) NOT NULL CHECK (TargetType IN ('farmer', 'business')),						-- Áp dụng đối với role nào
-	TriggerEvent VARCHAR(50) NOT NULL,																	-- Ví dụ: 'late_delivery' (giao trễ), 'short_delivery' (giao thiếu), 'on_time_delivery' (giao đủ đúng hẹn)
-	ConditionExpression NVARCHAR(MAX) NOT NULL,															-- Cú pháp điều kiện như trong rule engine, ví dụ: deliveryDate > EstimatedDeliveryEnd
-	PointChange INT NOT NULL,																			-- Cộng/trừ điểm
-	ApplyOn VARCHAR(50) NOT NULL CHECK (ApplyOn IN ('on_event_triggered', 'on_commitment_complete')),	-- Áp dụng khi nào
-	Enabled BIT NOT NULL DEFAULT 1,																		-- Bật/Tắt trigger
-	Note NVARCHAR(255),																					-- Note ghi chú, hướng dẫn sử dụng
-	CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
-	UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0																	-- 0 = chưa xoá, 1 = đã xoá mềm
-);
-
-GO
-
--- ManualViolations - Những vi phạm điều khoản không thể xử lý tự động được, cần được báo cáo lại
-CREATE TABLE ManualViolations (
-	ReportID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),											-- Khóa chính
-	CommitmentID UNIQUEIDENTIFIER NOT NULL,																	-- Vi phạm này thuộc hợp đồng nào
-	ReporterID UNIQUEIDENTIFIER NOT NULL,																	-- Ai báo cáo
-	ReporterType VARCHAR(20) NOT NULL CHECK (ReporterType IN ('farmer', 'business')),						-- Role người báo cáo
-	TargetType VARCHAR(20) NOT NULL CHECK (TargetType IN ('farmer', 'business')),							-- Bên bị cáo buộc: 'farmer' hoặc 'business'
-	TargetID UNIQUEIDENTIFIER NOT NULL,																		-- ID của đối tượng bị cáo buộc
-	ViolationType VARCHAR(50) NOT NULL,																		-- ví dụ: 'short_delivery', 'unpaid', 'quality_issue'
-	Description NVARCHAR(MAX) NULL,																			-- Mô tả chi tiết vi phạm
-	EvidenceLinks NVARCHAR(MAX) NULL,																		-- chuỗi link hoặc file chứng cứ nếu có
-	Status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (Status IN ('pending', 'approved', 'rejected')),	-- pending / approved / rejected
-	ApprovedBy UNIQUEIDENTIFIER NULL,																		-- FK đến bảng AdminUsers nếu có
-	CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
-	UpdatedAt DATETIME NULL
-
-	-- Foreign Keys
-	CONSTRAINT FK_ManualViolations_CommitmentID 
-		FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID),
-
-	CONSTRAINT FK_ManualViolations_ApprovedBy 
-		FOREIGN KEY (ApprovedBy) REFERENCES UserAccounts(UserID)
+        FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
 );
 
 GO
@@ -763,6 +603,19 @@ CREATE TABLE CropProgresses (
 
     CONSTRAINT FK_CropProgresses_StageID 
         FOREIGN KEY (StageID) REFERENCES CropStages(StageID)
+);
+
+GO
+
+-- Danh mục phương pháp sơ chế (natural, washed,...)
+CREATE TABLE ProcessingMethods (
+  MethodID INT PRIMARY KEY IDENTITY(1,1),                      -- ID nội bộ
+  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'natural', 'washed'...
+  Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
+  Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -1809,23 +1662,6 @@ INSERT INTO ContractDeliveryItems (
 
 GO
 
--- Insert vào bảng ProcessingMethods
-INSERT INTO ProcessingMethods (MethodCode, Name, Description)
-VALUES 
--- Phơi tự nhiên (natural/dry)
-('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
--- Sơ chế ướt (washed)
-('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
--- Sơ chế mật ong (honey)
-('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
--- Semi-washed (bán ướt)
-('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
--- Carbonic maceration (hiếm)
-('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
-
-
-GO
-
 -- Insert vào bảng ProcurementPlans và ProcurementPlansDetails
 -- Lấy ManagerID (nếu chưa có)
 DECLARE @BMID UNIQUEIDENTIFIER = (
@@ -1875,57 +1711,36 @@ DECLARE @CTI_Honey UNIQUEIDENTIFIER = (
   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003'
 );
 
--- Lấy MethodID
-DECLARE @MethodID_washed INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed'
-);
-DECLARE @MethodID_natural INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
-);
-DECLARE @MethodID_honey INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey'
-);
-
 -- Chi tiết: Arabica 5,000 kg
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, BeanSize, BeanColor, MoistureContent, DefectRate,
+  MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage
 )
 VALUES (
-	'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, @MethodID_washed,
-	5000, N'Krông Bông', 100,
-	N'Yêu cầu chất lượng tương ứng', 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', 0,
-	@CTI_Arabica, 'active', GETDATE(), GETDATE(), 0
+  'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, N'Arabica', 5000, N'Krông Bông',
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 75, 95,
+  N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0
 );
 
 -- Chi tiết: Robusta 12,500 kg
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-	'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, @MethodID_natural,
-	12500, N'Ea Kar', 150,
-	N'Yêu cầu chất lượng tương ứng', 50, 65, N'Robusta thông thường – giao lần 1', 0,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, N'Robusta', 12500, N'Ea Kar',
+  150, N'18+', N'Nâu sẫm', 13.0, 6, 50, 65, N'Robusta thông thường – giao lần 1'
 );
 
 -- Chi tiết: Robusta Honey 2,500 kg
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-	'PLD-2025-C003', @PlanID, @CoffeeID_Honey, @MethodID_honey,
-	2500, N'Cư M’gar', 100,
-	N'Yêu cầu chất lượng tương ứng', 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên', 0,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-C003', @PlanID, @CoffeeID_Honey, N'Robusta', 2500, N'Cư M’gar',
+  100, N'18+', N'Nâu đậm', 12.0, 4, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên'
 );
 
 GO
@@ -1990,71 +1805,44 @@ DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0008'
 );
 
--- Lấy MethodID
-DECLARE @MethodID_washed INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed'
-);
-DECLARE @MethodID_natural INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
-);
-DECLARE @MethodID_honey INT = (
-SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey'
-);
-
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
 )
 VALUES (
-	'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, @MethodID_washed,
-	3000, N'Krông Bông', 100,
-	N'Thu mua dành cho thị trường specialty', 80, 100, N'Thu mua dành cho thị trường specialty', 73.33,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, N'Arabica', 3000, N'Krông Bông',
+  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
 );
 
 -- Chi tiết 2: Typica
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-	'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, @MethodID_washed,
-	3000, N'M''Đrắk', 150,
-	N'Sản phẩm trưng bày hội chợ cà phê 2025', 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025', 0,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, N'Typica', 3000, N'M''Đrắk',
+  150, N'16+', N'Nâu vàng', 11.5, 3, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025'
 );
 
 -- Chi tiết 3: Robusta Honey
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-	'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, @MethodID_honey,
-	7000, N'Cư M’gar', 200,
-	N'Sơ chế Honey tại chỗ, không vận chuyển trước khi phơi', 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi', 0,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, N'Robusta', 7000, N'Cư M’gar',
+  200, N'18+', N'Nâu sẫm', 12.0, 4, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi'
 );
 
 -- Chi tiết 4: Robusta TR9
 INSERT INTO ProcurementPlansDetails (
-	PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
-	TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-	RequiredQuality, MinPriceRange, MaxPriceRange, Note, ProgressPercentage,
-	ContractItemID, Status, CreatedAt, UpdatedAt, IsDeleted
+  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-	'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, @MethodID_natural,
-	5000, N'Ea Kar', 300,
-	N'Áp dụng tiêu chuẩn ISO 8451', 55, 68, N'Áp dụng tiêu chuẩn ISO 8451', 0,
-	NULL, 'active', GETDATE(), GETDATE(), 0
+  'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, N'Robusta', 5000, N'Ea Kar',
+  300, N'17–18', N'Nâu đen', 13.0, 6, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
 );
 
 GO
@@ -2259,6 +2047,22 @@ VALUES (
 
 GO
 
+-- Insert vào bảng ProcessingMethods
+INSERT INTO ProcessingMethods (MethodCode, Name, Description)
+VALUES 
+-- Phơi tự nhiên (natural/dry)
+('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
+-- Sơ chế ướt (washed)
+('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
+-- Sơ chế mật ong (honey)
+('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
+-- Semi-washed (bán ướt)
+('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
+-- Carbonic maceration (hiếm)
+('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
+
+GO
+
 DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
 DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
 DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
@@ -2448,29 +2252,3 @@ DECLARE @AdminID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email
 
 INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
 VALUES (@MinAgeConfigID, @AdminID, 'manage');
-
--- Insert vào bảng TriggerRulse
-INSERT INTO TriggerRules (RuleID, RuleName, TargetType, TriggerEvent, ConditionExpression, PointChange, ApplyOn, Enabled, Note, CreatedAt, UpdatedAt, IsDeleted)
-VALUES (NEWID(), N'Farmer giao hàng đúng hạn', 'farmer', 'on_time_delivery',
-N'actualDeliveryDate <= EstimatedDeliveryEnd AND deliveredQuantity >= CommittedQuantity', 10, 'on_event_triggered', 1,
-N'Thưởng khi farmer giao đủ và đúng hạn', GETDATE(), GETDATE(), 0);
-
-INSERT INTO TriggerRules (RuleID, RuleName, TargetType, TriggerEvent, ConditionExpression, PointChange, ApplyOn, Enabled, Note, CreatedAt, UpdatedAt, IsDeleted)
-VALUES (NEWID(), N'Farmer giao thiếu sản lượng', 'farmer', 'short_delivery',
-N'deliveredQuantity < CommittedQuantity', -10, 'on_event_triggered', 1,
-N'Phạt khi giao thiếu', GETDATE(), GETDATE(), 0);
-
-INSERT INTO TriggerRules (RuleID, RuleName, TargetType, TriggerEvent, ConditionExpression, PointChange, ApplyOn, Enabled, Note, CreatedAt, UpdatedAt, IsDeleted)
-VALUES (NEWID(), N'Farmer giao hàng trễ', 'farmer', 'late_delivery',
-N'actualDeliveryDate > EstimatedDeliveryEnd', -5, 'on_event_triggered', 1,
-N'Phạt nếu giao hàng trễ hạn', GETDATE(), GETDATE(), 0);
-
-INSERT INTO TriggerRules (RuleID, RuleName, TargetType, TriggerEvent, ConditionExpression, PointChange, ApplyOn, Enabled, Note, CreatedAt, UpdatedAt, IsDeleted)
-VALUES (NEWID(), N'Doanh nghiệp thanh toán đúng hạn', 'business', 'payment_on_time',
-N'paidDate <= dueDate', 5, 'on_event_triggered', 1,
-N'Thưởng khi thanh toán đúng hạn', GETDATE(), GETDATE(), 0);
-
-INSERT INTO TriggerRules (RuleID, RuleName, TargetType, TriggerEvent, ConditionExpression, PointChange, ApplyOn, Enabled, Note, CreatedAt, UpdatedAt, IsDeleted)
-VALUES (NEWID(), N'Doanh nghiệp thanh toán trễ', 'business', 'payment_late',
-N'paidDate > dueDate', -7, 'on_event_triggered', 1,
-N'Phạt nếu doanh nghiệp thanh toán trễ', GETDATE(), GETDATE(), 0);
