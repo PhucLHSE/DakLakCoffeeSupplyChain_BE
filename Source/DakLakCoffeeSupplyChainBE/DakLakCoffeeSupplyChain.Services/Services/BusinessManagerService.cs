@@ -22,8 +22,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public BusinessManagerService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator 
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll()
@@ -179,6 +182,81 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(BusinessManagerUpdateDto businessManagerDto)
+        {
+            try
+            {
+                // Tìm đối tượng BusinessManager theo ID
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: bm => bm.ManagerId == businessManagerDto.ManagerId,
+                    include: query => query
+                       .Include(bm => bm.User)
+                );
+
+                // Nếu không tìm thấy
+                if (businessManager == null || businessManager.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Quản lý doanh nghiệp không tồn tại hoặc đã bị xóa.."
+                    );
+                }
+
+                // Nếu mã số thuế bị thay đổi thì kiểm tra trùng mã số thuế
+                if (!string.IsNullOrEmpty(businessManagerDto.TaxId) &&
+                    businessManager.TaxId != businessManagerDto.TaxId)
+                {
+                    var existedTax = await _unitOfWork.BusinessManagerRepository.GetByTaxIdAsync(businessManagerDto.TaxId);
+
+                    if (existedTax != null && existedTax.ManagerId != businessManagerDto.ManagerId)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            "Mã số thuế đã được sử dụng cho một doanh nghiệp khác."
+                        );
+                    }
+                }
+
+                //Map DTO to Entity
+                businessManagerDto.MapToUpdateBusinessManager(businessManager);
+
+                // Cập nhật businessManager ở repository
+                await _unitOfWork.BusinessManagerRepository.UpdateAsync(businessManager);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = businessManager.MapToBusinessManagerViewDetailsDto();
+                    responseDto.Email = businessManager.User.Email ?? string.Empty;
+                    responseDto.FullName = businessManager.User.Name ?? string.Empty;
+                    responseDto.PhoneNumber = businessManager.User.PhoneNumber ?? string.Empty;
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteById(Guid managerId)
         {
             try
@@ -258,7 +336,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Đánh dấu xoá mềm bằng IsDeleted
                     businessManager.IsDeleted = true;
-                    businessManager.UpdatedAt = DateTime.Now;
+                    businessManager.UpdatedAt = DateTime.UtcNow;
 
                     // Cập nhật xoá mềm quản lý doanh nghiệp ở repository
                     await _unitOfWork.BusinessManagerRepository.UpdateAsync(businessManager);

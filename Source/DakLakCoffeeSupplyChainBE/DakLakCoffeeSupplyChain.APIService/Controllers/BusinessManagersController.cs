@@ -76,6 +76,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PUT api/<BusinessManagersController>/{managerId}
+        [HttpPut("{managerId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
+        public async Task<IActionResult> UpdateRoleAsync(Guid managerId, [FromBody] BusinessManagerUpdateDto businessManagerDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (managerId != businessManagerDto.ManagerId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _businessManagerService.Update(businessManagerDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy quản lý doanh nghiệp để cập nhật.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // DELETE api/<BusinessManagersController>/{managerId}
         [HttpDelete("{managerId}")]
         [Authorize(Roles = "Admin")]

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -71,6 +72,21 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
+        }
+
+        // Mapper BusinessManagerUpdateDto
+        public static void MapToUpdateBusinessManager(this BusinessManagerUpdateDto dto, BusinessManager businessManager)
+        {
+            businessManager.CompanyName = dto.CompanyName;
+            businessManager.Position = dto.Position;
+            businessManager.Department = dto.Department;
+            businessManager.CompanyAddress = dto.CompanyAddress;
+            businessManager.TaxId = dto.TaxId;
+            businessManager.Website = dto.Website;
+            businessManager.ContactEmail = dto.ContactEmail;
+            businessManager.BusinessLicenseUrl = dto.BusinessLicenseUrl;
+            businessManager.IsCompanyVerified = dto.IsCompanyVerified;
+            businessManager.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }
