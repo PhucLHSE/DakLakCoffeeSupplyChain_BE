@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
@@ -82,8 +83,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 LoginType = dto.LoginType.ToString(), // enum → string
                 Status = dto.Status.ToString(),       // enum → string
                 RoleId = RoleId,
-                RegistrationDate = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                RegistrationDate = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
                 EmailVerified = true,         // Admin tạo thì email được xem là xác thực
                 IsVerified = true,            // Có thể xem như đã duyệt
                 VerificationCode = null,      // Không cần tạo mã xác minh
@@ -103,7 +104,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             userAccount.ProfilePictureUrl = dto.ProfilePictureUrl;
             userAccount.Status = dto.Status.ToString(); // enum → string
             userAccount.RoleId = roleId;
-            userAccount.UpdatedAt = DateTime.UtcNow;
+            userAccount.UpdatedAt = DateHelper.NowVietnamTime();
         }  
     }
 }

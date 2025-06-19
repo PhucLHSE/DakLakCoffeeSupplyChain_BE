@@ -68,8 +68,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ContactEmail = dto.ContactEmail,
                 BusinessLicenseUrl = dto.BusinessLicenseUrl,
                 IsCompanyVerified = false,                    // Mặc định khi đăng ký là false
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false
             };
         }

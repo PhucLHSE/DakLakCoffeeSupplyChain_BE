@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using Microsoft.EntityFrameworkCore;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -176,7 +177,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Đánh dấu xoá mềm bằng IsDeleted
                     product.IsDeleted = true;
-                    product.UpdatedAt = DateTime.Now;
+                    product.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm vai trò ở repository
                     await _unitOfWork.ProductRepository.UpdateAsync(product);
