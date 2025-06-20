@@ -1107,7 +1107,7 @@ CREATE TABLE WarehouseOutboundRequests (
     FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
 
   CONSTRAINT FK_WarehouseOutboundRequests_Staff 
-    FOREIGN KEY (RequestedBy) REFERENCES BusinessStaffs(StaffID),
+    FOREIGN KEY (RequestedBy) REFERENCES BusinessManagers(ManagerID),
 
   CONSTRAINT FK_WarehouseOutboundRequests_OrderItem 
     FOREIGN KEY (OrderItemID) REFERENCES OrderItems(OrderItemID)
