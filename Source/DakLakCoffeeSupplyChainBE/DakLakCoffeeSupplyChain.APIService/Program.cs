@@ -34,6 +34,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IBusinessManagerService, BusinessManagerService>();
+builder.Services.AddScoped<IBusinessBuyerService, BusinessBuyerService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
@@ -79,6 +80,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<Role>("Role");
     odataBuilder.EntitySet<UserAccount>("UserAccount");
     odataBuilder.EntitySet<BusinessManager>("BusinessManager");
+    odataBuilder.EntitySet<BusinessBuyer>("BusinessBuyer");
     odataBuilder.EntitySet<Contract>("Contract");
     odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
     odataBuilder.EntitySet<CropStage>("CropStage");
@@ -87,7 +89,6 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<ProcessingMethod>("ProcessingMethod");
     odataBuilder.EntitySet<WarehouseInboundRequest>("WarehouseInboundRequest");
     odataBuilder.EntitySet<Product>("Product");
-
 
     return odataBuilder.GetEdmModel();
 }
