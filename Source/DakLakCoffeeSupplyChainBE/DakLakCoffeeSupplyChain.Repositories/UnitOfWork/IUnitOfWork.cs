@@ -53,5 +53,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IWarehouseReceiptRepository WarehouseReceipts { get; }
         IInventoryRepository Inventories { get; }
         IWarehouseRepository Warehouses { get; }
+        IWarehouseOutboundRequestRepository WarehouseOutboundRequests { get; }
+
     }
 }

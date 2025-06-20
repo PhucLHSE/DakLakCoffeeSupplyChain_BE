@@ -39,7 +39,5 @@ public partial class BusinessStaff
 
     public virtual ICollection<WarehouseOutboundReceipt> WarehouseOutboundReceipts { get; set; } = new List<WarehouseOutboundReceipt>();
 
-    public virtual ICollection<WarehouseOutboundRequest> WarehouseOutboundRequests { get; set; } = new List<WarehouseOutboundRequest>();
-
     public virtual ICollection<WarehouseReceipt> WarehouseReceipts { get; set; } = new List<WarehouseReceipt>();
 }

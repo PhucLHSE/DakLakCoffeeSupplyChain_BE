@@ -48,6 +48,8 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICropProgressService, CropProgressService>();
 builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IWarehouseOutboundRequestService, WarehouseOutboundRequestService>();
+
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>

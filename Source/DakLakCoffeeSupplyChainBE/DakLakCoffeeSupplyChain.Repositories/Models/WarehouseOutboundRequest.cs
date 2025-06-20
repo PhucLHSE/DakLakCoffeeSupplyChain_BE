@@ -39,7 +39,7 @@ public partial class WarehouseOutboundRequest
 
     public virtual OrderItem OrderItem { get; set; }
 
-    public virtual BusinessStaff RequestedByNavigation { get; set; }
+    public virtual BusinessManager RequestedByNavigation { get; set; }
 
     public virtual Warehouse Warehouse { get; set; }
 
