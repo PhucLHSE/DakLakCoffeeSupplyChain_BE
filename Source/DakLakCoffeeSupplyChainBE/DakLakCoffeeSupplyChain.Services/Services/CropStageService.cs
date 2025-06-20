@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDto;
+using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -65,6 +66,58 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Const.SUCCESS_READ_MSG,
                 dto
             );
+        }
+
+        public async Task<IServiceResult> Create(CropStageCreateDto dto)
+        {
+            try
+            {
+                // Kiểm tra trùng StageCode
+                var duplicateCode = await _unitOfWork.CropStageRepository
+                    .GetAllAsync(x => x.StageCode == dto.StageCode && x.IsDeleted == false);
+
+                if (duplicateCode.Any())
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Mã giai đoạn đã tồn tại.");
+                }
+
+                // Kiểm tra trùng StageName
+                var duplicateName = await _unitOfWork.CropStageRepository
+                    .GetAllAsync(x => x.StageName == dto.StageName && x.IsDeleted == false);
+
+                if (duplicateName.Any())
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tên giai đoạn đã tồn tại.");
+                }
+
+                // Kiểm tra trùng OrderIndex
+                if (dto.OrderIndex.HasValue)
+                {
+                    var duplicateOrder = await _unitOfWork.CropStageRepository
+                        .GetAllAsync(x => x.OrderIndex == dto.OrderIndex && x.IsDeleted == false);
+
+                    if (duplicateOrder.Any())
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, $"Thứ tự giai đoạn {dto.OrderIndex} đã tồn tại.");
+                    }
+                }
+
+                var newStage = dto.MapToNewCropStage();
+                await _unitOfWork.CropStageRepository.CreateAsync(newStage);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, newStage);
+                }
+
+                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
         }
 
     }
