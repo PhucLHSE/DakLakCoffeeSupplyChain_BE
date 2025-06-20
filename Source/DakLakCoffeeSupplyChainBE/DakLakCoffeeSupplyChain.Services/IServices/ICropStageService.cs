@@ -17,6 +17,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Delete(int stageId);
 
+        Task<IServiceResult> SoftDelete(int stageId);
+
 
     }
 }
