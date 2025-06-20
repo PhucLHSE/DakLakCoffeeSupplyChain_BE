@@ -2,11 +2,13 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class CropStagesController : ControllerBase
 {
     private readonly ICropStageService _cropStageService;
@@ -46,6 +48,8 @@ public class CropStagesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,AgriculturalExpert")]
+
     public async Task<IActionResult> CreateCropStage([FromBody] CropStageCreateDto dto)
     {
         if (!ModelState.IsValid)
@@ -63,6 +67,7 @@ public class CropStagesController : ControllerBase
     }
 
     [HttpPut("{stageId}")]
+    [Authorize(Roles = "Admin,AgriculturalExpert")]
     public async Task<IActionResult> UpdateCropStage(int stageId, [FromBody] CropStageUpdateDto dto)
     {
         if (stageId != dto.StageId)
@@ -86,6 +91,7 @@ public class CropStagesController : ControllerBase
     }
 
     [HttpDelete("{stageId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCropStage(int stageId)
     {
         var result = await _cropStageService.Delete(stageId);
@@ -100,6 +106,7 @@ public class CropStagesController : ControllerBase
     }
 
     [HttpPatch("{stageId}/soft-delete")]
+    [Authorize(Roles = "Admin,BusinessManager")]
     public async Task<IActionResult> SoftDeleteCropStage(int stageId)
     {
         var result = await _cropStageService.SoftDelete(stageId);
