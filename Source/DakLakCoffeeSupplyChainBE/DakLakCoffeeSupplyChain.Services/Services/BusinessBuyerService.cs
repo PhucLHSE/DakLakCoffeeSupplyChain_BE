@@ -72,5 +72,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> GetById(Guid buyerId)
+        {
+            // Tìm buyer theo ID
+            var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
+                predicate: bb => bb.BuyerId == buyerId,
+                include: query => query
+                   .Include(bb => bb.CreatedByNavigation),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy buyer
+            if (businessBuyer == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new BusinessBuyerViewDetailDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Map sang DTO chi tiết để trả về
+                var businessBuyerDto = businessBuyer.MapToBusinessBuyerViewDetailDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    businessBuyerDto
+                );
+            }
+        }
     }
 }
