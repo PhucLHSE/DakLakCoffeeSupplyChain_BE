@@ -14,5 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Update(CropSeasonUpdateDto dto);
 
         Task<IServiceResult> DeleteById(Guid cropSeasonId);
+
+        Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId);
     }
 }
