@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
@@ -16,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 
         Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId);
 
+        Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate);
 
     }
 }

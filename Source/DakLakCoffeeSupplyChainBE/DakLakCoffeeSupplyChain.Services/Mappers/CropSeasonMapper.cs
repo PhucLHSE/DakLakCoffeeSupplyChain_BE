@@ -54,7 +54,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RegistrationId = dto.RegistrationId,
                 CommitmentId = dto.CommitmentId,
                 SeasonName = dto.SeasonName,
-                Area = dto.Area,
+                //Area = dto.Area,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Note = dto.Note,
