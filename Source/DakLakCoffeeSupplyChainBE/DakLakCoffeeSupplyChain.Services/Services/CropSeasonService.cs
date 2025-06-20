@@ -196,5 +196,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mùa vụ thành công.");
         }
+
+        public async Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId)
+        {
+            var existing = await _unitOfWork.CropSeasonRepository.GetByIdAsync(cropSeasonId);
+            if (existing == null || existing.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy hoặc mùa vụ đã bị xoá.");
+
+            _unitOfWork.CropSeasonRepository.SoftDelete(existing);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.");
+        }
+
     }
 }

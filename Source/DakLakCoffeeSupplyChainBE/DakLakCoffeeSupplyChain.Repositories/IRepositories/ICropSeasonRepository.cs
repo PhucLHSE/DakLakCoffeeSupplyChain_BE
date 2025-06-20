@@ -18,6 +18,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId);
 
         Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate);
+        void SoftDelete(CropSeason entity);
 
     }
 }
