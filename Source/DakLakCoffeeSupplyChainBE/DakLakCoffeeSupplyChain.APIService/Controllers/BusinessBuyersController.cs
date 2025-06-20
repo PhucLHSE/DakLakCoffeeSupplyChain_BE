@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "BusinessManager")]
     public class BusinessBuyersController : ControllerBase
     {
         private readonly IBusinessBuyerService _businessBuyerService;
@@ -22,7 +23,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/<BusinessBuyersController>
         [HttpGet]
         [EnableQuery]
-        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetAllBussinessBuyersAsync()
         {
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -39,6 +39,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 + message
 
             return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
+        // GET api/<BusinessBuyersController>/{buyerId}
+        [HttpGet("{buyerId}")]
+        public async Task<IActionResult> GetById(Guid buyerId)
+        {
+            var result = await _businessBuyerService.GetById(buyerId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
     }
 }
