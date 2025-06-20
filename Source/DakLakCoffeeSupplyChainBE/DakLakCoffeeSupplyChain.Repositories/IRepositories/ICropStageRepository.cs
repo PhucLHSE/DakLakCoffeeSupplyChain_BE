@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<CropStage>> GetAllOrderedAsync();
         Task<CropStage?> GetByIdAsync(int stageId);
 
+        Task DeleteCropCropStageByStageIdAsync(int stageId);
+
     }
 }

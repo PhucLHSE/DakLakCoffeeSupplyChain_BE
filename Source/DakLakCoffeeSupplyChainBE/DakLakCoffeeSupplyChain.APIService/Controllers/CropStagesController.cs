@@ -37,30 +37,30 @@ public class CropStagesController : ControllerBase
         var result = await _cropStageService.GetById(stageId);
 
         if (result.Status == Const.SUCCESS_READ_CODE)
-            return Ok(result.Data);            
+            return Ok(result.Data);
 
         if (result.Status == Const.WARNING_NO_DATA_CODE)
-            return NotFound(result.Message);    
+            return NotFound(result.Message);
 
-        return StatusCode(500, result.Message);  
+        return StatusCode(500, result.Message);
     }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateCropStage([FromBody] CropStageCreateDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+    [HttpPost]
+    public async Task<IActionResult> CreateCropStage([FromBody] CropStageCreateDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-            var result = await _cropStageService.Create(dto);
+        var result = await _cropStageService.Create(dto);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return Ok(result.Data);
+        if (result.Status == Const.SUCCESS_CREATE_CODE)
+            return Ok(result.Data);
 
-            if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(result.Message);
+        if (result.Status == Const.FAIL_CREATE_CODE)
+            return Conflict(result.Message);
 
-            return StatusCode(500, result.Message);
-        }
+        return StatusCode(500, result.Message);
+    }
 
     [HttpPut("{stageId}")]
     public async Task<IActionResult> UpdateCropStage(int stageId, [FromBody] CropStageUpdateDto dto)
@@ -78,6 +78,20 @@ public class CropStagesController : ControllerBase
 
         if (result.Status == Const.FAIL_UPDATE_CODE)
             return Conflict(result.Message);
+
+        if (result.Status == Const.WARNING_NO_DATA_CODE)
+            return NotFound(result.Message);
+
+        return StatusCode(500, result.Message);
+    }
+
+    [HttpDelete("{stageId}")]
+    public async Task<IActionResult> DeleteCropStage(int stageId)
+    {
+        var result = await _cropStageService.Delete(stageId);
+
+        if (result.Status == Const.SUCCESS_DELETE_CODE)
+            return Ok(result.Message);
 
         if (result.Status == Const.WARNING_NO_DATA_CODE)
             return NotFound(result.Message);

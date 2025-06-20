@@ -164,5 +164,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+        public async Task<IServiceResult> Delete(int stageId)
+        {
+            try
+            {
+                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
+
+                if (stage == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Giai đoạn không tồn tại hoặc đã bị xóa.");
+
+                await _unitOfWork.CropStageRepository.DeleteCropCropStageByStageIdAsync(stageId);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG);
+
+                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
+        }
     }
 }
