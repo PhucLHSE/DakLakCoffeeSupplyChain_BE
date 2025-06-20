@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRepository
 {
@@ -46,6 +47,10 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .ToListAsync();
 
         _context.CropSeasonDetails.RemoveRange(details);
+    }
+    public async Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate)
+    {
+        return await _context.CropSeasons.AnyAsync(predicate);
     }
 
 }

@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -8,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CropSeasonsController : ControllerBase
     {
         private readonly ICropSeasonService _cropSeasonService;
@@ -48,6 +50,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
+
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
         {
             if (!ModelState.IsValid)
@@ -66,6 +70,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{cropSeasonId}")]
+        [Authorize(Roles = "Admin,AgriculturalExpert")]
         public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
         {
             if (cropSeasonId != dto.CropSeasonId)
@@ -83,6 +88,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpDelete("{cropSeasonId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
         {
             var result = await _cropSeasonService.DeleteById(cropSeasonId);
