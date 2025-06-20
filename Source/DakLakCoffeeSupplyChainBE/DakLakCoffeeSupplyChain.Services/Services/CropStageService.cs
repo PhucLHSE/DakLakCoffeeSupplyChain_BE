@@ -120,5 +120,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(CropStageUpdateDto dto)
+        {
+            try
+            {
+                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
+
+                if (stage == null || stage.IsDeleted)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy giai đoạn cần cập nhật.");
+
+                var duplicateCode = await _unitOfWork.CropStageRepository
+                    .GetAllAsync(x => x.StageCode == dto.StageCode && x.StageId != dto.StageId && x.IsDeleted == false);
+
+                if (duplicateCode.Any())
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Mã giai đoạn đã tồn tại.");
+
+                var duplicateName = await _unitOfWork.CropStageRepository
+                    .GetAllAsync(x => x.StageName == dto.StageName && x.StageId != dto.StageId && x.IsDeleted == false);
+
+                if (duplicateName.Any())
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tên giai đoạn đã tồn tại.");
+
+                if (dto.OrderIndex.HasValue)
+                {
+                    var duplicateOrder = await _unitOfWork.CropStageRepository
+                        .GetAllAsync(x => x.OrderIndex == dto.OrderIndex && x.StageId != dto.StageId && x.IsDeleted == false);
+
+                    if (duplicateOrder.Any())
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Thứ tự giai đoạn {dto.OrderIndex} đã tồn tại.");
+                }
+
+                dto.MapToUpdateCropStage(stage);
+                await _unitOfWork.CropStageRepository.UpdateAsync(stage);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, stage);
+
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
+        }
     }
 }

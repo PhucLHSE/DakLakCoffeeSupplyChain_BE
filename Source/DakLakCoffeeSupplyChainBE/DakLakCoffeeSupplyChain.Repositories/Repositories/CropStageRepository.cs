@@ -23,9 +23,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.CropStages
                 .AsNoTracking()
+                .Where(s => !s.IsDeleted)  
                 .OrderBy(s => s.OrderIndex)
                 .ToListAsync();
         }
+
         public async Task<CropStage?> GetByIdAsync(int stageId)
         {
             return await _context.CropStages
