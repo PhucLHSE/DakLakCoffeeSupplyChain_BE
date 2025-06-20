@@ -57,5 +57,7 @@ public partial class BusinessManager
 
     public virtual UserAccount User { get; set; }
 
+    public virtual ICollection<WarehouseOutboundRequest> WarehouseOutboundRequests { get; set; } = new List<WarehouseOutboundRequest>();
+
     public virtual ICollection<Warehouse> Warehouses { get; set; } = new List<Warehouse>();
 }

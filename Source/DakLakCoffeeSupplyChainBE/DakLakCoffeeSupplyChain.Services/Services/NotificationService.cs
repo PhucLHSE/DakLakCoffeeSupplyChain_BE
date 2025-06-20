@@ -24,7 +24,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = "NT-" + DateTime.UtcNow.Ticks,
+            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -69,7 +69,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = "NT-" + DateTime.UtcNow.Ticks,
+            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -103,5 +103,52 @@ public class NotificationService : INotificationService
 
         return notification;
     }
+    public async Task<SystemNotification> NotifyOutboundRequestCreatedAsync(Guid requestId, Guid managerId)
+    {
+        var title = "📤 Yêu cầu xuất kho mới";
+        var message = $"Quản lý doanh nghiệp (ID: {managerId}) đã gửi yêu cầu xuất kho (Mã: {requestId}).";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
+            Title = title,
+            Message = message,
+            Type = "WarehouseOutbound",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = null
+        };
+
+        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+
+        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
+
+        foreach (var staff in businessStaffs)
+        {
+            var recipient = new SystemNotificationRecipient
+            {
+                Id = Guid.NewGuid(),
+                NotificationId = notification.NotificationId,
+                RecipientId = staff.UserId,
+                IsRead = false,
+                ReadAt = null
+            };
+
+            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+
+            if (!string.IsNullOrWhiteSpace(staff.User?.Email))
+            {
+                await _emailService.SendEmailAsync(staff.User.Email, title, message);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
 
 }
+
+
+
