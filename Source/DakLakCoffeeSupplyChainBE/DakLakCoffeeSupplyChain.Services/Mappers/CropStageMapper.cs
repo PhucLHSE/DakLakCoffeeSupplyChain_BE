@@ -45,5 +45,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
+        public static void MapToUpdateCropStage(this CropStageUpdateDto dto, CropStage entity)
+        {
+            entity.StageCode = dto.StageCode;
+            entity.StageName = dto.StageName;
+            entity.Description = dto.Description;
+            entity.OrderIndex = dto.OrderIndex;
+            entity.UpdatedAt = DateHelper.NowVietnamTime();
+        }
+
     }
 }

@@ -13,5 +13,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Create(CropStageCreateDto dto);
 
+        Task<IServiceResult> Update(CropStageUpdateDto dto);
+
     }
 }
