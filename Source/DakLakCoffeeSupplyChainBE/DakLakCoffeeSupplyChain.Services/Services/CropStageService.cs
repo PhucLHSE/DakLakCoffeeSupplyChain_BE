@@ -179,14 +179,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG);
+                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa stage giai đoạn thành công.");
 
-                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa stage thất bại.");
             }
             catch (Exception ex)
             {
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+        public async Task<IServiceResult> SoftDelete(int stageId)
+        {
+            try
+            {
+                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
+
+                if (stage == null || stage.IsDeleted)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Giai đoạn không tồn tại hoặc đã bị xóa.");
+
+                stage.IsDeleted = true;
+                stage.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.CropStageRepository.UpdateAsync(stage);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm giai đoạn thành công.");
+
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
+        }
+
     }
 }

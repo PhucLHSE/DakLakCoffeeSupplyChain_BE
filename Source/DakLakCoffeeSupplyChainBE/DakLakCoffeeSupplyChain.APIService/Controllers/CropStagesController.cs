@@ -98,4 +98,19 @@ public class CropStagesController : ControllerBase
 
         return StatusCode(500, result.Message);
     }
+
+    [HttpPatch("{stageId}/soft-delete")]
+    public async Task<IActionResult> SoftDeleteCropStage(int stageId)
+    {
+        var result = await _cropStageService.SoftDelete(stageId);
+
+        if (result.Status == Const.SUCCESS_DELETE_CODE)
+            return Ok(result.Message);
+
+        if (result.Status == Const.WARNING_NO_DATA_CODE)
+            return NotFound(result.Message);
+
+        return StatusCode(500, result.Message);
+    }
+
 }
