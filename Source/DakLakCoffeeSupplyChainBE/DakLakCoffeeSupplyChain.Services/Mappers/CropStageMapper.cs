@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDto;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 
@@ -27,6 +28,20 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Description = entity.Description ?? string.Empty,
                 Order = entity.OrderIndex ?? 0,
                 CreatedAt = entity.CreatedAt
+            };
+        }
+
+        public static CropStage MapToNewCropStage(this CropStageCreateDto dto)
+        {
+            return new CropStage
+            {
+                StageCode = dto.StageCode,
+                StageName = dto.StageName,
+                Description = dto.Description,
+                OrderIndex = dto.OrderIndex,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false
             };
         }
 

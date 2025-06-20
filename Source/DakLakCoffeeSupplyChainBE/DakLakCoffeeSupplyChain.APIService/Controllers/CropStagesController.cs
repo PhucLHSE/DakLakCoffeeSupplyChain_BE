@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -43,4 +44,21 @@ public class CropStagesController : ControllerBase
 
         return StatusCode(500, result.Message);  
     }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateCropStage([FromBody] CropStageCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _cropStageService.Create(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
 }
