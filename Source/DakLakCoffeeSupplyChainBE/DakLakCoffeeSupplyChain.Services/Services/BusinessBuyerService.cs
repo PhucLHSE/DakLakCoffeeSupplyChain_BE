@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -101,6 +102,65 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     businessBuyerDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid buyerId)
+        {
+            try
+            {
+                // Tìm buyer theo ID
+                var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
+                    predicate: bb => bb.BuyerId == buyerId,
+                    include: query => query
+                       .Include(bb => bb.CreatedByNavigation),
+                    asNoTracking: true
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (businessBuyer == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    businessBuyer.IsDeleted = true;
+                    businessBuyer.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật xoá mềm buyer ở repository
+                    await _unitOfWork.BusinessBuyerRepository.UpdateAsync(businessBuyer);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
