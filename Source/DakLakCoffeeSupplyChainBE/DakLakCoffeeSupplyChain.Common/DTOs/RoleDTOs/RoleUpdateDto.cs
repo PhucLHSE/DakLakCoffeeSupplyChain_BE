@@ -14,14 +14,14 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs
         [Required(ErrorMessage = "ID vai trò là bắt buộc.")]
         public int RoleId { get; set; }
 
-        [Required(ErrorMessage = "Role name is required.")]
-        [StringLength(100, ErrorMessage = "Role name must be at most 100 characters.")]
+        [Required(ErrorMessage = "Tên vai trò không được để trống.")]
+        [StringLength(100, ErrorMessage = "Tên vai trò không được vượt quá 100 ký tự.")]
         public string RoleName { get; set; } = string.Empty;
 
-        [StringLength(250, ErrorMessage = "Description must be at most 250 characters.")]
+        [StringLength(250, ErrorMessage = "Mô tả không được vượt quá 250 ký tự.")]
         public string Description { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Status is required.")]
+        [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public RoleStatus Status { get; set; } = RoleStatus.Inactive;
     }
