@@ -216,7 +216,7 @@ GO
 -- Table BusinessBuyers
 CREATE TABLE BusinessBuyers (
   BuyerID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    
-  BuyerCode VARCHAR(20) UNIQUE,                                    -- BUY-2024-025
+  BuyerCode VARCHAR(50) UNIQUE,                                    -- BUY-2024-025
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                             -- Người tạo buyer (BusinessManager)
   CompanyName NVARCHAR(100) NOT NULL,                              -- Tên doanh nghiệp mua hàng
   ContactPerson NVARCHAR(100),                                     -- Người đại diện ký hợp đồng

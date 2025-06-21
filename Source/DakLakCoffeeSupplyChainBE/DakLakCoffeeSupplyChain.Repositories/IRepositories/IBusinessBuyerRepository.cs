@@ -10,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IBusinessBuyerRepository : IGenericRepository<BusinessBuyer>
     {
+        Task<int> CountBuyersCreatedByManagerInYearAsync(Guid managerId, int year);
     }
 }

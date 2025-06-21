@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -44,6 +45,27 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = businessBuyer.CreatedAt,
                 UpdatedAt = businessBuyer.UpdatedAt,
                 CreatedByName = businessBuyer.CreatedByNavigation?.CompanyName ?? string.Empty
+            };
+        }
+
+        // Mapper BusinessBuyerCreateDto
+        public static BusinessBuyer MapToNewBusinessBuyer(this BusinessBuyerCreateDto dto, Guid managerId, string buyerCode)
+        {
+            return new BusinessBuyer
+            {
+                BuyerId = Guid.NewGuid(),
+                BuyerCode = buyerCode,
+                CompanyName = dto.CompanyName,
+                ContactPerson = dto.ContactPerson,
+                Position = dto.Position,
+                CompanyAddress = dto.CompanyAddress,
+                TaxId = dto.TaxId,
+                Email = dto.Email,
+                Phone = dto.PhoneNumber,
+                Website = dto.Website,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                CreatedBy = managerId
             };
         }
     }
