@@ -27,10 +27,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAllBussinessBuyersAsync()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Guid userId;
 
-            if (!Guid.TryParse(userIdStr, out var userId))
-                return Unauthorized("Không xác định được UserId từ token.");
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
 
             var result = await _businessBuyerService.GetAll(userId);
 
@@ -69,6 +76,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             try
             {
+                // Lấy userId từ token qua ClaimsHelper
                 userId = User.GetUserId();
             }
             catch
