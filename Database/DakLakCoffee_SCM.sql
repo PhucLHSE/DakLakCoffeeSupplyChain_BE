@@ -60,7 +60,7 @@ CREATE TABLE UserAccounts (
 
 GO
 
--- Table PaymentConfigurations
+-- Table PaymentConfigurations – Cấu hình các loại phí
 CREATE TABLE PaymentConfigurations (
   ConfigID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cấu hình
   RoleID INT NOT NULL,                                           -- Vai trò áp dụng (Farmer, BusinessManager...)
@@ -1359,6 +1359,98 @@ VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên V
 -- Business Staff
 INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
 VALUES ('USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', '1999-09-12', N'Đắk Lắk', 'BusinessStaff@12345', 3);
+
+GO
+
+-- Insert vào bảng PaymentConfigurations
+-- BusinessManager: Đăng ký & phí duy trì hằng tháng
+INSERT INTO PaymentConfigurations (RoleID, FeeType, Amount, Description, EffectiveFrom)
+VALUES 
+((SELECT RoleID FROM Roles WHERE RoleName = 'BusinessManager'), 'Registration', 1000000, 
+ N'Phí đăng ký tài khoản doanh nghiệp', '2025-06-01'),
+
+((SELECT RoleID FROM Roles WHERE RoleName = 'BusinessManager'), 'MonthlyFee', 400000, 
+ N'Phí duy trì hệ thống theo tháng cho doanh nghiệp', '2025-06-01');
+
+-- Farmer: Đăng ký
+INSERT INTO PaymentConfigurations (RoleID, FeeType, Amount, Description, EffectiveFrom)
+VALUES 
+((SELECT RoleID FROM Roles WHERE RoleName = 'Farmer'), 'Registration', 200000, 
+ N'Phí đăng ký tham gia chuỗi cung ứng cho nông hộ', '2025-06-01');
+
+-- Farmer: Phí duy trì theo năm
+INSERT INTO PaymentConfigurations (RoleID, FeeType, Amount, Description, EffectiveFrom)
+VALUES 
+((SELECT RoleID FROM Roles WHERE RoleName = 'Farmer'), 'AnnualMaintenanceFee', 300000, 
+ N'Phí duy trì tài khoản theo năm cho nông hộ. Không bắt buộc ngay, nhưng cần để tiếp tục đăng ký kế hoạch với doanh nghiệp.', 
+ '2025-07-01');
+
+GO
+
+-- Insert vào bảng Payments
+-- Business Manager đăng ký
+INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+VALUES (
+  'businessmanager@gmail.com', 2, 
+  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
+  'PAY-2025-0001', 1000000, 'VNPay', 'Registration', 'success', '2025-06-01 08:00:00', 1, CURRENT_TIMESTAMP, NULL
+);
+
+-- Business Manager đóng phí tháng 6
+INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+VALUES (
+  'businessmanager@gmail.com', 2, 
+  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
+  'PAY-2025-0002', 400000, 'VNPay', 'MonthlyFee', 'success', '2025-06-03 09:30:00', 1, CURRENT_TIMESTAMP, NULL
+);
+
+-- Farmer đăng ký
+INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+VALUES (
+  'farmer@gmail.com', 4, 
+  (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'), 
+  'PAY-2025-0003', 200000, 'VNPay', 'Registration', 'success', '2025-06-05 10:15:00', 1, CURRENT_TIMESTAMP, NULL
+);
+
+GO
+
+-- Insert vào bảng Wallets
+-- Ví hệ thống duy nhất
+INSERT INTO Wallets (UserID, WalletType, TotalBalance)
+VALUES (NULL, 'System', 1600000);
+
+-- Ví người dùng khởi tạo, nhưng số dư = 0
+INSERT INTO Wallets (UserID, WalletType, TotalBalance)
+VALUES 
+((SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 'Business', 0),
+((SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'), 'Farmer', 0);
+
+GO
+
+-- Insert vào bảng WalletTransactions
+-- BusinessManager đăng ký (PAY-2025-0001)
+INSERT INTO WalletTransactions (WalletID, PaymentID, Amount, TransactionType, Description)
+VALUES (
+  (SELECT WalletID FROM Wallets WHERE WalletType = 'System' AND UserID IS NULL),
+  (SELECT PaymentID FROM Payments WHERE PaymentCode = 'PAY-2025-0001'),
+  1000000, 'TopUp', N'Thu phí đăng ký tài khoản BusinessManager'
+);
+
+-- BusinessManager đóng phí tháng (PAY-2025-0002)
+INSERT INTO WalletTransactions (WalletID, PaymentID, Amount, TransactionType, Description)
+VALUES (
+  (SELECT WalletID FROM Wallets WHERE WalletType = 'System' AND UserID IS NULL),
+  (SELECT PaymentID FROM Payments WHERE PaymentCode = 'PAY-2025-0002'),
+  400000, 'TopUp', N'Thu phí duy trì tháng cho BusinessManager'
+);
+
+-- Farmer đăng ký (PAY-2025-0003)
+INSERT INTO WalletTransactions (WalletID, PaymentID, Amount, TransactionType, Description)
+VALUES (
+  (SELECT WalletID FROM Wallets WHERE WalletType = 'System' AND UserID IS NULL),
+  (SELECT PaymentID FROM Payments WHERE PaymentCode = 'PAY-2025-0003'),
+  200000, 'TopUp', N'Thu phí đăng ký tài khoản Farmer'
+);
 
 GO
 
