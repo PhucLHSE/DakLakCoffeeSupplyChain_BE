@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -114,6 +116,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // POST api/<ProcurementPlan>
+        [HttpPost]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> CreateProcurementPlanAsync([FromBody] ProcurementPlanCreateDto planDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _procurementPlanService.Create(planDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { planId = ((ProcurementPlanViewDetailsSumaryDto)result.Data).PlanId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
         }

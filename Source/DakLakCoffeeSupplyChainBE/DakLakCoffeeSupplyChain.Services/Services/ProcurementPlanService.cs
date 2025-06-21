@@ -1,21 +1,20 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class ProcurementPlanService : IProcurementPlanService
+    public class ProcurementPlanService(IUnitOfWork unitOfWork, IProcurementPlanCodeGenerator planCodeGenerator) : IProcurementPlanService
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        private readonly IProcurementPlanCodeGenerator _planCode = planCodeGenerator ?? throw new ArgumentNullException(nameof(planCodeGenerator));
 
-        public ProcurementPlanService(IUnitOfWork unitOfWork)
-        {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        }
         //Hiển thị toàn bộ plan đang mở ở màn hình public
         public async Task<IServiceResult> GetAllProcurementPlansAvailable()
         {
@@ -143,17 +142,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                //Kiểm tra người dùng có quyền tạo kế hoạch hay không
-                var user = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(procurementPlanDto.CreatedById);
-                if (user == null || user.Role.RoleName != "BusinessManager")
-                {
-                    return new ServiceResult(
-                        Const.FAIL_CREATE_CODE,
-                        "Bạn không có quyền tạo kế hoạch mua hàng."
-                    );
-                }
+                //Nếu status là open
+                    //Start date là null thì Start date sẽ tự động cập nhật thành thời điểm hiện tại
+                    //Start date không phải null thì không được phép trong quá khứ, không được sau EndDate và chỉ hiển thị lên public khi đến ngày đó
+                //Nếu status là draft
+                    //Start date là null thì Bỏ qua toàn bộ logic kiểm tra
+                    //Start date không phải null thì không đuọc phép trong quá khứ, không được sau EndDate
 
-                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(user.UserId);
+                //Logic cho TotalQuantity/TargetQuantity/MinimumRegistrationQuantity (plan/detail) đã xong
+                //Logic cho StartDate/EndDate (plan) đã xong
+                //Logic cho MinPriceRange/MaxPriceRange (detail) đã xong
+
+                //Logic chỉ hiển thị lên public khi đến ngày StartDate và active chưa xong
+
+                //Generate code
+                string procurementPlanCode = await _planCode.GenerateProcurementPlanCodeAsync();
+                string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+
+                //Map dto to model
+                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode, procurementPlanDetailsCode);
+
+                //Nếu như BM để status kế hoạch là open nhưng chưa set StartDate thì kế hoạch sẽ tự động mở đăng ký luôn
+                //Nếu BM để status open và đã set StartDate thì kế hoạch mới mở đăng ký khi đến ngày đó thôi.
+                if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
+                    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+
+                //Logic TotalQuantity/TargetQuantity
+                foreach(var item in newPlan.ProcurementPlansDetails)
+                    newPlan.TotalQuantity += item.TargetQuantity;                    
 
                 // Save data to database
                 await _unitOfWork.ProcurementPlanRepository.CreateAsync(newPlan);
@@ -161,14 +177,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Không thể xài cách này được vì responseDTO không chứa các thông tin của các DTO navigation
                     // Map the saved entity to a response DTO
-                    //var responseDto = newPlan.MapToUserAccountViewDetailsDto();
-                    //responseDto.RoleName = role.RoleName;
+                    //var responseDto = newPlan.MapToProcurementPlanViewDetailsDto();
+
+                    var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                        predicate: p => p.PlanId == newPlan.PlanId,
+                        include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails).
+                        ThenInclude(d => d.CoffeeType),
+                        asNoTracking: true
+                        );
+
+                    if (plan == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new ProcurementPlanViewDetailsSumaryDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = plan.MapToProcurementPlanViewDetailsDto();
 
                     return new ServiceResult(
                         Const.SUCCESS_CREATE_CODE,
-                        Const.SUCCESS_CREATE_MSG
-                        //responseDto
+                        Const.SUCCESS_CREATE_MSG,
+                    responseDto
                     );
                 }
                 else

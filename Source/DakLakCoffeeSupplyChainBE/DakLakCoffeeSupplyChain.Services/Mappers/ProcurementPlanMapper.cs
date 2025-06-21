@@ -54,6 +54,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Title = entity.Title ?? string.Empty,
                 Description = entity.Description ?? string.Empty,
                 TotalQuantity = entity.TotalQuantity,
+                CreatedById = entity.CreatedBy,
                 CreatedBy = entity.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
                 {
                     ManagerId = entity.CreatedByNavigation.ManagerId,
@@ -87,7 +88,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         TypicalRegion = p.CoffeeType.TypicalRegion,
                         SpecialtyLevel = p.CoffeeType.SpecialtyLevel
                     },
-                    //CropType = p.CropType, //Có khả năng field này bị thừa
                     TargetQuantity = p.TargetQuantity,
                     TargetRegion = p.TargetRegion,
                     MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
@@ -107,18 +107,35 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ProcurementPlanViewAllDto
-        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, Guid BusinessManager)
+        // Mapper ProcurementPlanCreateDto
+        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, string planCode, string planDetailCode)
         {
             return new ProcurementPlan
             {
-                PlanId = Guid.NewGuid(), // Assuming PlanID is generated here
+                PlanId = Guid.NewGuid(),
+                PlanCode = planCode,
                 Title = dto.Title,
                 Description = dto.Description,
+                TotalQuantity = 0, // Cái này chưa có default 0 trong db
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                CreatedBy = BusinessManager,
+                CreatedBy = dto.CreatedById,
                 Status = dto.Status.ToString(),
+                ProcurementPlansDetails = [.. dto.ProcurementPlansDetails
+                .Select(detail => new ProcurementPlansDetail
+                {
+                    PlanDetailsId = Guid.NewGuid(),
+                    PlanDetailCode = planDetailCode,
+                    CoffeeTypeId = detail.CoffeeType,
+                    CropType = "Arabica", //Set mặc định cho CropType, trường này sẽ được loại bỏ trong tương lai
+                    TargetQuantity = detail.TargetQuantity,
+                    TargetRegion = detail.TargetRegion,
+                    MinimumRegistrationQuantity = detail.MinimumRegistrationQuantity,
+                    MinPriceRange = detail.MinPriceRange,
+                    MaxPriceRange = detail.MaxPriceRange,
+                    Note = detail.Note,
+                    Status = detail.Status.ToString()
+                })]
             };
         }
     }

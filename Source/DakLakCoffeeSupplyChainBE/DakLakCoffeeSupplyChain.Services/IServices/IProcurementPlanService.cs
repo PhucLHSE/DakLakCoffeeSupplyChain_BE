@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 
 namespace DakLakCoffeeSupplyChain.Services.IServices
 {
@@ -9,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid planId);
         Task<IServiceResult> GetByIdExceptDisablePlanDetails(Guid planId);
         Task<IServiceResult> SoftDeleteById(Guid planId);
+        Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto);
     }
 }

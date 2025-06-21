@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public double? TotalQuantity { get; set; }
+        public Guid CreatedById { get; set; }
         public BusinessManagerSummaryDto? CreatedBy { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
