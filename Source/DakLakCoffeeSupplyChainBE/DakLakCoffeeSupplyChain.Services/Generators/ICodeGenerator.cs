@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         Task<string> GenerateUserCodeAsync();
 
         Task<string> GenerateManagerCodeAsync();
+
+        Task<string> GenerateBuyerCodeAsync(Guid managerId);
     }
 }

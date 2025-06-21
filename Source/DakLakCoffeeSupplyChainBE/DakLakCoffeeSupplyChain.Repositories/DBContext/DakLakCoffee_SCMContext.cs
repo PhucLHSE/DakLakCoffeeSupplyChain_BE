@@ -191,7 +191,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(newid())")
                 .HasColumnName("BuyerID");
             entity.Property(e => e.BuyerCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.CompanyAddress).HasMaxLength(255);
             entity.Property(e => e.CompanyName)

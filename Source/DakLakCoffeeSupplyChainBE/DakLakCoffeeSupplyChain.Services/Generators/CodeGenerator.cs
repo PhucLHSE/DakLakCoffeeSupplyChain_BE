@@ -36,5 +36,26 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"BM-{currentYear}-{(count + 1):D4}";
         }
+
+        public async Task<string> GenerateBuyerCodeAsync(Guid managerId)
+        {
+            var currentYear = DateTime.UtcNow.Year;
+
+            // Đếm số buyer mà manager này đã tạo trong năm
+            var count = await _unitOfWork.BusinessBuyerRepository.CountBuyersCreatedByManagerInYearAsync(managerId, currentYear);
+
+            // Lấy ManagerCode để dùng làm tiền tố
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => m.ManagerId == managerId && !m.IsDeleted,
+                asNoTracking: true
+            );
+
+            var managerCode = manager?.ManagerCode;
+
+            if (string.IsNullOrWhiteSpace(managerCode))
+                managerCode = "BM-UNKNOWN"; // fallback
+
+            return $"{managerCode}-BUY-{currentYear}-{(count + 1):D3}";
+        }
     }
 }

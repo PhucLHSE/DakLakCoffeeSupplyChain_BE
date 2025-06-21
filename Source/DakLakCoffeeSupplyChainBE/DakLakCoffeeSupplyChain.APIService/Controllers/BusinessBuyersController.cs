@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -54,6 +56,37 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // POST api/<BusinessBuyersController>
+        [HttpPost]
+        public async Task<IActionResult> CreateBusinessBuyerAsync([FromBody] BusinessBuyerCreateDto businessBuyerCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _businessBuyerService.Create(businessBuyerCreateDto, userId);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { buyerId = ((BusinessBuyerViewDetailDto)result.Data).BuyerId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
         // PATCH: api/<BusinessBuyersController>/soft-delete/{buyerId}

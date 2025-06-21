@@ -40,11 +40,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .CountAsync(bm => bm.CreatedAt.Year == year && !bm.IsDeleted);
         }
+
         public async Task<BusinessManager?> FindByUserIdAsync(Guid userId)
         {
             return await _context.BusinessManagers
                 .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted);
         }
-
     }
 }
