@@ -31,6 +31,7 @@ builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 builder.Services.AddScoped<IBusinessManagerService, BusinessManagerService>();
 builder.Services.AddScoped<IBusinessBuyerService, BusinessBuyerService>();
 builder.Services.AddScoped<IContractService, ContractService>();
+builder.Services.AddScoped<IContractItemService, ContractItemService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
 builder.Services.AddScoped<IProductService, ProductService>();
