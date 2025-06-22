@@ -18,7 +18,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static CropProgressViewDetailsDto ToViewDetailsDto(this CropProgress entity)
+        public static CropProgressViewDetailsDto MapToCropProgressViewDetailsDto(this CropProgress entity)
         {
             return new CropProgressViewDetailsDto
             {
@@ -37,5 +37,26 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+
+        public static CropProgress MapToCropProgressCreateDto(this CropProgressCreateDto dto)
+        {
+            return new CropProgress
+            {
+                ProgressId = Guid.NewGuid(),
+                CropSeasonDetailId = dto.CropSeasonDetailId,
+                StageId = dto.StageId,
+                StageDescription = dto.StageDescription ?? string.Empty,
+                ProgressDate = dto.ProgressDate,
+                PhotoUrl = dto.PhotoUrl ?? string.Empty,
+                VideoUrl = dto.VideoUrl ?? string.Empty,
+                Note = dto.Note ?? string.Empty,
+                StepIndex = dto.StepIndex,
+                UpdatedBy = dto.UpdatedBy,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+        }
+
     }
 }
