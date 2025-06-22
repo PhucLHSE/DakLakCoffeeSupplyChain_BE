@@ -112,7 +112,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                        .Include(p => p.Batch)
                        .Include(p => p.Inventory)
                        .ThenInclude(i => i.Warehouse),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Kiểm tra nếu không tồn tại

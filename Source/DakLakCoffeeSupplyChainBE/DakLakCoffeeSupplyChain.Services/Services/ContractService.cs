@@ -105,11 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
                     predicate: c => c.ContractId == contractId,
                     include: query => query
-                       .Include(c => c.Buyer)
-                       .Include(c => c.Seller)
-                          .ThenInclude(s => s.User)
-                       .Include(c => c.ContractItems)
-                          .ThenInclude(ci => ci.CoffeeType),
+                       .Include(c => c.ContractItems),
                     asNoTracking: false
                 );
 

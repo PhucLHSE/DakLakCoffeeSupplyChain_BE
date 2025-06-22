@@ -289,7 +289,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: bb => bb.BuyerId == buyerId,
                     include: query => query
                        .Include(bb => bb.CreatedByNavigation),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Kiểm tra nếu không tồn tại
@@ -342,9 +342,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tìm buyer theo ID
                 var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
                     predicate: bb => bb.BuyerId == buyerId,
-                    include: query => query
-                       .Include(bb => bb.CreatedByNavigation),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Kiểm tra nếu không tồn tại

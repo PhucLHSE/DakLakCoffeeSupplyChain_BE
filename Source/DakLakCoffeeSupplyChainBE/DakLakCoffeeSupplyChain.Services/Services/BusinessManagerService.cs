@@ -267,7 +267,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: bm => bm.ManagerId == managerId,
                     include: query => query
                        .Include(bm => bm.User),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Kiểm tra nếu không tồn tại
@@ -320,9 +320,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tìm quản lý doanh nghiệp theo ID
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: bm => bm.ManagerId == managerId,
-                    include: query => query
-                       .Include(bm => bm.User),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Kiểm tra nếu không tồn tại
