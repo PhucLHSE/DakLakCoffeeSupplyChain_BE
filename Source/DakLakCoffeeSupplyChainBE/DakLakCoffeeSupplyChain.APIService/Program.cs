@@ -21,7 +21,6 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, CodeGenerator>();
-builder.Services.AddScoped<IProcurementPlanCodeGenerator, ProcurementPlanCodeGenerator>();
 
 // Unit of Work pattern: quản lý Transaction + Repository access
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
