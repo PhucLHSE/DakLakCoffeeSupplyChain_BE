@@ -109,6 +109,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
                 : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
         }
+        public async Task<IServiceResult> UpdateAsync(ProcessingStageUpdateDto dto)
+        {
+            // Lấy thực thể từ database
+            var entity = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(dto.StageId);
+            if (entity == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"Không tìm thấy stage ID {dto.StageId}");
+
+            // Ánh xạ giá trị mới từ dto sang entity
+            ProcessingStageMapper.MapToProcessingStageUpdateEntity(entity, dto);
+
+            // Gọi update và lưu
+            var updated = await _unitOfWork.ProcessingStageRepository.UpdateAsync(entity);
+            if (!updated)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại");
+
+            var result = await _unitOfWork.SaveChangesAsync();
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG)
+                : new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+        }
 
     }
 }

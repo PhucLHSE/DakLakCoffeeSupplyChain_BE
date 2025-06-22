@@ -15,5 +15,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetDetailByIdAsync(int stageId);
         Task<IServiceResult> CreateAsync(CreateProcessingStageDto dto);
         Task<IServiceResult> DeleteAsync(int stageId);
+        Task<IServiceResult> UpdateAsync(ProcessingStageUpdateDto dto);
     }
 }

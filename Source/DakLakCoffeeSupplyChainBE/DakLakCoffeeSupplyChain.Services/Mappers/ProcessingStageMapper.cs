@@ -59,5 +59,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+        public static void MapToProcessingStageUpdateEntity(this ProcessingStage stage, ProcessingStageUpdateDto dto)
+        {
+            stage.StageCode = dto.StageCode;
+            stage.StageName = dto.StageName;
+            stage.Description = dto.Description;
+            stage.OrderIndex = dto.OrderIndex;
+            stage.IsRequired = dto.IsRequired;
+            stage.MethodId = dto.MethodId;
+            stage.UpdatedAt = DateTime.UtcNow;
+        }
     }
 }
