@@ -5,5 +5,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface ICoffeeTypeService
     {
         Task<IServiceResult> GetAll();
+        Task<IServiceResult> GetById(Guid TypeId);
     }
 }
