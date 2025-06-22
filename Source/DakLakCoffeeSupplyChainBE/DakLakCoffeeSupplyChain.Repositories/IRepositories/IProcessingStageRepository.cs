@@ -13,5 +13,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<ProcessingStage>> GetAllStagesAsync();  
         Task CreateAsync(ProcessingStage entity);
         Task<bool> SoftDeleteAsync(int stageId);
+        Task<bool> UpdateAsync(ProcessingStage entity);
     }
 }

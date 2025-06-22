@@ -46,5 +46,25 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             _context.ProcessingStages.Update(stage);
             return true;
         }
+        public async Task<bool> UpdateAsync(ProcessingStage entity)
+        {
+            var existing = await _context.ProcessingStages
+                .FirstOrDefaultAsync(s => s.StageId == entity.StageId && !s.IsDeleted);
+
+            if (existing == null)
+                return false;
+
+
+            existing.StageCode = entity.StageCode;
+            existing.StageName = entity.StageName;
+            existing.Description = entity.Description;
+            existing.OrderIndex = entity.OrderIndex;
+            existing.IsRequired = entity.IsRequired;
+            existing.MethodId = entity.MethodId;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            _context.ProcessingStages.Update(existing);
+            return true;
+        }
     }
 }

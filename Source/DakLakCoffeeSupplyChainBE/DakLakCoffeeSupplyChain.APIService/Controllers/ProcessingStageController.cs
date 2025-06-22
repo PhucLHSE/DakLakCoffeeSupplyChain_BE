@@ -79,6 +79,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        [HttpPut("{id}")]
+        //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> Update(int id, [FromBody] ProcessingStageUpdateDto dto)
+        {
+            if (id != dto.StageId)
+                return BadRequest("ID trong URL không khớp với dữ liệu gửi lên.");
+
+            var result = await _processingStageService.UpdateAsync(dto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 
 }
