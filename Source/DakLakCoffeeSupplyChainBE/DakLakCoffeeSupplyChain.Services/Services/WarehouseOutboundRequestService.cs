@@ -105,6 +105,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", result);
         }
+        public async Task<IServiceResult> AcceptRequestAsync(Guid requestId, Guid staffUserId)
+        {
+            var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(requestId);
+            if (request == null || request.Status != WarehouseOutboundRequestStatus.Pending.ToString())
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc đã xử lý.");
+
+            var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
+            if (staff == null)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên xử lý.");
+
+            request.Status = WarehouseOutboundRequestStatus.Accepted.ToString();
+            request.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.WarehouseOutboundRequests.Update(request);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã tiếp nhận yêu cầu xuất kho.");
+        }
+
 
 
 

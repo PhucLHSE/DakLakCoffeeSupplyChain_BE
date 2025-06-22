@@ -8,9 +8,10 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums
 {
     public enum WarehouseOutboundRequestStatus
     {
-        Pending,
-        Approved,
-        Rejected
+        Pending,      
+        Accepted,       
+        Completed,      
+        Cancelled      
     }
 
 }

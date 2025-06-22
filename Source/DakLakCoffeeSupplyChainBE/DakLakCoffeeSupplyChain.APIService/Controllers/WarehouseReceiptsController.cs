@@ -30,10 +30,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
         [HttpPut("{id}/confirm")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> ConfirmReceipt(Guid id)
+        public async Task<IActionResult> ConfirmReceipt(Guid id, [FromBody] WarehouseReceiptConfirmDto dto)
         {
-            var result = await _receiptService.ConfirmReceiptAsync(id);
+            var result = await _receiptService.ConfirmReceiptAsync(id, dto);
             return StatusCode(result.Status, result);
         }
+
     }
 }

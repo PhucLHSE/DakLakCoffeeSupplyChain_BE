@@ -8,11 +8,8 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface IInventoryRepository : IGenericRepository<Inventory>
+    public interface IWarehouseOutboundReceiptRepository : IGenericRepository<WarehouseOutboundReceipt>
     {
-        Task<Inventory?> FindByWarehouseAndBatchAsync(Guid warehouseId, Guid batchId);
-        Task<Inventory?> FindByIdAsync(Guid id);
-        void Update(Inventory entity);
+        Task<WarehouseOutboundReceipt?> GetByOutboundRequestIdAsync(Guid outboundRequestId);
     }
-
 }

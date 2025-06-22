@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<WarehouseOutboundRequest?> GetByIdAsync(Guid id);
         Task CreateAsync(WarehouseOutboundRequest entity);
         Task<List<WarehouseOutboundRequest>> GetAllAsync();
+        void Update(WarehouseOutboundRequest entity);
     }
 }
 

@@ -38,5 +38,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }
+        public void Update(WarehouseOutboundRequest entity)
+        {
+            _context.WarehouseOutboundRequests.Update(entity);
+        }
     }
 }

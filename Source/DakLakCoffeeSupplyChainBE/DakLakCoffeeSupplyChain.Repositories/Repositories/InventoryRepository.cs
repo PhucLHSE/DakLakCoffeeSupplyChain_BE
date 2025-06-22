@@ -25,6 +25,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     inv.BatchId == batchId &&
                     !inv.IsDeleted);
         }
+        public async Task<Inventory?> FindByIdAsync(Guid id)
+        {
+            return await _context.Inventories
+                .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
+        }
     }
 
 }
