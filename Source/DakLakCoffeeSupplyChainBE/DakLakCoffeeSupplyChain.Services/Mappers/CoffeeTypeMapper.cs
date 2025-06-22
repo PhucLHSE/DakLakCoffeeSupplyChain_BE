@@ -18,5 +18,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 SpecialtyLevel = entity.SpecialtyLevel
             };
         }
+        public static CoffeeType MapToCofeeTypeCreateDto(this CoffeeTypeCreateDto dto, string typeCode)
+        {
+            return new CoffeeType
+            {
+                CoffeeTypeId = Guid.NewGuid(),
+                TypeCode = typeCode,
+                TypeName = dto.TypeName,
+                BotanicalName = dto.BotanicalName,
+                Description = dto.Description,
+                TypicalRegion = dto.TypicalRegion,
+                SpecialtyLevel = dto.SpecialtyLevel
+            };
+        }
     }
 }

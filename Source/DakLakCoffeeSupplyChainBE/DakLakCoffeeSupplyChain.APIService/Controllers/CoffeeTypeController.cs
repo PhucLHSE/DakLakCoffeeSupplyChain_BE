@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -80,6 +82,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // POST api/<CoffeeType>
+        [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager")]
+        public async Task<IActionResult> CreateCoffeeTypeAsync([FromBody] CoffeeTypeCreateDto typeDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _coffeeTypeService.Create(typeDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { typeId = ((CoffeeTypeViewAllDto)result.Data).CoffeeTypeId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
         }
