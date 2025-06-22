@@ -57,5 +57,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }
+        public async Task<IServiceResult> GetDetailAsync(Guid outboundRequestId)
+        {
+            var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(outboundRequestId);
+
+            if (request == null)
+            {
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu xuất kho.");
+            }
+
+            var dto = new WarehouseOutboundRequestDetailDto
+            {
+                OutboundRequestId = request.OutboundRequestId,
+                OutboundRequestCode = request.OutboundRequestCode,
+                WarehouseId = request.WarehouseId,
+                WarehouseName = request.Warehouse?.Name,
+                InventoryId = request.InventoryId,
+                InventoryName = request.Inventory?.Products?.FirstOrDefault()?.ProductName,
+                RequestedQuantity = request.RequestedQuantity,
+                Unit = request.Unit,
+                Purpose = request.Purpose,
+                Reason = request.Reason,
+                OrderItemId = request.OrderItemId,
+                RequestedBy = request.RequestedBy,
+                RequestedByName = request.RequestedByNavigation?.CompanyName, 
+                Status = request.Status,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
+            };
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết yêu cầu thành công", dto);
+        }
+
+
     }
 }
