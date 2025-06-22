@@ -243,7 +243,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingStageRepository ??= new ProcessingStageRepository(context);
+            }
         }
-
     }
 }
