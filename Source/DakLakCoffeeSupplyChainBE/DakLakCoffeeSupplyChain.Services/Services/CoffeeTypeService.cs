@@ -1,10 +1,13 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -46,11 +49,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid TypeId)
+        public async Task<IServiceResult> GetById(Guid typeId)
         {
             // Tìm tài coffee type theo ID
             var type = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
-                predicate: u => u.CoffeeTypeId == TypeId,
+                predicate: u => u.CoffeeTypeId == typeId,
                 asNoTracking: true
             );
 
@@ -72,6 +75,116 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     coffeeTypeDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> DeleteById(Guid typeId)
+        {
+            try
+            {
+                // Tìm coffee type theo ID từ repository
+                var type = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
+                    predicate: u => u.CoffeeTypeId == typeId,
+                    asNoTracking: true
+                );
+
+                // Nếu không tìm thấy coffee type, trả về cảnh báo không có dữ liệu
+                if (type == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa coffee type ra khỏi repository
+                    await _unitOfWork.CoffeeTypeRepository.RemoveAsync(type);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid typeId)
+        {
+            try
+            {
+                // Tìm coffee type theo ID từ repository
+                var type = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
+                    predicate: u => u.CoffeeTypeId == typeId,
+                    asNoTracking: true
+                );
+
+                // Nếu không tìm thấy coffee type, trả về cảnh báo không có dữ liệu
+                if (type == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    type.IsDeleted = true;
+                    type.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật xoá mềm ở repository
+                    await _unitOfWork.CoffeeTypeRepository.UpdateAsync(type);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
