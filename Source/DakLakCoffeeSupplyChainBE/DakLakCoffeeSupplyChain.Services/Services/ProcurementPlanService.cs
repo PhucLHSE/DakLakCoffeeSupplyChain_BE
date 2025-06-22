@@ -10,10 +10,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class ProcurementPlanService(IUnitOfWork unitOfWork, IProcurementPlanCodeGenerator planCodeGenerator) : IProcurementPlanService
+    public class ProcurementPlanService(IUnitOfWork unitOfWork, ICodeGenerator planCodeGenerator) : IProcurementPlanService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        private readonly IProcurementPlanCodeGenerator _planCode = planCodeGenerator ?? throw new ArgumentNullException(nameof(planCodeGenerator));
+        private readonly ICodeGenerator _planCode = planCodeGenerator ?? throw new ArgumentNullException(nameof(planCodeGenerator));
 
         //Hiển thị toàn bộ plan đang mở ở màn hình public
         public async Task<IServiceResult> GetAllProcurementPlansAvailable()
