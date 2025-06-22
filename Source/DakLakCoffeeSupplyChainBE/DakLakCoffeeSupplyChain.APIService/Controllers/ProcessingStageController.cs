@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodStageDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -63,6 +64,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest(result);
 
             return StatusCode(500, result.Message); // lỗi không mong muốn
+        }
+
+        [HttpDelete("{id}")]
+        //[Authorize(Roles = "Admin,BusinessManager")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var result = await _processingStageService.DeleteAsync(id); 
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
     }
 
