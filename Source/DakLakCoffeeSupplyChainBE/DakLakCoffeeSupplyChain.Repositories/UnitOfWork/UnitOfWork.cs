@@ -35,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IInventoryRepository? inventoryRepository;
         private IWarehouseRepository? warehouseRepository;
         private IWarehouseOutboundRequestRepository? warehouseOutboundRequestRepository;
+        private IProcessingStageRepository? processingStageRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -227,6 +228,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return warehouseOutboundRequestRepository ??= new WarehouseOutboundRequestRepository(context);
+            }
+        }
+        public IProcessingStageRepository ProcessingStageRepository
+        {
+            get
+            {
+                return processingStageRepository ??= new ProcessingStageRepository(context);
             }
         }
 
