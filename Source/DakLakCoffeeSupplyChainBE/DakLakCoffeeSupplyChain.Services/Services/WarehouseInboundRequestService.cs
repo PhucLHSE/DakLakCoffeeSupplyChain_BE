@@ -34,7 +34,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var newRequest = new WarehouseInboundRequest
             {
                 InboundRequestId = Guid.NewGuid(),
-                InboundRequestCode = "IR-" + DateTime.UtcNow.Ticks,
+                InboundRequestCode = "IR-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
                 FarmerId = farmer.FarmerId,
                 BusinessStaffId = dto.BusinessStaffId,
                 BatchId = dto.BatchId ?? Guid.Empty,

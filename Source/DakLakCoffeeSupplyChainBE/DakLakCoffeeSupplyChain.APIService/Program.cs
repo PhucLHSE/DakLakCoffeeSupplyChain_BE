@@ -44,6 +44,8 @@ builder.Services.AddScoped<ICropProgressService, CropProgressService>();
 builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IWarehouseOutboundRequestService, WarehouseOutboundRequestService>();
+
+builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundReceiptService>();
 builder.Services.AddScoped<ICoffeeTypeService, CoffeeTypeService>();
 builder.Services.AddScoped<IProcessingStageService, ProcessingStageService>();
 
