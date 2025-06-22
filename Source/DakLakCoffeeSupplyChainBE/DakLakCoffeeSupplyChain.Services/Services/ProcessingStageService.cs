@@ -96,7 +96,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> DeleteAsync(int stageId)
+        {
+            var deleted = await _unitOfWork.ProcessingStageRepository.SoftDeleteAsync(stageId);
+            if (!deleted)
+            {
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"StageId {stageId} không tồn tại hoặc đã bị xóa.");
+            }
 
+            var result = await _unitOfWork.SaveChangesAsync();
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
+                : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+        }
 
     }
 }

@@ -34,5 +34,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             await _context.AddAsync(entity);
         }
+        public async Task<bool> SoftDeleteAsync(int stageId)
+        {
+            var stage = await _context.ProcessingStages.FirstOrDefaultAsync(s => s.StageId == stageId && !s.IsDeleted);
+            if (stage == null)
+                return false;
+
+            stage.IsDeleted = true;
+            stage.UpdatedAt = DateTime.UtcNow;
+
+            _context.ProcessingStages.Update(stage);
+            return true;
+        }
     }
 }
