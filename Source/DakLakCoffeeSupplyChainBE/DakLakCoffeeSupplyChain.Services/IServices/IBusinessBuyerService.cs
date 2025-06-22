@@ -18,6 +18,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Update(BusinessBuyerUpdateDto businessBuyerDto);
 
+        Task<IServiceResult> DeleteById(Guid buyerId);
+
         Task<IServiceResult> SoftDeleteById(Guid buyerId);
     }
 }
