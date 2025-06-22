@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs
+namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 {
-    public class BusinessBuyerDeleteDto
+    public class ContractDeleteDto
     {
         [Required]
-        public Guid BuyerId { get; set; }
+        public Guid ContractId { get; set; }
     }
 }

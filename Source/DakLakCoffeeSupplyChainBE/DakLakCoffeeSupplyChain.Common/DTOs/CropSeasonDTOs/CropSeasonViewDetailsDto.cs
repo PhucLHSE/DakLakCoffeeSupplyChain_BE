@@ -1,5 +1,6 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
-using System;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs.DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
@@ -21,5 +22,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropSeasonStatus Status { get; set; }
+
+        public List<CropSeasonDetailViewDto> Details { get; set; } = new();
     }
 }

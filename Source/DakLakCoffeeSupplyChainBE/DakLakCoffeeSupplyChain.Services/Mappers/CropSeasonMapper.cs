@@ -1,4 +1,6 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs.DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -27,8 +29,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static CropSeasonViewDetailsDto MapToCropSeasonViewDetailsDto(this CropSeason entity)
         {
             var status = Enum.TryParse<CropSeasonStatus>(entity.Status, true, out var parsedStatus)
-      ? parsedStatus
-      : CropSeasonStatus.Active;
+                ? parsedStatus : CropSeasonStatus.Active;
+
             return new CropSeasonViewDetailsDto
             {
                 CropSeasonId = entity.CropSeasonId,
@@ -41,7 +43,23 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
                 CommitmentId = entity.CommitmentId,
                 RegistrationId = entity.RegistrationId,
-                                Status = status
+                Status = status,
+
+                Details = entity.CropSeasonDetails?
+    .Where(d => !d.IsDeleted)
+    .Select(d => new CropSeasonDetailViewDto
+    {
+        DetailId = d.DetailId,
+        Area = d.AreaAllocated ?? 0,
+        CoffeeTypeId = d.CoffeeTypeId,
+        TypeName = d.CoffeeType?.TypeName ?? string.Empty,
+        ExpectedHarvestStart = d.ExpectedHarvestStart,
+        ExpectedHarvestEnd = d.ExpectedHarvestEnd,
+        EstimatedYield = d.EstimatedYield,
+        PlannedQuality = d.PlannedQuality ?? string.Empty,
+        Status = d.Status ?? string.Empty
+    }).ToList() ?? new()
+
             };
         }
         public static CropSeason MapToCropSeasonCreateDto(this CropSeasonCreateDto dto, string code)

@@ -44,12 +44,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetById(Guid cropSeasonId)
         {
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetCropSeasonByIdAsync(cropSeasonId);
+            var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
 
             if (cropSeason == null)
-            {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG, new CropSeasonViewDetailsDto());
-            }
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mùa vụ.");
 
             var dto = cropSeason.MapToCropSeasonViewDetailsDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
