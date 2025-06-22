@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWarehouseOutboundRequestService
     {
         Task<IServiceResult> CreateRequestAsync(Guid managerUserId, WarehouseOutboundRequestCreateDto dto);
+        Task<IServiceResult> GetDetailAsync(Guid outboundRequestId);
     }
 
 }

@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -24,6 +25,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var managerUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _requestService.CreateRequestAsync(managerUserId, dto);
             return StatusCode(result.Status, result);
+        }
+        [HttpGet("{outboundRequestId}")]
+        public async Task<IActionResult> GetDetail(Guid outboundRequestId)
+        {
+            var result = await _requestService.GetDetailAsync(outboundRequestId);
+            return Ok(result);
         }
     }
 }
