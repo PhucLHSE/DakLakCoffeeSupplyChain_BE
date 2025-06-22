@@ -57,5 +57,12 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"{managerCode}-BUY-{currentYear}-{(count + 1):D3}";
         }
+
+            public async Task<string> GenerateCropSeasonCodeAsync(int year)
+            {
+                int count = await _unitOfWork.CropSeasonRepository.CountByYearAsync(year);
+                return $"SEASON-{year}-{(count + 1):D4}";
+            }
+        
     }
 }
