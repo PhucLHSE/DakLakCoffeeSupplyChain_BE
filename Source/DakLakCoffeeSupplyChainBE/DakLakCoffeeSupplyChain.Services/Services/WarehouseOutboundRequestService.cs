@@ -88,6 +88,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết yêu cầu thành công", dto);
         }
+        public async Task<IServiceResult> GetAllAsync()
+        {
+            var requests = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync();
+
+            var result = requests.Select(x => new WarehouseOutboundRequestListItemDto
+            {
+                OutboundRequestId = x.OutboundRequestId,
+                OutboundRequestCode = x.OutboundRequestCode,
+                Status = x.Status,
+                WarehouseName = x.Warehouse?.Name,
+                RequestedQuantity = x.RequestedQuantity,
+                Unit = x.Unit,
+                CreatedAt = x.CreatedAt
+            }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", result);
+        }
+
 
 
     }

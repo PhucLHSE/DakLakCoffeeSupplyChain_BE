@@ -30,7 +30,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetDetail(Guid outboundRequestId)
         {
             var result = await _requestService.GetDetailAsync(outboundRequestId);
-            return Ok(result);
+            return StatusCode(result.Status, result);
+        }
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _requestService.GetAllAsync();
+            return StatusCode(result.Status, result);
         }
     }
 }
