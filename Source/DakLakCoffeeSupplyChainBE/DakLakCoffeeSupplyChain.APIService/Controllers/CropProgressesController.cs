@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -17,7 +18,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _cropProgressService = cropProgressService;
         }
 
-        // GET: api/CropProgresses
         [HttpGet]
         [EnableQuery]
         public async Task<IActionResult> GetAllCropProgressesAsync()
@@ -33,7 +33,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // GET: api/CropProgresses/{id}
         [HttpGet("{progressId}")]
         public async Task<IActionResult> GetById(Guid progressId)
         {
@@ -44,6 +43,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CropProgressCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _cropProgressService.Create(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Created(string.Empty, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
         }

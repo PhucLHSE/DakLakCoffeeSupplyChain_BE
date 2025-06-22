@@ -1,12 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
-using DakLakCoffeeSupplyChain.Repositories.IRepositories;
-using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 
 namespace DakLakCoffeeSupplyChain.Services.Generators
 {
@@ -57,5 +49,32 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"{managerCode}-BUY-{currentYear}-{(count + 1):D3}";
         }
+
+        public async Task<string> GenerateCropSeasonCodeAsync(int year)
+        {
+            int count = await _unitOfWork.CropSeasonRepository.CountByYearAsync(year);
+            return $"SEASON-{year}-{(count + 1):D4}";
+        }
+
+        public async Task<string> GenerateProcurementPlanCodeAsync()
+        {
+            var currentYear = DateTime.UtcNow.Year;
+
+            // Đếm số procurement plan tạo trong năm
+            var count = await _unitOfWork.ProcurementPlanRepository.CountProcurementPlansInYearAsync(currentYear);
+
+            return $"PLAN-{currentYear}-{(count + 1):D4}";
+        }
+
+        public async Task<string> GenerateProcurementPlanDetailsCodeAsync()
+        {
+            var currentYear = DateTime.UtcNow.Year;
+
+            // Đếm số procurement plan detail tạo trong năm
+            var count = await _unitOfWork.ProcurementPlanDetailsRepository.CountProcurementPlanDetailsInYearAsync(currentYear);
+
+            return $"PLD-{currentYear}-{(count + 1):D4}";
+        }
+
     }
 }

@@ -18,10 +18,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IContractRepository? contractRepository;
         private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
-        private IFarmerRepository? farmerRepository; 
-        private ICultivationRegistrationRepository? cultivationRegistrationRepository; 
-        private IFarmingCommitmentRepository? farmingCommitmentRepository; 
-        private ICropSeasonRepository? cropSeasonRepository; 
+        private IFarmerRepository? farmerRepository;
+        private ICultivationRegistrationRepository? cultivationRegistrationRepository;
+        private IFarmingCommitmentRepository? farmingCommitmentRepository;
+        private ICropSeasonRepository? cropSeasonRepository;
         private ICropStageRepository cropStageRepository;
         private IProcurementPlanRepository? procurementPlanRepository;
         private IProcessingMethodRepository? processingMethodRepository;
@@ -36,6 +36,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IWarehouseRepository? warehouseRepository;
         private IWarehouseOutboundRequestRepository? warehouseOutboundRequestRepository;
         private IWarehouseOutboundReceiptRepository? warehouseOutboundReceiptRepository;
+        private ICoffeeTypeRepository? coffeeTypeRepository;
+        private IProcessingStageRepository? processingStageRepository;
+
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -100,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return systemConfigurationRepository ??= new SystemConfigurationRepository(context);
             }
         }
-        
+
         public IFarmerRepository FarmerRepository
         {
             get
@@ -108,7 +111,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return farmerRepository ??= new FarmerRepository(context);
             }
         }
-        
+
         public ICultivationRegistrationRepository CultivationRegistrationRepository
         {
             get
@@ -116,7 +119,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cultivationRegistrationRepository ??= new CultivationRegistrationRepository(context);
             }
         }
-        
+
         public IFarmingCommitmentRepository FarmingCommitmentRepository
         {
             get
@@ -124,7 +127,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return farmingCommitmentRepository ??= new FarmingCommitmentRepository(context);
             }
         }
-        
+
         public ICropSeasonRepository CropSeasonRepository
         {
             get
@@ -132,7 +135,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cropSeasonRepository ??= new CropSeasonRepository(context);
             }
         }
-        
+
         public ICropStageRepository CropStageRepository
         {
             get
@@ -140,7 +143,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cropStageRepository ??= new CropStageRepository(context);
             }
         }
-        
+
         public IProcurementPlanRepository ProcurementPlanRepository
         {
             get
@@ -148,7 +151,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return procurementPlanRepository ??= new ProcurementPlanRepository(context);
             }
         }
-        
+
         public IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository
         {
             get
@@ -156,7 +159,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return procurementPlanDetailsRepository ??= new ProcurementPlanDetailsRepository(context);
             }
         }
-        
+
         public IProcessingMethodRepository ProcessingMethodRepository
         {
             get
@@ -172,6 +175,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cropProgressRepository ??= new CropProgressRepository(context);
             }
         }
+
         public IWarehouseInboundRequestRepository WarehouseInboundRequests
         {
             get
@@ -179,6 +183,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return warehouseInboundRequestRepository ??= new WarehouseInboundRequestRepository(context);
             }
         }
+
         public ISystemNotificationRepository SystemNotificationRepository
         {
             get
@@ -202,6 +207,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return businessStaffRepository ??= new BusinessStaffRepository(context);
             }
         }
+
         public IWarehouseReceiptRepository WarehouseReceipts
         {
             get
@@ -209,6 +215,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return warehouseReceiptRepository ??= new WarehouseReceiptRepository(context);
             }
         }
+
         public IInventoryRepository Inventories
         {
             get
@@ -216,6 +223,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return inventoryRepository ??= new InventoryRepository(context);
             }
         }
+
         public IWarehouseRepository Warehouses
         {
             get
@@ -223,6 +231,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return warehouseRepository ??= new WarehouseRepository(context);
             }
         }
+
         public IWarehouseOutboundRequestRepository WarehouseOutboundRequests
         {
             get
@@ -230,11 +239,26 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return warehouseOutboundRequestRepository ??= new WarehouseOutboundRequestRepository(context);
             }
         }
+
         public IWarehouseOutboundReceiptRepository WarehouseOutboundReceipts
         {
             get
             {
                 return warehouseOutboundReceiptRepository ??= new WarehouseOutboundReceiptRepository(context);
+
+        public ICoffeeTypeRepository CoffeeTypeRepository
+        {
+            get
+            {
+                return coffeeTypeRepository ??= new CoffeeTypeRepository(context);
+            }
+        }
+
+        public IProcessingStageRepository ProcessingStageRepository
+        {
+            get
+            {
+                return processingStageRepository ??= new ProcessingStageRepository(context);
             }
         }
     }

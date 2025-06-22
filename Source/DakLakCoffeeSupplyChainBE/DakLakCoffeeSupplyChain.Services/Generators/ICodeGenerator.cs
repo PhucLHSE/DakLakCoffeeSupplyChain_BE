@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DakLakCoffeeSupplyChain.Services.Generators
+﻿namespace DakLakCoffeeSupplyChain.Services.Generators
 {
     public interface ICodeGenerator
     {
@@ -13,5 +7,9 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         Task<string> GenerateManagerCodeAsync();
 
         Task<string> GenerateBuyerCodeAsync(Guid managerId);
+        Task<string> GenerateCropSeasonCodeAsync(int year);
+        Task<string> GenerateProcurementPlanCodeAsync();
+        Task<string> GenerateProcurementPlanDetailsCodeAsync();
+
     }
 }

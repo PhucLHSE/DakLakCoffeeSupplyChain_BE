@@ -1,9 +1,5 @@
-using DakLakCoffeeSupplyChain.APIService;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
-using DakLakCoffeeSupplyChain.Repositories.IRepositories;
-using DakLakCoffeeSupplyChain.Repositories.Repositories;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
-using DakLakCoffeeSupplyChain.Services;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -25,8 +21,6 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Đăng ký service tạo mã định danh
 builder.Services.AddScoped<ICodeGenerator, CodeGenerator>();
-builder.Services.AddScoped<ICropSeasonCodeGenerator, CropSeasonCodeGenerator>();
-builder.Services.AddScoped<IProcurementPlanCodeGenerator, ProcurementPlanCodeGenerator>();
 
 // Unit of Work pattern: quản lý Transaction + Repository access
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -50,8 +44,10 @@ builder.Services.AddScoped<ICropProgressService, CropProgressService>();
 builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IWarehouseOutboundRequestService, WarehouseOutboundRequestService>();
-builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundReceiptService>();
 
+builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundReceiptService>();
+builder.Services.AddScoped<ICoffeeTypeService, CoffeeTypeService>();
+builder.Services.AddScoped<IProcessingStageService, ProcessingStageService>();
 
 
 // JSON Settings

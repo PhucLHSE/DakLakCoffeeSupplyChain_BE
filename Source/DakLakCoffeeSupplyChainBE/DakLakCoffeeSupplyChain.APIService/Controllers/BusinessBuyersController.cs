@@ -97,6 +97,49 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PUT api/<BusinessBuyersController>/{buyerId}
+        [HttpPut("{buyerId}")]
+        public async Task<IActionResult> UpdateRoleAsync(Guid buyerId, [FromBody] BusinessBuyerUpdateDto businessBuyerDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (buyerId != businessBuyerDto.BuyerId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _businessBuyerService.Update(businessBuyerDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy khách hàng để cập nhật.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // DELETE api/<BusinessBuyersController>/{buyerId}
+        [HttpDelete("{buyerId}")]
+        public async Task<IActionResult> DeleteRoleByIdAsync(Guid buyerId)
+        {
+            var result = await _businessBuyerService.DeleteById(buyerId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy khách hàng.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // PATCH: api/<BusinessBuyersController>/soft-delete/{buyerId}
         [HttpPatch("soft-delete/{buyerId}")]
         public async Task<IActionResult> SoftDeleteBusinessBuyerByIdAsync(Guid buyerId)

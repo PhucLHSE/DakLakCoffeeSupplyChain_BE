@@ -10,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<List<CropProgress>> GetAllWithIncludesAsync();
         Task<CropProgress?> GetByIdWithIncludesAsync(Guid progressId);
+
     }
 }
