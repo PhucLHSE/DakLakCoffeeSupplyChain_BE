@@ -68,5 +68,19 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedBy = managerId
             };
         }
+
+        // Mapper BusinessBuyerUpdateDto
+        public static void MapToUpdateBusinessBuyer(this BusinessBuyerUpdateDto dto, BusinessBuyer businessBuyer)
+        {
+            businessBuyer.CompanyName = dto.CompanyName;
+            businessBuyer.ContactPerson = dto.ContactPerson;
+            businessBuyer.Position = dto.Position;
+            businessBuyer.CompanyAddress = dto.CompanyAddress;
+            businessBuyer.TaxId = dto.TaxId;
+            businessBuyer.Email = dto.Email;
+            businessBuyer.Phone = dto.PhoneNumber;
+            businessBuyer.Website = dto.Website;
+            businessBuyer.UpdatedAt = DateHelper.NowVietnamTime(); // Cập nhật thời gian chỉnh sửa
+        }
     }
 }

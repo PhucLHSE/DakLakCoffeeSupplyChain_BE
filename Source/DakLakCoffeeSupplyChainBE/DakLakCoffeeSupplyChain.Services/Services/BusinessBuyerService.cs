@@ -46,7 +46,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Lấy danh sách buyer từ repository
             var businessBuyers = await _unitOfWork.BusinessBuyerRepository.GetAllAsync(
-                predicate: bb => bb.IsDeleted != true && bb.CreatedBy == manager.ManagerId,
+                predicate: bb => bb.IsDeleted != true && 
+                                 bb.CreatedBy == manager.ManagerId,
                 include: query => query
                    .Include(bb => bb.CreatedByNavigation),
                 orderBy: query => query.OrderBy(bb => bb.BuyerCode),
@@ -146,8 +147,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Kiểm tra trùng khách hàng
                 var existingBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                    predicate: b => b.TaxId == businessBuyerDto.TaxId
-                       && b.CreatedBy == managerId,
+                    predicate: b => b.TaxId == businessBuyerDto.TaxId && 
+                                    b.CreatedBy == managerId,
                     asNoTracking: true
                 );
 
@@ -188,6 +189,85 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(BusinessBuyerUpdateDto businessBuyerDto)
+        {
+            try
+            {
+                // Tìm đối tượng businessBuyer theo ID
+                var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
+                    predicate: bb => bb.BuyerId == businessBuyerDto.BuyerId,
+                    include: query => query
+                       .Include(bb => bb.CreatedByNavigation)
+                );
+
+                // Nếu không tìm thấy
+                if (businessBuyer == null || businessBuyer.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Khách hàng không tồn tại hoặc đã bị xóa.."
+                    );
+                }
+
+                // Nếu TaxId bị thay đổi → kiểm tra trùng với khách hàng khác của cùng người tạo
+                if (!string.IsNullOrWhiteSpace(businessBuyerDto.TaxId) &&
+                    !string.Equals(businessBuyerDto.TaxId, businessBuyer.TaxId, StringComparison.OrdinalIgnoreCase))
+                {
+                    var existed = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
+                        predicate: b => b.TaxId == businessBuyerDto.TaxId &&
+                                        b.CreatedBy == businessBuyer.CreatedBy &&
+                                        !b.IsDeleted &&
+                                        b.BuyerId != businessBuyerDto.BuyerId,
+                        asNoTracking: true
+                    );
+
+                    if (existed != null)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            "Mã số thuế đã được sử dụng cho một khách hàng khác."
+                        );
+                    }
+                }
+
+                //Map DTO to Entity
+                businessBuyerDto.MapToUpdateBusinessBuyer(businessBuyer);
+
+                // Cập nhật buyer ở repository
+                await _unitOfWork.BusinessBuyerRepository.UpdateAsync(businessBuyer);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = businessBuyer.MapToBusinessBuyerViewDetailDto();
+                    responseDto.CreatedByName = businessBuyer.CreatedByNavigation?.CompanyName ?? string.Empty;
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }
