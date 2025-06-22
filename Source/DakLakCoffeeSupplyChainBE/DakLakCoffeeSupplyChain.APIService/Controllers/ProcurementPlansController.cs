@@ -112,7 +112,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok("Xóa mềm thành công.");
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy sản phẩm.");
+                return NotFound("Không tìm thấy kế hoạch.");
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
