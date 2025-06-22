@@ -10,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> SoftDeleteById(Guid typeId);
         Task<IServiceResult> DeleteById(Guid typeId);
         Task<IServiceResult> Create(CoffeeTypeCreateDto coffeeTypeDto);
+        Task<IServiceResult> Update(CoffeeTypeUpdateDto coffeeTypeDto);
     }
 }

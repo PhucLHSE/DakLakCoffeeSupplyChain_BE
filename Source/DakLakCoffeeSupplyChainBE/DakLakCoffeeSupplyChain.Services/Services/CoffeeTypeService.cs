@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -219,6 +220,58 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(CoffeeTypeUpdateDto coffeeTypeDto)
+        {
+            try
+            {
+                // Kiểm tra coffee type tồn tại
+                var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(coffeeTypeDto.CoffeeTypeId);
+
+                if (coffeeType == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Coffee type không tồn tại."
+                    );
+                }
+
+                //Map DTO to Entity
+                coffeeTypeDto.MapToUpdateCoffeeType(coffeeType);
+
+                // Cập nhật Coffee type ở repository
+                await _unitOfWork.CoffeeTypeRepository.UpdateAsync(coffeeType);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = coffeeType.MapToCoffeeTypeViewAllDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }

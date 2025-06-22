@@ -106,5 +106,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        // PUT api/<CoffeeType>/{typeId}
+        [HttpPut("{typeId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
+        public async Task<IActionResult> UpdateCoffeeTypeAsync(Guid typeId, [FromBody] CoffeeTypeUpdateDto typeDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (typeId != typeDto.CoffeeTypeId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _coffeeTypeService.Update(typeDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy coffee type để cập nhật.");
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
