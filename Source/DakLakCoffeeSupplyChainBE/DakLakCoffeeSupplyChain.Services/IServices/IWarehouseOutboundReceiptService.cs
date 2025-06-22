@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWarehouseOutboundReceiptService
     {
         Task<IServiceResult> CreateAsync(Guid staffUserId, WarehouseOutboundReceiptCreateDto dto);
+        Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseOutboundReceiptConfirmDto dto);
     }
 }

@@ -14,5 +14,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<Inventory?> FindByIdAsync(Guid id);
         void Update(Inventory entity);
     }
-
 }
+

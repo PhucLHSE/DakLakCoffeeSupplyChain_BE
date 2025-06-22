@@ -28,6 +28,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(result.Status, result);
         }
 
-        // [HttpPut("{id}/confirm")] // Nếu sau này có confirm, bạn có thể thêm tại đây
+        [HttpPut("{receiptId}/confirm")]
+        [Authorize(Roles = "BusinessStaff")]
+        public async Task<IActionResult> ConfirmReceipt(Guid receiptId, [FromBody] WarehouseOutboundReceiptConfirmDto dto)
+        {
+            var result = await _receiptService.ConfirmReceiptAsync(receiptId, dto);
+            return StatusCode(result.Status, result);
+        }
     }
 }
