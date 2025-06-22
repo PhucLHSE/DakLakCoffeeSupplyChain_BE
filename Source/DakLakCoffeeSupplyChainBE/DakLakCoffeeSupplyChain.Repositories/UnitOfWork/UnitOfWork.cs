@@ -1,9 +1,10 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
-using DakLakCoffeeSupplyChain.Repositories;
+﻿using DakLakCoffeeSupplyChain.Repositories;
+using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
-using DakLakCoffeeSupplyChain.Repositories.Repositories;
-using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Repositories.Repositories;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -39,6 +40,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IWarehouseOutboundReceiptRepository? warehouseOutboundReceiptRepository;
         private ICoffeeTypeRepository? coffeeTypeRepository;
         private IProcessingStageRepository? processingStageRepository;
+        private IGeneralFarmerReportRepository generalFarmerReportRepository;
 
 
         public UnitOfWork()
@@ -254,6 +256,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return warehouseOutboundReceiptRepository ??= new WarehouseOutboundReceiptRepository(context);
+            }
+        }
 
         public ICoffeeTypeRepository CoffeeTypeRepository
         {
@@ -268,6 +272,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingStageRepository ??= new ProcessingStageRepository(context);
+            }
+        }
+
+        public IGeneralFarmerReportRepository GeneralFarmerReportRepository
+        {
+            get
+            {
+                return generalFarmerReportRepository ??= new GeneralFarmerReportRepository(context);
             }
         }
     }

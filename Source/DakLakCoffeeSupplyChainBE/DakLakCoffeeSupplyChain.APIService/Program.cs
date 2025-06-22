@@ -48,6 +48,8 @@ builder.Services.AddScoped<IWarehouseOutboundRequestService, WarehouseOutboundRe
 builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundReceiptService>();
 builder.Services.AddScoped<ICoffeeTypeService, CoffeeTypeService>();
 builder.Services.AddScoped<IProcessingStageService, ProcessingStageService>();
+builder.Services.AddScoped<IGeneralFarmerReportService, GeneralFarmerReportService>();
+
 
 
 // JSON Settings
