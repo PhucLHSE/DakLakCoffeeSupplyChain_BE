@@ -40,8 +40,12 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     {
         return await _context.CropSeasons
             .Include(cs => cs.CropSeasonDetails)
+                .ThenInclude(d => d.CoffeeType) 
+            .Include(cs => cs.Farmer)
+                .ThenInclude(f => f.User)
             .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
     }
+
 
 
     public async Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId)
