@@ -122,6 +122,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // DELETE api/<BusinessBuyersController>/{buyerId}
+        [HttpDelete("{buyerId}")]
+        public async Task<IActionResult> DeleteRoleByIdAsync(Guid buyerId)
+        {
+            var result = await _businessBuyerService.DeleteById(buyerId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy khách hàng.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // PATCH: api/<BusinessBuyersController>/soft-delete/{buyerId}
         [HttpPatch("soft-delete/{buyerId}")]
         public async Task<IActionResult> SoftDeleteBusinessBuyerByIdAsync(Guid buyerId)
