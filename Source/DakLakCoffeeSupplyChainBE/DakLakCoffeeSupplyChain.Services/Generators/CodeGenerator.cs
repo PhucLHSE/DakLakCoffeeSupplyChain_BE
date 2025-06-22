@@ -2,39 +2,30 @@
 
 namespace DakLakCoffeeSupplyChain.Services.Generators
 {
-    public class CodeGenerator : ICodeGenerator
+    public class CodeGenerator(IUnitOfWork unitOfWork) : ICodeGenerator
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
-        public CodeGenerator(IUnitOfWork unitOfWork)
-            => _unitOfWork = unitOfWork;
+        private static int CurrentYear => DateTime.UtcNow.Year;
 
         public async Task<string> GenerateUserCodeAsync()
         {
-            var currentYear = DateTime.UtcNow.Year;
-
             // Đếm số user tạo trong năm
-            var count = await _unitOfWork.UserAccountRepository.CountUsersRegisteredInYearAsync(currentYear);
-
-            return $"USR-{currentYear}-{(count + 1):D4}";
+            var count = await _unitOfWork.UserAccountRepository.CountUsersRegisteredInYearAsync(CurrentYear);
+            return $"USR-{CurrentYear}-{(count + 1):D4}";
         }
 
         public async Task<string> GenerateManagerCodeAsync()
         {
-            var currentYear = DateTime.UtcNow.Year;
-
             // Đếm số manager tạo trong năm
-            var count = await _unitOfWork.BusinessManagerRepository.CountBusinessManagersRegisteredInYearAsync(currentYear);
-
-            return $"BM-{currentYear}-{(count + 1):D4}";
+            var count = await _unitOfWork.BusinessManagerRepository.CountBusinessManagersRegisteredInYearAsync(CurrentYear);
+            return $"BM-{CurrentYear}-{(count + 1):D4}";
         }
 
         public async Task<string> GenerateBuyerCodeAsync(Guid managerId)
         {
-            var currentYear = DateTime.UtcNow.Year;
-
             // Đếm số buyer mà manager này đã tạo trong năm
-            var count = await _unitOfWork.BusinessBuyerRepository.CountBuyersCreatedByManagerInYearAsync(managerId, currentYear);
+            var count = await _unitOfWork.BusinessBuyerRepository.CountBuyersCreatedByManagerInYearAsync(managerId, CurrentYear);
 
             // Lấy ManagerCode để dùng làm tiền tố
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
@@ -47,7 +38,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             if (string.IsNullOrWhiteSpace(managerCode))
                 managerCode = "BM-UNKNOWN"; // fallback
 
-            return $"{managerCode}-BUY-{currentYear}-{(count + 1):D3}";
+            return $"{managerCode}-BUY-{CurrentYear}-{(count + 1):D3}";
         }
 
         public async Task<string> GenerateCropSeasonCodeAsync(int year)
@@ -58,22 +49,22 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateProcurementPlanCodeAsync()
         {
-            var currentYear = DateTime.UtcNow.Year;
-
             // Đếm số procurement plan tạo trong năm
-            var count = await _unitOfWork.ProcurementPlanRepository.CountProcurementPlansInYearAsync(currentYear);
-
-            return $"PLAN-{currentYear}-{(count + 1):D4}";
+            var count = await _unitOfWork.ProcurementPlanRepository.CountProcurementPlansInYearAsync(CurrentYear);
+            return $"PLAN-{CurrentYear}-{(count + 1):D4}";
         }
 
         public async Task<string> GenerateProcurementPlanDetailsCodeAsync()
         {
-            var currentYear = DateTime.UtcNow.Year;
-
             // Đếm số procurement plan detail tạo trong năm
-            var count = await _unitOfWork.ProcurementPlanDetailsRepository.CountProcurementPlanDetailsInYearAsync(currentYear);
+            var count = await _unitOfWork.ProcurementPlanDetailsRepository.CountProcurementPlanDetailsInYearAsync(CurrentYear);
+            return $"PLD-{CurrentYear}-{(count + 1):D4}";
+        }
 
-            return $"PLD-{currentYear}-{(count + 1):D4}";
+        public async Task<string> GenerateCoffeeTypeCodeAsync()
+        {
+            var count = await _unitOfWork.CoffeeTypeRepository.CountCoffeeTypeInYearAsync(CurrentYear);
+            return $"CFT-{CurrentYear}-{(count + 1):D4}";
         }
 
     }

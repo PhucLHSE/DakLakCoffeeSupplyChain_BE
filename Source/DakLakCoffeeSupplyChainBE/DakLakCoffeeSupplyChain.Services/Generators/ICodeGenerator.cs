@@ -10,6 +10,7 @@
         Task<string> GenerateCropSeasonCodeAsync(int year);
         Task<string> GenerateProcurementPlanCodeAsync();
         Task<string> GenerateProcurementPlanDetailsCodeAsync();
+        Task<string> GenerateCoffeeTypeCodeAsync();
 
     }
 }

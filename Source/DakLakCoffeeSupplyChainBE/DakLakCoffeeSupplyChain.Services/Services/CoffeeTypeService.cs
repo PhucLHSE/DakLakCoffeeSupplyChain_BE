@@ -6,8 +6,6 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
-using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -182,6 +180,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             catch (Exception ex)
             {
                 // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(CoffeeTypeCreateDto coffeeTypeDto)
+        {
+            try
+            {                
+                // Generate coffee type code
+                string typeCode = await _codeGenerator.GenerateCoffeeTypeCodeAsync();
+
+                // Map DTO to Entity
+                var newCoffeeType = coffeeTypeDto.MapToCofeeTypeCreateDto(typeCode);
+
+                // Tạo CoffeeType ở repository
+                await _unitOfWork.CoffeeTypeRepository.CreateAsync(newCoffeeType);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    var responseDto = newCoffeeType.MapToCoffeeTypeViewAllDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
