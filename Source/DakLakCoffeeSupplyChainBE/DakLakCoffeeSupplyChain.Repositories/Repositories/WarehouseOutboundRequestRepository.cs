@@ -30,5 +30,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             await _context.WarehouseOutboundRequests.AddAsync(entity);
         }
+        public async Task<List<WarehouseOutboundRequest>> GetAllAsync()
+        {
+            return await _context.WarehouseOutboundRequests
+                .Where(x => !x.IsDeleted)
+                .Include(x => x.Warehouse)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        }
     }
 }
