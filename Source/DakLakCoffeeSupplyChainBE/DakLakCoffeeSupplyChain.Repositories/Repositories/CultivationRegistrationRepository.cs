@@ -16,5 +16,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RegistrationId == id);
         }
+
+        public async Task<CropSeasonDetail?> GetCropSeasonDetailByIdAsync(Guid cropSeasonDetailId)
+        {
+            return await _context.CropSeasonDetails
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.DetailId == cropSeasonDetailId && !d.IsDeleted);
+        }
+
     }
 }
