@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
     public interface IProcessingStageService
     {
-        Task<IServiceResult> GetAll();    
+        Task<IServiceResult> GetAll();
+        Task<IServiceResult> GetDetailByIdAsync(int stageId);
     }
 }

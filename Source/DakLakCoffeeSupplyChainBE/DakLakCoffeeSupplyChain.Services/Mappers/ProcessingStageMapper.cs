@@ -26,5 +26,23 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 MethodName = stage.Method?.Name ?? string.Empty
             };
         }
+        public static ProcessingStageViewDetailDto ToDetailDto(this ProcessingStage entity)
+        {
+            return new ProcessingStageViewDetailDto
+            {
+                StageId = entity.StageId,
+                StageCode = entity.StageCode,
+                StageName = entity.StageName,
+                Description = entity.Description,
+                OrderIndex = entity.OrderIndex,
+                IsRequired = entity.IsRequired ?? false,
+                MethodId = entity.MethodId,
+                MethodName = entity.Method?.Name ?? string.Empty,
+                MethodCode = entity.Method?.MethodCode ?? string.Empty,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                IsDeleted = entity.IsDeleted
+            };
+        }
     }
 }
