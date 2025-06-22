@@ -45,5 +45,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 result
             );
         }
+        public async Task<IServiceResult> GetDetailByIdAsync(int stageId)
+        {
+            var stage = await _unitOfWork.ProcessingStageRepository
+                .GetAllQueryable()
+                .Include(x => x.Method)
+                .FirstOrDefaultAsync(x => x.StageId == stageId && !x.IsDeleted);
+
+            if (stage == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    $"Processing stage with ID {stageId} not found.",
+                    null
+                );
+            }
+
+            var dto = stage.ToDetailDto();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                dto
+            );
+        }
     }
 }
