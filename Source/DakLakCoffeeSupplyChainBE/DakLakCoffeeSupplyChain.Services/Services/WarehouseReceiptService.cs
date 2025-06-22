@@ -107,6 +107,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 inventory.Quantity += (double)dto.ConfirmedQuantity;
                 inventory.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Inventories.Update(inventory);
+
             }
             else
             {
@@ -128,6 +129,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             request.Status = InboundRequestStatus.Completed.ToString();
             request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
             request.UpdatedAt = DateTime.UtcNow;
+          
 
             _unitOfWork.WarehouseReceipts.UpdateAsync(receipt);
             _unitOfWork.WarehouseInboundRequests.Update(request);

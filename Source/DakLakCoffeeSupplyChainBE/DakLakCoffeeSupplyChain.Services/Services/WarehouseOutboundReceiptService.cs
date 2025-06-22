@@ -77,6 +77,62 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo phiếu xuất kho thành công", receipt.OutboundReceiptId);
         }
+        public async Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseOutboundReceiptConfirmDto dto)
+        {
+            var receipt = await _unitOfWork.WarehouseOutboundReceipts.GetByIdAsync(receiptId);
+            if (receipt == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu xuất kho.");
+
+            var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(receipt.OutboundRequestId);
+            if (request == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu xuất kho.");
+
+            var inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId);
+            if (inventory == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy tồn kho tương ứng.");
+
+            if (dto.ConfirmedQuantity > request.RequestedQuantity)
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá yêu cầu ({request.RequestedQuantity}kg).");
+            }
+
+            if (dto.ConfirmedQuantity > receipt.Quantity)
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Xác nhận vượt quá số lượng ghi nhận ({receipt.Quantity}kg).");
+            }
+
+            if (dto.ConfirmedQuantity > inventory.Quantity)
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Tồn kho không đủ. Chỉ còn {inventory.Quantity}kg.");
+            }
+
+            // ✅ Trừ tồn kho
+            inventory.Quantity -= dto.ConfirmedQuantity;
+            inventory.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Inventories.Update(inventory);
+
+            // ✅ Cập nhật phiếu xuất
+            receipt.Quantity = dto.ConfirmedQuantity;
+            receipt.DestinationNote = dto.DestinationNote ?? "";
+            receipt.Note = (receipt.Note ?? "") + $" [Đã xác nhận lúc {DateTime.UtcNow:HH:mm dd/MM/yyyy}]";
+            receipt.UpdatedAt = DateTime.UtcNow;
+
+            // ✅ Cập nhật yêu cầu
+            request.Status = WarehouseOutboundRequestStatus.Completed.ToString();
+            request.UpdatedAt = DateTime.UtcNow;
+
+            // ❌ KHÔNG cần gọi Update(), EF tự hiểu rồi
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu xuất kho thành công.", receipt.OutboundReceiptId);
+        }
+
+
+
+
 
 
 

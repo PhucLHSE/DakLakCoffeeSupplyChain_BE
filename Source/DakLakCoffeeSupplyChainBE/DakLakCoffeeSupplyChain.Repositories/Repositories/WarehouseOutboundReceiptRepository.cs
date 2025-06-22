@@ -21,5 +21,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseOutboundReceipts
                 .FirstOrDefaultAsync(r => r.OutboundRequestId == outboundRequestId && !r.IsDeleted);
         }
+        
     }
 }
