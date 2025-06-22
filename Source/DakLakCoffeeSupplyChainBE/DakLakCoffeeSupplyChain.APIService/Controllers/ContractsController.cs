@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "BusinessManager")]
     public class ContractsController : ControllerBase
     {
         private readonly IContractService _contractService;
