@@ -24,11 +24,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<IServiceResult> GetAll()
+        public async Task<IServiceResult> GetAll(Guid userId)
         {
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => m.UserId == userId,
+                asNoTracking: true
+            );
+
+            if (manager == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                );
+            }
+
             // Truy vấn tất cả hợp đồng từ repository
             var contracts = await _unitOfWork.ContractRepository.GetAllAsync(
-                predicate: c => !c.IsDeleted,
+                predicate: c => !c.IsDeleted &&
+                                c.SellerId == manager.ManagerId,
                 include: query => query
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)
