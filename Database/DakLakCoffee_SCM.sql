@@ -216,7 +216,7 @@ GO
 -- Table BusinessBuyers
 CREATE TABLE BusinessBuyers (
   BuyerID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    
-  BuyerCode VARCHAR(50) UNIQUE,                                    -- BUY-2024-025
+  BuyerCode VARCHAR(50) UNIQUE,                                    -- BM-2025-0001-BUY-2025-001
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                             -- Người tạo buyer (BusinessManager)
   CompanyName NVARCHAR(100) NOT NULL,                              -- Tên doanh nghiệp mua hàng
   ContactPerson NVARCHAR(100),                                     -- Người đại diện ký hợp đồng
@@ -1493,7 +1493,7 @@ INSERT INTO BusinessBuyers (
     CompanyAddress, TaxID, Email, Phone, CreatedAt, UpdatedAt
 )
 VALUES (
-    'ED49B648-F170-48AC-8535-823C80381179', 'BUY-2025-0001', @BMID, N'CTCP Thương Mại Xuất Khẩu VinCafé',
+    'ED49B648-F170-48AC-8535-823C80381179', 'BM-2025-0001-BUY-2025-001', @BMID, N'CTCP Thương Mại Xuất Khẩu VinCafé',
     N'Nguyễn Văn Hậu', N'Tổng Giám Đốc', N'123 Đường Cà Phê, P. Tân Lợi, TP. Buôn Ma Thuột, Đắk Lắk',
     '6001234567', 'vincafe@coffee.com.vn', '02623779999',
     '2025-06-15 11:37:11', '2025-06-15 11:37:11'
