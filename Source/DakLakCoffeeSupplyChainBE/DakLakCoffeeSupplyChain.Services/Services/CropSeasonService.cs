@@ -20,9 +20,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class CropSeasonService : ICropSeasonService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ICropSeasonCodeGenerator _codeCropSeasonGenerator;
+        private readonly ICodeGenerator _codeCropSeasonGenerator;
 
-        public CropSeasonService(IUnitOfWork unitOfWork, ICropSeasonCodeGenerator cropSeasonCodeGenerator)
+        public CropSeasonService(IUnitOfWork unitOfWork, ICodeGenerator cropSeasonCodeGenerator)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _codeCropSeasonGenerator = cropSeasonCodeGenerator ?? throw new ArgumentNullException(nameof(cropSeasonCodeGenerator));
