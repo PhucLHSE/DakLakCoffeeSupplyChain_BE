@@ -30,5 +30,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .ToListAsync();
         }
+        public async Task CreateAsync(ProcessingStage entity)
+        {
+            await _context.AddAsync(entity);
+        }
     }
 }

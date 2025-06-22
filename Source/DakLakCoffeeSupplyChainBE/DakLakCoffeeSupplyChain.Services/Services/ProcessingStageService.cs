@@ -61,7 +61,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            var dto = stage.ToDetailDto();
+            var dto = stage.MapToProcessingStageViewDetailDto();
 
             return new ServiceResult(
                 Const.SUCCESS_READ_CODE,
@@ -69,5 +69,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dto
             );
         }
+        public async Task<IServiceResult> CreateAsync(CreateProcessingStageDto dto)
+        {
+            try
+            {
+                var entity = dto.MapToProcessingStageCreateEntity(); // map DTO -> Entity
+                await _unitOfWork.ProcessingStageRepository.CreateAsync(entity);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    
+                    var created = await _unitOfWork.ProcessingStageRepository.GetByIdAsync (entity.StageId);
+
+                    if (created == null)
+                        return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, null);
+
+                    var viewDto = created.MapToProcessingStageViewDetailDto();
+                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, viewDto);
+                }
+
+                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+
     }
 }

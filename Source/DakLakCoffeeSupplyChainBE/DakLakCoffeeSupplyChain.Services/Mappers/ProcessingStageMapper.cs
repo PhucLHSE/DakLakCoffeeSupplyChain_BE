@@ -26,7 +26,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 MethodName = stage.Method?.Name ?? string.Empty
             };
         }
-        public static ProcessingStageViewDetailDto ToDetailDto(this ProcessingStage entity)
+        public static ProcessingStageViewDetailDto MapToProcessingStageViewDetailDto(this ProcessingStage entity)
         {
             return new ProcessingStageViewDetailDto
             {
@@ -42,6 +42,21 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
                 IsDeleted = entity.IsDeleted
+            };
+        }
+        public static ProcessingStage MapToProcessingStageCreateEntity(this CreateProcessingStageDto dto)
+        {
+            return new ProcessingStage
+            {
+                StageCode = dto.StageCode,
+                StageName = dto.StageName,
+                Description = dto.Description,
+                OrderIndex = dto.OrderIndex,
+                IsRequired = dto.IsRequired,
+                MethodId = dto.MethodId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
             };
         }
     }
