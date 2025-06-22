@@ -5,6 +5,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface ICoffeeTypeRepository : IGenericRepository<CoffeeType>
     {
-
+        Task<int> CountCoffeeTypeInYearAsync(int year);
     }
 }
