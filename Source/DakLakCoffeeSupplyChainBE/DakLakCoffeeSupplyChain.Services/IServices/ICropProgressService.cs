@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 
 namespace DakLakCoffeeSupplyChain.Services.IServices
 {
@@ -7,5 +8,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll();
 
         Task<IServiceResult> GetById(Guid id);
+
+        Task<IServiceResult> Create(CropProgressCreateDto dto);
+
     }
 }
