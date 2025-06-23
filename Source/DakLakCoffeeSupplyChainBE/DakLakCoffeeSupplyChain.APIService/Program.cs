@@ -25,6 +25,9 @@ builder.Services.AddScoped<ICodeGenerator, CodeGenerator>();
 // Unit of Work pattern: quản lý Transaction + Repository access
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// Service gửi mail
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 // Đăng ký các service nghiệp vụ
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserAccountService, UserAccountService>();
@@ -39,19 +42,18 @@ builder.Services.AddScoped<IProcurementPlanService, ProcurementPlanService>();
 builder.Services.AddScoped<IProcessingMethodService, ProcessingMethodService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWarehouseInboundRequestService, WarehouseInboundRequestService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICropProgressService, CropProgressService>();
 builder.Services.AddScoped<IWarehouseReceiptService, WarehouseReceiptService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IWarehouseOutboundRequestService, WarehouseOutboundRequestService>();
-
 builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundReceiptService>();
 builder.Services.AddScoped<ICoffeeTypeService, CoffeeTypeService>();
 builder.Services.AddScoped<IProcessingStageService, ProcessingStageService>();
 builder.Services.AddScoped<IGeneralFarmerReportService, GeneralFarmerReportService>();
 
-
+//Add MemoryCache
+builder.Services.AddMemoryCache();
 
 // JSON Settings
 builder.Services.AddControllers().AddJsonOptions(options =>

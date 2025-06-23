@@ -11,6 +11,7 @@
         Task<string> GenerateProcurementPlanCodeAsync();
         Task<string> GenerateProcurementPlanDetailsCodeAsync();
         Task<string> GenerateCoffeeTypeCodeAsync();
+        Task<string> GenerateFarmerCodeAsync();
 
     }
 }
