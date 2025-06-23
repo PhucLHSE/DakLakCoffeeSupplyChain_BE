@@ -95,5 +95,11 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"CFT-{CurrentYear}-{(count + 1):D4}";
         }
+
+        public async Task<string> GenerateFarmerCodeAsync()
+        {
+            var count = await _unitOfWork.FarmerRepository.CountFarmerInYearAsync(CurrentYear);
+            return $"FRM-{CurrentYear}-{(count + 1):D4}";
+        }
     }
 }
