@@ -84,13 +84,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         asNoTracking: true
                     );
 
-                    // Map the saved entity to a response DTO
-                    var responseDto = createdItem?.MapToContractItemViewDto();
+                    if (createdItem != null)
+                    {
+                        var responseDto = createdItem.MapToContractItemViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
 
                     return new ServiceResult(
-                        Const.SUCCESS_CREATE_CODE,
-                        Const.SUCCESS_CREATE_MSG,
-                        responseDto
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo mới thành công nhưng không truy xuất được dữ liệu."
                     );
                 }
                 else
@@ -110,13 +117,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteContractItemById(Guid contractItemId)
+        {
+            try
+            {
+                // Tìm contractItem theo ID
+                var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
+                    predicate: ct => ct.ContractItemId == contractItemId && 
+                                     !ct.IsDeleted,
+                    include: query => query
+                           .Include(ct => ct.CoffeeType)
+                           .Include(ct => ct.Contract),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (contractItem == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa buyer khỏi repository
+                    await _unitOfWork.ContractItemRepository.RemoveAsync(contractItem);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId)
         {
             try
             {
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                    predicate: ct => ct.ContractItemId == contractItemId && !ct.IsDeleted,
+                    predicate: ct => ct.ContractItemId == contractItemId && 
+                                     !ct.IsDeleted,
                     asNoTracking: false
                 );
 
