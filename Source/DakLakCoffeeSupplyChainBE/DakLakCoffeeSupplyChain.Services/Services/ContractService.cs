@@ -47,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)
                       .ThenInclude(s => s.User),
-                orderBy: u => u.OrderBy(u => u.ContractCode),
+                orderBy: c => c.OrderBy(c => c.ContractCode),
                 asNoTracking: true
             );
 
@@ -79,7 +79,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Tìm contract theo ID
             var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
-                predicate: c => c.ContractId == contractId && !c.IsDeleted,
+                predicate: c => c.ContractId == contractId && 
+                                !c.IsDeleted,
                 include: query => query
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)
@@ -100,6 +101,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else
             {
+                // Sắp xếp danh sách ContractItems theo ContractItemCode tăng dần
+                contract.ContractItems = contract.ContractItems
+                    .OrderBy(ci => ci.ContractItemCode)
+                    .ToList();
+
                 // Map sang DTO chi tiết để trả về
                 var contractDto = contract.MapToContractViewDetailDto();
 
