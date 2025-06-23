@@ -7,5 +7,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<Farmer?> GetByIdAsync(Guid id);
         Task<Farmer?> FindByUserIdAsync(Guid userId);
+        Task<int> CountFarmerInYearAsync(int year);
     }
 }

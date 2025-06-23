@@ -21,5 +21,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.Farmers.FirstOrDefaultAsync(f => f.UserId == userId);
         }
+        public async Task<int> CountFarmerInYearAsync(int year)
+            => await _context.Farmers.CountAsync(p => p.CreatedAt.Year == year);
     }
 }
