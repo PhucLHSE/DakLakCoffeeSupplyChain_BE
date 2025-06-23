@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IContractItemService
     {
+        Task<IServiceResult> Create(ContractItemCreateDto contractItemDto);
+
         Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId);
     }
 }

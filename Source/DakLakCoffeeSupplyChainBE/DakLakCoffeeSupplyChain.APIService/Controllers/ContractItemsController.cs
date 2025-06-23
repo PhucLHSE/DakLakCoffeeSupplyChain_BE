@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -18,6 +20,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         public ContractItemsController(IContractItemService contractItemService)
             => _contractItemService = contractItemService;
+
+        // POST api/<ContractItemsController>
+        [HttpPost]
+        public async Task<IActionResult> CreateContractItemAsync([FromBody] ContractItemCreateDto contractItemCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _contractItemService.Create(contractItemCreateDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return StatusCode(201, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
 
         // PATCH: api/<ContractItemsController>/soft-delete/{contractItemId}
         [HttpPatch("soft-delete/{contractItemId}")]

@@ -287,7 +287,7 @@ GO
 -- ContractItems – Chi tiết sản phẩm trong hợp đồng
 CREATE TABLE ContractItems (
   ContractItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- Mã dòng sản phẩm trong hợp đồng
-  ContractItemCode VARCHAR(20) UNIQUE,                             -- CTI-2025-0150
+  ContractItemCode VARCHAR(50) UNIQUE,                             -- CTI-2025-0150
   ContractID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến hợp đồng
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với loại cà phê, không phải sản phẩm cụ thể
   Quantity FLOAT,                                                  -- Số lượng đặt mua
@@ -1645,7 +1645,7 @@ INSERT INTO ContractItems (
     ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
     DiscountAmount, Note, CreatedAt, UpdatedAt
 ) VALUES (
-    'CTI-2025-0001', @ContractID, @ArabicaID, 20000, 65000, 0,
+    'CTI-001-CTR-2025-0001', @ContractID, @ArabicaID, 20000, 65000, 0,
     N'Cà phê Arabica chất lượng cao', GETDATE(), GETDATE()
 );
 
@@ -1654,17 +1654,17 @@ INSERT INTO ContractItems (
     ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
     DiscountAmount, Note, CreatedAt, UpdatedAt
 ) VALUES (
-    'CTI-2025-0002', @ContractID, @RobustaID, 50000, 50000, 0,
+    'CTI-002-CTR-2025-0001', @ContractID, @RobustaID, 50000, 50000, 0,
     N'Cà phê Robusta xuất khẩu', GETDATE(), GETDATE()
 );
 
 INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
 VALUES 
-('CTI-2025-0003', @ContractID, @HoneyID,   10000, 57000, 0, N'Robusta xử lý mật ong (Honey)',        GETDATE(), GETDATE()),
-('CTI-2025-0004', @ContractID, @WashedID,  8000,  56000, 0, N'Robusta sơ chế ướt (Washed)',          GETDATE(), GETDATE()),
-('CTI-2025-0005', @ContractID, @CuliID,    5000,  60000, 0, N'Cà phê Culi đậm vị, đột biến tự nhiên', GETDATE(), GETDATE()),
-('CTI-2025-0006', @ContractID, @NaturalID, 5000,  53000, 0, N'Robusta sơ chế tự nhiên (Natural)',     GETDATE(), GETDATE()),
-('CTI-2025-0007', @ContractID, @TypicaID,  2000,  68000, 0, N'Giống Arabica Typica quý hiếm',         GETDATE(), GETDATE());
+('CTI-003-CTR-2025-0001', @ContractID, @HoneyID,   10000, 57000, 0, N'Robusta xử lý mật ong (Honey)',        GETDATE(), GETDATE()),
+('CTI-004-CTR-2025-0001', @ContractID, @WashedID,  8000,  56000, 0, N'Robusta sơ chế ướt (Washed)',          GETDATE(), GETDATE()),
+('CTI-005-CTR-2025-0001', @ContractID, @CuliID,    5000,  60000, 0, N'Cà phê Culi đậm vị, đột biến tự nhiên', GETDATE(), GETDATE()),
+('CTI-006-CTR-2025-0001', @ContractID, @NaturalID, 5000,  53000, 0, N'Robusta sơ chế tự nhiên (Natural)',     GETDATE(), GETDATE()),
+('CTI-007-CTR-2025-0001', @ContractID, @TypicaID,  2000,  68000, 0, N'Giống Arabica Typica quý hiếm',         GETDATE(), GETDATE());
 
 GO
 

@@ -441,7 +441,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.CoffeeTypeId).HasColumnName("CoffeeTypeID");
             entity.Property(e => e.ContractId).HasColumnName("ContractID");
             entity.Property(e => e.ContractItemCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
