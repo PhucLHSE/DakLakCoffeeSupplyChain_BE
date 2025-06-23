@@ -19,7 +19,5 @@
         Task<string> GenerateCoffeeTypeCodeAsync();
       
         Task<string> GenerateFarmerCodeAsync();
-
-        Task<string> GenerateCoffeeTypeCodeAsync();
     }
 }
