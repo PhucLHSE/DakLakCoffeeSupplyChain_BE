@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             // Đếm số user tạo trong năm
             var count = await _unitOfWork.UserAccountRepository.CountUsersRegisteredInYearAsync(CurrentYear);
+
             return $"USR-{CurrentYear}-{(count + 1):D4}";
         }
 
@@ -19,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             // Đếm số manager tạo trong năm
             var count = await _unitOfWork.BusinessManagerRepository.CountBusinessManagersRegisteredInYearAsync(CurrentYear);
+
             return $"BM-{CurrentYear}-{(count + 1):D4}";
         }
 
@@ -41,9 +43,33 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"{managerCode}-BUY-{CurrentYear}-{(count + 1):D3}";
         }
 
+        public async Task<string> GenerateContractItemCodeAsync(Guid contractId)
+        {
+            // Lấy contract để có ContractCode
+            var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                predicate: c => c.ContractId == contractId && 
+                                !c.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (contract == null || string.IsNullOrWhiteSpace(contract.ContractCode))
+            {
+                return $"CTI-UNKNOWN-{CurrentYear}-{Guid.NewGuid().ToString()[..4]}"; // fallback tránh null
+            }
+
+            var contractCode = contract.ContractCode.Replace(" ", "").ToUpper();
+
+            // Đếm số item trong hợp đồng này
+            var count = await _unitOfWork.ContractItemRepository.CountByContractIdAsync(contractId);
+
+            // Format: CTI-001-HDX2025
+            return $"CTI-{(count + 1):D3}-{contractCode}";
+        }
+
         public async Task<string> GenerateCropSeasonCodeAsync(int year)
         {
             int count = await _unitOfWork.CropSeasonRepository.CountByYearAsync(year);
+
             return $"SEASON-{year}-{(count + 1):D4}";
         }
 
@@ -51,6 +77,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             // Đếm số procurement plan tạo trong năm
             var count = await _unitOfWork.ProcurementPlanRepository.CountProcurementPlansInYearAsync(CurrentYear);
+
             return $"PLAN-{CurrentYear}-{(count + 1):D4}";
         }
 
@@ -58,19 +85,21 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             // Đếm số procurement plan detail tạo trong năm
             var count = await _unitOfWork.ProcurementPlanDetailsRepository.CountProcurementPlanDetailsInYearAsync(CurrentYear);
+
             return $"PLD-{CurrentYear}-{(count + 1):D4}";
         }
 
         public async Task<string> GenerateCoffeeTypeCodeAsync()
         {
             var count = await _unitOfWork.CoffeeTypeRepository.CountCoffeeTypeInYearAsync(CurrentYear);
+
             return $"CFT-{CurrentYear}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateFarmerCodeAsync()
         {
             var count = await _unitOfWork.FarmerRepository.CountFarmerInYearAsync(CurrentYear);
             return $"FRM-{CurrentYear}-{(count + 1):D4}";
         }
-
     }
 }

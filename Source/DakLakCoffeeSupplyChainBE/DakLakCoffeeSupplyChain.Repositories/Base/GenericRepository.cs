@@ -243,5 +243,18 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         {
             return _context.Set<T>().AsQueryable();
         }
+
+        public async Task<bool> AnyAsync(
+            Expression<Func<T, bool>> predicate,
+            bool asNoTracking = true
+        )
+        {
+            IQueryable<T> query = _context.Set<T>();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            return await query.AnyAsync(predicate);
+        }
     }
 }

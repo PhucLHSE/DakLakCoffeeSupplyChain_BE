@@ -61,5 +61,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         int Save();
 
         Task<int> SaveAsync();
+
+        Task<bool> AnyAsync(
+            Expression<Func<T, bool>> predicate,
+            bool asNoTracking = true
+        );
     }
 }
