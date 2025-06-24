@@ -293,7 +293,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
             }
         }
-
         public IProcessingParameterRepository ProcessingParameterRepository
         {
             get

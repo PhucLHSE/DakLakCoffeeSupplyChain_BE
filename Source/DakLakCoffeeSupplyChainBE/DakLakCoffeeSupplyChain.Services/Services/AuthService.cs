@@ -37,15 +37,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
                 return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
 
-            // 3. Kiểm tra xác minh email
+            // 3. Kiểm tra xác minh isVerify
+            if (!(user.IsVerified ?? false))
+                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt.");
+
+            // 4. Kiểm tra xác minh email
             if (!(user.EmailVerified ?? false))
                 return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa xác minh email.");
 
-            // 4. Kiểm tra duyệt
+            // 5. Kiểm tra duyệt
             if (user.Status?.ToLower() != "active")
                 return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt hoặc đã bị khóa.");
 
-            // 5. Tạo token
+            // 6. Tạo token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
 
@@ -125,7 +129,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         UserId = newUser.UserId
                     };
                     await _unitOfWork.FarmerRepository.CreateAsync(newFarmer);
-                } else if (role.RoleName == "BusinessManager")
+                }
+                else if (role.RoleName == "BusinessManager")
                 {
                     string managerCode = await _codeGenerator.GenerateManagerCodeAsync();
                     BusinessManager newBusinessManager = new()
@@ -211,7 +216,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // 5. Cập nhật trạng thái người dùng
                 user.IsVerified = true;
-                user.Status = "Active";
+                user.EmailVerified = true;
+                user.Status = "active";
                 await _unitOfWork.UserAccountRepository.UpdateAsync(user);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -227,8 +233,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     include: p => p.Include(p => p.User).ThenInclude(p => p.Role),
                     asNoTracking: true
                     );
-                
-                if(businessManager != null && businessManager.User.Role.RoleName == "BusinessManager")
+
+                if (businessManager != null && businessManager.User.Role.RoleName == "BusinessManager")
                 {
                     var businessURL = $"https://localhost:7163/api/BusinessManagers/{businessManager.ManagerId}";
                     await _emailService.SendEmailAsync("xuandang854@gmail.com", $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>");
