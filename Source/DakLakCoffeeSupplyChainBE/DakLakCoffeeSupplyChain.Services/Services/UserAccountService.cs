@@ -35,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Truy vấn tất cả người dùng từ repository
             var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
                 predicate: u => u.IsDeleted != true,
-                include: query => query.Include(u => u.Role),
+                include: query => query
+                   .Include(u => u.Role),
                 orderBy: u => u.OrderBy(u => u.UserCode),
                 asNoTracking: true
             );
@@ -69,7 +70,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm tài khoản người dùng theo ID
             var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                 predicate: u => u.UserId == userId,
-                include: query => query.Include(u => u.Role),
+                include: query => query
+                   .Include(u => u.Role),
                 asNoTracking: true
             );
 
@@ -103,7 +105,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var role = await _unitOfWork.RoleRepository.GetRoleByNameAsync(userDto.RoleName);
 
                 if (role == null)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Vai trò không hợp lệ.");
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE, 
+                        "Vai trò không hợp lệ."
+                    );
 
                 // Kiểm tra email đã tồn tại chưa
                 var emailExists = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(userDto.Email);

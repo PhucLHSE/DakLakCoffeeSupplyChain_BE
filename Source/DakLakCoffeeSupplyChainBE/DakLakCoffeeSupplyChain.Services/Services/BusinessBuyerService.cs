@@ -46,8 +46,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Lấy danh sách buyer từ repository
             var businessBuyers = await _unitOfWork.BusinessBuyerRepository.GetAllAsync(
-                predicate: bb => bb.IsDeleted != true && 
-                                 bb.CreatedBy == manager.ManagerId,
+                predicate: bb => 
+                   bb.IsDeleted != true && 
+                   bb.CreatedBy == manager.ManagerId,
                 include: query => query
                    .Include(bb => bb.CreatedByNavigation),
                 orderBy: query => query.OrderBy(bb => bb.BuyerCode),
@@ -116,7 +117,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm thông tin BusinessManager từ userId (token hiện tại)
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                    predicate: m => m.UserId == userId && !m.IsDeleted,
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
                     include: query => query
                        .Include(bm => bm.User)
                           .ThenInclude(u => u.Role),
@@ -147,8 +150,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Kiểm tra trùng khách hàng
                 var existingBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                    predicate: b => b.TaxId == businessBuyerDto.TaxId && 
-                                    b.CreatedBy == managerId,
+                    predicate: b => 
+                       b.TaxId == businessBuyerDto.TaxId && 
+                       b.CreatedBy == managerId,
                     asNoTracking: true
                 );
 
@@ -226,10 +230,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     !string.Equals(businessBuyerDto.TaxId, businessBuyer.TaxId, StringComparison.OrdinalIgnoreCase))
                 {
                     var existed = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                        predicate: b => b.TaxId == businessBuyerDto.TaxId &&
-                                        b.CreatedBy == businessBuyer.CreatedBy &&
-                                        !b.IsDeleted &&
-                                        b.BuyerId != businessBuyerDto.BuyerId,
+                        predicate: b => 
+                           b.TaxId == businessBuyerDto.TaxId &&
+                           b.CreatedBy == businessBuyer.CreatedBy &&
+                           !b.IsDeleted &&
+                           b.BuyerId != businessBuyerDto.BuyerId,
                         asNoTracking: true
                     );
 

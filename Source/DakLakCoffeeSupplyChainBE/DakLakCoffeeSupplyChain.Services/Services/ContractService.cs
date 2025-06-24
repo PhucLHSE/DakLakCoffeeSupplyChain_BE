@@ -46,8 +46,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Truy vấn tất cả hợp đồng từ repository
             var contracts = await _unitOfWork.ContractRepository.GetAllAsync(
-                predicate: c => !c.IsDeleted &&
-                                c.SellerId == manager.ManagerId,
+                predicate: c => 
+                   !c.IsDeleted &&
+                   c.SellerId == manager.ManagerId,
                 include: query => query
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)
@@ -84,8 +85,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Tìm contract theo ID
             var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
-                predicate: c => c.ContractId == contractId && 
-                                !c.IsDeleted,
+                predicate: c => 
+                   c.ContractId == contractId && 
+                   !c.IsDeleted,
                 include: query => query
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)

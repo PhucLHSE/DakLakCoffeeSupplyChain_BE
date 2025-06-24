@@ -35,8 +35,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Kiểm tra Contract có tồn tại không
                 var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
-                    predicate: c => c.ContractId == contractItemDto.ContractId && 
-                                    !c.IsDeleted,
+                    predicate: c => 
+                       c.ContractId == contractItemDto.ContractId && 
+                       !c.IsDeleted,
                     asNoTracking: true
                 );
 
@@ -50,9 +51,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Kiểm tra đã có loại cà phê này trong hợp đồng chưa
                 var isDuplicated = await _unitOfWork.ContractItemRepository.AnyAsync(
-                    predicate: ci => ci.ContractId == contractItemDto.ContractId &&
-                                     ci.CoffeeTypeId == contractItemDto.CoffeeTypeId &&
-                                     !ci.IsDeleted
+                    predicate: ci => 
+                       ci.ContractId == contractItemDto.ContractId &&
+                       ci.CoffeeTypeId == contractItemDto.CoffeeTypeId &&
+                       !ci.IsDeleted
                 );
 
                 if (isDuplicated)
@@ -123,8 +125,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                    predicate: ci => ci.ContractItemId == contractItemDto.ContractItemId &&
-                                     !ci.IsDeleted,
+                    predicate: ci => 
+                       ci.ContractItemId == contractItemDto.ContractItemId &&
+                       !ci.IsDeleted,
                     include: query => query
                            .Include(ci => ci.CoffeeType)
                            .Include(ci => ci.Contract),
@@ -215,8 +218,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                    predicate: ct => ct.ContractItemId == contractItemId && 
-                                     !ct.IsDeleted,
+                    predicate: ct => 
+                       ct.ContractItemId == contractItemId && 
+                       !ct.IsDeleted,
                     include: query => query
                            .Include(ct => ct.CoffeeType)
                            .Include(ct => ct.Contract),
@@ -272,8 +276,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                    predicate: ct => ct.ContractItemId == contractItemId && 
-                                     !ct.IsDeleted,
+                    predicate: ct => 
+                       ct.ContractItemId == contractItemId && 
+                       !ct.IsDeleted,
                     asNoTracking: false
                 );
 
