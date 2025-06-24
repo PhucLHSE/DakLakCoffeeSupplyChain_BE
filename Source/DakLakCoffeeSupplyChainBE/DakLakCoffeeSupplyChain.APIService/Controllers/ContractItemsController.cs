@@ -39,6 +39,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PUT api/<ContractItemsController>/{contractItemId}
+        [HttpPut("{contractItemId}")]
+        public async Task<IActionResult> UpdateContractItemAsync(Guid contractItemId, [FromBody] ContractItemUpdateDto contractItemUpdateDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (contractItemId != contractItemUpdateDto.ContractItemId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _contractItemService.Update(contractItemUpdateDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy sản phẩm hợp đồng.");
+
+            return StatusCode(500, result.Message);
+        }
+
+
         // DELETE api/<ContractItemsController>/{contractItemId}
         [HttpDelete("{contractItemId}")]
         public async Task<IActionResult> DeleteContractItemByIdAsync(Guid contractItemId)
