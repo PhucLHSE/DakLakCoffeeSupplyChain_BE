@@ -10,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IProcessingMethodRepository : IGenericRepository<ProcessingMethod>
     {
+        Task<bool> SoftDeleteAsync(int methodId);
     }
 }
