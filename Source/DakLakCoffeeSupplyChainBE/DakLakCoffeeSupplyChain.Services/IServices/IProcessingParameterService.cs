@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll();
         Task<IServiceResult> GetById(Guid id);
         Task<IServiceResult> CreateAsync(ProcessingParameterCreateDto dto);
+        Task<IServiceResult> UpdateAsync(ProcessingParameterUpdateDto dto);
 
     }
 }
