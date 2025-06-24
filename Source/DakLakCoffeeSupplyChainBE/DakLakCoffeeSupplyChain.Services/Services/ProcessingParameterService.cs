@@ -186,5 +186,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> HardDeleteAsync(Guid parameterId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingParameterRepository.HardDeleteAsync(parameterId);
+                if (!success)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Parameter not found");
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Hard delete success");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
     }
 }

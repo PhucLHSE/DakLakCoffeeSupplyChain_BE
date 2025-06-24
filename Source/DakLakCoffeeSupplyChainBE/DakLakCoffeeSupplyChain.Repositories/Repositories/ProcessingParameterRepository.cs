@@ -48,5 +48,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             _context.ProcessingParameters.Update(entity);
             return true;
         }
+        public async Task<bool> HardDeleteAsync(Guid parameterId)
+        {
+            var entity = await _context.ProcessingParameters
+                .FirstOrDefaultAsync(p => p.ParameterId == parameterId);
+
+            if (entity == null)
+                return false;
+
+            _context.ProcessingParameters.Remove(entity);
+            return true;
+        }
+
     }
 }
