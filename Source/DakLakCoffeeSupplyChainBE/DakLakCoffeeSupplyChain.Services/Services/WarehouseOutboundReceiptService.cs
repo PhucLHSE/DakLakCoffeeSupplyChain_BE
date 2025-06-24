@@ -129,6 +129,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu xuất kho thành công.", receipt.OutboundReceiptId);
         }
+        public async Task<IServiceResult> GetAllAsync()
+        {
+            var receipts = await _unitOfWork.WarehouseOutboundReceipts.GetAllWithIncludesAsync();
+            if (!receipts.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có phiếu xuất kho nào.", new List<WarehouseOutboundReceiptListItemDto>());
+
+            var result = receipts.Select(r => new WarehouseOutboundReceiptListItemDto
+            {
+                OutboundReceiptId = r.OutboundReceiptId,
+                OutboundReceiptCode = r.OutboundReceiptCode,
+                WarehouseName = r.Warehouse?.Name,
+                BatchCode = r.Batch?.BatchCode,
+                Quantity = r.Quantity,
+                ExportedAt = r.ExportedAt,
+                StaffName = r.ExportedByNavigation?.User?.Name
+            }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách phiếu xuất kho thành công", result);
+        }
+
+        public async Task<IServiceResult> GetByIdAsync(Guid receiptId)
+        {
+            var r = await _unitOfWork.WarehouseOutboundReceipts.GetDetailByIdAsync(receiptId);
+            if (r == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu xuất kho.");
+
+            var dto = new WarehouseOutboundReceiptDetailDto
+            {
+                OutboundReceiptId = r.OutboundReceiptId,
+                OutboundReceiptCode = r.OutboundReceiptCode,
+                WarehouseId = r.WarehouseId,
+                WarehouseName = r.Warehouse?.Name,
+                BatchId = r.BatchId,
+                BatchCode = r.Batch?.BatchCode,
+                Quantity = r.Quantity,
+                ExportedAt = r.ExportedAt,
+                StaffName = r.ExportedByNavigation?.User?.Name,
+                Note = r.Note,
+                DestinationNote = r.DestinationNote
+            };
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu xuất kho thành công", dto);
+        }
+
 
 
 

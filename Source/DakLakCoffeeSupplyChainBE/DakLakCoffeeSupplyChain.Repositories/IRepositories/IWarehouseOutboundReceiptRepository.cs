@@ -11,6 +11,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IWarehouseOutboundReceiptRepository : IGenericRepository<WarehouseOutboundReceipt>
     {
         Task<WarehouseOutboundReceipt?> GetByOutboundRequestIdAsync(Guid outboundRequestId);
-        
+        Task<List<WarehouseOutboundReceipt>> GetAllWithIncludesAsync();
+        Task<WarehouseOutboundReceipt?> GetDetailByIdAsync(Guid receiptId);
+
+
     }
 }
