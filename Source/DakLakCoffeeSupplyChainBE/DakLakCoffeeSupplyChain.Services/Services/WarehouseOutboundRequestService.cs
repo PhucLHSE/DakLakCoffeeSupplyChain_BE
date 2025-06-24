@@ -61,7 +61,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(outboundRequestId);
 
-            if (request == null)
+            if (request == null || request.IsDeleted)
             {
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu xuất kho.");
             }
@@ -123,9 +123,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã tiếp nhận yêu cầu xuất kho.");
         }
-
-
-
 
     }
 }

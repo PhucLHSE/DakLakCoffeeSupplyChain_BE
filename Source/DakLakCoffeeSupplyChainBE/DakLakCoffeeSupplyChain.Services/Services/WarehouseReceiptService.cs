@@ -137,6 +137,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận thành công", receipt.ReceiptId);
         }
+        public async Task<IServiceResult> GetAllAsync()
+        {
+            var receipts = await _unitOfWork.WarehouseReceipts.GetAllWithIncludesAsync();
+            if (receipts == null || !receipts.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có phiếu nhập kho nào.", new List<WarehouseReceiptListItemDto>());
+
+            var result = receipts.Select(r => new WarehouseReceiptListItemDto
+            {
+                ReceiptId = r.ReceiptId,
+                ReceiptCode = r.ReceiptCode,
+                WarehouseName = r.Warehouse?.Name,
+                BatchCode = r.Batch?.BatchCode,
+                ReceivedQuantity = (double)r.ReceivedQuantity,
+                ReceivedAt = r.ReceivedAt,
+                StaffName = r.ReceivedByNavigation?.User?.Name
+            }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách phiếu nhập kho thành công", result);
+        }
+
+        public async Task<IServiceResult> GetByIdAsync(Guid receiptId)
+        {
+            var receipt = await _unitOfWork.WarehouseReceipts.GetDetailByIdAsync(receiptId);
+            if (receipt == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu nhập kho.");
+
+            var dto = new WarehouseReceiptDetailDto
+            {
+                ReceiptId = receipt.ReceiptId,
+                ReceiptCode = receipt.ReceiptCode,
+                WarehouseId = receipt.WarehouseId,
+                WarehouseName = receipt.Warehouse?.Name,
+                BatchId = receipt.BatchId,
+                BatchCode = receipt.Batch?.BatchCode,
+                ReceivedQuantity = (double)receipt.ReceivedQuantity,
+                ReceivedAt = receipt.ReceivedAt,
+                StaffName = receipt.ReceivedByNavigation?.User?.Name,
+                Note = receipt.Note
+            };
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu nhập thành công", dto);
+        }
+
 
 
 
