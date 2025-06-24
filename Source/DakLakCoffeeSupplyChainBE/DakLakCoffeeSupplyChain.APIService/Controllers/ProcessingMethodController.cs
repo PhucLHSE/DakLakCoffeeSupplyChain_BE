@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -76,6 +77,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE || result.Status == Const.WARNING_NO_DATA_CODE)
                 return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+        [HttpDelete("soft/{methodId}")]
+         [Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> SoftDelete(int methodId)
+        {
+            var result = await _procesingMethodService.SoftDeleteAsync(methodId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
         }

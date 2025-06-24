@@ -17,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteById(int methodId);
 
         Task<IServiceResult> CreateAsync(ProcessingMethodCreateDto input);
+        Task<IServiceResult> SoftDeleteAsync(int methodId);
 
     }
 }
