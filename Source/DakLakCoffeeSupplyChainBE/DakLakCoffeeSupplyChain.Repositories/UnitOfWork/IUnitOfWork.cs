@@ -64,5 +64,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IProcessingParameterRepository ProcessingParameterRepository { get; }
 
+        
+
     }
 }
