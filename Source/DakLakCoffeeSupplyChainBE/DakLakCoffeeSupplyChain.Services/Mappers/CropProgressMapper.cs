@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
@@ -38,6 +39,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
+
         public static CropProgress MapToCropProgressCreateDto(this CropProgressCreateDto dto)
         {
             return new CropProgress
@@ -57,6 +59,20 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+        public static void MapToUpdateCropProgress(this CropProgressUpdateDto dto, CropProgress entity)
+        {
+            entity.CropSeasonDetailId = dto.CropSeasonDetailId;
+            entity.UpdatedBy = dto.UpdatedBy;
+            entity.StageId = dto.StageId;
+            entity.StageDescription = dto.StageDescription;
+            entity.ProgressDate = dto.ProgressDate;
+            entity.PhotoUrl = dto.PhotoUrl ?? string.Empty;
+            entity.VideoUrl = dto.VideoUrl ?? string.Empty;
+            entity.Note = dto.Note ?? string.Empty;
+            entity.StepIndex = dto.StepIndex;
+            entity.UpdatedAt = DateHelper.NowVietnamTime();
+        }
+
 
     }
 }

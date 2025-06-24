@@ -11,17 +11,22 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class ContractService : IContractService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public ContractService(IUnitOfWork unitOfWork)
+        public ContractService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork 
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -113,6 +118,157 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     contractDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(ContractCreateDto contractDto, Guid userId)
+        {
+            try
+            {
+                // Tìm BusinessManager tương ứng với userId
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    include: query => query
+                       .Include(bm => bm.User)
+                          .ThenInclude(u => u.Role),
+                    asNoTracking: true
+                );
+
+                if (businessManager == null || businessManager.User == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm thấy thông tin quản lý doanh nghiệp."
+                    );
+                }
+
+                var user = businessManager.User;
+
+                // Kiểm tra quyền hạn
+                if (user.IsDeleted || user.Role == null || user.Role.RoleName != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Người dùng không có quyền tạo hợp đồng."
+                    );
+                }
+
+                var sellerId = businessManager.ManagerId;
+
+                // Kiểm tra Buyer tồn tại
+                var buyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
+                    predicate: b => 
+                       b.BuyerId == contractDto.BuyerId && 
+                       !b.IsDeleted,
+                    asNoTracking: true
+                );
+                if (buyer == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy thông tin bên mua."
+                    );
+                }
+
+                // Kiểm tra ContractNumber đã tồn tại chưa (của cùng Seller)
+                bool isDuplicateContractNumber = await _unitOfWork.ContractRepository.AnyAsync(
+                    predicate: c =>
+                        !c.IsDeleted &&
+                        c.ContractNumber == contractDto.ContractNumber &&
+                        c.SellerId == sellerId
+                );
+
+                if (isDuplicateContractNumber)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Số hợp đồng [{contractDto.ContractNumber}] đã tồn tại trong hệ thống."
+                    );
+                }
+
+                // Tính tổng Quantity (an toàn với nullable)
+                double totalItemQuantity = contractDto.ContractItems
+                    .Sum(i => i.Quantity ?? 0);
+
+                // Tính tổng trị giá = Quantity * UnitPrice - DiscountAmount (đều là nullable)
+                double totalItemValue = contractDto.ContractItems
+                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
+
+                // So sánh với tổng của hợp đồng (nếu được nhập)
+                if (contractDto.TotalQuantity.HasValue && totalItemQuantity > contractDto.TotalQuantity.Value)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Tổng khối lượng từ các dòng hợp đồng ({totalItemQuantity} kg) vượt quá tổng khối lượng hợp đồng đã khai báo ({contractDto.TotalQuantity} kg)."
+                    );
+                }
+
+                if (contractDto.TotalValue.HasValue && totalItemValue > contractDto.TotalValue.Value)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Tổng trị giá từ các dòng hợp đồng ({totalItemValue:N0} VND) vượt quá tổng giá trị hợp đồng đã khai báo ({contractDto.TotalValue:N0} VND)."
+                    );
+                }
+
+                // Sinh mã định danh cho Contract
+                string contractCode = await _codeGenerator.GenerateContractCodeAsync();
+
+                // Map DTO to Entity
+                var newContract = contractDto.MapToNewContract(sellerId, contractCode);
+
+                // Tạo Contract ở repository
+                await _unitOfWork.ContractRepository.CreateAsync(newContract);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại hợp đồng vừa tạo để trả ra DTO
+                    var createdContract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                        predicate: c => c.ContractId == newContract.ContractId,
+                        include: query => query
+                            .Include(c => c.Buyer)
+                            .Include(c => c.Seller)
+                               .ThenInclude(u => u.User)
+                            .Include(c => c.ContractItems)
+                               .ThenInclude(i => i.CoffeeType),
+                        asNoTracking: true
+                    );
+
+                    if (createdContract != null)
+                    {
+                        var responseDto = createdContract.MapToContractViewDetailDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo hợp đồng thành công nhưng không truy xuất được dữ liệu."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }

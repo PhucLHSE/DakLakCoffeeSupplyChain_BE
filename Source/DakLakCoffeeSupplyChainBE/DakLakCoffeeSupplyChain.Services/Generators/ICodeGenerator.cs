@@ -8,6 +8,8 @@
 
         Task<string> GenerateBuyerCodeAsync(Guid managerId);
 
+        Task<string> GenerateContractCodeAsync();
+
         Task<string> GenerateContractItemCodeAsync(Guid contractId);
 
         Task<string> GenerateCropSeasonCodeAsync(int year);
