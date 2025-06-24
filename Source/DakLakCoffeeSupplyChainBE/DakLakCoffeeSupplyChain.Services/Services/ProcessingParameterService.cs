@@ -44,5 +44,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 parameterDtos
             );
         }
+        public async Task<IServiceResult> GetById(Guid id)
+        {
+            var parameter = await _unitOfWork.ProcessingParameterRepository.GetByIdAsync(id);
+
+            if (parameter == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    $"Không tìm thấy thông số chế biến với ID = {id}",
+                    null
+                );
+            }
+
+            var dto = parameter.MapToProcessingParameterDetailDto();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                dto
+            );
+        }
     }
 }
