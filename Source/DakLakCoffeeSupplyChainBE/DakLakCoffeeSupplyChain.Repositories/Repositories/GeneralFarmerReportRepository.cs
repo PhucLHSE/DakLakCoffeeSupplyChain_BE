@@ -29,5 +29,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(pp => pp.Batch)
                 .FirstOrDefaultAsync(r => r.ReportId == reportId && !r.IsDeleted);
         }
+
+        public async Task<int> CountReportsInYearAsync(int year)
+        {
+            return await _context.GeneralFarmerReports
+                .Where(r => !r.IsDeleted && r.ReportedAt.Year == year)
+                .CountAsync();
+        }
+
     }
 }
