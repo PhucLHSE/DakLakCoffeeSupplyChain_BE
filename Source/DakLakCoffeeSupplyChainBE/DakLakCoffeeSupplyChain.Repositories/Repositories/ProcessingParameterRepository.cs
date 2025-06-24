@@ -28,5 +28,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .ToListAsync();
         }
+        public async Task<ProcessingParameter?> GetByIdAsync(Guid parameterId)
+        {
+            return await _context.ProcessingParameters
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ParameterId == parameterId && !p.IsDeleted);
+        }
     }
 }

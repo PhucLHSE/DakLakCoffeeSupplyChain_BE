@@ -22,5 +22,19 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RecordedAt = entity.RecordedAt
             };
         }
+        public static ProcessingParameterViewDetailDto MapToProcessingParameterDetailDto(this ProcessingParameter entity)
+        {
+            return new ProcessingParameterViewDetailDto
+            {
+                ParameterId = entity.ParameterId,
+                ProgressId = entity.ProgressId,
+                ParameterName = entity.ParameterName,
+                ParameterValue = entity.ParameterValue,
+                Unit = entity.Unit,
+                RecordedAt = entity.RecordedAt,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt
+            };
+        }
     }
 }

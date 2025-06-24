@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IProcessingParameterRepository : IGenericRepository<ProcessingParameter>
     {
         Task<List<ProcessingParameter>> GetAllActiveAsync();
+        Task<ProcessingParameter?> GetByIdAsync(Guid parameterId);
+
     }
 }
