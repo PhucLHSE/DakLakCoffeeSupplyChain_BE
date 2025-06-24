@@ -1,7 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
-using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -79,6 +79,48 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     })
                     .ToList()
             };
+        }
+
+        // Mapper ContractCreateDto
+        public static Contract MapToNewContract(this ContractCreateDto dto, Guid sellerId, string contractCode)
+        {
+            var contract = new Contract
+            {
+                ContractId = Guid.NewGuid(),
+                ContractCode = contractCode,
+                ContractNumber = dto.ContractNumber,
+                ContractTitle = dto.ContractTitle,
+                ContractFileUrl = dto.ContractFileUrl,
+                BuyerId = dto.BuyerId,
+                SellerId = sellerId,
+                DeliveryRounds = dto.DeliveryRounds,
+                TotalQuantity = dto.TotalQuantity,
+                TotalValue = dto.TotalValue,
+                StartDate = dto.StartDate ?? default,
+                EndDate = dto.EndDate ?? default,
+                SignedAt = dto.SignedAt,
+                Status = dto.Status.ToString(), // enum → string
+                CancelReason = dto.CancelReason,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false,
+
+                ContractItems = dto.ContractItems.Select((itemDto, index) => new ContractItem
+                {
+                    ContractItemId = Guid.NewGuid(),
+                    ContractItemCode = $"CTI-{index + 1:D3}-{contractCode}",
+                    CoffeeTypeId = itemDto.CoffeeTypeId,
+                    Quantity = itemDto.Quantity,
+                    UnitPrice = itemDto.UnitPrice,
+                    DiscountAmount = itemDto.DiscountAmount,
+                    Note = itemDto.Note,
+                    IsDeleted = false,
+                    CreatedAt = DateHelper.NowVietnamTime(),
+                    UpdatedAt = DateHelper.NowVietnamTime()
+                }).ToList()
+            };
+
+            return contract;
         }
     }
 }

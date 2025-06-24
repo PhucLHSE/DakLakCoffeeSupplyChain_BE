@@ -43,6 +43,15 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"{managerCode}-BUY-{CurrentYear}-{(count + 1):D3}";
         }
 
+        public async Task<string> GenerateContractCodeAsync()
+        {
+            // Đếm số hợp đồng tạo trong năm hiện tại
+            var count = await _unitOfWork.ContractRepository.CountContractsInYearAsync(CurrentYear);
+
+            // Trả về mã có dạng: CTR-2025-0032
+            return $"CTR-{CurrentYear}-{(count + 1):D4}";
+        }
+
         public async Task<string> GenerateContractItemCodeAsync(Guid contractId)
         {
             // Lấy contract để có ContractCode
@@ -54,7 +63,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             if (contract == null || string.IsNullOrWhiteSpace(contract.ContractCode))
             {
-                return $"CTI-UNKNOWN-{CurrentYear}-{Guid.NewGuid().ToString()[..4]}"; // fallback tránh null
+                return $"CTI-UNKNOWN-{CurrentYear}-{Guid.NewGuid().ToString()[..3]}"; // fallback tránh null
             }
 
             var contractCode = contract.ContractCode.Replace(" ", "").ToUpper();

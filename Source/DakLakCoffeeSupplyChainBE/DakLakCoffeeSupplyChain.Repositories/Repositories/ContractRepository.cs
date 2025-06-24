@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +17,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
         public ContractRepository(DakLakCoffee_SCMContext context)
             => _context = context;
+
+        // Đếm số Contract đã tạo trong một năm
+        public async Task<int> CountContractsInYearAsync(int year)
+        {
+            return await _context.Contracts
+                .AsNoTracking()
+                .CountAsync(c =>
+                    !c.IsDeleted &&
+                    c.CreatedAt.Year == year
+                );
+        }
     }
 }

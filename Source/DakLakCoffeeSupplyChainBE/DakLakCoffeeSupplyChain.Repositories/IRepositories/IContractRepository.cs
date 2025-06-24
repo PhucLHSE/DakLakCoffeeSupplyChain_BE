@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IContractRepository : IGenericRepository<Contract>
     {
+        // Đếm số Contract đã tạo trong một năm
+        Task<int> CountContractsInYearAsync(int year);
     }
 }
