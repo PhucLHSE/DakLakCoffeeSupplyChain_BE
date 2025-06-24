@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -47,5 +48,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+
+        [HttpPost]
+        //[Authorize(Roles = "BusinessStaff,Farmer")]
+        public async Task<IActionResult> Create([FromBody] ProcessingParameterCreateDto dto)
+        {
+            var result = await _processingParameterService.CreateAsync(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data); // 200 OK
+
+            if (result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result.Message); // 400 Bad Request nếu validate fail
+
+            return StatusCode(500, result.Message); // 500 Internal Server Error nếu exception
+        }
+
     }
 }
