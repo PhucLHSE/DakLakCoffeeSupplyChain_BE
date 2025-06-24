@@ -45,5 +45,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
+        // Mapper ContractItemUpdateDto
+        public static void MapToUpdateContractItem(this ContractItemUpdateDto dto, ContractItem contractItem)
+        {
+            contractItem.ContractId = dto.ContractId;
+            contractItem.CoffeeTypeId = dto.CoffeeTypeId;
+            contractItem.Quantity = dto.Quantity;
+            contractItem.UnitPrice = dto.UnitPrice;
+            contractItem.DiscountAmount = dto.DiscountAmount;
+            contractItem.Note = dto.Note ?? string.Empty;
+            contractItem.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }

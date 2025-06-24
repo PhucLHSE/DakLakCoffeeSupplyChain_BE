@@ -50,9 +50,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Kiểm tra đã có loại cà phê này trong hợp đồng chưa
                 var isDuplicated = await _unitOfWork.ContractItemRepository.AnyAsync(
-                    predicate: item => item.ContractId == contractItemDto.ContractId &&
-                                       item.CoffeeTypeId == contractItemDto.CoffeeTypeId &&
-                                       !item.IsDeleted
+                    predicate: ci => ci.ContractId == contractItemDto.ContractId &&
+                                     ci.CoffeeTypeId == contractItemDto.CoffeeTypeId &&
+                                     !ci.IsDeleted
                 );
 
                 if (isDuplicated)
@@ -78,9 +78,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (result > 0)
                 {
                     var createdItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                        predicate: i => i.ContractItemId == newContractItem.ContractItemId,
+                        predicate: ci => ci.ContractItemId == newContractItem.ContractItemId,
                         include: query => query
-                           .Include(i => i.CoffeeType),
+                           .Include(ci => ci.CoffeeType),
                         asNoTracking: true
                     );
 
@@ -117,6 +117,98 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(ContractItemUpdateDto contractItemDto)
+        {
+            try
+            {
+                // Tìm contractItem theo ID
+                var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
+                    predicate: ci => ci.ContractItemId == contractItemDto.ContractItemId &&
+                                     !ci.IsDeleted,
+                    include: query => query
+                           .Include(ci => ci.CoffeeType)
+                           .Include(ci => ci.Contract),
+                    asNoTracking: true
+                );
+
+                // Nếu không tìm thấy
+                if (contractItem == null || contractItem.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy mục hợp đồng cần cập nhật."
+                    );
+                }
+
+                // Kiểm tra loại cà phê có bị trùng trong hợp đồng không (trừ chính nó)
+                var isDuplicated = await _unitOfWork.ContractItemRepository.AnyAsync(
+                    predicate: ci =>
+                        ci.ContractItemId != contractItemDto.ContractItemId &&
+                        ci.ContractId == contractItemDto.ContractId &&
+                        ci.CoffeeTypeId == contractItemDto.CoffeeTypeId &&
+                        !ci.IsDeleted
+                );
+
+                if (isDuplicated)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Loại cà phê này đã có trong hợp đồng."
+                    );
+                }
+
+                //Map DTO to Entity
+                contractItemDto.MapToUpdateContractItem(contractItem);
+
+                // Cập nhật contractItem ở repository
+                await _unitOfWork.ContractItemRepository.UpdateAsync(contractItem);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại entity sau khi cập nhật (kèm CoffeeType)
+                    var updatedItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
+                        predicate: ci => ci.ContractItemId == contractItemDto.ContractItemId,
+                        include: query => query
+                           .Include(ci => ci.CoffeeType),
+                        asNoTracking: true
+                    );
+
+                    if (updatedItem != null)
+                    {
+                        var responseDto = updatedItem.MapToContractItemViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteContractItemById(Guid contractItemId)
         {
             try
@@ -141,7 +233,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // Xóa buyer khỏi repository
+                    // Xóa contractItem khỏi repository
                     await _unitOfWork.ContractItemRepository.RemoveAsync(contractItem);
 
                     // Lưu thay đổi
