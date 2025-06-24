@@ -69,8 +69,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_LOGIN_CODE, "Đăng nhập thành công", new { token = tokenString });
         }
 
-
-        public async Task<IServiceResult> RegisterFarmerAccount(SignUpRequestDto request)
+        public async Task<IServiceResult> RegisterAccount(SignUpRequestDto request)
         {
             try
             {
@@ -106,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Map DTO to Entity
                 var newUser = request.MapToNewAccount(passwordHash, userCode);
 
-                //Tạo mã verify email
+                //Tạo mã verify email, lưu trong ram của server, thời hạn 30 phút, nếu như hệ thống bị tắt thì sẽ xóa hết trong ram
                 string verificationCode = GenerateVerificationCode(6);
                 _cache.Set($"email-verify:{newUser.UserId}", verificationCode, TimeSpan.FromMinutes(30));
                 var verifyUrl = $"https://localhost:7163/api/Auth/verify-email/userId={newUser.UserId}&code={verificationCode}";

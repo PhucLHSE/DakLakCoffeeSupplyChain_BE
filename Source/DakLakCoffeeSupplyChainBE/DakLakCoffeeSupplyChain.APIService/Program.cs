@@ -51,6 +51,7 @@ builder.Services.AddScoped<IWarehouseOutboundReceiptService, WarehouseOutboundRe
 builder.Services.AddScoped<ICoffeeTypeService, CoffeeTypeService>();
 builder.Services.AddScoped<IProcessingStageService, ProcessingStageService>();
 builder.Services.AddScoped<IGeneralFarmerReportService, GeneralFarmerReportService>();
+builder.Services.AddScoped<ICultivationRegistrationService, CultivationRegistrationService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
