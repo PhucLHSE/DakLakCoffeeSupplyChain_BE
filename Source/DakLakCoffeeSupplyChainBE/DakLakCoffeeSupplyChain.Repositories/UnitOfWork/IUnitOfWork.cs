@@ -73,5 +73,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IProcessingBatchProgressRepository ProcessingBatchProgressRepository { get; }
       
         IProcessingParameterRepository ProcessingParameterRepository { get; }
+
     }
 }

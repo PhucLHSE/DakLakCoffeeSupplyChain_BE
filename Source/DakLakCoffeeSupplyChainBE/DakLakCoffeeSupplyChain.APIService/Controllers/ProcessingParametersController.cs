@@ -64,5 +64,49 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message); // 500 Internal Server Error nếu exception
         }
 
+        [HttpPut]
+        //[Authorize(Roles = "BusinessStaff,Farmer")]
+        public async Task<IActionResult> Update([FromBody] ProcessingParameterUpdateDto dto)
+        {
+            var result = await _processingParameterService.UpdateAsync(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data); // 200 OK
+
+            if (result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result.Message); // 400 Bad Request nếu validate fail
+
+            return StatusCode(500, result.Message); // 500 Internal Server Error nếu exception
+        }
+
+        [HttpDelete("soft/{parameterId}")]
+        // [Authorize(Roles = "BusinessStaff,Farmer")]
+        public async Task<IActionResult> SoftDelete(Guid parameterId)
+        {
+            var result = await _processingParameterService.SoftDeleteAsync(parameterId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+        [HttpDelete("hard/{parameterId}")]
+        // [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> HardDelete(Guid parameterId)
+        {
+            var result = await _processingParameterService.HardDeleteAsync(parameterId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
     }
 }

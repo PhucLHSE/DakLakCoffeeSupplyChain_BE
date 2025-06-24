@@ -120,5 +120,91 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG, ex.Message);
             }
         }
+        public async Task<IServiceResult> UpdateAsync(ProcessingParameterUpdateDto dto)
+        {
+            if (dto.ParameterId == Guid.Empty)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "ParameterId không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(dto.ParameterName) ||
+                string.IsNullOrWhiteSpace(dto.ParameterValue) ||
+                string.IsNullOrWhiteSpace(dto.Unit))
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Dữ liệu không hợp lệ");
+            }
+
+            var entity = await _unitOfWork.ProcessingParameterRepository.GetByIdAsync(dto.ParameterId);
+            if (entity == null || entity.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Thông số không tồn tại");
+
+            // Check trùng tên (nếu cần)
+            var isDuplicate = await _unitOfWork.ProcessingParameterRepository.AnyAsync(x =>
+                x.ParameterId != dto.ParameterId &&
+                x.ProgressId == entity.ProgressId &&
+                x.ParameterName.ToLower() == dto.ParameterName.ToLower() &&
+                !x.IsDeleted);
+
+            if (isDuplicate)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Thông số \"{dto.ParameterName}\" đã tồn tại trong bước này");
+
+            // Cập nhật
+            entity.ParameterName = dto.ParameterName;
+            entity.ParameterValue = dto.ParameterValue;
+            entity.Unit = dto.Unit;
+            entity.RecordedAt = dto.RecordedAt;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.ProcessingParameterRepository.UpdateAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG);
+        }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid parameterId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingParameterRepository.SoftDeleteAsync(parameterId);
+                if (!success)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Parameter not found or already deleted"
+                    );
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(
+                    Const.SUCCESS_DELETE_CODE,
+                    Const.SUCCESS_DELETE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
+                );
+            }
+        }
+        public async Task<IServiceResult> HardDeleteAsync(Guid parameterId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingParameterRepository.HardDeleteAsync(parameterId);
+                if (!success)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Parameter not found");
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Hard delete success");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
     }
 }

@@ -46,6 +46,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProcessingParameterRepository? processingParameterRepository;
 
 
+
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
@@ -292,7 +293,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
             }
         }
-
 
         public IProcessingParameterRepository ProcessingParameterRepository
         {
