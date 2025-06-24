@@ -1,10 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
-using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -24,12 +21,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<SignUpRequest>
         [HttpPost("SignUpRequest")]
-        public async Task<IActionResult> CreateFarmerAccountAsync([FromBody] SignUpRequestDto farmerSignUpRequestDto)
+        public async Task<IActionResult> CreateFarmerAccountAsync([FromBody] SignUpRequestDto SignUpRequestDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _authService.RegisterFarmerAccount(farmerSignUpRequestDto);
+            var result = await _authService.RegisterAccount(SignUpRequestDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Created(Url.Action("GetById", "UserAccountsController", new { userId = ((UserAccountViewDetailsDto)result.Data).UserId }), result.Data);

@@ -51,18 +51,27 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         ISystemConfigurationRepository SystemConfigurationRepository { get; }
 
         ISystemNotificationRepository SystemNotificationRepository { get; }
-
+      
         ISystemNotificationRecipientRepository SystemNotificationRecipientRepository { get; }
+      
         IWarehouseReceiptRepository WarehouseReceipts { get; }
+      
         IInventoryRepository Inventories { get; }
+      
         IWarehouseRepository Warehouses { get; }
+      
         IWarehouseOutboundRequestRepository WarehouseOutboundRequests { get; }
+      
         IWarehouseOutboundReceiptRepository WarehouseOutboundReceipts { get; }
+      
         ICoffeeTypeRepository CoffeeTypeRepository { get; }
+      
         IProcessingStageRepository ProcessingStageRepository { get; }
-
+      
         IGeneralFarmerReportRepository GeneralFarmerReportRepository { get; }
+      
         IProcessingBatchProgressRepository ProcessingBatchProgressRepository { get; }
-
+      
+        IProcessingParameterRepository ProcessingParameterRepository { get; }
     }
 }

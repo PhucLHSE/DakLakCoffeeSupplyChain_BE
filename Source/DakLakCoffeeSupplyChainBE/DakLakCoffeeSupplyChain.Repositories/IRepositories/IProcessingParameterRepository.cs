@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface IWarehouseReceiptRepository : IGenericRepository<WarehouseReceipt>
+    public interface IProcessingParameterRepository : IGenericRepository<ProcessingParameter>
     {
-        Task<WarehouseReceipt?> GetByInboundRequestIdAsync(Guid inboundRequestId);
-        Task<List<WarehouseReceipt>> GetAllWithIncludesAsync();
-        Task<WarehouseReceipt?> GetDetailByIdAsync(Guid id);
+        Task<List<ProcessingParameter>> GetAllActiveAsync();
+        Task<ProcessingParameter?> GetByIdAsync(Guid parameterId);
+
     }
 }

@@ -42,6 +42,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<UserAccount?> GetUserAccountByEmailAsync(string email)
         {
             return await _context.UserAccounts
+                .Include(u => u.Role)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
@@ -58,15 +59,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.UserAccounts
                 .CountAsync(u => u.RegistrationDate.Year == year);
         }
-        public async Task<UserAccount?> GetUserByCredentialsAsync(string email, string password)
-        {
-            return await _context.UserAccounts
-                .Include(u => u.Role)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u =>
-                    u.Email == email &&
-                    u.PasswordHash == password);
-
-        }
+       
     }
 }

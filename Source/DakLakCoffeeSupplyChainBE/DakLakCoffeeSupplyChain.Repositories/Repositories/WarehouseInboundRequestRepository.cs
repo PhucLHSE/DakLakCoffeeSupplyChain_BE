@@ -19,39 +19,42 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseInboundRequest?> GetByIdAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
         }
 
         public async Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
                 .Include(r => r.Farmer)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
         }
 
         public async Task<WarehouseInboundRequest?> GetByIdWithBatchAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
                 .Include(r => r.Batch)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
         }
 
         public async Task<List<WarehouseInboundRequest>> GetAllPendingAsync()
         {
             return await _context.WarehouseInboundRequests
-                .Where(r => r.Status == "Pending")
+                .Where(r => r.Status == "Pending" && !r.IsDeleted) // <-- thêm lọc IsDeleted
                 .Include(r => r.Farmer)
                 .ToListAsync();
         }
+
         public async Task<List<WarehouseInboundRequest>> GetAllWithIncludesAsync()
         {
             return await _context.WarehouseInboundRequests
                 .Include(r => r.Farmer).ThenInclude(f => f.User)
                 .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
                 .Include(r => r.Batch)
+                .Where(r => !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
+
         public async Task<WarehouseInboundRequest?> GetDetailByIdAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
@@ -59,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
                 .Include(r => r.Batch).ThenInclude(b => b.CoffeeType)
                 .Include(r => r.Batch).ThenInclude(b => b.CropSeason)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted); // <-- đã có
         }
 
         public void Update(WarehouseInboundRequest entity)

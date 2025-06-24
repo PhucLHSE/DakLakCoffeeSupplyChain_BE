@@ -28,10 +28,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> LoginAsync(LoginRequestDto request)
         {
-            var user = await _unitOfWork.UserAccountRepository.GetUserByCredentialsAsync(request.Email, request.Password);
+            // 1. Tìm user theo email
+            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
             if (user == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
 
+            // 2. So sánh mật khẩu bằng hasher
+            if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
+                return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
+
+            // 3. Kiểm tra xác minh email
+            if (!(user.EmailVerified ?? false))
+                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa xác minh email.");
+
+            // 4. Kiểm tra duyệt
+            if (user.Status?.ToLower() != "active")
+                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt hoặc đã bị khóa.");
+
+            // 5. Tạo token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
 
@@ -55,7 +69,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_LOGIN_CODE, "Đăng nhập thành công", new { token = tokenString });
         }
 
-        public async Task<IServiceResult> RegisterFarmerAccount(SignUpRequestDto request)
+        public async Task<IServiceResult> RegisterAccount(SignUpRequestDto request)
         {
             try
             {
@@ -91,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Map DTO to Entity
                 var newUser = request.MapToNewAccount(passwordHash, userCode);
 
-                //Tạo mã verify email
+                //Tạo mã verify email, lưu trong ram của server, thời hạn 30 phút, nếu như hệ thống bị tắt thì sẽ xóa hết trong ram
                 string verificationCode = GenerateVerificationCode(6);
                 _cache.Set($"email-verify:{newUser.UserId}", verificationCode, TimeSpan.FromMinutes(30));
                 var verifyUrl = $"https://localhost:7163/api/Auth/verify-email/userId={newUser.UserId}&code={verificationCode}";
