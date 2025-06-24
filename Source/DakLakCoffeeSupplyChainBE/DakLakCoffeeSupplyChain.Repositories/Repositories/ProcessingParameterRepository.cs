@@ -34,5 +34,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ParameterId == parameterId && !p.IsDeleted);
         }
+        public async Task<bool> SoftDeleteAsync(Guid parameterId)
+        {
+            var entity = await _context.ProcessingParameters
+                .FirstOrDefaultAsync(p => p.ParameterId == parameterId && !p.IsDeleted);
+
+            if (entity == null)
+                return false;
+
+            entity.IsDeleted = true;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            _context.ProcessingParameters.Update(entity);
+            return true;
+        }
     }
 }

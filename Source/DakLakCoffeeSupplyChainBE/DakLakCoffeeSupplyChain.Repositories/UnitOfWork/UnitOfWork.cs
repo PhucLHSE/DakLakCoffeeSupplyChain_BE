@@ -290,7 +290,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
-                
+            }
+        }
         public IProcessingParameterRepository ProcessingParameterRepository
         {
             get

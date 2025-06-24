@@ -158,5 +158,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG);
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid parameterId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingParameterRepository.SoftDeleteAsync(parameterId);
+                if (!success)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Parameter not found or already deleted"
+                    );
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(
+                    Const.SUCCESS_DELETE_CODE,
+                    Const.SUCCESS_DELETE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
+                );
+            }
+        }
     }
 }
