@@ -35,6 +35,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _receiptService.ConfirmReceiptAsync(id, dto);
             return StatusCode(result.Status, result);
         }
+        [HttpGet]
+        [Authorize(Roles = "Admin,BusinessStaff,Manager")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _receiptService.GetAllAsync();
+            return StatusCode(result.Status, result);
+        }
+
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,BusinessStaff,Manager")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var result = await _receiptService.GetByIdAsync(id);
+            return StatusCode(result.Status, result);
+        }
 
     }
 }
