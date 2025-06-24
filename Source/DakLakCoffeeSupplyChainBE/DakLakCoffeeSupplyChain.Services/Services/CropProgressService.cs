@@ -87,6 +87,101 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+        public async Task<IServiceResult> Update(CropProgressUpdateDto dto)
+        {
+            try
+            {
+                // B1: Kiểm tra tồn tại bản ghi
+                var entity = await _unitOfWork.CropProgressRepository.GetByIdAsync(dto.ProgressId);
+                if (entity == null || entity.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        $"Không tìm thấy tiến trình với ID = {dto.ProgressId} hoặc bản ghi đã bị xóa."
+                    );
+                }
+
+                // B2: Kiểm tra khóa ngoại - mùa vụ có tồn tại không
+                var seasonDetail = await _unitOfWork.CultivationRegistrationRepository
+                    .GetCropSeasonDetailByIdAsync(dto.CropSeasonDetailId);
+                if (seasonDetail == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Chi tiết mùa vụ với ID = {dto.CropSeasonDetailId} không tồn tại."
+                    );
+                }
+
+                // B3: Kiểm tra stage có tồn tại không
+                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
+                if (stage == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Giai đoạn với ID = {dto.StageId} không tồn tại."
+                    );
+                }
+
+                // B4: Kiểm tra nông dân có tồn tại không
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.UpdatedBy);
+                if (farmer == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Người cập nhật (UpdatedBy) với ID = {dto.UpdatedBy} không tồn tại."
+                    );
+                }
+
+                // B5: Ngăn thay đổi mùa vụ nếu đã liên kết với báo cáo
+                var linkedReports = await _unitOfWork.GeneralFarmerReportRepository.GetAllAsync(
+                    r => r.ProcessingProgressId == dto.ProgressId
+                );
+                if (linkedReports.Any() && dto.CropSeasonDetailId != entity.CropSeasonDetailId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Không được thay đổi CropSeasonDetailId vì tiến trình này đã liên kết với báo cáo nông hộ."
+                    );
+                }
+
+                // B6: Trùng ngày + giai đoạn + mùa vụ (ngoại trừ chính nó)
+                var duplicates = await _unitOfWork.CropProgressRepository.GetAllAsync(
+                    p => p.CropSeasonDetailId == dto.CropSeasonDetailId
+                      && p.StageId == dto.StageId
+                      && p.ProgressDate == dto.ProgressDate
+                      && p.ProgressId != dto.ProgressId
+                      && !p.IsDeleted
+                );
+                if (duplicates.Any())
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Đã tồn tại tiến trình khác có cùng ngày {dto.ProgressDate} và giai đoạn {stage.StageName} trong mùa vụ."
+                    );
+                }
+
+                // B7: Gán lại dữ liệu
+                dto.MapToUpdateCropProgress(entity);
+
+                // B8: Cập nhật
+                await _unitOfWork.CropProgressRepository.UpdateAsync(entity);
+                var saveResult = await _unitOfWork.SaveChangesAsync();
+
+                if (saveResult > 0)
+                {
+                    var fullEntity = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(dto.ProgressId);
+                    var responseDto = fullEntity?.MapToCropProgressViewDetailsDto();
+
+                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, responseDto);
+                }
+
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại. Không có thay đổi nào được ghi nhận.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống khi cập nhật tiến trình: " + ex.Message);
+            }
+        }
 
     }
 }
