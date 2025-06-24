@@ -1,5 +1,8 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
@@ -34,6 +37,32 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ReportedByName = entity.ReportedByNavigation?.Name ?? string.Empty,
                 CropStageName = entity.CropProgress?.Stage?.StageName ?? string.Empty,
                 ProcessingBatchCode = entity.ProcessingProgress?.Batch?.BatchCode ?? string.Empty
+            };
+        }
+
+        public static GeneralFarmerReport MapToNewGeneralFarmerReportAsync(this GeneralFarmerReportCreateDto dto, string reportCode)
+        {
+            var severityLevel = Enum.TryParse<SeverityLevel>(dto.SeverityLevel.ToString(), out var parsed)
+            ? parsed
+    :        SeverityLevel.Low;
+
+            return new GeneralFarmerReport
+            {
+                ReportId = Guid.NewGuid(),
+                ReportCode = reportCode,
+                ReportType = dto.ReportType,
+                CropProgressId = dto.CropProgressId,
+                ProcessingProgressId = dto.ProcessingProgressId,
+                ReportedBy = dto.ReportedBy,
+                Title = dto.Title,
+                Description = dto.Description,
+                SeverityLevel = (int)severityLevel,
+                ImageUrl = dto.ImageUrl ?? string.Empty,
+                VideoUrl = dto.VideoUrl ?? string.Empty,
+                IsResolved = false,
+                ReportedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false
             };
         }
     }

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,5 +50,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        // POST: api/GeneralFarmerReports
+        [HttpPost]
+        public async Task<IActionResult> CreateAsync([FromBody] GeneralFarmerReportCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _reportService.CreateGeneralFarmerReports(dto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            {
+                var data = (GeneralFarmerReportViewDetailsDto)result.Data!;
+                return CreatedAtAction(nameof(GetById), new { reportId = data.ReportId }, data);
+            }
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
     }
 }
