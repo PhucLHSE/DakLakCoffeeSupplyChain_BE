@@ -30,6 +30,28 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
+        public async Task<List<Inventory>> GetAllWithIncludesAsync()
+        {
+            return await _context.Inventories
+                .Where(i => !i.IsDeleted)
+                .Include(i => i.Warehouse)
+                .Include(i => i.Batch)
+                    .ThenInclude(b => b.Products)
+                        .ThenInclude(p => p.CoffeeType)
+                .ToListAsync();
+        }
+
+        public async Task<Inventory?> GetDetailByIdAsync(Guid id)
+        {
+            return await _context.Inventories
+                .Include(i => i.Warehouse)
+                .Include(i => i.Batch)
+                    .ThenInclude(b => b.Products)
+                        .ThenInclude(p => p.CoffeeType)
+                .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
+        }
     }
 
 }
+
+
