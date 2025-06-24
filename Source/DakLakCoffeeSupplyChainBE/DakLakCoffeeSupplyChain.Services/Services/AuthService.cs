@@ -53,10 +53,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User")
-        }),
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User")
+                }),
                 Expires = DateTime.UtcNow.AddHours(3),
                 Issuer = _config["Jwt:Issuer"],
                 Audience = _config["Jwt:Audience"],

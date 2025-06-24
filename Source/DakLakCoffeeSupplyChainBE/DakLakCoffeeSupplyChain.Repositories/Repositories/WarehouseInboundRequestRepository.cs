@@ -19,7 +19,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseInboundRequest?> GetByIdAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id);
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
         }
 
         public async Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id)
@@ -49,6 +49,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Farmer).ThenInclude(f => f.User)
                 .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
                 .Include(r => r.Batch)
+                .Where(r => !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
