@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories;
 using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
+using DakLakCoffeeSupplyChain.Repositories.IRepositories.DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private ICoffeeTypeRepository? coffeeTypeRepository;
         private IProcessingStageRepository? processingStageRepository;
         private IGeneralFarmerReportRepository generalFarmerReportRepository;
+        private IProcessingBatchProgressRepository? processingBatchProgressRepository;
         private IProcessingParameterRepository? processingParameterRepository;
 
 
@@ -284,6 +286,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return generalFarmerReportRepository ??= new GeneralFarmerReportRepository(context);
             }
         }
+        public IProcessingBatchProgressRepository ProcessingBatchProgressRepository
+        {
+            get
+            {
+                return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
+                
         public IProcessingParameterRepository ProcessingParameterRepository
         {
             get
