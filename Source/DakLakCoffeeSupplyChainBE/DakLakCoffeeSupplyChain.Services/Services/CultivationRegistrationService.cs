@@ -1,6 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -17,9 +16,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
 
             var cultivationRegistrations = await _unitOfWork.CultivationRegistrationRepository.GetAllAsync(
-                predicate: p => p.IsDeleted != true,
-                include: p => p.Include(p => p.Farmer).ThenInclude(p => p.User),
-                orderBy: p => p.OrderBy(p => p.RegistrationCode),
+                predicate: c => c.IsDeleted != true,
+                include: c => c.
+                Include(c => c.Farmer).ThenInclude(c => c.User),
+                orderBy: c => c.OrderBy(c => c.RegistrationCode),
                 asNoTracking: true);
 
             if (cultivationRegistrations == null || cultivationRegistrations.Count == 0)
@@ -40,6 +40,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     cultivationRegistrationViewAllDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> GetById(Guid registrationId)
+        {
+            var cultivation = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+                predicate: c => c.RegistrationId == registrationId,
+                include: c => c.
+                Include(c => c.CultivationRegistrationsDetails).
+                Include(c => c.Farmer).
+                ThenInclude(c => c.User),
+                asNoTracking: true
+                );
+
+            if (cultivation == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new CultivationRegistrationViewSumaryDto()
+                );
+            }
+            else
+            {
+                var cultivationDto = cultivation.MapToCultivationRegistrationViewSumaryDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    cultivationDto
                 );
             }
         }

@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.CoffeeTypeDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
@@ -76,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     PlanDetailsId = p.PlanDetailsId,
                     PlanDetailCode = p.PlanDetailCode,
                     PlanId = p.PlanId,
-                    CoffeeType = p.CoffeeType == null ? null : new Common.DTOs.ProcurementPlanDTOs.CoffeeTypeDTOs.CoffeeTypePlanDetailsViewDto
+                    CoffeeType = p.CoffeeType == null ? null : new CoffeeTypePlanDetailsViewDto
                     {
                         CoffeeTypeId = p.CoffeeTypeId,
                         TypeCode = p.CoffeeType.TypeCode,
