@@ -28,10 +28,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> LoginAsync(LoginRequestDto request)
         {
-            var user = await _unitOfWork.UserAccountRepository.GetUserByCredentialsAsync(request.Email, request.Password);
+            // 1. Tìm user theo email
+            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
             if (user == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
 
+            // 2. So sánh mật khẩu bằng hasher
+            if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
+                return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
+
+            // 3. Kiểm tra xác minh email
+            if (!(user.EmailVerified ?? false))
+                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa xác minh email.");
+
+            // 4. Kiểm tra duyệt
+            if (user.Status?.ToLower() != "active")
+                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt hoặc đã bị khóa.");
+
+            // 5. Tạo token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
 
@@ -39,10 +53,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User")
-                }),
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User")
+        }),
                 Expires = DateTime.UtcNow.AddHours(3),
                 Issuer = _config["Jwt:Issuer"],
                 Audience = _config["Jwt:Audience"],
@@ -54,6 +68,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_LOGIN_CODE, "Đăng nhập thành công", new { token = tokenString });
         }
+
 
         public async Task<IServiceResult> RegisterFarmerAccount(SignUpRequestDto request)
         {
