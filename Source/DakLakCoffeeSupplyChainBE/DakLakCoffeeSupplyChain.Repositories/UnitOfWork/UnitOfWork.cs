@@ -41,6 +41,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private ICoffeeTypeRepository? coffeeTypeRepository;
         private IProcessingStageRepository? processingStageRepository;
         private IGeneralFarmerReportRepository generalFarmerReportRepository;
+        private IProcessingParameterRepository? processingParameterRepository;
 
 
         public UnitOfWork()
@@ -280,6 +281,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return generalFarmerReportRepository ??= new GeneralFarmerReportRepository(context);
+            }
+        }
+        public IProcessingParameterRepository ProcessingParameterRepository
+        {
+            get
+            {
+                return processingParameterRepository ??= new ProcessingParameterRepository(context);
             }
         }
     }

@@ -62,6 +62,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IGeneralFarmerReportRepository GeneralFarmerReportRepository { get; }
 
+        IProcessingParameterRepository ProcessingParameterRepository { get; }
 
     }
 }
