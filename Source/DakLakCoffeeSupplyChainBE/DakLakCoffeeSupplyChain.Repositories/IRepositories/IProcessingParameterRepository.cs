@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<List<ProcessingParameter>> GetAllActiveAsync();
         Task<ProcessingParameter?> GetByIdAsync(Guid parameterId);
+        Task<bool> SoftDeleteAsync(Guid parameterId);
 
     }
 }
