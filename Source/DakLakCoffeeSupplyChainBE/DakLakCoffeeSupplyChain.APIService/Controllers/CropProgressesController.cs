@@ -63,5 +63,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        [HttpPut("{progressId}")]
+        public async Task<IActionResult> Update(Guid progressId, [FromBody] CropProgressUpdateDto dto)
+        {
+            if (progressId != dto.ProgressId)
+                return BadRequest("ProgressId trong route không khớp với nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _cropProgressService.Update(dto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return NotFound(result.Message);
+        }
+
+
     }
 }

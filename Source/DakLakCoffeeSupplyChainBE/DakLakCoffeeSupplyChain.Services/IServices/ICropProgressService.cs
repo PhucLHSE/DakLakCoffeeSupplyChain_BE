@@ -10,6 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid id);
 
         Task<IServiceResult> Create(CropProgressCreateDto dto);
-
+        Task<IServiceResult> Update(CropProgressUpdateDto dto);
     }
 }

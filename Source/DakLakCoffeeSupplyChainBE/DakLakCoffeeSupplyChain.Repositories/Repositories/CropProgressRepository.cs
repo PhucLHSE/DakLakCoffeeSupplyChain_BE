@@ -35,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(p => p.Stage)
                 .Include(p => p.UpdatedByNavigation)
                     .ThenInclude(f => f.User)
-                .FirstOrDefaultAsync(p => p.ProgressId == progressId);
+                .FirstOrDefaultAsync(p => p.ProgressId == progressId && !p.IsDeleted);
         }
+
     }
 }
