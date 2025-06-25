@@ -772,6 +772,8 @@ CREATE TABLE ExpertAdvice (
         FOREIGN KEY (ExpertID) REFERENCES AgriculturalExperts(ExpertID)
 );
 
+GO
+
 -- ProcessingBatchEvaluations – Đánh giá chất lượng batch
 CREATE TABLE ProcessingBatchEvaluations (
   EvaluationID UNIQUEIDENTIFIER PRIMARY KEY,                    -- ID đánh giá
@@ -1581,7 +1583,7 @@ GO
 -- Insert bảng Contracts
 -- Giả định SellerID (BusinessManagerID) và BuyerID đã có
 DECLARE @SellerID UNIQUEIDENTIFIER = (SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001');
-DECLARE @BuyerID UNIQUEIDENTIFIER = (SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BUY-2025-0001');
+DECLARE @BuyerID UNIQUEIDENTIFIER = (SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-001');
 
 -- Tạo hợp đồng
 DECLARE @ContractID UNIQUEIDENTIFIER = NEWID();
@@ -1680,9 +1682,9 @@ INSERT INTO ContractDeliveryBatches (
     @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0001');
-DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0002');
-DECLARE @CTI_Honey UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003');
+DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0001');
+DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0001');
+DECLARE @CTI_Honey UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-003-CTR-2025-0001');
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1702,8 +1704,8 @@ INSERT INTO ContractDeliveryBatches (
     @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Washed UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0004');
-DECLARE @CTI_Culi UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0005');
+DECLARE @CTI_Washed UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-004-CTR-2025-0001');
+DECLARE @CTI_Culi UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-005-CTR-2025-0001');
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1722,7 +1724,7 @@ INSERT INTO ContractDeliveryBatches (
     @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Natural UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0006');
+DECLARE @CTI_Natural UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-006-CTR-2025-0001');
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1742,7 +1744,7 @@ INSERT INTO ContractDeliveryBatches (
     @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Typica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0007');
+DECLARE @CTI_Typica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-007-CTR-2025-0001');
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -2323,6 +2325,65 @@ VALUES
 (NEWID(), @ProgressID4, N'humidity', '11.4', N'%', GETDATE()),
 (NEWID(), @ProgressID2, N'temperature', '36.5', N'°C', GETDATE()),
 (NEWID(), @ProgressID3, N'pH', '5.2', N'', GETDATE());
+
+GO
+
+-- Insert vào bảng GeneralFarmerReports
+DECLARE @CropProgressID UNIQUEIDENTIFIER = (
+  SELECT TOP 1 ProgressID
+  FROM CropProgresses
+  WHERE CropSeasonDetailID = (
+    SELECT DetailID
+    FROM CropSeasonDetails
+    WHERE CropSeasonID = (
+      SELECT CropSeasonID
+      FROM CropSeasons
+      WHERE CropSeasonCode = 'SEASON-2025-0001'
+    )
+  )
+);
+
+DECLARE @ReportedBy UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'
+);
+
+DECLARE @ReportID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO GeneralFarmerReports (
+    ReportID, ReportCode, ReportType, CropProgressID,
+    ReportedBy, Title, Description, SeverityLevel,
+    ImageUrl, VideoUrl, ReportedAt, UpdatedAt
+)
+VALUES (
+    @ReportID, 'REP-2025-0001', 'Crop', @CropProgressID,
+    @ReportedBy, N'Cây cà phê bị vàng lá hàng loạt',
+    N'Phát hiện hiện tượng vàng lá và rụng sớm trên 20% diện tích vườn. Có thể do sâu bệnh hoặc thiếu dinh dưỡng.',
+    2,
+    'https://example.com/images/leaf-yellowing.jpg',
+    NULL,
+    GETDATE(), GETDATE()
+);
+
+GO
+
+-- Insert vào bảng ExpertAdvice
+DECLARE @ReportID UNIQUEIDENTIFIER = (
+  SELECT ReportID FROM GeneralFarmerReports WHERE ReportCode = 'REP-2025-0001'
+);
+
+DECLARE @ExpertID UNIQUEIDENTIFIER = (
+  SELECT ExpertID FROM AgriculturalExperts WHERE ExpertCode = 'EXP-2025-0001'
+);
+
+INSERT INTO ExpertAdvice (
+    ReportID, ExpertID, ResponseType, AdviceSource,
+    AdviceText, AttachedFileUrl
+)
+VALUES (
+    @ReportID, @ExpertID, 'corrective', 'human',
+    N'Hiện tượng vàng lá có thể do tuyến trùng hoặc thiếu kali. Đề xuất kiểm tra pH đất, bổ sung phân kali và dùng thuốc trừ tuyến trùng nếu cần.',
+    'https://example.com/docs/yellow-leaf-treatment.pdf'
+);
 
 GO
 
