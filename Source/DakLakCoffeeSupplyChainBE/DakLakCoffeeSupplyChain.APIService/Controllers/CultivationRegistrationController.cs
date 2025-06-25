@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -15,7 +16,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/<CultivationRegistration>
         [HttpGet]
         [EnableQuery]
-        [Authorize(Roles = "BusinessManager")]
+        [Authorize(Roles = "BusinessManager, Farmer")]
         public async Task<IActionResult> GetAllCultivationRegistrationnAsync()
         {
             var result = await _service.GetAll();
@@ -32,7 +33,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET api/<CultivationRegistration>/{registrationId}
         [HttpGet("{registrationId}")]
         [EnableQuery]
-        [Authorize(Roles = "BusinessManager")]
+        [Authorize(Roles = "BusinessManager, Farmer")]
         public async Task<IActionResult> GetById(Guid registrationId)
         {
             var result = await _service.GetById(registrationId);
@@ -44,6 +45,44 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // DELETE api/<CultivationRegistration>/{registrationId}
+        [HttpDelete("{registrationId}")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> DeleteByIdAsync(Guid registrationId)
+        {
+            var result = await _service.DeleteById(registrationId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy cultivation registration.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH: api/<CultivationRegistration>/soft-delete/{registrationId}
+        [HttpPatch("soft-delete/{registrationId}")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> SoftDeleteByIdAsync(Guid registrationId)
+        {
+            var result = await _service.SoftDeleteById(registrationId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy cultivation registration.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
         }
     }
 }
