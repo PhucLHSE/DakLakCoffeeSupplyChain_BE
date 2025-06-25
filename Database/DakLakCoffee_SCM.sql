@@ -2387,6 +2387,131 @@ VALUES (
 
 GO
 
+-- Insert vào bảng ProcessingBatchEvaluations
+DECLARE @EvalID UNIQUEIDENTIFIER = NEWID();
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @ExpertUserID UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'expert@gmail.com'
+);
+
+INSERT INTO ProcessingBatchEvaluations (
+  EvaluationID, EvaluationCode, BatchID, EvaluatedBy,
+  EvaluationResult, Comments, EvaluatedAt
+)
+VALUES (
+  @EvalID, 'EVAL-2025-0001', @BatchID, @ExpertUserID,
+  N'Pass', N'Lô hàng đạt tiêu chuẩn độ ẩm và màu sắc, phù hợp để xuất khẩu.',
+  GETDATE()
+);
+
+GO
+
+-- Insert vào bảng ProcessingBatchWastes và ProcessingWasteDisposals theo từng Progress của Batch
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @FarmerUserID UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'
+);
+
+-- 1: Thu hoạch (Harvest)
+DECLARE @ProgressID1 UNIQUEIDENTIFIER = (
+  SELECT ProgressID FROM ProcessingBatchProgresses 
+  WHERE BatchID = @BatchID AND StepIndex = 1
+);
+DECLARE @WasteID1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ProcessingBatchWastes (
+  WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
+)
+VALUES (
+  @WasteID1, 'WASTE-2025-0001', @ProgressID1, N'Trái non/hỏng', 30, N'kg',
+  N'Loại bỏ trái non, trái dập trong quá trình hái.', GETDATE(), @FarmerUserID
+);
+
+INSERT INTO ProcessingWasteDisposals (
+  DisposalID, DisposalCode, WasteID, DisposalMethod, HandledBy, Notes, IsSold, Revenue
+)
+VALUES (
+  NEWID(), 'DISP-2025-0001', @WasteID1, N'Chôn lấp', @FarmerUserID, N'Trái không dùng được, chôn tại rìa vườn.', 0, NULL
+);
+
+-- 2: Phơi (Drying)
+DECLARE @ProgressID2 UNIQUEIDENTIFIER = (
+  SELECT ProgressID FROM ProcessingBatchProgresses 
+  WHERE BatchID = @BatchID AND StepIndex = 2
+);
+DECLARE @WasteID2 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ProcessingBatchWastes (
+  WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
+)
+VALUES (
+  @WasteID2, 'WASTE-2025-0002', @ProgressID2, N'Vỏ quả khô', 80, N'kg', 
+  N'Phế phẩm từ vỏ sau khi phơi nguyên trái.', GETDATE(), @FarmerUserID
+);
+
+INSERT INTO ProcessingWasteDisposals (
+  DisposalID, DisposalCode, WasteID, DisposalMethod, HandledBy, Notes, IsSold, Revenue
+)
+VALUES (
+  NEWID(), 'DISP-2025-0002', @WasteID2, N'Sử dụng làm phân compost', 
+  @FarmerUserID, N'Trộn với trấu và ủ tại trang trại.', 0, NULL
+);
+
+-- 3: Xay vỏ (Hulling)
+DECLARE @ProgressID3 UNIQUEIDENTIFIER = (
+  SELECT ProgressID FROM ProcessingBatchProgresses 
+  WHERE BatchID = @BatchID AND StepIndex = 3
+);
+DECLARE @WasteID3 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ProcessingBatchWastes (
+  WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
+)
+VALUES (
+  @WasteID3, 'WASTE-2025-0003', @ProgressID3, N'Vỏ trấu', 50, N'kg',
+  N'Vỏ trấu sau khi xay bóc nhân.', GETDATE(), @FarmerUserID
+);
+
+INSERT INTO ProcessingWasteDisposals (
+  DisposalID, DisposalCode, WasteID, DisposalMethod, HandledBy, Notes, IsSold, Revenue
+)
+VALUES (
+  NEWID(), 'DISP-2025-0003', @WasteID3, N'Bán cho cơ sở đốt lò', 
+  @FarmerUserID, N'Thu hồi nhiệt hoặc làm chất đốt.', 1, 350000
+);
+
+-- 4: Phân loại (Grading)
+DECLARE @ProgressID4 UNIQUEIDENTIFIER = (
+  SELECT ProgressID FROM ProcessingBatchProgresses 
+  WHERE BatchID = @BatchID AND StepIndex = 4
+);
+DECLARE @WasteID4 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ProcessingBatchWastes (
+  WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
+)
+VALUES (
+  @WasteID4, 'WASTE-2025-0004', @ProgressID4, N'Hạt lép/hỏng', 20, N'kg',
+  N'Hạt không đạt tiêu chuẩn kích cỡ hoặc màu sắc.', GETDATE(), @FarmerUserID
+);
+
+INSERT INTO ProcessingWasteDisposals (
+  DisposalID, DisposalCode, WasteID, DisposalMethod, HandledBy, Notes, IsSold, Revenue
+)
+VALUES (
+  NEWID(), 'DISP-2025-0004', @WasteID4, N'Dùng làm thức ăn gia súc', 
+  @FarmerUserID, N'Trộn với cám để nuôi gà vịt.', 0, NULL
+);
+
+GO
+
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
 INSERT INTO SystemConfiguration 
