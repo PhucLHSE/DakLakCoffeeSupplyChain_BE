@@ -46,6 +46,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public DateTime UpdatedAt { get; set; }
 
-        public List<ContractItemViewDto> Items { get; set; } = new();
+        public List<ContractItemViewDto> ContractItems { get; set; } = new();
     }
 }

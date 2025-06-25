@@ -10,8 +10,11 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 {
-    public class ContractCreateDto : IValidatableObject
+    public class ContractUpdateDto : IValidatableObject
     {
+        [Required(ErrorMessage = "ContractId là bắt buộc.")]
+        public Guid ContractId { get; set; }
+
         [Required(ErrorMessage = "BuyerId là bắt buộc.")]
         public Guid BuyerId { get; set; }
 
@@ -51,7 +54,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         [MaxLength(1000, ErrorMessage = "Lý do hủy không được vượt quá 1000 ký tự.")]
         public string CancelReason { get; set; } = string.Empty;
 
-        public List<ContractItemCreateDto> ContractItems { get; set; } = new();
+        public List<ContractItemUpdateDto> ContractItems { get; set; } = new();
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -90,7 +93,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                     }
                 }
 
-                // Kiểm tra trùng CoffeeType trong danh sách ContractItems
                 var duplicatedTypes = ContractItems
                     .GroupBy(ci => ci.CoffeeTypeId)
                     .Where(ci => ci.Count() > 1)
