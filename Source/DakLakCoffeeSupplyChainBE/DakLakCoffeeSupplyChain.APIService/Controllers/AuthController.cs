@@ -3,14 +3,22 @@ using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthController(IAuthService authService) : ControllerBase
+    public class AuthController : ControllerBase
     {
-        private readonly IAuthService _authService = authService;
+        private readonly IAuthService _authService;
+        private readonly IMemoryCache _cache; // Thêm _cache vào
+
+        public AuthController(IAuthService authService, IMemoryCache cache)
+        {
+            _authService = authService;
+            _cache = cache;
+        }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
@@ -39,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/verify-email/userId={userId}&code={verificationCode}
         [HttpGet("verify-email/userId={userId}&code={verificationCode}")]
-        public async Task<IActionResult> CreateFarmerAccountAsync(Guid userId, string verificationCode)
+        public async Task<IActionResult> VerifyEmailAsync(Guid userId, string verificationCode)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,6 +61,45 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
+        }
+
+        // Phương thức gửi mã OTP qua email
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+        {
+            var result = await _authService.ForgotPasswordAsync(request);
+
+            if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
+                return Ok(result.Message);
+
+            return Conflict(result.Message); // Trả về thông báo lỗi nếu có
+        }
+
+        // Phương thức để reset mật khẩu sau khi nhập mã OTP
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromQuery] Guid userId, [FromQuery] string token, [FromBody] ResetPasswordRequestDto request)
+        {
+            var result = await _authService.ResetPasswordAsync(userId, token, request);
+
+            if (result.Status == Const.SUCCESS_RESET_PASSWORD_CODE)
+                return Ok(result.Message);
+
+            return Conflict(result.Message); // Trả về lỗi nếu mã không hợp lệ
+        }
+
+        // Phương thức xác minh mã OTP qua GET
+        [HttpGet("reset-password/userId={userId}&token={token}")]
+        public IActionResult ResetPasswordPage(Guid userId, string token)
+        {
+            // Kiểm tra mã reset có hợp lệ hay không
+            var cacheKey = $"password-reset:{userId}";
+            if (!_cache.TryGetValue(cacheKey, out string cachedToken) || cachedToken != token)
+            {
+                return NotFound(new { message = "Mã reset không hợp lệ hoặc đã hết hạn." });
+            }
+
+            // Nếu mã hợp lệ, trả về thông báo yêu cầu người dùng nhập mật khẩu mới
+            return Ok(new { message = "Mã reset hợp lệ. Vui lòng nhập mật khẩu mới." });
         }
     }
 }
