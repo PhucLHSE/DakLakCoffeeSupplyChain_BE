@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +25,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetAllProductsAsync()
         {
-            var result = await _productService.GetAll();
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _productService.GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
