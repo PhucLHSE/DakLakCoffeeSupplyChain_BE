@@ -247,5 +247,56 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+        // Phương thức gửi email với mã OTP reset mật khẩu
+        public async Task<IServiceResult> ForgotPasswordAsync(ForgotPasswordRequestDto request)
+        {
+            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
+            if (user == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Email không tồn tại.");
+
+            var resetToken = GenerateResetToken(); // Tạo mã reset
+            _cache.Set($"password-reset:{user.UserId}", resetToken, TimeSpan.FromMinutes(30)); // Lưu mã trong cache
+
+            var resetUrl = $"https://localhost:7163/api/Auth/reset-password/userId={user.UserId}&token={resetToken}"; // Đường dẫn reset mật khẩu
+
+            await _emailService.SendEmailAsync(user.Email, "Reset mật khẩu", $"Click vào đường link này để thay đổi mật khẩu của bạn: <b>{resetUrl}</b>");
+
+            return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE, "Mã OTP đã được gửi qua email.");
+        }
+
+        // Phương thức kiểm tra mã token và thay đổi mật khẩu
+        public async Task<IServiceResult> ResetPasswordAsync(Guid userId, string token, ResetPasswordRequestDto request)
+        {
+            var cacheKey = $"password-reset:{userId}";
+            if (!_cache.TryGetValue(cacheKey, out string cachedToken) || cachedToken != token)
+            {
+                return new ServiceResult(Const.FAIL_RESET_PASSWORD_CODE, "Mã reset không hợp lệ hoặc đã hết hạn.");
+            }
+
+            // Cập nhật mật khẩu mới
+            var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
+            if (user == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Người dùng không tồn tại.");
+
+            string passwordHash = _passwordHasher.Hash(request.NewPassword);
+            user.PasswordHash = passwordHash;
+            await _unitOfWork.UserAccountRepository.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Xóa mã token sau khi đổi mật khẩu
+            _cache.Remove(cacheKey);
+
+            return new ServiceResult(Const.SUCCESS_RESET_PASSWORD_CODE, "Mật khẩu đã được thay đổi.");
+        }
+
+
+        // Phương thức tạo mã reset ngẫu nhiên
+        public static string GenerateResetToken(int length = 6)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
     }
 }
