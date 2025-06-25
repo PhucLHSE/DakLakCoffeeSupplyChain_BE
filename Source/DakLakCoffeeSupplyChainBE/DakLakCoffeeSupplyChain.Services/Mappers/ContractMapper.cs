@@ -64,7 +64,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CancelReason = contract.CancelReason ?? string.Empty,
                 CreatedAt = contract.CreatedAt,
                 UpdatedAt = contract.UpdatedAt,
-                Items = contract.ContractItems
+                ContractItems = contract.ContractItems
                     .Where(item => !item.IsDeleted)
                     .Select(item => new ContractItemViewDto
                     {
@@ -121,6 +121,25 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
 
             return contract;
+        }
+
+        // Mapper ContractUpdateDto
+        public static void MapToUpdateContract(this Contract contract, ContractUpdateDto dto)
+        {
+            // Cập nhật thông tin contract chính
+            contract.BuyerId = dto.BuyerId;
+            contract.ContractNumber = dto.ContractNumber;
+            contract.ContractTitle = dto.ContractTitle;
+            contract.ContractFileUrl = dto.ContractFileUrl;
+            contract.DeliveryRounds = dto.DeliveryRounds;
+            contract.TotalQuantity = dto.TotalQuantity;
+            contract.TotalValue = dto.TotalValue;
+            contract.StartDate = dto.StartDate ?? default;
+            contract.EndDate = dto.EndDate ?? default;
+            contract.SignedAt = dto.SignedAt;
+            contract.Status = dto.Status.ToString();
+            contract.CancelReason = dto.CancelReason;
+            contract.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

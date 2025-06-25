@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -92,6 +93,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PUT api/<ContractsController>/{contractId}
+        [HttpPut("{contractId}")]
+        public async Task<IActionResult> UpdateContractAsync(Guid contractId, [FromBody] ContractUpdateDto contractUpdateDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (contractId != contractUpdateDto.ContractId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _contractService.Update(contractUpdateDto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy hợp đồng.");
 
             return StatusCode(500, result.Message);
         }

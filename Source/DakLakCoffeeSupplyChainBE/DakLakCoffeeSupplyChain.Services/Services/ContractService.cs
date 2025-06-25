@@ -12,6 +12,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -263,6 +264,189 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(ContractUpdateDto contractDto)
+        {
+            try
+            {
+                // Tìm contract theo ID
+                var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                    predicate: c =>
+                       c.ContractId == contractDto.ContractId &&
+                       !c.IsDeleted,
+                    include: query => query
+                       .Include(c => c.Buyer)
+                       .Include(c => c.Seller)
+                          .ThenInclude(s => s.User)
+                       .Include(c => c.ContractItems)
+                          .ThenInclude(ci => ci.CoffeeType),
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy
+                if (contract == null || contract.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm hợp đồng cần cập nhật."
+                    );
+                }
+
+                // Kiểm tra ContractNumber có bị trùng (nếu có thay đổi)
+                if (!string.Equals(contract.ContractNumber, contractDto.ContractNumber, StringComparison.OrdinalIgnoreCase))
+                {
+                    bool isDuplicate = await _unitOfWork.ContractRepository.AnyAsync(
+                        predicate: c =>
+                            !c.IsDeleted &&
+                            c.SellerId == contract.SellerId &&
+                            c.ContractNumber == contractDto.ContractNumber &&
+                            c.ContractId != contractDto.ContractId
+                    );
+
+                    if (isDuplicate)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Số hợp đồng [{contractDto.ContractNumber}] đã tồn tại trong hệ thống."
+                        );
+                    }
+                }
+
+                // Tính lại tổng Quantity và Value từ các ContractItemDto
+                double totalItemQuantity = contractDto.ContractItems
+                    .Sum(i => i.Quantity ?? 0);
+
+                double totalItemValue = contractDto.ContractItems
+                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
+
+                if (contractDto.TotalQuantity.HasValue && totalItemQuantity > contractDto.TotalQuantity.Value)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Tổng khối lượng từ các dòng hợp đồng ({totalItemQuantity} kg) vượt quá tổng khối lượng hợp đồng đã khai báo ({contractDto.TotalQuantity} kg)."
+                    );
+                }
+
+                if (contractDto.TotalValue.HasValue && totalItemValue > contractDto.TotalValue.Value)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Tổng trị giá từ các dòng hợp đồng ({totalItemValue:N0} VND) vượt quá tổng giá trị hợp đồng đã khai báo ({contractDto.TotalValue:N0} VND)."
+                    );
+                }
+
+                //Map DTO to Entity
+                contract.MapToUpdateContract(contractDto);
+
+                // Đồng bộ lại ContractItems
+                var now = DateHelper.NowVietnamTime();
+                var dtoItemIds = contractDto.ContractItems.Select(i => i.ContractItemId).ToHashSet();
+
+                // Xoá mềm những cái không còn
+                foreach (var oldItem in contract.ContractItems)
+                {
+                    if (!dtoItemIds.Contains(oldItem.ContractItemId))
+                    {
+                        oldItem.IsDeleted = true;
+                        oldItem.UpdatedAt = now;
+                        await _unitOfWork.ContractItemRepository.UpdateAsync(oldItem);
+                    }
+                }
+
+                // Thêm mới hoặc cập nhật
+                foreach (var itemDto in contractDto.ContractItems)
+                {
+                    if (itemDto.ContractItemId != Guid.Empty)
+                    {
+                        var existingItem = contract.ContractItems
+                            .FirstOrDefault(i => i.ContractItemId == itemDto.ContractItemId);
+
+                        if (existingItem != null)
+                        {
+                            existingItem.CoffeeTypeId = itemDto.CoffeeTypeId;
+                            existingItem.Quantity = itemDto.Quantity;
+                            existingItem.UnitPrice = itemDto.UnitPrice;
+                            existingItem.DiscountAmount = itemDto.DiscountAmount;
+                            existingItem.Note = itemDto.Note;
+                            existingItem.UpdatedAt = now;
+                            existingItem.IsDeleted = false;
+
+                            await _unitOfWork.ContractItemRepository.UpdateAsync(existingItem);
+                        }
+                    }
+                    else
+                    {
+                        var newItem = new ContractItem
+                        {
+                            ContractItemId = Guid.NewGuid(),
+                            ContractItemCode = $"CTI-{contract.ContractItems.Count + 1:D3}-{contract.ContractCode}",
+                            CoffeeTypeId = itemDto.CoffeeTypeId,
+                            Quantity = itemDto.Quantity,
+                            UnitPrice = itemDto.UnitPrice,
+                            DiscountAmount = itemDto.DiscountAmount,
+                            Note = itemDto.Note,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                            IsDeleted = false,
+                            ContractId = contract.ContractId
+                        };
+
+                        await _unitOfWork.ContractItemRepository.CreateAsync(newItem);
+                    }
+                }
+
+                // Cập nhật contract ở repository
+                await _unitOfWork.ContractRepository.UpdateAsync(contract);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại contract sau update để trả DTO
+                    var updatedContract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                        predicate: c => c.ContractId == contractDto.ContractId,
+                        include: query => query
+                            .Include(c => c.Buyer)
+                            .Include(c => c.Seller)
+                               .ThenInclude(s => s.User)
+                            .Include(c => c.ContractItems.Where(ci => !ci.IsDeleted))
+                               .ThenInclude(ci => ci.CoffeeType),
+                        asNoTracking: true
+                    );
+
+                    if (updatedContract != null)
+                    {
+                        var responseDto = updatedContract.MapToContractViewDetailDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }
