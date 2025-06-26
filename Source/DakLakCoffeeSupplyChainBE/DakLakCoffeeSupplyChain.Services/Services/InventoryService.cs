@@ -6,6 +6,7 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -66,6 +67,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             };
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết tồn kho thành công.", dto);
+        }
+        public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto)
+        {
+            var existing = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
+            if (existing != null)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tồn tại dữ liệu trùng lặp: đã có tồn kho cho Warehouse + Batch này.");
+            }
+
+            var newInventory = new Inventory
+            {
+                InventoryId = Guid.NewGuid(),
+                InventoryCode = "INV-" + DateTime.Now.ToString("yyMMddHHmmss"),
+                WarehouseId = dto.WarehouseId,
+                BatchId = dto.BatchId,
+                Quantity = dto.Quantity,
+                Unit = dto.Unit,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.Inventories.CreateAsync(newInventory);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
+        }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid id)
+        {
+            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            if (entity == null)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+
+            entity.IsDeleted = true;
+            entity.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Inventories.Update(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm tồn kho thành công.");
+        }
+
+        public async Task<IServiceResult> HardDeleteAsync(Guid id)
+        {
+            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            if (entity == null)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+
+            _unitOfWork.Inventories.RemoveAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá thật tồn kho thành công.");
         }
     }
 }
