@@ -20,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IContractRepository? contractRepository;
         private IContractItemRepository? contractItemRepository;
         private IContractDeliveryBatchRepository? contractDeliveryBatchRepository;
+        private IContractDeliveryItemRepository? contractDeliveryItemRepository;
         private IProductRepository? productRepository;
         private ISystemConfigurationRepository? systemConfigurationRepository;
         private IFarmerRepository? farmerRepository;
@@ -110,6 +111,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return contractDeliveryBatchRepository ??= new ContractDeliveryBatchRepository(context);
+            }
+        }
+
+        public IContractDeliveryItemRepository ContractDeliveryItemRepository
+        {
+            get
+            {
+                return contractDeliveryItemRepository ??= new ContractDeliveryItemRepository(context);
             }
         }
 
