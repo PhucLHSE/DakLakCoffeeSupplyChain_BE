@@ -55,6 +55,7 @@ builder.Services.AddScoped<ICultivationRegistrationService, CultivationRegistrat
 builder.Services.AddScoped<IProcessingParameterService, ProcessingParameterService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IProcessingBatchService, ProcessingBatchService>();
+builder.Services.AddScoped<IProcessingBatchProgressService, ProcessingBatchProgressService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
