@@ -17,7 +17,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 
         public DateTime RegisteredAt { get; set; }
 
-        public double? WantedPrice { get; set; }
+        public double? TotalWantedPrice { get; set; }
 
         public CultivationRegistrationStatus Status { get; set; }
 

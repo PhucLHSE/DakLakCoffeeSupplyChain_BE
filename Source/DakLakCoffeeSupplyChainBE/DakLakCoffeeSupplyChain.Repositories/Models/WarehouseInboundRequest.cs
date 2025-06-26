@@ -17,7 +17,7 @@ public partial class WarehouseInboundRequest
 
     public Guid FarmerId { get; set; }
 
-    public Guid BusinessStaffId { get; set; }
+    public Guid? BusinessStaffId { get; set; }
 
     public double? RequestedQuantity { get; set; }
 

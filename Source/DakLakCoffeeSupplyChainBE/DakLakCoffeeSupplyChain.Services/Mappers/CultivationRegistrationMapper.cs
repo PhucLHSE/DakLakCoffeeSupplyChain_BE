@@ -19,7 +19,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = cultivation.Farmer.User.Name,
                 RegisteredArea = cultivation.RegisteredArea,
                 RegisteredAt = cultivation.RegisteredAt,
-                WantedPrice = cultivation.WantedPrice,
+                TotalWantedPrice = cultivation.TotalWantedPrice,
             };
         }
 
@@ -35,7 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = entity.Farmer.User.Name,
                 RegisteredArea = entity.RegisteredArea,
                 RegisteredAt = entity.RegisteredAt,
-                WantedPrice = entity.WantedPrice,
+                TotalWantedPrice = entity.TotalWantedPrice,
                 Status = EnumHelper.ParseEnumFromString(entity.Status, CultivationRegistrationStatus.Unknown),
                 Note = entity.Note,
                 CultivationRegistrationDetails = entity.CultivationRegistrationsDetails?

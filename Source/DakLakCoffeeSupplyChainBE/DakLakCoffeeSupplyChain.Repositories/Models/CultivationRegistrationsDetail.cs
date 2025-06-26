@@ -19,6 +19,8 @@ public partial class CultivationRegistrationsDetail
 
     public DateOnly? ExpectedHarvestEnd { get; set; }
 
+    public double? WantedPrice { get; set; }
+
     public string Status { get; set; }
 
     public string Note { get; set; }

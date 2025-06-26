@@ -11,6 +11,8 @@ public partial class FarmingCommitment
 
     public string CommitmentCode { get; set; }
 
+    public string CommitmentName { get; set; }
+
     public Guid RegistrationDetailId { get; set; }
 
     public Guid PlanDetailId { get; set; }
