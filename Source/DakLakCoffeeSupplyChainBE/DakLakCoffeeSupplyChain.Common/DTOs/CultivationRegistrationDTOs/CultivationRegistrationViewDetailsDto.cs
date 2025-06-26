@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         public Guid PlanDetailId { get; set; }
 
         public double? EstimatedYield { get; set; }
+        public double? WantedPrice { get; set; }
 
         public DateOnly? ExpectedHarvestStart { get; set; }
 

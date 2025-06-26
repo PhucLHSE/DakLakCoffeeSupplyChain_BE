@@ -1,6 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -81,6 +81,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // POST api/<CultivationRegistration>
+        [HttpPost]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> CreateCultivationRegistrationAsync([FromBody] CultivationRegistrationCreateViewDto registrationId)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _service.Create(registrationId);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { registrationId = ((CultivationRegistrationViewSumaryDto)result.Data).RegistrationId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
         }

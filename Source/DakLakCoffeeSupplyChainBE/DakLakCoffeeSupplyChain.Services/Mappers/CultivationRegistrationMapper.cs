@@ -46,11 +46,40 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     RegistrationId = c.RegistrationId,
                     PlanDetailId = c.PlanDetailId,
                     EstimatedYield = c.EstimatedYield,
+                    WantedPrice = c.WantedPrice,
                     ExpectedHarvestStart = c.ExpectedHarvestStart,
                     ExpectedHarvestEnd = c.ExpectedHarvestEnd,
                     Status = EnumHelper.ParseEnumFromString(c.Status, CultivationRegistrationStatus.Unknown),
                     Note = c.Note
                 }).ToList() ?? []
+            };
+        }
+
+        // Mapper CultivationRegistrationCreateDto
+        public static CultivationRegistration MapToCultivationRegistrationCreateDto(this CultivationRegistrationCreateViewDto dto, string registrationCode)
+        {
+            return new CultivationRegistration
+            {
+                RegistrationId = Guid.NewGuid(),
+                RegistrationCode = registrationCode,
+                PlanId = dto.PlanId,
+                FarmerId = dto.FarmerId,
+                RegisteredArea = dto.RegisteredArea,
+                TotalWantedPrice = 0, // Vì sql không có khai báo mặc định nên buộc phải khai báo ở đây
+                Status = CultivationRegistrationStatus.Pending.ToString(), // Mặc định gán vào luôn, farmer không có lựa chọn
+                Note = dto.Note,
+                CultivationRegistrationsDetails = [.. dto.CultivationRegistrationDetailsCreateViewDto
+                .Select(detail => new CultivationRegistrationsDetail
+                {
+                    CultivationRegistrationDetailId = Guid.NewGuid(),
+                    PlanDetailId = detail.PlanDetailId,
+                    EstimatedYield = detail.EstimatedYield,
+                    WantedPrice = detail.WantedPrice,
+                    ExpectedHarvestStart = detail.ExpectedHarvestStart,
+                    ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
+                    Note = detail.Note,
+                    Status = CultivationRegistrationStatus.Pending.ToString()
+                })]
             };
         }
     }

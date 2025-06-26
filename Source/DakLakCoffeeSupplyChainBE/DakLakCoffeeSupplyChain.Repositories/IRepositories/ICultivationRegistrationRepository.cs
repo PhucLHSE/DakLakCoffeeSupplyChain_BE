@@ -8,6 +8,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<CultivationRegistration?> GetByIdAsync(Guid id);
 
         Task<CropSeasonDetail?> GetCropSeasonDetailByIdAsync(Guid cropSeasonDetailId);
+        Task<int> CountCultivationRegistrationsInYearAsync(int year);
 
     }
 }
