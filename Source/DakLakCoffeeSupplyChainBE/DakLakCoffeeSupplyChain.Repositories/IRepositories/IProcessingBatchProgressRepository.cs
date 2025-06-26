@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         public interface IProcessingBatchProgressRepository : IGenericRepository<ProcessingBatchProgress>
         {
+            Task<List<ProcessingBatchProgress>> GetAllWithIncludesAsync();
         }
     }
 }
