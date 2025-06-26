@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.IServices;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs;
+using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -36,6 +37,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _inventoryService.GetByIdAsync(id);
+            return StatusCode(result.Status, result);
+        }
+        [HttpPost]
+        [Authorize(Roles = "BusinessStaff,Admin")]
+        public async Task<IActionResult> Create([FromBody] InventoryCreateDto dto)
+        {
+            var result = await _inventoryService.CreateAsync(dto);
             return StatusCode(result.Status, result);
         }
     }
