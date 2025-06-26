@@ -9,7 +9,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class CropSeasonsController : ControllerBase
     {
         private readonly ICropSeasonService _cropSeasonService;
