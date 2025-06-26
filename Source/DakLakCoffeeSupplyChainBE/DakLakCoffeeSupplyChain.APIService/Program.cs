@@ -55,6 +55,7 @@ builder.Services.AddScoped<IGeneralFarmerReportService, GeneralFarmerReportServi
 builder.Services.AddScoped<ICultivationRegistrationService, CultivationRegistrationService>();
 builder.Services.AddScoped<IProcessingParameterService, ProcessingParameterService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IProcessingBatchService, ProcessingBatchService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
