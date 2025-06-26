@@ -349,6 +349,19 @@ CREATE TABLE ContractDeliveryItems (
 
 GO
 
+-- Danh mục phương pháp sơ chế (natural, washed,...)
+CREATE TABLE ProcessingMethods (
+  MethodID INT PRIMARY KEY IDENTITY(1,1),                      -- ID nội bộ
+  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'natural', 'washed'...
+  Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
+  Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
+  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
+);
+
+GO
+
 -- ProcurementPlans – Bảng kế hoạch thu mua tổng quan
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
@@ -378,18 +391,19 @@ CREATE TABLE ProcurementPlansDetails (
 	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-A001
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
-    CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
+	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
+    --CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (kg)
-    BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
-    BeanColor NVARCHAR(50),                                                            -- Màu hạt
-    MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
-    DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
+    --BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
+    --BeanColor NVARCHAR(50),                                                            -- Màu hạt
+    --MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
+    --DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
-    BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
+    --BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
 	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
     Status NVARCHAR(50) DEFAULT 'active',                                              -- Trạng thái: active, closed, disabled
@@ -405,7 +419,10 @@ CREATE TABLE ProcurementPlansDetails (
         FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID),
 
 	CONSTRAINT FK_ProcurementPlansDetails_ContractItemID
-        FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID)
+        FOREIGN KEY (ContractItemID) REFERENCES ContractItems(ContractItemID),
+
+	CONSTRAINT FK_ProcurementPlansDetails_ProcessMethodID
+        FOREIGN KEY (ProcessMethodID) REFERENCES ProcessingMethods(MethodID)
 );
 
 GO
@@ -418,7 +435,7 @@ CREATE TABLE CultivationRegistrations (
     FarmerID UNIQUEIDENTIFIER NOT NULL,                            -- Nông dân nộp đơn
     RegisteredArea FLOAT,                                          -- Diện tích đăng ký (hecta)
     RegisteredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,      -- Thời điểm nộp đơn
-    WantedPrice FLOAT,                                             -- Mức giá mong muốn
+    TotalWantedPrice FLOAT,                                        -- Tổng mức giá mong muốn
     Status NVARCHAR(50) DEFAULT 'pending',                         -- Trạng thái: pending, approved,...
     Note NVARCHAR(MAX),                                            -- Ghi chú từ farmer
     SystemNote NVARCHAR(MAX),                                      -- Ghi chú từ hệ thống
@@ -444,6 +461,7 @@ CREATE TABLE CultivationRegistrationsDetail (
     EstimatedYield FLOAT,                                                         -- Sản lượng ước tính (kg)
     ExpectedHarvestStart DATE,                                                    -- Ngày bắt đầu thu hoạch
     ExpectedHarvestEnd DATE,                                                      -- Ngày kết thúc thu hoạch
+	WantedPrice FLOAT,															  -- Mức giá mong muốn
     Status NVARCHAR(50) DEFAULT 'pending',                                        -- pending, approved,...
     Note NVARCHAR(MAX),                                                           -- Ghi chú từ farmer
     SystemNote NVARCHAR(MAX),                                                     -- Ghi chú hệ thống
@@ -470,6 +488,7 @@ GO
 CREATE TABLE FarmingCommitments (
     CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
 	CommitmentCode VARCHAR(20) UNIQUE,                                 -- COMMIT-2025-0038
+	CommitmentName VARCHAR(255),									   -- Tên của bảng cam kết
     RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
@@ -603,19 +622,6 @@ CREATE TABLE CropProgresses (
 
     CONSTRAINT FK_CropProgresses_StageID 
         FOREIGN KEY (StageID) REFERENCES CropStages(StageID)
-);
-
-GO
-
--- Danh mục phương pháp sơ chế (natural, washed,...)
-CREATE TABLE ProcessingMethods (
-  MethodID INT PRIMARY KEY IDENTITY(1,1),                      -- ID nội bộ
-  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'natural', 'washed'...
-  Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
-  Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
-  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
-  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối (update thủ công khi chỉnh sửa)
-  IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 );
 
 GO
@@ -933,7 +939,7 @@ CREATE TABLE WarehouseInboundRequests (
   InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0008
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Gắn với mẻ sơ chế
   FarmerID UNIQUEIDENTIFIER NOT NULL,                               -- Người gửi yêu cầu (Farmer)
-  BusinessStaffID UNIQUEIDENTIFIER NOT NULL,                        -- Người đại diện doanh nghiệp nhận
+  BusinessStaffID UNIQUEIDENTIFIER NULL,							-- Người đại diện doanh nghiệp nhận
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
@@ -1756,6 +1762,23 @@ INSERT INTO ContractDeliveryItems (
 
 GO
 
+-- Insert vào bảng ProcessingMethods
+INSERT INTO ProcessingMethods (MethodCode, Name, Description)
+VALUES 
+-- Phơi tự nhiên (natural/dry)
+('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
+-- Sơ chế ướt (washed)
+('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
+-- Sơ chế mật ong (honey)
+('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
+-- Semi-washed (bán ướt)
+('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
+-- Carbonic maceration (hiếm)
+('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
+
+
+GO
+
 -- Insert vào bảng ProcurementPlans và ProcurementPlansDetails
 -- Lấy ManagerID (nếu chưa có)
 DECLARE @BMID UNIQUEIDENTIFIER = (
@@ -1805,36 +1828,41 @@ DECLARE @CTI_Honey UNIQUEIDENTIFIER = (
   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003'
 );
 
+DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
+DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
+DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
+DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
+DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+
 -- Chi tiết: Arabica 5,000 kg
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, BeanSize, BeanColor, MoistureContent, DefectRate,
-  MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage
 )
 VALUES (
-  'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, N'Arabica', 5000, N'Krông Bông',
-  100, N'16–18', N'Nâu sáng', 12.5, 5, 75, 95,
-  N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0
+  'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, @Washed, 5000, N'Krông Bông',
+  100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0
 );
 
 -- Chi tiết: Robusta 12,500 kg
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-  'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, N'Robusta', 12500, N'Ea Kar',
-  150, N'18+', N'Nâu sẫm', 13.0, 6, 50, 65, N'Robusta thông thường – giao lần 1'
+  'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, @Natural, 12500, N'Ea Kar',
+  150, 50, 65, N'Robusta thông thường – giao lần 1'
 );
+
 
 -- Chi tiết: Robusta Honey 2,500 kg
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-  'PLD-2025-C003', @PlanID, @CoffeeID_Honey, N'Robusta', 2500, N'Cư M’gar',
-  100, N'18+', N'Nâu đậm', 12.0, 4, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên'
+  'PLD-2025-C003', @PlanID, @CoffeeID_Honey, @Honey, 2500, N'Cư M’gar',
+  100, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên'
 );
 
 GO
@@ -1899,44 +1927,50 @@ DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0008'
 );
 
+DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
+DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
+DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
+DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
+DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
 )
 VALUES (
-  'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, N'Arabica', 3000, N'Krông Bông',
-  100, N'16–18', N'Nâu sáng', 12.5, 5, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
+  'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, @Washed, 3000, N'Krông Bông',
+  100, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
 );
 
 -- Chi tiết 2: Typica
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-  'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, N'Typica', 3000, N'M''Đrắk',
-  150, N'16+', N'Nâu vàng', 11.5, 3, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025'
+  'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, @SemiWashed, 3000, N'M''Đrắk',
+  150, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025'
 );
 
 -- Chi tiết 3: Robusta Honey
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-  'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, N'Robusta', 7000, N'Cư M’gar',
-  200, N'18+', N'Nâu sẫm', 12.0, 4, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi'
+  'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, @Honey, 7000, N'Cư M’gar',
+  200, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi'
 );
 
 -- Chi tiết 4: Robusta TR9
 INSERT INTO ProcurementPlansDetails (
-  PlanDetailCode, PlanID, CoffeeTypeID, CropType, TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
-  BeanSize, BeanColor, MoistureContent, DefectRate, MinPriceRange, MaxPriceRange, Note
+  PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
 )
 VALUES (
-  'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, N'Robusta', 5000, N'Ea Kar',
-  300, N'17–18', N'Nâu đen', 13.0, 6, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
+  'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, @Natural, 5000, N'Ea Kar',
+  300, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
 );
 
 GO
@@ -1950,7 +1984,7 @@ DECLARE @PlanID UNIQUEIDENTIFIER = (SELECT PlanID FROM ProcurementPlans WHERE Pl
 DECLARE @RegistrationID UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO CultivationRegistrations (
-    RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, WantedPrice, Note
+    RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, TotalWantedPrice, Note
 )
 VALUES (
     @RegistrationID, 'REG-2025-0001', @PlanID, @FarmerID, 1.8, 95, N'Đăng ký trồng cà phê Arabica với kỹ thuật tưới nhỏ giọt'
@@ -1972,12 +2006,12 @@ DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO CultivationRegistrationsDetail (
     CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
-    ExpectedHarvestStart, ExpectedHarvestEnd, Note
+    ExpectedHarvestStart, ExpectedHarvestEnd, Note, WantedPrice
 )
 VALUES (
     @RegistrationDetailID, @RegistrationID, @PlanDetailID, 2200,
     '2025-11-01', '2026-01-15',
-    N'Dự kiến sử dụng phân bón hữu cơ và công nghệ AI kiểm tra sâu bệnh'
+    N'Dự kiến sử dụng phân bón hữu cơ và công nghệ AI kiểm tra sâu bệnh', 95
 );
 
 GO
@@ -2138,22 +2172,6 @@ VALUES (
     N'Đã hoàn tất thu hoạch toàn bộ diện tích Arabica.',
     '2026-01-18', NULL, NULL, N'Chuyển mẻ sơ chế về khu vực phơi.', 5
 );
-
-GO
-
--- Insert vào bảng ProcessingMethods
-INSERT INTO ProcessingMethods (MethodCode, Name, Description)
-VALUES 
--- Phơi tự nhiên (natural/dry)
-('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
--- Sơ chế ướt (washed)
-('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
--- Sơ chế mật ong (honey)
-('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
--- Semi-washed (bán ướt)
-('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
--- Carbonic maceration (hiếm)
-('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
 
 GO
 
