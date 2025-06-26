@@ -114,7 +114,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (entity == null)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
 
-            _unitOfWork.Inventories.RemoveAsync(entity);
+            await _unitOfWork.Inventories.RemoveAsync(entity);
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá thật tồn kho thành công.");

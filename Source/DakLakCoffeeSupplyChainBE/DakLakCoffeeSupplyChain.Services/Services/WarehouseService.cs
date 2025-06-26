@@ -86,9 +86,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            var hasDependencies = await _unitOfWork.Warehouses.HasDependenciesAsync(warehouseId);
-            if (hasDependencies)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Kho đang được sử dụng, không thể xoá.");
+            // Check tồn kho còn hoạt động
+            var inventories = await _unitOfWork.Inventories
+                .GetAllAsync(i => i.WarehouseId == warehouseId && !i.IsDeleted);
+
+            if (inventories.Any())
+            {
+                var inventoryCodes = inventories.Select(i => i.InventoryCode).ToList();
+                var message = $"Không thể xoá mềm kho vì đang có tồn kho liên kết: {string.Join(", ", inventoryCodes)}";
+
+                return new ServiceResult(Const.FAIL_DELETE_CODE, message);
+            }
 
             warehouse.IsDeleted = true;
             warehouse.UpdatedAt = DateTime.UtcNow;
@@ -96,8 +104,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork.Warehouses.Update(warehouse);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá kho thành công.");
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm kho thành công.");
         }
+
         public async Task<IServiceResult> GetByIdAsync(Guid id)
         {
             var warehouse = await _unitOfWork.Warehouses.GetByIdWithManagerAsync(id);
@@ -107,7 +116,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = warehouse.ToDetailDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }
+        public async Task<IServiceResult> HardDeleteAsync(Guid warehouseId)
+        {
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            if (warehouse == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
+            // Check tồn kho còn hoạt động
+            var inventories = await _unitOfWork.Inventories
+                .GetAllAsync(i => i.WarehouseId == warehouseId);
+
+            if (inventories.Any())
+            {
+                var inventoryCodes = inventories.Select(i => i.InventoryCode).ToList();
+                var message = $"Không thể xoá vĩnh viễn kho vì đang có tồn kho liên kết: {string.Join(", ", inventoryCodes)}";
+
+                return new ServiceResult(Const.FAIL_DELETE_CODE, message);
+            }
+
+            await _unitOfWork.Warehouses.RemoveAsync(warehouse);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa kho vĩnh viễn thành công.");
+        }
 
 
     }

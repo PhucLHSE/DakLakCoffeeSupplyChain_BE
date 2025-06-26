@@ -38,7 +38,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(result.Status, result);
         }
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _warehouseService.DeleteAsync(id);
@@ -49,6 +49,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _warehouseService.GetByIdAsync(id);
+            return StatusCode(result.Status, result);
+        }
+        [HttpDelete("hard-delete/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> HardDelete(Guid id)
+        {
+            var result = await _warehouseService.HardDeleteAsync(id);
             return StatusCode(result.Status, result);
         }
 
