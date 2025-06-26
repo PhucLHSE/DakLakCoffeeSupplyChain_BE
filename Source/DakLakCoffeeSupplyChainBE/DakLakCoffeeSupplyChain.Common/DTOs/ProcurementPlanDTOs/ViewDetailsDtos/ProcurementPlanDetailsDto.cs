@@ -18,8 +18,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public Guid PlanId { get; set; }
 
         public CoffeeTypePlanDetailsViewDto? CoffeeType { get; set; }
-
-        //public string CropType { get; set; } = string.Empty; Có khả năng field này bị thừa, cần loại bỏ
+        public int ProcessingMethodId { get; set; }
 
         public double? TargetQuantity { get; set; }
 
@@ -27,21 +26,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         public double? MinimumRegistrationQuantity { get; set; }
 
-        public string BeanSize { get; set; } = string.Empty;
-
-        public string BeanColor { get; set; } = string.Empty;
-
-        public double? MoistureContent { get; set; }
-
-        public double? DefectRate { get; set; }
-
         public double? MinPriceRange { get; set; }
 
         public double? MaxPriceRange { get; set; }
 
         public string Note { get; set; } = string.Empty;
-
-        public string BeanColorImageUrl { get; set; } = string.Empty;
 
         public double? ProgressPercentage { get; set; }
 

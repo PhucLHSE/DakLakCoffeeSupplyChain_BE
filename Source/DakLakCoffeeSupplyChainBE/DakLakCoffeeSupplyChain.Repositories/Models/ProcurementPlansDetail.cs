@@ -15,7 +15,7 @@ public partial class ProcurementPlansDetail
 
     public Guid CoffeeTypeId { get; set; }
 
-    public string CropType { get; set; }
+    public int ProcessMethodId { get; set; }
 
     public double? TargetQuantity { get; set; }
 
@@ -23,21 +23,11 @@ public partial class ProcurementPlansDetail
 
     public double? MinimumRegistrationQuantity { get; set; }
 
-    public string BeanSize { get; set; }
-
-    public string BeanColor { get; set; }
-
-    public double? MoistureContent { get; set; }
-
-    public double? DefectRate { get; set; }
-
     public double? MinPriceRange { get; set; }
 
     public double? MaxPriceRange { get; set; }
 
     public string Note { get; set; }
-
-    public string BeanColorImageUrl { get; set; }
 
     public double? ProgressPercentage { get; set; }
 
@@ -60,4 +50,6 @@ public partial class ProcurementPlansDetail
     public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
 
     public virtual ProcurementPlan Plan { get; set; }
+
+    public virtual ProcessingMethod ProcessMethod { get; set; }
 }

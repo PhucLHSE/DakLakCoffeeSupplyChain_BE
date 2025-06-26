@@ -15,7 +15,7 @@
 
         public DateTime RegisteredAt { get; set; }
 
-        public double? WantedPrice { get; set; }
+        public double? TotalWantedPrice { get; set; }
 
     }
 }
