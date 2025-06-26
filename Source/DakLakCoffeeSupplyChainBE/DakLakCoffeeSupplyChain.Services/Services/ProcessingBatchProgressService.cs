@@ -44,6 +44,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid progressId)
+        {
+            var entity = await _unitOfWork.ProcessingBatchProgressRepository
+                .GetByIdAsync(progressId); 
 
+            if (entity == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy tiến trình xử lý", null);
+
+            var dto = entity.MapToProcessingBatchProgressDetailDto();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Thành công", dto);
+        }
     }
 }
