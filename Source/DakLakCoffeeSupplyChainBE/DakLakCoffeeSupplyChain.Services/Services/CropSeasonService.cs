@@ -1,12 +1,13 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using System;
 using System.Collections.Generic;
@@ -197,15 +198,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId)
         {
-            var existing = await _unitOfWork.CropSeasonRepository.GetByIdAsync(cropSeasonId);
-            if (existing == null || existing.IsDeleted)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy hoặc mùa vụ đã bị xoá.");
+            try
+            {
+                var existing = await _unitOfWork.CropSeasonRepository.GetByIdAsync(cropSeasonId);
 
-            _unitOfWork.CropSeasonRepository.SoftDelete(existing);
-            await _unitOfWork.SaveChangesAsync();
+                if (existing == null || existing.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy hoặc mùa vụ đã bị xoá."
+                    );
+                }
 
-            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.");
+                // Đánh dấu xoá mềm
+                existing.IsDeleted = true;
+                existing.UpdatedAt = DateHelper.NowVietnamTime();
+
+                await _unitOfWork.CropSeasonRepository.UpdateAsync(existing);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return new ServiceResult(
+                        Const.SUCCESS_DELETE_CODE,
+                        "Xoá mềm mùa vụ thành công."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Xoá mềm mùa vụ thất bại."
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi hệ thống khi xoá mềm mùa vụ: {ex.Message}"
+                );
+            }
         }
+
 
     }
 }

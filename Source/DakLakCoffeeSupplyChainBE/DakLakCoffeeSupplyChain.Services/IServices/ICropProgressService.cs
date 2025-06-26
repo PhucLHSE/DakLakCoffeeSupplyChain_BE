@@ -10,6 +10,12 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid id);
 
         Task<IServiceResult> Create(CropProgressCreateDto dto);
+
         Task<IServiceResult> Update(CropProgressUpdateDto dto);
+
+        Task<IServiceResult> SoftDeleteById(Guid progressId);
+            
+        Task<IServiceResult> DeleteById(Guid progressId);
+
     }
 }

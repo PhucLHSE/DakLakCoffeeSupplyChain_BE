@@ -84,6 +84,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return NotFound(result.Message);
         }
 
+        [HttpPatch("soft-delete/{progressId}")]
+        public async Task<IActionResult> SoftDeleteById(Guid progressId)
+        {
+            var result = await _cropProgressService.SoftDeleteById(progressId);
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            return NotFound(result.Message);
+        }
+
+
+        [HttpDelete("hard/{progressId}")]
+        public async Task<IActionResult> HardDelete(Guid progressId)
+        {
+            var result = await _cropProgressService.DeleteById(progressId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            return NotFound(result.Message);
+        }
 
     }
 }

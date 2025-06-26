@@ -15,9 +15,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Update(CropStageUpdateDto dto);
 
-        Task<IServiceResult> Delete(int stageId);
+        Task<IServiceResult> DeleteById(int stageId);
+        Task<IServiceResult> SoftDeleteById(int stageId);
 
-        Task<IServiceResult> SoftDelete(int stageId);
 
 
     }

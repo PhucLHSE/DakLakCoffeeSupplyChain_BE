@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDto;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -165,55 +166,96 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Delete(int stageId)
+        public async Task<IServiceResult> DeleteById(int stageId)
         {
             try
             {
+                // Tìm giai đoạn theo ID
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
 
+                // Không tìm thấy
                 if (stage == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Giai đoạn không tồn tại hoặc đã bị xóa.");
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
 
-                await _unitOfWork.CropStageRepository.DeleteCropCropStageByStageIdAsync(stageId);
+                // Xóa giai đoạn
+                await _unitOfWork.CropStageRepository.RemoveAsync(stage);
 
+                // Lưu thay đổi
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa stage giai đoạn thành công.");
+                {
+                    return new ServiceResult(
+                        Const.SUCCESS_DELETE_CODE,
+                        Const.SUCCESS_DELETE_MSG
+                    );
+                }
 
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa stage thất bại.");
+                return new ServiceResult(
+                    Const.FAIL_DELETE_CODE,
+                    Const.FAIL_DELETE_MSG
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi khi xóa giai đoạn: {ex.Message}"
+                );
             }
         }
-
-        public async Task<IServiceResult> SoftDelete(int stageId)
+        public async Task<IServiceResult> SoftDeleteById(int stageId)
         {
             try
             {
+                // Tìm giai đoạn theo ID
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
 
+                // Không tìm thấy hoặc đã xóa mềm
                 if (stage == null || stage.IsDeleted)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Giai đoạn không tồn tại hoặc đã bị xóa.");
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
 
+                // Gán trạng thái xoá mềm
                 stage.IsDeleted = true;
-                stage.UpdatedAt = DateTime.UtcNow;
+                stage.UpdatedAt = DateHelper.NowVietnamTime();
 
                 await _unitOfWork.CropStageRepository.UpdateAsync(stage);
+
+                // Lưu thay đổi
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm giai đoạn thành công.");
+                {
+                    return new ServiceResult(
+                        Const.SUCCESS_DELETE_CODE,
+                        Const.SUCCESS_DELETE_MSG
+                    );
+                }
 
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+                return new ServiceResult(
+                    Const.FAIL_DELETE_CODE,
+                    Const.FAIL_DELETE_MSG
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi khi xóa mềm giai đoạn: {ex.Message}"
+                );
             }
         }
+
 
     }
 }

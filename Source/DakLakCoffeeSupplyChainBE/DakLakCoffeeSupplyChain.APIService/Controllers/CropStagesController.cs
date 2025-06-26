@@ -94,8 +94,7 @@ public class CropStagesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCropStage(int stageId)
     {
-        var result = await _cropStageService.Delete(stageId);
-
+        var result = await _cropStageService.DeleteById(stageId); 
         if (result.Status == Const.SUCCESS_DELETE_CODE)
             return Ok(result.Message);
 
@@ -109,7 +108,7 @@ public class CropStagesController : ControllerBase
     [Authorize(Roles = "Admin,BusinessManager")]
     public async Task<IActionResult> SoftDeleteCropStage(int stageId)
     {
-        var result = await _cropStageService.SoftDelete(stageId);
+        var result = await _cropStageService.SoftDeleteById(stageId); 
 
         if (result.Status == Const.SUCCESS_DELETE_CODE)
             return Ok(result.Message);
