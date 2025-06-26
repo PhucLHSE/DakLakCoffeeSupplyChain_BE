@@ -94,5 +94,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid id)
+        {
+            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            if (entity == null)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+
+            entity.IsDeleted = true;
+            entity.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Inventories.Update(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm tồn kho thành công.");
+        }
+
+        public async Task<IServiceResult> HardDeleteAsync(Guid id)
+        {
+            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            if (entity == null)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+
+            _unitOfWork.Inventories.RemoveAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá thật tồn kho thành công.");
+        }
     }
 }
