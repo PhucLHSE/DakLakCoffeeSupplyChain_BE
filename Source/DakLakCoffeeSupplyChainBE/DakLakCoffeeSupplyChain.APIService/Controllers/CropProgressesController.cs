@@ -9,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CropProgressesController : ControllerBase
     {
         private readonly ICropProgressService _cropProgressService;
@@ -48,6 +49,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
+
         public async Task<IActionResult> Create([FromBody] CropProgressCreateDto dto)
         {
             if (!ModelState.IsValid)
@@ -65,6 +68,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{progressId}")]
+        [Authorize(Roles = "Admin,AgriculturalExpert")]
+
         public async Task<IActionResult> Update(Guid progressId, [FromBody] CropProgressUpdateDto dto)
         {
             if (progressId != dto.ProgressId)
@@ -85,6 +90,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPatch("soft-delete/{progressId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
+
         public async Task<IActionResult> SoftDeleteById(Guid progressId)
         {
             var result = await _cropProgressService.SoftDeleteById(progressId);
