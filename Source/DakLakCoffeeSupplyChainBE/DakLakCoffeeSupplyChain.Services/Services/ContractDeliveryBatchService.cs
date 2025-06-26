@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -134,6 +135,75 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     contractDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId)
+        {
+            try
+            {
+                // Tìm contractDeliveryBatch theo ID
+                var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: cdb => cdb.DeliveryBatchId == deliveryBatchId,
+                    include: query => query
+                       .Include(cdb => cdb.ContractDeliveryItems),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (contractDeliveryBatch == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu contractDeliveryBatch là đã xóa
+                    contractDeliveryBatch.IsDeleted = true;
+                    contractDeliveryBatch.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Đánh dấu tất cả ContractDeliveryItems là đã xóa
+                    foreach (var item in contractDeliveryBatch.ContractDeliveryItems)
+                    {
+                        item.IsDeleted = true;
+                        item.UpdatedAt = DateHelper.NowVietnamTime();
+
+                        // Đảm bảo EF theo dõi thay đổi của item
+                        await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(item);
+                    }
+
+                    // Cập nhật xoá mềm contractDeliveryBatch ở repository
+                    await _unitOfWork.ContractDeliveryBatchRepository.UpdateAsync(contractDeliveryBatch);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
