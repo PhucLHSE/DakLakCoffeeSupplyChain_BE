@@ -35,14 +35,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .FirstOrDefaultAsync(cs => cs.StageId == stageId);
         }
 
-        public async Task DeleteCropCropStageByStageIdAsync(int stageId)
-        {
-            var entity = await _context.CropStages.FindAsync(stageId);
-            if (entity != null)
-            {
-                _context.CropStages.Remove(entity);
-            }
-        }
+
 
     }
 }
