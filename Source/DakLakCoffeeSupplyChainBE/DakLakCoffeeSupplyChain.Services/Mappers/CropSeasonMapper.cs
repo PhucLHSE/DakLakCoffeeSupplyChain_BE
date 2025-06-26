@@ -42,7 +42,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerId = entity.FarmerId,
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
                 CommitmentId = entity.CommitmentId,
+                CommitmentCode = entity.Commitment?.CommitmentCode ?? string.Empty,
                 RegistrationId = entity.RegistrationId,
+                RegistrationCode = entity.Registration?.RegistrationCode ?? string.Empty,
                 Status = status,
 
                 Details = entity.CropSeasonDetails?
