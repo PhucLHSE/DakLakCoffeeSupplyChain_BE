@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -91,6 +92,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     contractDeliveryBatchDtos
+                );
+            }
+        }
+
+        public async Task<IServiceResult> GetById(Guid deliveryBatchId)
+        {
+            // Tìm contractDeliveryBatch theo ID
+            var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                predicate: cdb =>
+                   cdb.DeliveryBatchId == deliveryBatchId && 
+                   !cdb.IsDeleted,
+                include: query => query
+                   .Include(cdb => cdb.Contract)
+                   .Include(cdb => cdb.ContractDeliveryItems.Where(cdi => !cdi.IsDeleted))
+                      .ThenInclude(cdi => cdi.ContractItem)
+                         .ThenInclude(ci => ci.CoffeeType),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy contract
+            if (contractDeliveryBatch == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new ContractDeliveryBatchViewDetailDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Sắp xếp danh sách ContractDeliveryItems theo DeliveryItemCode tăng dần
+                contractDeliveryBatch.ContractDeliveryItems = contractDeliveryBatch.ContractDeliveryItems
+                    .OrderBy(cdi => cdi.DeliveryItemCode)
+                    .ToList();
+
+                // Map sang DTO chi tiết để trả về
+                var contractDto = contractDeliveryBatch.MapToContractDeliveryBatchViewDetailDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    contractDto
                 );
             }
         }

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.ContractDeliveryItem;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractDeliveryBatchEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -31,6 +32,44 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = status,
                 CreatedAt = contractDeliveryBatch.CreatedAt,
                 UpdatedAt = contractDeliveryBatch.UpdatedAt
+            };
+        }
+
+        // Mapper ContractDeliveryBatchViewDetailDto
+        public static ContractDeliveryBatchViewDetailDto MapToContractDeliveryBatchViewDetailDto(this ContractDeliveryBatch contractDeliveryBatch)
+        {
+            // Parse Status string từ entity sang enum
+            ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>(
+                contractDeliveryBatch.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : ContractDeliveryBatchStatus.Planned;
+
+            return new ContractDeliveryBatchViewDetailDto
+            {
+                DeliveryBatchId = contractDeliveryBatch.DeliveryBatchId,
+                DeliveryBatchCode = contractDeliveryBatch.DeliveryBatchCode ?? string.Empty,
+                ContractId = contractDeliveryBatch.ContractId,
+                ContractNumber = contractDeliveryBatch.Contract?.ContractNumber ?? string.Empty,
+                ContractTitle = contractDeliveryBatch.Contract?.ContractTitle ?? string.Empty,
+                DeliveryRound = contractDeliveryBatch.DeliveryRound,
+                ExpectedDeliveryDate = contractDeliveryBatch.ExpectedDeliveryDate,
+                TotalPlannedQuantity = contractDeliveryBatch.TotalPlannedQuantity,
+                Status = status,
+                CreatedAt = contractDeliveryBatch.CreatedAt,
+                UpdatedAt = contractDeliveryBatch.UpdatedAt,
+                ContractDeliveryItems = contractDeliveryBatch.ContractDeliveryItems?
+                    .Where(item => !item.IsDeleted)
+                    .Select(item => new ContractDeliveryItemViewDto
+                    {
+                        DeliveryItemId = item.DeliveryItemId,
+                        DeliveryItemCode = item.DeliveryItemCode ?? string.Empty,
+                        ContractItemId = item.ContractItemId,
+                        CoffeeTypeName = item.ContractItem?.CoffeeType?.TypeName ?? string.Empty,
+                        PlannedQuantity = item.PlannedQuantity,
+                        FulfilledQuantity = item.FulfilledQuantity,
+                        Note = item.Note ?? string.Empty
+                    })
+                    .ToList() ?? new List<ContractDeliveryItemViewDto>()
             };
         }
     }
