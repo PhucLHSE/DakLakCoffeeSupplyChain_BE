@@ -23,5 +23,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(p => !p.IsDeleted)
                 .ToListAsync();
         }
+        public async Task<ProcessingBatchProgress?> GetByIdAsync(Guid id)
+        {
+            return await _context.ProcessingBatchProgresses
+                .Include(p => p.Stage)
+                .Include(p => p.Batch)
+                .Include(p => p.UpdatedByNavigation)
+                    .ThenInclude(f => f.User)
+                .Include(p => p.ProcessingParameters)
+                .FirstOrDefaultAsync(p => p.ProgressId == id && !p.IsDeleted);
+        }
     }
 }

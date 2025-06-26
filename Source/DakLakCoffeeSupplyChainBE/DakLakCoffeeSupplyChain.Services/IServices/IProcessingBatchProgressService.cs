@@ -10,6 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IProcessingBatchProgressService
     {
         Task<IServiceResult> GetAllAsync();
-     
+        Task<IServiceResult> GetByIdAsync(Guid progressId);
     }
 }
