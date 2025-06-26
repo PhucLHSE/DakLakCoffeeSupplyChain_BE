@@ -35,6 +35,7 @@ builder.Services.AddScoped<IBusinessManagerService, BusinessManagerService>();
 builder.Services.AddScoped<IBusinessBuyerService, BusinessBuyerService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<IContractItemService, ContractItemService>();
+builder.Services.AddScoped<IContractDeliveryBatchService, ContractDeliveryBatchService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -91,6 +92,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<BusinessManager>("BusinessManager");
     odataBuilder.EntitySet<BusinessBuyer>("BusinessBuyer");
     odataBuilder.EntitySet<Contract>("Contract");
+    odataBuilder.EntitySet<ContractDeliveryBatch>("ContractDeliveryBatch");
     odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
     odataBuilder.EntitySet<CropStage>("CropStage");
     odataBuilder.EntitySet<CropSeason>("CropSeason");
