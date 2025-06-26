@@ -22,6 +22,7 @@
       
         Task<string> GenerateFarmerCodeAsync();
         Task<string> GenerateGeneralFarmerReportCodeAsync();
+        Task<string> GenerateCultivationRegistrationCodeAsync();
 
     }
 }

@@ -3,15 +3,17 @@ using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class CultivationRegistrationService(IUnitOfWork unitOfWork) : ICultivationRegistrationService
+    public class CultivationRegistrationService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator) : ICultivationRegistrationService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
+        private readonly ICodeGenerator _codeGenerator = codeGenerator;
 
         public async Task<IServiceResult> DeleteById(Guid registrationId)
         {
@@ -179,6 +181,111 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             catch (Exception ex)
             {
                 // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto)
+        {
+            //Check trường hợp plan detail bắt buộc phải thuộc cái plan đang được chọn, ko được chọn plan detail không thuộc plan chính
+            try
+            {
+                // Generate cultivation registration code
+                string registrationCode = await _codeGenerator.GenerateCultivationRegistrationCodeAsync(); // ví dụ: "USR-YYYY-####" hoặc Guid, tuỳ bạn
+
+                // Map DTO to Entity
+                var newCultivationRegistration = registrationDto.MapToCultivationRegistrationCreateDto(registrationCode);
+
+                var selectedProcurementPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                    predicate: p => p.PlanId == newCultivationRegistration.PlanId,
+                    include: p => p.
+                    Include(p => p.CultivationRegistrations).
+                    Include(p => p.ProcurementPlansDetails),
+                    asNoTracking: true
+                    );
+
+                // Kiểm tra xem plan được chọn có tồn tại không
+                if (selectedProcurementPlan == null)
+                    return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Kế hoạch thu mua được chọn không tồn tại"
+                        );
+
+                // Lấy các plan detail id từ plan mẹ được chọn trong hệ thống
+                var planDetailIds = selectedProcurementPlan.ProcurementPlansDetails.Select(d => d.PlanDetailsId);
+
+                //Kiểm tra xem farmer này đã đăng ký kế hoạch thu mua này chưa, nếu đăng ký rồi thì không được phép đăng ký thêm
+                foreach (var application in selectedProcurementPlan.CultivationRegistrations)
+                {
+                    if (application.FarmerId == newCultivationRegistration.FarmerId)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Bạn đã đăng ký kế hoạch thu mua này rồi, bạn không thể tạo đơn đăng ký mới nữa, nhưng bạn có thể cập nhật đơn đăng ký đang tồn tại với sản lượng mới hoặc loại cà phê mới."
+                        );
+                }
+
+                foreach (var detail in newCultivationRegistration.CultivationRegistrationsDetails)
+                {
+                    // Kiểm tra xem plan detail có thuộc plan mẹ không
+                    if (!planDetailIds.Contains(detail.PlanDetailId))
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Chi tiết kế hoạch thu mua không thuộc kế hoạch chính đã chọn."
+                        );
+                    }
+
+                    // Tổng hợp lại toàn bộ các mức giá mong muốn của từng chi tiết đơn
+                    newCultivationRegistration.TotalWantedPrice += detail.WantedPrice;
+                }
+
+                // Tạo người dùng ở repository
+                await _unitOfWork.CultivationRegistrationRepository.CreateAsync(newCultivationRegistration);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Map the saved entity to a response DTO
+                    //var responseDto = newCultivationRegistration.MapToCultivationRegistrationViewSumaryDto();
+
+                    var cultivation = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+                        predicate: c => c.RegistrationId == newCultivationRegistration.RegistrationId,
+                        include: c => c.
+                        Include(c => c.CultivationRegistrationsDetails).
+                        Include(c => c.Farmer).
+                        ThenInclude(c => c.User),
+                        asNoTracking: true
+                        );
+
+                    if (cultivation == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new CultivationRegistrationViewSumaryDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = cultivation.MapToCultivationRegistrationViewSumaryDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()

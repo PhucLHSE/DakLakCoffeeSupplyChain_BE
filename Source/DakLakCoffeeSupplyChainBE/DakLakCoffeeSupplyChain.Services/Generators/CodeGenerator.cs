@@ -118,5 +118,12 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"RPT-{CurrentYear}-{(count + 1):D4}";
         }
 
+        public async Task<string> GenerateCultivationRegistrationCodeAsync()
+        {
+            var count = await _unitOfWork.CultivationRegistrationRepository.CountCultivationRegistrationsInYearAsync(CurrentYear);
+
+            return $"REG-{CurrentYear}-{(count + 1):D4}";
+        }
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 
 namespace DakLakCoffeeSupplyChain.Services.IServices
 {
@@ -8,5 +9,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid registrationId);
         Task<IServiceResult> SoftDeleteById(Guid registrationId);
         Task<IServiceResult> DeleteById(Guid registrationId);
+        Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto);
     }
 }
