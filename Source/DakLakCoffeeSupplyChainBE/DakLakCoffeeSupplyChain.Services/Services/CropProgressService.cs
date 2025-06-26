@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -91,7 +92,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // B1: Kiểm tra tồn tại bản ghi
                 var entity = await _unitOfWork.CropProgressRepository.GetByIdAsync(dto.ProgressId);
                 if (entity == null || entity.IsDeleted)
                 {
@@ -101,7 +101,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B2: Kiểm tra khóa ngoại - mùa vụ có tồn tại không
                 var seasonDetail = await _unitOfWork.CultivationRegistrationRepository
                     .GetCropSeasonDetailByIdAsync(dto.CropSeasonDetailId);
                 if (seasonDetail == null)
@@ -112,7 +111,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B3: Kiểm tra stage có tồn tại không
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
                 if (stage == null)
                 {
@@ -122,7 +120,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B4: Kiểm tra nông dân có tồn tại không
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.UpdatedBy);
                 if (farmer == null)
                 {
@@ -132,7 +129,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B5: Ngăn thay đổi mùa vụ nếu đã liên kết với báo cáo
                 var linkedReports = await _unitOfWork.GeneralFarmerReportRepository.GetAllAsync(
                     r => r.ProcessingProgressId == dto.ProgressId
                 );
@@ -144,7 +140,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B6: Trùng ngày + giai đoạn + mùa vụ (ngoại trừ chính nó)
                 var duplicates = await _unitOfWork.CropProgressRepository.GetAllAsync(
                     p => p.CropSeasonDetailId == dto.CropSeasonDetailId
                       && p.StageId == dto.StageId
@@ -160,10 +155,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // B7: Gán lại dữ liệu
                 dto.MapToUpdateCropProgress(entity);
 
-                // B8: Cập nhật
                 await _unitOfWork.CropProgressRepository.UpdateAsync(entity);
                 var saveResult = await _unitOfWork.SaveChangesAsync();
 
@@ -182,6 +175,112 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống khi cập nhật tiến trình: " + ex.Message);
             }
         }
+
+        public async Task<IServiceResult> DeleteById(Guid progressId)
+        {
+            try
+            {
+                // Tìm tiến trình mùa vụ theo ID từ repository
+                var progress = await _unitOfWork.CropProgressRepository.GetByIdAsync(progressId);
+
+                // Nếu không tìm thấy tiến trình, trả về cảnh báo không có dữ liệu
+                if (progress == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa tiến trình ra khỏi repository
+                    await _unitOfWork.CropProgressRepository.RemoveAsync(progress);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid progressId)
+        {
+            try
+            {
+                // Tìm tiến trình mùa vụ theo ID từ repository
+                var progress = await _unitOfWork.CropProgressRepository.GetByIdAsync(progressId);
+
+                // Nếu không tìm thấy tiến trình, trả về cảnh báo không có dữ liệu
+                if (progress == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    progress.IsDeleted = true;
+                    progress.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật lại tiến trình đã đánh dấu xóa
+                    await _unitOfWork.CropProgressRepository.UpdateAsync(progress);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+
 
     }
 }

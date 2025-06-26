@@ -61,10 +61,5 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
         return await _context.CropSeasons.AnyAsync(predicate);
     }
 
-    public void SoftDelete(CropSeason entity)
-    {
-        entity.IsDeleted = true;
-        _context.CropSeasons.Update(entity);
-    }
 
 }
