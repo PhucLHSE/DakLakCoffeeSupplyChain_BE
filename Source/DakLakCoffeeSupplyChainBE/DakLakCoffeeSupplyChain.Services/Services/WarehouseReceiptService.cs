@@ -99,6 +99,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             receipt.ReceivedQuantity = (double)dto.ConfirmedQuantity;
             receipt.Note = (receipt.Note ?? "") + $" [Confirmed at {DateTime.UtcNow:yyyy-MM-dd HH:mm}]";
             receipt.ReceivedAt ??= DateTime.UtcNow;
+            // ✅ Kiểm tra dung lượng kho hiện tại
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(receipt.WarehouseId);
+            if (warehouse == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
+
+            // Tính tổng tồn kho hiện tại
+            var currentInventories = await _unitOfWork.Inventories
+                .GetAllAsync(i => i.WarehouseId == receipt.WarehouseId && !i.IsDeleted);
+
+            double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
+
+            // Check dung lượng trống
+            double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
+            if ((double)dto.ConfirmedQuantity > available)
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể nhập thêm {dto.ConfirmedQuantity}kg.");
+            }
 
             // Tồn kho
             var inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId);

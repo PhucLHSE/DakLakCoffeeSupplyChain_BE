@@ -24,7 +24,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(result.Status, result);
         }
         [HttpGet]
-        [Authorize(Roles = "Admin, BusinessManager")]
+        [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetAllWarehouses()
         {
             var result = await _warehouseService.GetAllAsync();
@@ -45,7 +45,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(result.Status, result);
         }
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin, BusinessManager")]
+        [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _warehouseService.GetByIdAsync(id);
