@@ -1,20 +1,23 @@
-﻿namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
+﻿using System;
+using System.Text.Json.Serialization;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
+
+namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
 {
-    namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
+    public class CropSeasonDetailViewDto
     {
-        public class CropSeasonDetailViewDto
-        {
-            public Guid DetailId { get; set; }
-            public double Area { get; set; }
-            public Guid CoffeeTypeId { get; set; }
-            public string TypeName { get; set; } = string.Empty;
-            public DateOnly? ExpectedHarvestStart { get; set; }
-            public DateOnly? ExpectedHarvestEnd { get; set; }
-            public double? EstimatedYield { get; set; }
-            public string PlannedQuality { get; set; } = string.Empty;
-            public string Status { get; set; } = string.Empty;
-        }
+        public Guid DetailId { get; set; }
+        public Guid CoffeeTypeId { get; set; }
+        public string TypeName { get; set; } = string.Empty;
+        public double? AreaAllocated { get; set; }
+        public DateOnly? ExpectedHarvestStart { get; set; }
+        public DateOnly? ExpectedHarvestEnd { get; set; }
+        public double? EstimatedYield { get; set; }
+        public double? ActualYield { get; set; }
+        public string PlannedQuality { get; set; } = string.Empty;
+        public string QualityGrade { get; set; } = string.Empty;
 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CropDetailStatus Status { get; set; }
     }
-
 }
