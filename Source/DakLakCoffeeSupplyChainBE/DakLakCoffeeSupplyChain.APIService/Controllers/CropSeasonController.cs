@@ -49,7 +49,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpPost]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
 
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
         {
@@ -69,7 +68,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{cropSeasonId}")]
-        [Authorize(Roles = "Admin,AgriculturalExpert")]
         public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
         {
             if (cropSeasonId != dto.CropSeasonId)
@@ -87,7 +85,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpDelete("{cropSeasonId}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
         {
             var result = await _cropSeasonService.DeleteById(cropSeasonId);
@@ -102,7 +99,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPatch("soft-delete/{cropSeasonId}")]
-        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> SoftDeleteCropSeason(Guid cropSeasonId)
         {
             var result = await _cropSeasonService.SoftDeleteAsync(cropSeasonId);

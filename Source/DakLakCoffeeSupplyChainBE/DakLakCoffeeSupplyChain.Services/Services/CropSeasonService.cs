@@ -1,7 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
-using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -12,8 +11,6 @@ using DakLakCoffeeSupplyChain.Services.Mappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
@@ -58,7 +55,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // Kiểm tra điều kiện nhập liệu
                 var validationResult = await ValidateCropSeasonCreate(dto);
                 if (validationResult != null)
                     return validationResult;
@@ -66,44 +62,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.FarmerId);
                 var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(dto.RegistrationId);
 
-                // Tạo mã mùa vụ
                 string code = await _codeCropSeasonGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
                 var entity = dto.MapToCropSeasonCreateDto(code);
-                double totalArea = dto.Details.Sum(d => d.AreaAllocated ?? 0);
-                entity.Area = totalArea;
 
-                // Ghi database
+                entity.Area = dto.Area; // Nếu null thì client sẽ cập nhật sau
+
                 await _unitOfWork.CropSeasonRepository.CreateAsync(entity);
                 int result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
                 {
                     var responseDto = entity.MapToCropSeasonViewDetailsDto();
-                    responseDto.FarmerName = farmer.User?.Name ?? "UnKnown";
+                    responseDto.FarmerName = farmer.User?.Name ?? "Unknown";
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, responseDto);
                 }
 
                 return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, "Đã xảy ra lỗi nội bộ."); // Có thể log ex nếu có _logger
+                return new ServiceResult(Const.ERROR_EXCEPTION, "Đã xảy ra lỗi nội bộ.");
             }
         }
 
         private async Task<IServiceResult?> ValidateCropSeasonCreate(CropSeasonCreateDto dto)
         {
-            if (dto.Details == null || !dto.Details.Any())
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Phải có ít nhất 1 dòng cà phê.");
-
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
-
-            foreach (var detail in dto.Details)
-            {
-                if (detail.ExpectedHarvestStart >= detail.ExpectedHarvestEnd)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày thu hoạch không hợp lệ.");
-            }
 
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.FarmerId);
             if (farmer == null)
@@ -129,7 +114,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return null;
         }
 
-
         public async Task<IServiceResult> Update(CropSeasonUpdateDto dto)
         {
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(dto.CropSeasonId);
@@ -151,33 +135,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // Kiểm tra trùng mùa vụ theo năm và đăng ký, trừ chính bản ghi đang cập nhật
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-           x => x.RegistrationId == dto.RegistrationId &&
-                x.StartDate.HasValue &&
-                x.StartDate.Value.Year == dto.StartDate.Year &&
-                x.CropSeasonId != dto.CropSeasonId
-       );
-
+                x => x.RegistrationId == dto.RegistrationId &&
+                     x.StartDate.HasValue &&
+                     x.StartDate.Value.Year == dto.StartDate.Year &&
+                     x.CropSeasonId != dto.CropSeasonId
+            );
             if (isDuplicate)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Đã tồn tại mùa vụ khác cho đăng ký canh tác trong năm này.");
 
             dto.MapToExistingEntity(cropSeason);
-            cropSeason.CropSeasonDetails.Clear();
-            cropSeason.CropSeasonDetails = dto.Details.Select(detail => new CropSeasonDetail
-            {
-                DetailId = Guid.NewGuid(),
-                CropSeasonId = cropSeason.CropSeasonId,
-                CoffeeTypeId = detail.CoffeeTypeId,
-                ExpectedHarvestStart = detail.ExpectedHarvestStart,
-                ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
-                EstimatedYield = detail.EstimatedYield,
-                AreaAllocated = detail.AreaAllocated,
-                PlannedQuality = detail.PlannedQuality,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
-                Status = CropSeasonStatus.Active.ToString()
-            }).ToList();
 
             await _unitOfWork.SaveChangesAsync();
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công");
@@ -210,7 +177,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Đánh dấu xoá mềm
                 existing.IsDeleted = true;
                 existing.UpdatedAt = DateHelper.NowVietnamTime();
 
@@ -220,17 +186,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    return new ServiceResult(
-                        Const.SUCCESS_DELETE_CODE,
-                        "Xoá mềm mùa vụ thành công."
-                    );
+                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.");
                 }
                 else
                 {
-                    return new ServiceResult(
-                        Const.FAIL_DELETE_CODE,
-                        "Xoá mềm mùa vụ thất bại."
-                    );
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
                 }
             }
             catch (Exception ex)
@@ -241,7 +201,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
-
-
     }
 }

@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
 {
@@ -22,7 +19,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
         public Guid CommitmentId { get; set; }
 
         [Required]
-        public string SeasonName { get; set; }
+        public string SeasonName { get; set; } = string.Empty;
 
         public double? Area { get; set; }
 
@@ -34,7 +31,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
 
         public string? Note { get; set; }
 
-        public List<CropSeasonDetailCreateDto> Details { get; set; } = new();
+        public CropSeasonStatus Status { get; set; } = CropSeasonStatus.Active;
     }
-
 }
