@@ -36,7 +36,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 InboundRequestId = Guid.NewGuid(),
                 InboundRequestCode = "IR-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
                 FarmerId = farmer.FarmerId,
-                BusinessStaffId = dto.BusinessStaffId,
+                //BusinessStaffId = dto.BusinessStaffId,
                 BatchId = dto.BatchId ?? Guid.Empty,
                 RequestedQuantity = dto.RequestedQuantity,
                 PreferredDeliveryDate = dto.PreferredDeliveryDate,

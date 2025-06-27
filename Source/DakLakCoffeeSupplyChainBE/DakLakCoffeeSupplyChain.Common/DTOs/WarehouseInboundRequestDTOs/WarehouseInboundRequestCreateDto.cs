@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs
         public double RequestedQuantity { get; set; }
         public DateOnly PreferredDeliveryDate { get; set; }
         public string? Note { get; set; }
-        public Guid BusinessStaffId { get; set; }
+        //public Guid BusinessStaffId { get; set; }
 
     }
 }
