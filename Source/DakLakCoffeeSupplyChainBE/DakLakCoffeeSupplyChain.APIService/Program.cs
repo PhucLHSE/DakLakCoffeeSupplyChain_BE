@@ -36,6 +36,7 @@ builder.Services.AddScoped<IBusinessBuyerService, BusinessBuyerService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<IContractItemService, ContractItemService>();
 builder.Services.AddScoped<IContractDeliveryBatchService, ContractDeliveryBatchService>();
+builder.Services.AddScoped<IContractDeliveryItemService, ContractDeliveryItemService>();
 builder.Services.AddScoped<ICropSeasonService, CropSeasonService>();
 builder.Services.AddScoped<ICropStageService, CropStageService>();
 builder.Services.AddScoped<IProductService, ProductService>();
