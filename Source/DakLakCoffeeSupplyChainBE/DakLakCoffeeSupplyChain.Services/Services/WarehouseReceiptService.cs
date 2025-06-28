@@ -115,7 +115,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if ((double)dto.ConfirmedQuantity > available)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể nhập thêm {dto.ConfirmedQuantity}kg.");
+                    $"Kho \"{warehouse.Name}\" quá tải {available:n0}kg, không thể nhập thêm {dto.ConfirmedQuantity}kg.");
             }
 
             // Tồn kho

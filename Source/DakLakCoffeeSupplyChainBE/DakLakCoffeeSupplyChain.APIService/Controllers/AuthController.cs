@@ -24,8 +24,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             var result = await _authService.LoginAsync(request);
-            return StatusCode(result.Status, result);
+
+            // Đăng nhập thành công, trả về token string
+            if (result.Status == Const.SUCCESS_LOGIN_CODE && result.Data is not null)
+            {
+                var tokenProp = result.Data.GetType().GetProperty("token");
+                var tokenValue = tokenProp?.GetValue(result.Data)?.ToString();
+
+                if (!string.IsNullOrEmpty(tokenValue))
+                    return Ok(tokenValue); // 200
+            }
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return Unauthorized(result.Message); // 401
+
+            if (result.Status == Const.FAIL_VERIFY_OTP_CODE)
+                return BadRequest(result.Message); // 400
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message); // 404
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result.Message); // 500
+
+            return StatusCode(500, result.Message); // fallback nếu không khớp
         }
+
 
         // POST api/<SignUpRequest>
         [HttpPost("SignUpRequest")]
