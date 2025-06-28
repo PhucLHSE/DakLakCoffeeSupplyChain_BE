@@ -60,6 +60,7 @@ builder.Services.AddScoped<IProcessingBatchService, ProcessingBatchService>();
 builder.Services.AddScoped<IProcessingBatchProgressService, ProcessingBatchProgressService>();
 builder.Services.AddScoped<ICropSeasonDetailService, CropSeasonDetailService>();
 builder.Services.AddScoped<IFarmerService, FarmerService>();
+builder.Services.AddScoped<IFarmingCommitmentService, FarmingCommitmentService>();
 
 
 //Add MemoryCache
