@@ -12,6 +12,8 @@
 
         Task<string> GenerateContractItemCodeAsync(Guid contractId);
 
+        Task<string> GenerateContractDeliveryItemCodeAsync(Guid deliveryBatchId);
+
         Task<string> GenerateCropSeasonCodeAsync(int year);
 
         Task<string> GenerateProcurementPlanCodeAsync();
@@ -21,7 +23,9 @@
         Task<string> GenerateCoffeeTypeCodeAsync();
       
         Task<string> GenerateFarmerCodeAsync();
+
         Task<string> GenerateGeneralFarmerReportCodeAsync();
+
         Task<string> GenerateCultivationRegistrationCodeAsync();
 
     }

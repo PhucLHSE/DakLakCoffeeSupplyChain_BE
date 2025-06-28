@@ -75,6 +75,29 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"CTI-{(count + 1):D3}-{contractCode}";
         }
 
+        public async Task<string> GenerateContractDeliveryItemCodeAsync(Guid deliveryBatchId)
+        {
+            // Lấy contractDeliveryBatch để có DeliveryBatchCode
+            var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                predicate: cdb => cdb.DeliveryBatchId == deliveryBatchId &&
+                                !cdb.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (contractDeliveryBatch == null || string.IsNullOrWhiteSpace(contractDeliveryBatch.DeliveryBatchCode))
+            {
+                return $"DLI-UNKNOWN-{CurrentYear}-{Guid.NewGuid().ToString()[..3]}"; // fallback tránh null
+            }
+
+            var deliveryBatchCode = contractDeliveryBatch.DeliveryBatchCode.Replace(" ", "").ToUpper();
+
+            // Đếm số item trong danh mục giao của hợp đồng này
+            var count = await _unitOfWork.ContractDeliveryItemRepository.CountByDeliveryBatchIdAsync(deliveryBatchId);
+
+            // Format: DLI-001-HDX2025
+            return $"DLI-{(count + 1):D3}-{deliveryBatchCode}";
+        }
+
         public async Task<string> GenerateCropSeasonCodeAsync(int year)
         {
             int count = await _unitOfWork.CropSeasonRepository.CountByYearAsync(year);

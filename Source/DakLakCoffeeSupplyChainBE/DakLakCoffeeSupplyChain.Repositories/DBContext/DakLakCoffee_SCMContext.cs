@@ -376,7 +376,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.DeliveryBatchCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
@@ -406,7 +406,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.DeliveryBatchId).HasColumnName("DeliveryBatchID");
             entity.Property(e => e.DeliveryItemCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.FulfilledQuantity).HasDefaultValue(0.0);
             entity.Property(e => e.UpdatedAt)

@@ -311,7 +311,7 @@ GO
 -- ContractDeliveryBatches – đại diện từng đợt giao trong hợp đồng
 CREATE TABLE ContractDeliveryBatches (
   DeliveryBatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-  DeliveryBatchCode VARCHAR(20) UNIQUE,          -- DELB-2025-0012
+  DeliveryBatchCode VARCHAR(50) UNIQUE,          -- DELB-2025-0012
   ContractID UNIQUEIDENTIFIER NOT NULL,
   DeliveryRound INT NOT NULL,                    -- Đợt giao hàng số mấy (1, 2, 3...)
   ExpectedDeliveryDate DATE,                     -- Ngày dự kiến giao
@@ -330,7 +330,7 @@ GO
 -- ContractDeliveryItems – chi tiết mặt hàng của từng đợt giao
 CREATE TABLE ContractDeliveryItems (
   DeliveryItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-  DeliveryItemCode VARCHAR(20) UNIQUE,          -- DLI-2025-0231
+  DeliveryItemCode VARCHAR(50) UNIQUE,          -- DLI-2025-0231
   DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
   ContractItemID UNIQUEIDENTIFIER NOT NULL,
   PlannedQuantity FLOAT NOT NULL,               -- Số lượng mặt hàng cần giao trong đợt
