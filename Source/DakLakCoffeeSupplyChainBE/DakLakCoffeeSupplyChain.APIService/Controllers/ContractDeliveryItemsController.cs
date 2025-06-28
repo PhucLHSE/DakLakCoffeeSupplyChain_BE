@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.ContractDeliveryItem;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         public ContractDeliveryItemsController(IContractDeliveryItemService contractDeliveryItemService)
             => _contractDeliveryItemService = contractDeliveryItemService;
+
+        // POST api/<ContractItemsController>
+        [HttpPost]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> CreateContractDeliveryItemAsync([FromBody] ContractDeliveryItemCreateDto contractDeliveryItemCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _contractDeliveryItemService.Create(contractDeliveryItemCreateDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return StatusCode(201, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
 
         // PATCH: api/<ContractDeliveryItemsController>/soft-delete/{deliveryItemId}
         [HttpPatch("soft-delete/{deliveryItemId}")]
