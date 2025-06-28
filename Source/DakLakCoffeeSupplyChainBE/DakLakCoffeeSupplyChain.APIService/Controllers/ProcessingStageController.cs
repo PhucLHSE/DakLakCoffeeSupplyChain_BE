@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingMethodStageDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -21,6 +22,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
    
         [HttpGet]
+        [EnableQuery]
         //[Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> GetAll()
         {

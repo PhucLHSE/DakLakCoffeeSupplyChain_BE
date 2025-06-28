@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class WarehouseOutboundReceipt
 {
+    [Key]
     public Guid OutboundReceiptId { get; set; }
 
     public string OutboundReceiptCode { get; set; }

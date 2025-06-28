@@ -103,9 +103,19 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
     odataBuilder.EntitySet<CropStage>("CropStage");
     odataBuilder.EntitySet<CropSeason>("CropSeason");
+    odataBuilder.EntitySet<CropSeasonDetail>("CropSeasonDetail");
     odataBuilder.EntitySet<CropProgress>("CropProgress");
     odataBuilder.EntitySet<ProcessingMethod>("ProcessingMethod");
+    odataBuilder.EntitySet<ProcessingStage>("ProcessingStage");
+    odataBuilder.EntitySet<ProcessingBatch>("ProcessingBatch");
+    odataBuilder.EntitySet<ProcessingBatchProgress>("ProcessingBatchProgress");
+    odataBuilder.EntitySet<ProcessingParameter>("ProcessingParameter");
+    odataBuilder.EntitySet<Inventory>("Inventory");
+    odataBuilder.EntitySet<Warehouse>("Warehouse");
     odataBuilder.EntitySet<WarehouseInboundRequest>("WarehouseInboundRequest");
+    odataBuilder.EntitySet<WarehouseReceipt>("WarehouseReceipt");
+    odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
+    odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Product>("Product");
 
     return odataBuilder.GetEdmModel();
