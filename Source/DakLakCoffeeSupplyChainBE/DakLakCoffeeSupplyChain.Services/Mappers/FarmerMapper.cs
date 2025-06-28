@@ -17,5 +17,25 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = farmer.User.Name
             };
         }
+
+        // Mapper FarmerViewDetailsDto
+        public static FarmerViewDetailsDto MapToFarmerViewDetailsDto(this Farmer entity)
+        {
+            return new FarmerViewDetailsDto
+            {
+                FarmerId = entity.FarmerId,
+                FarmerCode = entity.FarmerCode,
+                UserId = entity.UserId,
+                FarmerName = entity.User.Name,
+                FarmLocation = entity.FarmLocation,
+                FarmSize = entity.FarmSize,
+                CertificationStatus = entity.CertificationStatus,
+                CertificationUrl = entity.CertificationUrl,
+                IsVerified = entity.IsVerified,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                IsDeleted = entity.IsDeleted
+            };
+        }
     }
 }
