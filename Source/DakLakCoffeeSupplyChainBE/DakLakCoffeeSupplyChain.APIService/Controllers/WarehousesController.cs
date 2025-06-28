@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -23,13 +24,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.CreateAsync(dto);
             return StatusCode(result.Status, result);
         }
+
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetAllWarehouses()
         {
             var result = await _warehouseService.GetAllAsync();
             return StatusCode(result.Status, result);
         }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] WarehouseUpdateDto dto)
@@ -37,6 +41,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.UpdateAsync(id, dto);
             return StatusCode(result.Status, result);
         }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> Delete(Guid id)
@@ -44,6 +49,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.DeleteAsync(id);
             return StatusCode(result.Status, result);
         }
+
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetById(Guid id)
@@ -51,6 +57,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _warehouseService.GetByIdAsync(id);
             return StatusCode(result.Status, result);
         }
+
         [HttpDelete("hard-delete/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid id)

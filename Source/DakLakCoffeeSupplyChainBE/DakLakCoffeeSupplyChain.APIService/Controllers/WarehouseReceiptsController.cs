@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -28,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _receiptService.CreateReceiptAsync(staffUserId, dto);
             return StatusCode(result.Status, result);
         }
+
         [HttpPut("{id}/confirm")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> ConfirmReceipt(Guid id, [FromBody] WarehouseReceiptConfirmDto dto)
@@ -35,7 +37,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _receiptService.ConfirmReceiptAsync(id, dto);
             return StatusCode(result.Status, result);
         }
+
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "Admin,BusinessStaff,Manager")]
         public async Task<IActionResult> GetAll()
         {

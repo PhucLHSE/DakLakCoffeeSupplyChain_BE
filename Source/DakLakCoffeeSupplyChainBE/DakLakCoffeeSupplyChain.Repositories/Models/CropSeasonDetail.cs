@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class CropSeasonDetail
 {
+    [Key]
     public Guid DetailId { get; set; }
 
     public Guid CropSeasonId { get; set; }

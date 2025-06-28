@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class ProcessingBatch
 {
+    [Key]
     public Guid BatchId { get; set; }
 
     public string SystemBatchCode { get; set; }

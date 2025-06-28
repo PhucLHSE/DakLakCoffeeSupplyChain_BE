@@ -5,6 +5,7 @@ using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -20,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet]
+        [EnableQuery]
         //[Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer")]
         public async Task<IActionResult> GetAll()
         {

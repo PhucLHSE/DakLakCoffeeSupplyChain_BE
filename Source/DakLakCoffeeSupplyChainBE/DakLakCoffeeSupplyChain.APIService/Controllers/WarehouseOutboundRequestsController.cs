@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -28,12 +29,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
         
         [HttpGet("all")]
+        [EnableQuery]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetAll()
         {
             var result = await _requestService.GetAllAsync();
             return StatusCode(result.Status, result);
         }
+
         [HttpGet("{outboundRequestId}")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetDetail(Guid outboundRequestId)
@@ -41,6 +44,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.GetDetailAsync(outboundRequestId);
             return StatusCode(result.Status, result);
         }
+
         [HttpPut("{id}/accept")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> Accept(Guid id)

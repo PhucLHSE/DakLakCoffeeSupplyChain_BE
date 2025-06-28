@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System;
 using System.Threading.Tasks;
 
@@ -22,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// Lấy danh sách tồn kho (view all)
         /// </summary>
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "BusinessStaff,Admin")]
         public async Task<IActionResult> GetAll()
         {
