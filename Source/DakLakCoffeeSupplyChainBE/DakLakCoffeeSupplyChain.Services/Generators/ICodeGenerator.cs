@@ -33,5 +33,9 @@
         Task<string> GenerateInboundRequestCodeAsync();
 
         Task<string> GenerateWarehouseCodeAsync();
+
+        Task<string> GenerateWarehouseReceiptCodeAsync();
+
+        Task<string> GenerateInventoryCodeAsync();
     }
 }

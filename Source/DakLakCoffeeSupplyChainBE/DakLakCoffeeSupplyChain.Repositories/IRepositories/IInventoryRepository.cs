@@ -15,6 +15,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         void Update(Inventory entity);
         Task<List<Inventory>> GetAllWithIncludesAsync();
         Task<Inventory?> GetDetailByIdAsync(Guid id);
+        Task<int> CountCreatedInYearAsync(int year);
     }
 }
 

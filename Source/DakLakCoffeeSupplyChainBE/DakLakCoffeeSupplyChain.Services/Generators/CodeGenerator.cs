@@ -162,6 +162,15 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             var count = await _unitOfWork.Warehouses.CountWarehousesCreatedInYearAsync(CurrentYear);
             return $"WH-{CurrentYear}-{(count + 1):D4}";
         }
-
+        public async Task<string> GenerateWarehouseReceiptCodeAsync()
+        {
+            var count = await _unitOfWork.WarehouseReceipts.CountCreatedInYearAsync(CurrentYear);
+            return $"WR-{CurrentYear}-{(count + 1):D4}";
+        }
+        public async Task<string> GenerateInventoryCodeAsync()
+        {
+            var count = await _unitOfWork.Inventories.CountCreatedInYearAsync(DateTime.UtcNow.Year);
+            return $"INV-{DateTime.UtcNow:yyyy}-{(count + 1):D4}";
+        }
     }
 }
