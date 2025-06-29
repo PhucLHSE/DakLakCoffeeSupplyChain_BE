@@ -82,6 +82,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
         // PATCH: api/<ContractItemsController>/soft-delete/{contractItemId}
         [HttpPatch("soft-delete/{contractItemId}")]
         public async Task<IActionResult> SoftDeleteContractItemByIdAsync(Guid contractItemId)

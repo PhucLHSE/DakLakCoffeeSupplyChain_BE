@@ -150,6 +150,64 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId)
+        {
+            try
+            {
+                // Tìm contractDeliveryItem theo ID
+                var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
+                    predicate: cdt =>
+                       cdt.DeliveryItemId == deliveryItemId &&
+                       !cdt.IsDeleted,
+                    include: query => query
+                           .Include(cdt => cdt.ContractItem)
+                           .Include(cdt => cdt.DeliveryBatch),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (contractDeliveryItem == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa contractDeliveryItem khỏi repository
+                    await _unitOfWork.ContractDeliveryItemRepository.RemoveAsync(contractDeliveryItem);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteContractDeliveryItemById(Guid deliveryItemId)
         {
             try
