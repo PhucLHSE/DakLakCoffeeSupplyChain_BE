@@ -147,6 +147,11 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"REG-{CurrentYear}-{(count + 1):D4}";
         }
+        public async Task<string> GenerateStaffCodeAsync()
+        {
+            var count = await _unitOfWork.BusinessStaffRepository.CountStaffCreatedInYearAsync(CurrentYear);
+            return $"STF-{CurrentYear}-{(count + 1):D4}";
+        }
 
     }
 }
