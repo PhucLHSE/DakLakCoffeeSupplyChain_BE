@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.ContractDeliveryItem;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -33,6 +34,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PUT api/<ContractDeliveryItemsController>/{deliveryItemId}
+        [HttpPut("{deliveryItemId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> UpdateContractItemAsync(Guid deliveryItemId, [FromBody] ContractDeliveryItemUpdateDto contractDeliveryItemUpdate)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (deliveryItemId != contractDeliveryItemUpdate.DeliveryItemId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _contractDeliveryItemService.Update(contractDeliveryItemUpdate);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy mục cần cập nhật.");
 
             return StatusCode(500, result.Message);
         }
