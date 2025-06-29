@@ -150,6 +150,133 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto)
+        {
+            try
+            {
+                // Tìm contractDeliveryItem theo ID
+                var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
+                    predicate: cdi =>
+                       cdi.DeliveryItemId == contractDeliveryItemDto.DeliveryItemId &&
+                       !cdi.IsDeleted,
+                    include: query => query
+                           .Include(cdi => cdi.ContractItem)
+                           .Include(cdi => cdi.DeliveryBatch),
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy
+                if (contractDeliveryItem == null || contractDeliveryItem.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy mục giao hàng cần cập nhật."
+                    );
+                }
+
+                // Kiểm tra ContractItem có tồn tại không và nằm trong cùng hợp đồng với DeliveryBatch
+                var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
+                    predicate: ci =>
+                        ci.ContractItemId == contractDeliveryItemDto.ContractItemId &&
+                        !ci.IsDeleted,
+                    include: query => query
+                       .Include(ci => ci.Contract),
+                    asNoTracking: true
+                );
+
+                if (contractItem == null || contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "ContractItem không hợp lệ hoặc không thuộc cùng hợp đồng với đợt giao hàng."
+                    );
+                }
+
+                // Kiểm tra tổng PlannedQuantity sau khi cập nhật không vượt quá Quantity trong hợp đồng
+                double totalPlanned = await _unitOfWork.ContractDeliveryItemRepository
+                    .SumPlannedQuantityAsync(contractItem.ContractItemId, excludeDeliveryItemId: contractDeliveryItem.DeliveryItemId);
+
+                double newPlannedQuantity = contractDeliveryItemDto.PlannedQuantity ?? 0;
+
+                if ((totalPlanned + newPlannedQuantity) > contractItem.Quantity)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Tổng số lượng sau cập nhật vượt quá giới hạn trong hợp đồng ({contractItem.Quantity} kg)."
+                    );
+                }
+
+                // Kiểm tra trùng loại sản phẩm trong cùng đợt giao (trừ chính nó)
+                bool isDuplicate = await _unitOfWork.ContractDeliveryItemRepository.AnyAsync(
+                    predicate: cdi =>
+                        cdi.DeliveryBatchId == contractDeliveryItem.DeliveryBatchId &&
+                        cdi.ContractItemId == contractDeliveryItemDto.ContractItemId &&
+                        cdi.DeliveryItemId != contractDeliveryItemDto.DeliveryItemId &&
+                        !cdi.IsDeleted
+                );
+
+                if (isDuplicate)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Loại sản phẩm này đã tồn tại trong đợt giao hàng."
+                    );
+                }
+
+                //Map DTO to Entity
+                contractDeliveryItemDto.MapToUpdateContractDeliveryItem(contractDeliveryItem);
+
+                // Cập nhật contractDeliveryItem ở repository
+                await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(contractDeliveryItem);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại dữ liệu sau khi cập nhật
+                    var updatedItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
+                        predicate: cdi => cdi.DeliveryItemId == contractDeliveryItem.DeliveryItemId,
+                        include: query => query
+                            .Include(cdi => cdi.ContractItem)
+                                .ThenInclude(ci => ci.CoffeeType)
+                            .Include(cdi => cdi.DeliveryBatch),
+                        asNoTracking: true
+                    );
+
+                    if (updatedItem != null)
+                    {
+                        var responseDto = updatedItem.MapToContractDeliveryItemViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu vừa cập nhật."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId)
         {
             try

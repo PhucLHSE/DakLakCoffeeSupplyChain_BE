@@ -43,5 +43,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
+        // Mapper ContractDeliveryItemUpdateDto → ContractDeliveryItem (cập nhật thông tin)
+        public static void MapToUpdateContractDeliveryItem(this ContractDeliveryItemUpdateDto dto, ContractDeliveryItem contractDeliveryItem)
+        {
+            contractDeliveryItem.ContractItemId = dto.ContractItemId;
+            contractDeliveryItem.PlannedQuantity = dto.PlannedQuantity ?? contractDeliveryItem.PlannedQuantity;
+            contractDeliveryItem.FulfilledQuantity = dto.FulfilledQuantity;
+            contractDeliveryItem.Note = dto.Note?.Trim();
+            contractDeliveryItem.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }
