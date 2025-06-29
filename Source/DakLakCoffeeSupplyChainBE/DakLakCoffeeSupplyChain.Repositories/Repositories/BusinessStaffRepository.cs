@@ -26,6 +26,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(bs => bs.User)
                 .FirstOrDefaultAsync(bs => bs.UserId == userId);
         }
+        public async Task<int> CountStaffCreatedInYearAsync(int year)
+        {
+            return await _context.BusinessStaffs
+                .AsNoTracking()
+                .CountAsync(bs => bs.CreatedAt.Year == year && !bs.IsDeleted);
+        }
 
 
     }

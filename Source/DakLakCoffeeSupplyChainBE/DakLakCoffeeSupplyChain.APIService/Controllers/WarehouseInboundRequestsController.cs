@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs;
+﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _service.CreateRequestAsync(farmerId, dto);
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
 
         [HttpPut("{id}/approve")]
@@ -34,7 +47,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             var staffUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _service.ApproveRequestAsync(id, staffUserId);
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
 
         [HttpGet]
@@ -43,7 +68,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllAsync();
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
 
         [HttpGet("{id}")]
@@ -51,7 +88,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
 
         [HttpPut("{id}/cancel")]
@@ -60,7 +109,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _service.CancelRequestAsync(id, farmerId);
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
 
         [HttpPut("{id}/reject")]
@@ -69,8 +130,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             var staffId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _service.RejectRequestAsync(id, staffId);
-            return StatusCode(result.Status, result);
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result);
+
+            return StatusCode(500, result); // fallback
         }
+
 
 
 
