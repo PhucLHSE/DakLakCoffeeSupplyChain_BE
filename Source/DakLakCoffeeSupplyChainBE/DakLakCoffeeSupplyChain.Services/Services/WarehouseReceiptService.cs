@@ -7,16 +7,19 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class WarehouseReceiptService : IWarehouseReceiptService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public WarehouseReceiptService(IUnitOfWork unitOfWork)
+        public WarehouseReceiptService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork;
+            _codeGenerator = codeGenerator;
         }
 
         public async Task<IServiceResult> CreateReceiptAsync(Guid staffUserId, WarehouseReceiptCreateDto dto)
@@ -39,11 +42,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Số lượng nhập ({dto.ReceivedQuantity}kg) không khớp với số lượng yêu cầu ({request.RequestedQuantity}kg).");
             }
+            var receiptCode = await _codeGenerator.GenerateWarehouseReceiptCodeAsync();
 
             var receipt = new WarehouseReceipt
             {
                 ReceiptId = Guid.NewGuid(),
-                ReceiptCode = "WR-" + Guid.NewGuid().ToString("N")[..8],
+                ReceiptCode = receiptCode,
                 InboundRequestId = request.InboundRequestId,
                 WarehouseId = dto.WarehouseId,
                 BatchId = request.BatchId,
@@ -74,65 +78,60 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu nhập kho tương ứng.");
 
-            // ❌ Không được xác nhận vượt quá số lượng yêu cầu
             if (dto.ConfirmedQuantity > request.RequestedQuantity)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá yêu cầu ({request.RequestedQuantity}kg).");
             }
 
-            // ❌ Không được xác nhận vượt quá số lượng đã ghi nhận trong phiếu
             if ((double)dto.ConfirmedQuantity > receipt.ReceivedQuantity)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá số lượng đã tạo phiếu ({receipt.ReceivedQuantity}kg).");
             }
 
-            // ⚠️ Ghi chú nếu có chênh lệch
             if ((double)dto.ConfirmedQuantity != receipt.ReceivedQuantity)
             {
                 var diffNote = $"[Chênh lệch: tạo {receipt.ReceivedQuantity}kg, xác nhận {dto.ConfirmedQuantity}kg]";
                 receipt.Note = string.IsNullOrWhiteSpace(receipt.Note) ? diffNote : receipt.Note + " " + diffNote;
             }
 
-            // Cập nhật lại số lượng xác nhận (có thể nhỏ hơn)
             receipt.ReceivedQuantity = (double)dto.ConfirmedQuantity;
             receipt.Note = (receipt.Note ?? "") + $" [Confirmed at {DateTime.UtcNow:yyyy-MM-dd HH:mm}]";
             receipt.ReceivedAt ??= DateTime.UtcNow;
-            // ✅ Kiểm tra dung lượng kho hiện tại
+
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(receipt.WarehouseId);
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            // Tính tổng tồn kho hiện tại
             var currentInventories = await _unitOfWork.Inventories
                 .GetAllAsync(i => i.WarehouseId == receipt.WarehouseId && !i.IsDeleted);
 
             double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
-
-            // Check dung lượng trống
             double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
+
             if ((double)dto.ConfirmedQuantity > available)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Kho \"{warehouse.Name}\" quá tải {available:n0}kg, không thể nhập thêm {dto.ConfirmedQuantity}kg.");
             }
 
-            // Tồn kho
             var inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId);
             if (inventory != null)
             {
                 inventory.Quantity += (double)dto.ConfirmedQuantity;
                 inventory.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Inventories.Update(inventory);
-
             }
             else
             {
+                // ✅ Sử dụng generator để tạo mã tồn kho
+                var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
+
                 var newInventory = new Inventory
                 {
                     InventoryId = Guid.NewGuid(),
-                    InventoryCode = "INV-" + Guid.NewGuid().ToString("N")[..8],
+                    InventoryCode = inventoryCode,
                     WarehouseId = receipt.WarehouseId,
                     BatchId = receipt.BatchId,
                     Quantity = (double)dto.ConfirmedQuantity,
@@ -147,7 +146,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             request.Status = InboundRequestStatus.Completed.ToString();
             request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
             request.UpdatedAt = DateTime.UtcNow;
-          
 
             _unitOfWork.WarehouseReceipts.UpdateAsync(receipt);
             _unitOfWork.WarehouseInboundRequests.Update(request);
@@ -155,6 +153,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận thành công", receipt.ReceiptId);
         }
+
         public async Task<IServiceResult> GetAllAsync()
         {
             var receipts = await _unitOfWork.WarehouseReceipts.GetAllWithIncludesAsync();

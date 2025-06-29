@@ -7,16 +7,19 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class InventoryService : IInventoryService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public InventoryService(IUnitOfWork unitOfWork)
+        public InventoryService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork;
+            _codeGenerator = codeGenerator;
         }
 
         public async Task<IServiceResult> GetAllAsync()
@@ -68,22 +71,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết tồn kho thành công.", dto);
         }
+
         public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto)
         {
-            var existing = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
-            if (existing != null)
+            // Kiểm tra tồn tại warehouse
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
+            if (warehouse == null)
             {
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tồn tại dữ liệu trùng lặp: đã có tồn kho cho Warehouse + Batch này.");
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
             }
+
+            // Tính tổng tồn kho hiện tại trong warehouse đó
+            var currentInventories = await _unitOfWork.Inventories
+                .GetAllAsync(i => i.WarehouseId == dto.WarehouseId && !i.IsDeleted);
+            double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
+
+            // Kiểm tra dung lượng trống
+            double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
+            if (dto.Quantity > available)
+            {
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể thêm {dto.Quantity}kg.");
+            }
+
+            // Tạo mã và thêm mới inventory
+            var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
 
             var newInventory = new Inventory
             {
                 InventoryId = Guid.NewGuid(),
-                InventoryCode = "INV-" + DateTime.Now.ToString("yyMMddHHmmss"),
+                InventoryCode = inventoryCode,
                 WarehouseId = dto.WarehouseId,
                 BatchId = dto.BatchId,
                 Quantity = dto.Quantity,
-                Unit = dto.Unit,
+                Unit = "kg",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
@@ -94,6 +115,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
         }
+
+
         public async Task<IServiceResult> SoftDeleteAsync(Guid id)
         {
             var entity = await _unitOfWork.Inventories.FindByIdAsync(id);

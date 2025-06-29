@@ -50,6 +50,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                         .ThenInclude(p => p.CoffeeType)
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
+        public async Task<int> CountCreatedInYearAsync(int year)
+        {
+            return await _context.Inventories
+                .CountAsync(i => i.CreatedAt.Year == year && !i.IsDeleted);
+        }
     }
 
 }
