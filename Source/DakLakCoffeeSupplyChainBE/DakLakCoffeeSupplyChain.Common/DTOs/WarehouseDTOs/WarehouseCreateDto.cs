@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseDTOs
     {
         public string Name { get; set; } = null!;
         public string Location { get; set; } = null!;
-        public Guid ManagerId { get; set; }
+        //public Guid ManagerId { get; set; }
         public double? Capacity { get; set; }
     }
 }

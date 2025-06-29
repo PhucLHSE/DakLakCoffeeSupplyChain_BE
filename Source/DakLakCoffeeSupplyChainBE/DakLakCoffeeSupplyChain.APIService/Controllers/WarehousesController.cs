@@ -17,11 +17,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _warehouseService = warehouseService;
         }
 
+        //[HttpPost]
+        //[Authorize(Roles = "BusinessManager")]
+        //public async Task<IActionResult> Create([FromBody] WarehouseCreateDto dto)
+        //{
+        //    var result = await _warehouseService.CreateAsync(dto);
+        //    return StatusCode(result.Status, result);
+        //}
         [HttpPost]
-        [Authorize(Roles = "BusinessManager,Admin")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> Create([FromBody] WarehouseCreateDto dto)
         {
-            var result = await _warehouseService.CreateAsync(dto);
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized(new { message = "Không thể xác định BusinessManager từ token." });
+
+            var result = await _warehouseService.CreateAsync(dto, userId);
             return StatusCode(result.Status, result);
         }
 

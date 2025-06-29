@@ -28,7 +28,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
         }
 
-        public async Task<IServiceResult> Create(BusinessStaffCreateDto dto)
+        public async Task<IServiceResult> Create(BusinessStaffCreateDto dto, Guid supervisorId)
         {
             try
             {
@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // 3. Kiểm tra supervisor (BusinessManager) có hợp lệ không
-                var supervisor = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(dto.SupervisorId);
+                var supervisor = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(supervisorId);
                 if (supervisor == null || supervisor.IsDeleted)
                 {
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Supervisor không hợp lệ.");
@@ -79,20 +79,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     RegistrationDate = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsDeleted = false,
-                    IsVerified = true,     // ✅ Đã xác minh
-                    EmailVerified = true, // ✅ Không cần verify email
-                    Status = "active"      // ✅ Kích hoạt
+                    IsVerified = true,
+                    EmailVerified = true,
+                    Status = "active"
                 };
 
                 await _unitOfWork.UserAccountRepository.CreateAsync(newUser);
 
                 // 6. Tạo mã nhân viên + BusinessStaff
                 var staffCode = await _codeGenerator.GenerateStaffCodeAsync();
-                var newStaff = dto.MapToNewBusinessStaff(newUser.UserId, staffCode);
+                var newStaff = dto.MapToNewBusinessStaff(newUser.UserId, staffCode, supervisor.ManagerId);
 
                 await _unitOfWork.BusinessStaffRepository.CreateAsync(newStaff);
 
-                // 7. Lưu
+                // 7. Lưu thay đổi
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
@@ -107,5 +107,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
     }
 }

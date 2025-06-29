@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IWarehouseService
     {
-        Task<IServiceResult> CreateAsync(WarehouseCreateDto dto);
+        Task<IServiceResult> CreateAsync(WarehouseCreateDto dto, Guid userId);
         Task<IServiceResult> GetAllAsync();
         Task<IServiceResult> UpdateAsync(Guid id, WarehouseUpdateDto dto);
         Task<IServiceResult> DeleteAsync(Guid warehouseId);

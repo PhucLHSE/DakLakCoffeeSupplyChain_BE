@@ -18,5 +18,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<bool> HasDependenciesAsync(Guid warehouseId);
         Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId);
         Task<Warehouse?> GetByIdWithManagerAsync(Guid id);
+        Task<int> CountWarehousesCreatedInYearAsync(int year);
     }
 }

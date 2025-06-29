@@ -4,38 +4,49 @@ using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Mappers;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using DakLakCoffeeSupplyChain.Services.Mappers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class WarehouseService : IWarehouseService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public WarehouseService(IUnitOfWork unitOfWork)
+        public WarehouseService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
-            _unitOfWork = unitOfWork;
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> CreateAsync(WarehouseCreateDto dto)
+        public async Task<IServiceResult> CreateAsync(WarehouseCreateDto dto, Guid userId)
         {
             if (await _unitOfWork.Warehouses.IsNameExistsAsync(dto.Name))
             {
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tên kho đã tồn tại.");
             }
 
+            // Lấy BusinessManager từ UserId
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager == null || manager.IsDeleted)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy BusinessManager hợp lệ.");
+            }
+
+            var warehouseCode = await _codeGenerator.GenerateWarehouseCodeAsync();
+
             var warehouse = new Warehouse
             {
                 WarehouseId = Guid.NewGuid(),
-                WarehouseCode = "WH-" + Guid.NewGuid().ToString("N")[..8],
+                WarehouseCode = warehouseCode,
                 Name = dto.Name,
                 Location = dto.Location,
-                ManagerId = dto.ManagerId,
+                ManagerId = manager.ManagerId, // ✅ Gán từ manager
                 Capacity = dto.Capacity,
                 IsDeleted = false,
                 CreatedAt = DateTime.UtcNow,
@@ -47,10 +58,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo kho thành công", warehouse.WarehouseId);
         }
+
+
         public async Task<IServiceResult> GetAllAsync()
         {
-            var warehouses = await _unitOfWork.Warehouses
-                .FindAsync(w => !w.IsDeleted);
+            var warehouses = await _unitOfWork.Warehouses.FindAsync(w => !w.IsDeleted);
 
             var result = warehouses.Select(w => new WarehouseViewDto
             {
@@ -62,6 +74,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }
+
         public async Task<IServiceResult> UpdateAsync(Guid id, WarehouseUpdateDto dto)
         {
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(id);
@@ -71,7 +84,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (await _unitOfWork.Warehouses.IsNameExistsAsync(dto.Name))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tên kho đã tồn tại.");
 
-            // Áp dụng mapper
             dto.MapToEntity(warehouse);
 
             _unitOfWork.Warehouses.Update(warehouse);
@@ -86,10 +98,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            // Check tồn kho còn hoạt động
-            var inventories = await _unitOfWork.Inventories
-                .GetAllAsync(i => i.WarehouseId == warehouseId && !i.IsDeleted);
-
+            var inventories = await _unitOfWork.Inventories.GetAllAsync(i => i.WarehouseId == warehouseId && !i.IsDeleted);
             if (inventories.Any())
             {
                 var inventoryCodes = inventories.Select(i => i.InventoryCode).ToList();
@@ -116,16 +125,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = warehouse.ToDetailDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }
+
         public async Task<IServiceResult> HardDeleteAsync(Guid warehouseId)
         {
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            // Check tồn kho còn hoạt động
-            var inventories = await _unitOfWork.Inventories
-                .GetAllAsync(i => i.WarehouseId == warehouseId);
-
+            var inventories = await _unitOfWork.Inventories.GetAllAsync(i => i.WarehouseId == warehouseId);
             if (inventories.Any())
             {
                 var inventoryCodes = inventories.Select(i => i.InventoryCode).ToList();
@@ -139,7 +146,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa kho vĩnh viễn thành công.");
         }
-
-
     }
 }
