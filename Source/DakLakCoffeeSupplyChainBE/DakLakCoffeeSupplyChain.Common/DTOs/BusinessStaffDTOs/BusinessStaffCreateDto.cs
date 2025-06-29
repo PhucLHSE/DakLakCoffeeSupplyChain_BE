@@ -23,8 +23,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.BusinessStaffDTOs
         public string? PhoneNumber { get; set; }
 
         // Nhân viên
-        [Required]
-        public Guid SupervisorId { get; set; }
+        //[Required]
+        //public Guid SupervisorId { get; set; }
 
         [Required]
         [StringLength(50)]

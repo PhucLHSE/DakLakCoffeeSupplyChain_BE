@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -13,16 +14,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         private readonly IBusinessStaffService _businessStaffService;
 
         public BusinessStaffsController(IBusinessStaffService businessStaffService)
-            => _businessStaffService = businessStaffService;
+        {
+            _businessStaffService = businessStaffService;
+        }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,BusinessManager")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> CreateBusinessStaffAsync([FromBody] BusinessStaffCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _businessStaffService.Create(dto);
+            // ✅ Lấy SupervisorId từ token đăng nhập
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid supervisorId))
+            {
+                return Unauthorized(new { message = "Không thể xác định danh tính người dùng từ token." });
+            }
+
+            // ✅ Gọi service và truyền supervisorId
+            var result = await _businessStaffService.Create(dto, supervisorId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
             {
@@ -39,7 +50,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, new { message = result.Message });
         }
 
-        // Stub for GetById
         [HttpGet("{staffId}")]
         public async Task<IActionResult> GetById(Guid staffId)
         {
