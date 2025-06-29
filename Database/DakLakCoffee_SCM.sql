@@ -2530,6 +2530,90 @@ VALUES (
 
 GO
 
+-- Insert vào bảng Warehouses
+-- Lấy ManagerID từ BusinessManager đã có
+DECLARE @BM_ManagerID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Thêm kho 1: Kho Cư M’gar
+INSERT INTO Warehouses (WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted)
+VALUES ('WH-2025-DL001', @BM_ManagerID, N'Kho Cư M’gar', N'Thôn 3, Xã Cư M’gar, Đắk Lắk', 50000, GETDATE(), GETDATE(), 0);
+
+-- Thêm kho 2: Kho Buôn Hồ
+INSERT INTO Warehouses (WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted)
+VALUES ('WH-2025-DL002', @BM_ManagerID, N'Kho Buôn Hồ', N'Đường Nguyễn Huệ, Phường An Bình, TX. Buôn Hồ', 35000, GETDATE(), GETDATE(), 0);
+
+GO
+
+-- Insert vào bảng BusinessStaffs
+-- Lấy ManagerID từ BusinessManager đã có
+DECLARE @BM_ManagerID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Lấy UserID của nhân viên 1
+DECLARE @Staff1UserID UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'businessstaff@gmail.com'
+);
+
+-- Tạo user phụ cho nhân viên kho 2 (nếu chưa có)
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
+VALUES ('USR-2025-0007', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 'Male', '1992-04-20', N'Buôn Hồ', 'BusinessStaff@12345', 3);
+
+-- Lấy UserID của nhân viên 2
+DECLARE @Staff2UserID UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'warehouse2@gmail.com'
+);
+
+-- Lấy WarehouseID cho từng kho
+DECLARE @Warehouse1ID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
+);
+DECLARE @Warehouse2ID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL002'
+);
+
+-- Thêm nhân viên 1: gán cho kho 1
+INSERT INTO BusinessStaffs (
+  StaffCode, UserID, SupervisorID, Position, Department, AssignedWarehouseID,
+  IsActive, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  'STAFF-2025-0007',
+  @Staff1UserID,
+  @BM_ManagerID,
+  N'Thủ kho Cư M’gar',
+  N'Kho Đắk Lắk',
+  @Warehouse1ID,
+  1,
+  GETDATE(),
+  GETDATE(),
+  0
+);
+
+-- Thêm nhân viên 2: gán cho kho 2
+INSERT INTO BusinessStaffs (
+  StaffCode, UserID, SupervisorID, Position, Department, AssignedWarehouseID,
+  IsActive, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  'STAFF-2025-0008',
+  @Staff2UserID,
+  @BM_ManagerID,
+  N'Thủ kho Buôn Hồ',
+  N'Kho Đắk Lắk',
+  @Warehouse2ID,
+  1,
+  GETDATE(),
+  GETDATE(),
+  0
+);
+
+GO
+
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
 INSERT INTO SystemConfiguration 
