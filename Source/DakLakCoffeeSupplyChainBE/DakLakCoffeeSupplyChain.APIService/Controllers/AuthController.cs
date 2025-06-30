@@ -87,6 +87,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // GET api/resend-verification-email
+        [HttpPost("resend-verification-email")]
+        public async Task<IActionResult> ResendVerificationEmail([FromBody] ResendEmailVerificationRequestDto emailDto)
+        {
+            var result = await _authService.ResendVerificationEmail(emailDto);
+            if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.FAIL_VERIFY_OTP_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
         // Phương thức gửi mã OTP qua email
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
