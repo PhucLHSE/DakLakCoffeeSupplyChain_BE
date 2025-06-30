@@ -46,11 +46,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
         //Hiển thị toàn bộ plan ở màn hình dashboard của BM
-        public async Task<IServiceResult> GetAll()
+        public async Task<IServiceResult> GetAll(Guid userId)
         {
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => m.UserId == userId,
+                asNoTracking: true
+            );
+
+            if (manager == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                );
+            }
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
-                predicate: p => p.IsDeleted != true,
+                predicate: p => p.IsDeleted != true && p.CreatedBy == manager.ManagerId,
                 include: p => p.Include(p => p.CreatedByNavigation),
                 orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);

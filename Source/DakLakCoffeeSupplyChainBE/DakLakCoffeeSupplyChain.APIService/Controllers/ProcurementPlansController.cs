@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetAllProcurementPlansAsync()
         {
-            var result = await _procurementPlanService.GetAll();
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _procurementPlanService.GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu

@@ -1,6 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
-using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+﻿using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
 {

@@ -1,5 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmerDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;

@@ -1,5 +1,4 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
