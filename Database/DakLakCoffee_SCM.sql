@@ -2614,6 +2614,104 @@ VALUES (
 
 GO
 
+-- Insert vào bảng WarehouseInboundRequests
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+  SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+DECLARE @BusinessStaffID UNIQUEIDENTIFIER = (
+  SELECT StaffID FROM BusinessStaffs WHERE StaffCode = 'STAFF-2025-0007'
+);
+
+INSERT INTO WarehouseInboundRequests (
+  InboundRequestCode, BatchID, FarmerID, BusinessStaffID,
+  RequestedQuantity, PreferredDeliveryDate, ActualDeliveryDate,
+  Status, Note, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  'INREQ-2025-0001', @BatchID, @FarmerID, @BusinessStaffID,
+  1400, '2025-06-28', '2025-06-30',
+  'completed', N'Hàng đạt chất lượng tốt', GETDATE(), GETDATE(), 0
+);
+
+GO
+
+-- Insert vào bảng WarehouseReceipts
+DECLARE @WarehouseID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
+);
+
+DECLARE @InboundRequestID UNIQUEIDENTIFIER = (
+  SELECT InboundRequestID FROM WarehouseInboundRequests WHERE InboundRequestCode = 'INREQ-2025-0001'
+);
+
+DECLARE @StaffID UNIQUEIDENTIFIER = (
+  SELECT StaffID FROM BusinessStaffs WHERE StaffCode = 'STAFF-2025-0007'
+);
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+INSERT INTO WarehouseReceipts (
+  ReceiptCode, InboundRequestID, WarehouseID, BatchID,
+  ReceivedBy, LotCode, ReceivedQuantity, ReceivedAt,
+  Note, QRCodeURL, IsDeleted
+)
+VALUES (
+  'RECEIPT-2025-0001', @InboundRequestID, @WarehouseID, @BatchID,
+  @StaffID, 'LOT-BATCH-0001', 1385.5, GETDATE(),
+  N'Đã kiểm tra đầy đủ, không hư hỏng', 'https://qrdemo.vn/RECEIPT-2025-0145', 0
+);
+
+GO
+
+-- Insert vào bảng Inventories
+DECLARE @WarehouseID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
+);
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+INSERT INTO Inventories (
+  InventoryCode, WarehouseID, BatchID, Quantity,
+  Unit, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  'INV-2025-0001', @WarehouseID, @BatchID, 1385.5,
+  N'kg', GETDATE(), GETDATE(), 0
+);
+
+GO
+
+-- Insert vào bảng InventoryLogs
+DECLARE @InventoryID UNIQUEIDENTIFIER = (
+  SELECT InventoryID FROM Inventories WHERE InventoryCode = 'INV-2025-0001'
+);
+
+DECLARE @StaffID UNIQUEIDENTIFIER = (
+  SELECT StaffID FROM BusinessStaffs WHERE StaffCode = 'STAFF-2025-0007'
+);
+
+INSERT INTO InventoryLogs (
+  InventoryID, ActionType, QuantityChanged,
+  UpdatedBy, TriggeredBySystem, Note,
+  LoggedAt, IsDeleted
+)
+VALUES (
+  @InventoryID, N'increase', 1385.5,
+  @StaffID, 0, N'Nhập kho từ INREQ-2025-0008',
+  GETDATE(), 0
+);
+
+GO
+
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
 INSERT INTO SystemConfiguration 
