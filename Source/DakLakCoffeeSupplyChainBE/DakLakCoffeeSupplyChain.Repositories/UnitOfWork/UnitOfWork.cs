@@ -48,6 +48,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProcessingParameterRepository? processingParameterRepository;
         private IProcessingBatchRepository? processingBatchRepository;
         private CropSeasonDetailRepository? cropSeasonDetailRepository;
+        private IInventoryLogRepository? inventoryLogRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -333,5 +334,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return cropSeasonDetailRepository ??= new CropSeasonDetailRepository(context);
             }
         }
+        public IInventoryLogRepository InventoryLogs
+        {
+            get
+            {
+                return inventoryLogRepository ??= new InventoryLogRepository(context);
+            }
+        }
+
     }
 }

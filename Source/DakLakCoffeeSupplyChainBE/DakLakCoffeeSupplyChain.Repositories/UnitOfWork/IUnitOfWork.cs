@@ -80,6 +80,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IProcessingBatchRepository ProcessingBatchRepository { get; }
         ICropSeasonDetailRepository CropSeasonDetailRepository { get; }
+        IInventoryLogRepository InventoryLogs { get; }
+
 
 
     }
