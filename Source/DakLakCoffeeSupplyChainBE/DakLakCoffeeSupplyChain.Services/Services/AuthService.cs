@@ -247,6 +247,60 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+        public async Task<IServiceResult> ResendVerificationEmail(ResendEmailVerificationRequestDto emailDto)
+        {
+            try
+            {
+                // 1. Lấy thông tin người dùng
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.Email == emailDto.Email,
+                    asNoTracking: true
+                    );
+                if (user == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tài khoản không tồn tại.");
+
+                // 2. Kiểm tra đã xác minh chưa
+                if (user.IsVerified == true)
+                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã được xác minh trước đó.");
+
+                // 3. Kiểm tra xem đã có mã xác minh trong cache chưa
+                var cacheKey = $"email-verify:{user.UserId}";
+                if (_cache.TryGetValue(cacheKey, out string existingCode))
+                {
+                    var verifyUrlExisting = $"https://localhost:7163/api/Auth/verify-email/userId={user.UserId}&code={existingCode}";
+
+                    // Gửi lại email xác minh với mã cũ
+                    await _emailService.SendEmailAsync(
+                        user.Email,
+                        "Xác minh tài khoản (gửi lại)",
+                        $"Mã xác minh trước đó vẫn còn hiệu lực. Vui lòng click vào link sau để xác minh tài khoản của bạn: <b>{verifyUrlExisting}</b>"
+                    );
+
+                    return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE    , "Đã gửi lại email xác minh (mã cũ vẫn còn hiệu lực).");
+                }
+
+                // 4. Nếu chưa có mã, tạo mã mới và lưu vào cache
+                string newVerificationCode = GenerateVerificationCode(6);
+                _cache.Set(cacheKey, newVerificationCode, TimeSpan.FromMinutes(30));
+
+                var verifyUrlNew = $"https://localhost:7163/api/Auth/verify-email/userId={user.UserId}&code={newVerificationCode}";
+
+                // 5. Gửi email xác minh mới
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Xác minh tài khoản (mã mới)",
+                    $"Click vào đường link sau để xác minh tài khoản của bạn: <b>{verifyUrlNew}</b>"
+                );
+
+                return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE, "Đã tạo và gửi email xác minh mới.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
+        }
+
         // Phương thức gửi email với mã OTP reset mật khẩu
         public async Task<IServiceResult> ForgotPasswordAsync(ForgotPasswordRequestDto request)
         {
