@@ -16,7 +16,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 BatchId = entity.BatchId,
                 BatchCode = entity.BatchCode,
-
+                SystemBatchCode = entity.SystemBatchCode,
                 FarmerId = entity.FarmerId,
                 FarmerName = entity.Farmer?.User?.Name ?? "N/A",     
 
