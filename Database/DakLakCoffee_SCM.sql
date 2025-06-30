@@ -803,7 +803,7 @@ GO
 -- ProcessingBatchWastes – Ghi nhận phế phẩm từng bước sơ chế
 CREATE TABLE ProcessingBatchWastes (
   WasteID UNIQUEIDENTIFIER PRIMARY KEY,                         -- ID dòng phế phẩm
-  WasteCode VARCHAR(20) UNIQUE,                                 -- WASTE-2025-0012
+  WasteCode VARCHAR(20) UNIQUE,                                 -- WASTE-2025-0001
   ProgressID UNIQUEIDENTIFIER NOT NULL,                         -- FK tới bước gây ra phế phẩm
   WasteType NVARCHAR(100),                                      -- Loại phế phẩm: vỏ quả, hạt lép...
   Quantity FLOAT,                                               -- Khối lượng
@@ -827,7 +827,7 @@ GO
 -- ProcessingWasteDisposals – Ghi nhận cách xử lý phế phẩm
 CREATE TABLE ProcessingWasteDisposals (
   DisposalID UNIQUEIDENTIFIER PRIMARY KEY,                -- ID xử lý phế phẩm
-  DisposalCode VARCHAR(20) UNIQUE,                        -- DISP-2025-0005
+  DisposalCode VARCHAR(20) UNIQUE,                        -- DISP-2025-0001
   WasteID UNIQUEIDENTIFIER NOT NULL,                      -- FK tới dòng phế phẩm
   DisposalMethod NVARCHAR(100) NOT NULL,                  -- Phương pháp xử lý: compost, sell, discard
   HandledBy UNIQUEIDENTIFIER,                             -- Ai thực hiện xử lý
@@ -895,7 +895,7 @@ GO
 -- Inventories – Ghi nhận tồn kho theo từng batch
 CREATE TABLE Inventories (
     InventoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- Mã dòng tồn kho
-	InventoryCode VARCHAR(20) UNIQUE,                               -- INV-2025-0056
+	InventoryCode VARCHAR(20) UNIQUE,                               -- INV-2025-0001
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
     BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
     Quantity FLOAT NOT NULL,                                        -- Số lượng hiện tại trong kho
@@ -936,7 +936,7 @@ GO
 -- WarehouseInboundRequests – Yêu cầu nhập kho từ Farmer
 CREATE TABLE WarehouseInboundRequests (
   InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã yêu cầu nhập kho,
-  InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0008
+  InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0001
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Gắn với mẻ sơ chế
   FarmerID UNIQUEIDENTIFIER NOT NULL,                               -- Người gửi yêu cầu (Farmer)
   BusinessStaffID UNIQUEIDENTIFIER NULL,							-- Người đại diện doanh nghiệp nhận
@@ -965,7 +965,7 @@ GO
 -- WarehouseReceipts – Phiếu nhập kho
 CREATE TABLE WarehouseReceipts (
   ReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),      -- Mã phiếu nhập kho
-  ReceiptCode VARCHAR(20) UNIQUE,                              -- RECEIPT-2025-0145
+  ReceiptCode VARCHAR(20) UNIQUE,                              -- RECEIPT-2025-0001
   InboundRequestID UNIQUEIDENTIFIER NOT NULL,                  -- Gắn với yêu cầu nhập kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                       -- Kho tiếp nhận
   BatchID UNIQUEIDENTIFIER NOT NULL,                           -- Mẻ cà phê
@@ -996,7 +996,7 @@ GO
 -- Products – Thông tin sản phẩm
 CREATE TABLE Products (
   ProductID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã sản phẩm duy nhất
-  ProductCode VARCHAR(20) UNIQUE,                                   -- PROD-2025-0101
+  ProductCode VARCHAR(20) UNIQUE,                                   -- PROD-2025-0001
   ProductName NVARCHAR(100) NOT NULL,                               -- Tên thương mại sản phẩm
   Description NVARCHAR(MAX),                                        -- Mô tả chi tiết sản phẩm
   UnitPrice FLOAT,                                                  -- Giá bán B2B (VNĐ/kg)
@@ -1042,7 +1042,7 @@ GO
 -- Orders – Thông tin đơn hàng theo hợp đồng
 CREATE TABLE Orders (
   OrderID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã đơn hàng
-  OrderCode VARCHAR(20) UNIQUE,                                   -- ORD-2025-0452
+  OrderCode VARCHAR(20) UNIQUE,                                   -- ORD-2025-0001
   DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
   DeliveryRound INT,                                              -- Đợt giao lần mấy
   OrderDate DATETIME,                                             -- Ngày đặt hàng
@@ -2708,6 +2708,96 @@ VALUES (
   @InventoryID, N'increase', 1385.5,
   @StaffID, 0, N'Nhập kho từ INREQ-2025-0008',
   GETDATE(), 0
+);
+
+GO
+
+-- Insert vào bảng Products
+DECLARE @ManagerID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001'
+);
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @InventoryID UNIQUEIDENTIFIER = (
+  SELECT InventoryID FROM Inventories WHERE InventoryCode = 'INV-2025-0001'
+);
+
+DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
+  SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+);
+
+DECLARE @ApprovedBy UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+);
+
+DECLARE @ProductID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO Products (
+  ProductID, ProductCode, ProductName, Description, UnitPrice, QuantityAvailable,
+  Unit, CreatedBy, BatchID, InventoryID, CoffeeTypeID, OriginRegion,
+  OriginFarmLocation, GeographicalIndicationCode, CertificationURL,
+  EvaluatedQuality, EvaluationScore, Status, ApprovedBy, ApprovalNote,
+  ApprovedAt, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  @ProductID, 'PROD-2025-0001', N'Arabica DakLak - Natural',
+  N'Arabica chất lượng Specialty, được sơ chế theo phương pháp tự nhiên tại Ea Tu.',
+  95000, 1385.5, N'kg',
+  @ManagerID, @BatchID, @InventoryID, @CoffeeTypeID,
+  N'Đắk Lắk', N'Xã Ea Tu, TP. Buôn Ma Thuột', 'DLK-GI-0001',
+  'https://certs.example.com/vietgap/arabica.pdf',
+  N'Specialty', 84.5, N'approved', @ApprovedBy, N'Meets all cupping standards.',
+  GETDATE(), GETDATE(), GETDATE(), 0
+);
+
+GO
+
+-- Insert vào bảng Orders
+DECLARE @DeliveryBatchID UNIQUEIDENTIFIER = (
+  SELECT DeliveryBatchID FROM ContractDeliveryBatches WHERE DeliveryBatchCode = 'DELB-2025-0001'
+);
+
+DECLARE @OrderID UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO Orders (
+  OrderID, OrderCode, DeliveryBatchID, DeliveryRound,
+  OrderDate, ActualDeliveryDate, TotalAmount,
+  Note, Status, CancelReason, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  @OrderID, 'ORD-2025-0001', @DeliveryBatchID, 1,
+  GETDATE(), GETDATE(), 95000 * 500,
+  N'First batch of Arabica delivery', 'preparing', NULL,
+  GETDATE(), GETDATE(), 0
+);
+
+GO
+
+-- Insert vào bảng OrderItems
+DECLARE @ContractDeliveryItemID UNIQUEIDENTIFIER = (
+  SELECT DeliveryItemID FROM ContractDeliveryItems WHERE DeliveryItemCode = 'DLI-2025-0001'
+);
+
+DECLARE @OrderID UNIQUEIDENTIFIER = (
+  SELECT OrderID FROM Orders WHERE OrderCode = 'ORD-2025-0001'
+);
+
+DECLARE @ProductID UNIQUEIDENTIFIER = (
+  SELECT ProductID FROM Products WHERE ProductCode = 'PROD-2025-0001'
+);
+
+INSERT INTO OrderItems (
+  OrderItemID, OrderID, ContractDeliveryItemID, ProductID,
+  Quantity, UnitPrice, DiscountAmount, TotalPrice,
+  Note, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  NEWID(), @OrderID, @ContractDeliveryItemID, @ProductID,
+  500, 95000, 0.0, 95000 * 500,
+  N'Standard delivery item', GETDATE(), GETDATE(), 0
 );
 
 GO
