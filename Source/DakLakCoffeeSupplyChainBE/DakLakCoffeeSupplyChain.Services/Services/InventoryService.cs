@@ -74,19 +74,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto)
         {
-            // Kiểm tra tồn tại warehouse
+            // ✅ Kiểm tra kho có tồn tại
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
             if (warehouse == null)
-            {
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
-            }
 
-            // Tính tổng tồn kho hiện tại trong warehouse đó
+            // ✅ Kiểm tra batch có tồn tại
+            //var batch = await _unitOfWork.ProcessingBatches.GetByIdAsync(dto.BatchId);
+            //if (batch == null)
+            //    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy batch.");
+
+            // ✅ Kiểm tra tồn tại inventory cùng warehouse + batch
+            var existing = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
+            if (existing != null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tồn kho đã tồn tại cho kho và batch này.");
+
+            // ✅ Kiểm tra dung lượng kho còn trống
             var currentInventories = await _unitOfWork.Inventories
                 .GetAllAsync(i => i.WarehouseId == dto.WarehouseId && !i.IsDeleted);
             double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
 
-            // Kiểm tra dung lượng trống
             double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
             if (dto.Quantity > available)
             {
@@ -94,7 +101,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể thêm {dto.Quantity}kg.");
             }
 
-            // Tạo mã và thêm mới inventory
+            // ✅ Sinh mã bằng generator
             var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
 
             var newInventory = new Inventory
@@ -115,6 +122,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
         }
+
+
 
 
         public async Task<IServiceResult> SoftDeleteAsync(Guid id)
