@@ -49,6 +49,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Department = staff.Department
             };
         }
+        public static void MapToUpdateBusinessStaff(this BusinessStaffUpdateDto dto, BusinessStaff entity)
+        {
+            entity.Position = dto.Position;
+            entity.Department = dto.Department;
+            entity.AssignedWarehouseId = dto.AssignedWarehouseId;
+            entity.IsActive = dto.IsActive;
+            entity.UpdatedAt = DateTime.UtcNow;
+        }
+
 
     }
 }
