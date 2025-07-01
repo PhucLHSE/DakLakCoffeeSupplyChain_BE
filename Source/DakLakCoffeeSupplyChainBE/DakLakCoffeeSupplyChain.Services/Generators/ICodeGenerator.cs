@@ -12,6 +12,8 @@
 
         Task<string> GenerateContractItemCodeAsync(Guid contractId);
 
+        Task<string> GenerateDeliveryBatchCodeAsync();
+
         Task<string> GenerateContractDeliveryItemCodeAsync(Guid deliveryBatchId);
 
         Task<string> GenerateCropSeasonCodeAsync(int year);

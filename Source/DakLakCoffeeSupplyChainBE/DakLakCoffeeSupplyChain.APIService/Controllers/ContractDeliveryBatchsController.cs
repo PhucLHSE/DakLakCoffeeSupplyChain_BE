@@ -5,6 +5,8 @@ using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.Authorization;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -62,6 +64,39 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // POST api/<ContractDeliveryBatchsController>
+        [HttpPost]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> CreateContractDeliveryBatchAsync([FromBody] ContractDeliveryBatchCreateDto contractDeliveryBatchDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractDeliveryBatchService.Create(contractDeliveryBatchDto, userId);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { deliveryBatchId = ((ContractDeliveryBatchViewDetailDto)result.Data).DeliveryBatchId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
         // PATCH: api/<ContractDeliveryBatchsController>/soft-delete/{deliveryBatchId}

@@ -10,19 +10,23 @@ using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class ContractDeliveryBatchService : IContractDeliveryBatchService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public ContractDeliveryBatchService(IUnitOfWork unitOfWork)
+        public ContractDeliveryBatchService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -135,6 +139,152 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     contractDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(ContractDeliveryBatchCreateDto contractDeliveryBatchDto, Guid userId)
+        {
+            try
+            {
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => m.UserId == userId && !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s => s.UserId == userId && !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm thấy quyền hợp lệ để tạo đợt giao hàng."
+                    );
+                }
+
+                // Kiểm tra hợp đồng có tồn tại và thuộc về Manager (hoặc Manager của Staff)
+                var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                    predicate: c => 
+                       c.ContractId == contractDeliveryBatchDto.ContractId && 
+                       c.SellerId == managerId && 
+                       !c.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (contract == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Không tìm thấy hợp đồng hoặc không thuộc quyền quản lý."
+                    );
+                }
+
+                // DeliveryRound đã tồn tại trong hợp đồng chưa
+                bool isDeliveryRoundDuplicated = await _unitOfWork.ContractDeliveryBatchRepository.AnyAsync(
+                    predicate: b =>
+                       !b.IsDeleted &&
+                       b.ContractId == contract.ContractId &&
+                       b.DeliveryRound == contractDeliveryBatchDto.DeliveryRound
+                );
+
+                if (isDeliveryRoundDuplicated)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Đợt giao hàng số {contractDeliveryBatchDto.DeliveryRound} đã tồn tại trong hợp đồng này."
+                    );
+                }
+
+                // ExpectedDeliveryDate phải nằm trong phạm vi ngày của hợp đồng
+                if (contractDeliveryBatchDto.ExpectedDeliveryDate < contract.StartDate ||
+                    contractDeliveryBatchDto.ExpectedDeliveryDate > contract.EndDate)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Ngày giao dự kiến phải nằm trong khoảng thời gian hiệu lực của hợp đồng: {contract.StartDate:dd/MM/yyyy} đến {contract.EndDate:dd/MM/yyyy}."
+                    );
+                }
+
+                // TotalPlannedQuantity không vượt quá TotalQuantity của hợp đồng
+                if (contract.TotalQuantity.HasValue && 
+                    contractDeliveryBatchDto.TotalPlannedQuantity > contract.TotalQuantity.Value)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Tổng sản lượng dự kiến ({contractDeliveryBatchDto.TotalPlannedQuantity} kg) vượt quá tổng sản lượng hợp đồng ({contract.TotalQuantity.Value} kg)."
+                    );
+                }
+
+                // Sinh mã giao hàng
+                string deliveryBatchCode = await _codeGenerator.GenerateDeliveryBatchCodeAsync();
+
+                // Map DTO sang Entity
+                var newDeliveryBatch = contractDeliveryBatchDto.MapToNewContractDeliveryBatch(deliveryBatchCode);
+
+                // Lưu vào DB
+                await _unitOfWork.ContractDeliveryBatchRepository.CreateAsync(newDeliveryBatch);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var createdContractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                        predicate: b => b.DeliveryBatchId == newDeliveryBatch.DeliveryBatchId,
+                        include: query => query
+                           .Include(b => b.Contract)
+                           .Include(b => b.ContractDeliveryItems)
+                              .ThenInclude(i => i.ContractItem)
+                                 .ThenInclude(ci => ci.CoffeeType),
+                        asNoTracking: true
+                    );
+
+                    if (createdContractDeliveryBatch != null)
+                    {
+                        var responseDto = createdContractDeliveryBatch.MapToContractDeliveryBatchViewDetailDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu để trả về."
+                    );
+                }
+
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE,
+                    Const.FAIL_CREATE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.Message
                 );
             }
         }

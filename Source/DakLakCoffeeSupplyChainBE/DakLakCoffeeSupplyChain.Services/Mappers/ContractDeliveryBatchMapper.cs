@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.ContractDeliveryItem;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractDeliveryBatchEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -71,6 +72,43 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     })
                     .ToList() ?? new List<ContractDeliveryItemViewDto>()
             };
+        }
+
+        // Mapper ContractDeliveryBatchCreateDto → ContractDeliveryBatch
+        public static ContractDeliveryBatch MapToNewContractDeliveryBatch(
+            this ContractDeliveryBatchCreateDto dto,
+            string deliveryBatchCode)
+        {
+            var batchId = Guid.NewGuid();
+
+            var deliveryBatch = new ContractDeliveryBatch
+            {
+                DeliveryBatchId = batchId,
+                DeliveryBatchCode = deliveryBatchCode,
+                ContractId = dto.ContractId,
+                DeliveryRound = dto.DeliveryRound,
+                ExpectedDeliveryDate = dto.ExpectedDeliveryDate,
+                TotalPlannedQuantity = dto.TotalPlannedQuantity,
+                Status = dto.Status.ToString(), // enum to string
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false,
+
+                ContractDeliveryItems = dto.ContractDeliveryItems.Select((item, index) => new ContractDeliveryItem
+                {
+                    DeliveryItemId = Guid.NewGuid(),
+                    DeliveryItemCode = $"DLI-{index + 1:D3}-{deliveryBatchCode}",
+                    DeliveryBatchId = batchId,
+                    ContractItemId = item.ContractItemId,
+                    PlannedQuantity = item.PlannedQuantity ?? 0,
+                    Note = item.Note,
+                    CreatedAt = DateHelper.NowVietnamTime(),
+                    UpdatedAt = DateHelper.NowVietnamTime(),
+                    IsDeleted = false
+                }).ToList()
+            };
+
+            return deliveryBatch;
         }
     }
 }

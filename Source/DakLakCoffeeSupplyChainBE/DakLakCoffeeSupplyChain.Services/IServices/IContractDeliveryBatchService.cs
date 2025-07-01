@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll(Guid userId);
 
         Task<IServiceResult> GetById(Guid deliveryBatchId);
+
+        Task<IServiceResult> Create(ContractDeliveryBatchCreateDto contractDeliveryBatchDto, Guid userId);
 
         Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId);
     }
