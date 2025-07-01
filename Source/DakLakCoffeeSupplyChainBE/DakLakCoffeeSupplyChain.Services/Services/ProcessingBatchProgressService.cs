@@ -213,5 +213,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 6] Không có thay đổi nào được lưu.");
             }
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid progressId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingBatchProgressRepository.SoftDeleteAsync(progressId);
+
+                if (!success)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "[SoftDelete] Progress không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(
+                    Const.SUCCESS_DELETE_CODE,
+                    "[SoftDelete] Đã xoá mềm tiến độ sơ chế thành công."
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"[Exception] {ex.Message}"
+                );
+            }
+        }
+
     }
 }
