@@ -45,5 +45,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 return false;
             }
         }
+        public async Task<bool> SoftDeleteAsync(Guid progressId)
+        {
+            var entity = await _context.ProcessingBatchProgresses
+                .FirstOrDefaultAsync(p => p.ProgressId == progressId && !p.IsDeleted);
+
+            if (entity == null) return false;
+
+            entity.IsDeleted = true;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            _context.ProcessingBatchProgresses.Update(entity); // cần thiết để EF ghi nhận thay đổi
+            return true;
+        }
+
     }
 }

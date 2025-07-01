@@ -74,6 +74,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result); // fallback lỗi hệ thống
         }
+        [HttpDelete("soft/{id}")]
+        // [Authorize(Roles = "BusinessStaff,Farmer")]
+        public async Task<IActionResult> SoftDelete(Guid id)
+        {
+            var result = await _processingBatchProgressService.SoftDeleteAsync(id);
 
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
