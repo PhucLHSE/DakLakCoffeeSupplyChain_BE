@@ -108,6 +108,35 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        // PATCH api/BusinessStaffs/soft-delete/{staffId}
+        [HttpPatch("soft-delete/{staffId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> SoftDeleteStaff(Guid staffId)
+        {
+            var result = await _businessStaffService.SoftDeleteAsync(staffId);
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(new { message = result.Message });
+
+            return StatusCode(500, result.Message);
+        }
+
+        // DELETE api/BusinessStaffs/{staffId}
+        [HttpDelete("{staffId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> HardDeleteStaff(Guid staffId)
+        {
+            var result = await _businessStaffService.HardDeleteAsync(staffId);
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(new { message = result.Message });
+
+            return StatusCode(500, result.Message);
+        }
 
 
     }

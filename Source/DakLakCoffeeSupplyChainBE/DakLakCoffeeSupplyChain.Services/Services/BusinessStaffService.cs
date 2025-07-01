@@ -186,6 +186,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid staffId)
+        {
+            var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(staffId);
+            if (staff == null || staff.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Staff not found or already deleted");
+
+            staff.IsDeleted = true;
+            staff.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.BusinessStaffRepository.UpdateAsync(staff);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Soft delete success")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Soft delete failed");
+        }
+
+        public async Task<IServiceResult> HardDeleteAsync(Guid staffId)
+        {
+            var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(staffId);
+            if (staff == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Staff not found");
+
+            await _unitOfWork.BusinessStaffRepository.RemoveAsync(staff);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Hard delete success")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Hard delete failed");
+        }
 
 
 
