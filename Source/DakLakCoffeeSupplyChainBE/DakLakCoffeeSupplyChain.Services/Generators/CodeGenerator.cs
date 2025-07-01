@@ -75,6 +75,15 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"CTI-{(count + 1):D3}-{contractCode}";
         }
 
+        public async Task<string> GenerateDeliveryBatchCodeAsync()
+        {
+            // Đếm số lô giao hàng đã tạo trong năm hiện tại
+            var count = await _unitOfWork.ContractDeliveryBatchRepository.CountByYearAsync(CurrentYear);
+
+            // Trả về mã có dạng: DELB-2025-0034
+            return $"DELB-{CurrentYear}-{(count + 1):D4}";
+        }
+
         public async Task<string> GenerateContractDeliveryItemCodeAsync(Guid deliveryBatchId)
         {
             // Lấy contractDeliveryBatch để có DeliveryBatchCode
