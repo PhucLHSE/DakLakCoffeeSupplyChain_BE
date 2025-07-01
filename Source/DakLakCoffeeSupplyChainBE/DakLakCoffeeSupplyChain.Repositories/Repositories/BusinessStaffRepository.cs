@@ -39,6 +39,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.StaffId == staffId && !bs.IsDeleted);
         }
+        public async Task<List<BusinessStaff>> GetBySupervisorIdAsync(Guid supervisorId)
+        {
+            return await _context.BusinessStaffs
+                .Include(bs => bs.User)
+                .Where(bs => bs.SupervisorId == supervisorId && !bs.IsDeleted)
+                .AsNoTracking()
+                .ToListAsync();
+        }
 
 
     }

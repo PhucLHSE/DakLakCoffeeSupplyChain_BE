@@ -18,6 +18,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _businessStaffService = businessStaffService;
         }
 
+        // POST: api/BusinessStaffs
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> CreateBusinessStaffAsync([FromBody] BusinessStaffCreateDto dto)
@@ -25,43 +26,64 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // ✅ Lấy SupervisorId từ token đăng nhập
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid supervisorId))
-            {
-                return Unauthorized(new { message = "Không thể xác định danh tính người dùng từ token." });
-            }
+                return Unauthorized("Không xác định được người dùng từ token.");
 
-            // ✅ Gọi service và truyền supervisorId
             var result = await _businessStaffService.Create(dto, supervisorId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
-            {
-                return CreatedAtAction(nameof(GetById), new { staffId = result.Data }, new
-                {
-                    message = result.Message,
-                    staffId = result.Data
-                });
-            }
+                return CreatedAtAction(nameof(GetById), new { staffId = result.Data }, result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(new { message = result.Message });
+                return Conflict(result.Message); // 409
 
-            return StatusCode(500, new { message = result.Message });
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result.Message); // 500
+
+            return StatusCode(500, result.Message); // fallback
         }
 
+        // GET: api/BusinessStaffs
+        [HttpGet]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> GetAllBySupervisor()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Không xác định được người dùng từ token.");
+
+            var result = await _businessStaffService.GetAllBySupervisorAsync(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data); // 200
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message); // 404
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result.Message); // 500
+
+            return StatusCode(500, result.Message); // fallback
+        }
+
+        // GET: api/BusinessStaffs/{staffId}
         [HttpGet("{staffId}")]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetById(Guid staffId)
         {
             var result = await _businessStaffService.GetByIdAsync(staffId);
 
-            return result.Status switch
-            {
-                var code when code == Const.SUCCESS_READ_CODE => Ok(result.Data),
-                var code when code == Const.WARNING_NO_DATA_CODE => NotFound(new { message = result.Message }),
-                _ => StatusCode(500, new { message = result.Message })
-            };
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data); // 200
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message); // 404
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return StatusCode(500, result.Message); // 500
+
+            return StatusCode(500, result.Message); // fallback
         }
     }
 }

@@ -136,6 +136,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> GetAllBySupervisorAsync(Guid userId)
+        {
+            try
+            {
+                var supervisor = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+                if (supervisor == null || supervisor.IsDeleted)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Supervisor không hợp lệ hoặc không tồn tại.");
+                }
+
+                var staffs = await _unitOfWork.BusinessStaffRepository.GetBySupervisorIdAsync(supervisor.ManagerId);
+                if (staffs == null || !staffs.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+                }
+
+                var list = staffs.Select(s => s.MapToListDto()).ToList();
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, list);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
 
 
     }

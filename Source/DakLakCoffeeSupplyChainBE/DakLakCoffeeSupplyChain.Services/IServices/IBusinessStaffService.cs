@@ -12,5 +12,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> Create(BusinessStaffCreateDto dto, Guid supervisorId);
         Task<IServiceResult> GetByIdAsync(Guid staffId);
+        Task<IServiceResult> GetAllBySupervisorAsync(Guid supervisorId);
     }
 }
