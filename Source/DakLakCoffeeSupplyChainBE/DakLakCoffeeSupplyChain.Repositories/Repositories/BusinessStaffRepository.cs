@@ -18,13 +18,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.BusinessStaffs
                 .Include(bs => bs.User)
+                .Where(bs => !bs.IsDeleted)
                 .ToListAsync();
         }
         public async Task<BusinessStaff?> FindByUserIdAsync(Guid userId)
         {
             return await _context.BusinessStaffs
                 .Include(bs => bs.User)
-                .FirstOrDefaultAsync(bs => bs.UserId == userId);
+                .FirstOrDefaultAsync(bs => bs.UserId == userId && !bs.IsDeleted);
         }
         public async Task<int> CountStaffCreatedInYearAsync(int year)
         {
