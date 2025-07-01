@@ -22,6 +22,21 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow
             };
         }
+        public static BusinessStaffDetailDto MapToDetailDto(this BusinessStaff staff)
+        {
+            return new BusinessStaffDetailDto
+            {
+                StaffId = staff.StaffId,
+                StaffCode = staff.StaffCode,
+                FullName = staff.User?.Name ?? string.Empty,
+                Email = staff.User?.Email ?? string.Empty,
+                PhoneNumber = staff.User?.PhoneNumber,
+                Department = staff.Department,
+                Position = staff.Position,
+                AssignedWarehouseId = staff.AssignedWarehouseId,
+                CreatedAt = staff.CreatedAt
+            };
+        }
 
     }
 }

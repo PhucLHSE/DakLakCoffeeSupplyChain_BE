@@ -107,6 +107,36 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid staffId)
+        {
+            try
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdWithUserAsync(staffId);
+
+                if (staff == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+
+                var dto = staff.MapToDetailDto();
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    dto
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
+                );
+            }
+        }
+
 
     }
 }

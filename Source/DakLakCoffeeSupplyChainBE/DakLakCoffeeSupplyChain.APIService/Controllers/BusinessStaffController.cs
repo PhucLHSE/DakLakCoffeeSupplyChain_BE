@@ -51,9 +51,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet("{staffId}")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetById(Guid staffId)
         {
-            return StatusCode(501); // Chưa triển khai
+            var result = await _businessStaffService.GetByIdAsync(staffId);
+
+            return result.Status switch
+            {
+                var code when code == Const.SUCCESS_READ_CODE => Ok(result.Data),
+                var code when code == Const.WARNING_NO_DATA_CODE => NotFound(new { message = result.Message }),
+                _ => StatusCode(500, new { message = result.Message })
+            };
         }
     }
 }
