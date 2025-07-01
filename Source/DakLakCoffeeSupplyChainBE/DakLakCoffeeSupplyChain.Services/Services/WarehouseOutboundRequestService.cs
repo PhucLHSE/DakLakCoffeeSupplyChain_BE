@@ -5,6 +5,7 @@ using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,11 +18,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public WarehouseOutboundRequestService(IUnitOfWork unitOfWork, INotificationService notificationService)
+        public WarehouseOutboundRequestService(
+            IUnitOfWork unitOfWork,
+            INotificationService notificationService,
+            ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
+            _codeGenerator = codeGenerator;
         }
 
         public async Task<IServiceResult> CreateRequestAsync(Guid managerUserId, WarehouseOutboundRequestCreateDto dto)
@@ -30,11 +36,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (manager == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy người dùng yêu cầu.");
 
+            // ✅ Sinh mã code sử dụng generator
+            var generatedCode = await _codeGenerator.GenerateOutboundRequestCodeAsync();
 
             var request = new WarehouseOutboundRequest
             {
                 OutboundRequestId = Guid.NewGuid(),
-                OutboundRequestCode = "WOR-" + Guid.NewGuid().ToString("N")[..8],
+                OutboundRequestCode = generatedCode,
                 WarehouseId = dto.WarehouseId,
                 InventoryId = dto.InventoryId,
                 RequestedQuantity = dto.RequestedQuantity,
@@ -52,19 +60,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseOutboundRequests.CreateAsync(request);
             await _unitOfWork.SaveChangesAsync();
 
-            // Gửi thông báo đến các BusinessStaff
             await _notificationService.NotifyOutboundRequestCreatedAsync(request.OutboundRequestId, manager.ManagerId);
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }
+
         public async Task<IServiceResult> GetDetailAsync(Guid outboundRequestId)
         {
             var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(outboundRequestId);
 
             if (request == null || request.IsDeleted)
-            {
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu xuất kho.");
-            }
 
             var dto = new WarehouseOutboundRequestDetailDto
             {
@@ -80,7 +86,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Reason = request.Reason,
                 OrderItemId = request.OrderItemId,
                 RequestedBy = request.RequestedBy,
-                RequestedByName = request.RequestedByNavigation?.CompanyName, 
+                RequestedByName = request.RequestedByNavigation?.CompanyName,
                 Status = request.Status,
                 CreatedAt = request.CreatedAt,
                 UpdatedAt = request.UpdatedAt
@@ -88,6 +94,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết yêu cầu thành công", dto);
         }
+
         public async Task<IServiceResult> GetAllAsync()
         {
             var requests = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync();
@@ -105,6 +112,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", result);
         }
+
         public async Task<IServiceResult> AcceptRequestAsync(Guid requestId, Guid staffUserId)
         {
             var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(requestId);
@@ -123,6 +131,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã tiếp nhận yêu cầu xuất kho.");
         }
-
     }
 }
