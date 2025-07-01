@@ -4,6 +4,7 @@ using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories.DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
@@ -58,6 +59,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             _context.ProcessingBatchProgresses.Update(entity); // cần thiết để EF ghi nhận thay đổi
             return true;
         }
+        public async Task<bool> HardDeleteAsync(Guid progressId)
+        {
+            var entity = await _context.ProcessingBatchProgresses
+                .FirstOrDefaultAsync(p => p.ProgressId == progressId);
 
+            if (entity == null)
+                return false;
+
+            _context.ProcessingBatchProgresses.Remove(entity);
+            return true;
+        }
     }
 }

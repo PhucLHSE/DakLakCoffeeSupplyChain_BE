@@ -88,5 +88,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpDelete("hard/{id}")]
+        public async Task<IActionResult> HardDelete(Guid id)
+        {
+            var result = await _processingBatchProgressService.HardDeleteAsync(id);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }

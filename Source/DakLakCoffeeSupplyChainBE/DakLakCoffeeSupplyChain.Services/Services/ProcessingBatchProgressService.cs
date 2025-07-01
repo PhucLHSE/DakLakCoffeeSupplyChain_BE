@@ -242,6 +242,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> HardDeleteAsync(Guid progressId)
+        {
+            try
+            {
+                var success = await _unitOfWork.ProcessingBatchProgressRepository.HardDeleteAsync(progressId);
+                if (!success)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Progress hoặc đã bị xóa.");
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa vĩnh viễn Progress thành công.");
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Trả về lỗi chi tiết từ SQL
+                var innerMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"[DB Error] {innerMessage}");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"[Exception] {ex.Message}");
+            }
+        }
+
 
     }
 }
