@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAllAsync();
         Task<IServiceResult> GetByIdAsync(Guid progressId);
         Task<IServiceResult> CreateAsync(ProcessingBatchProgressCreateDto dto);
+        Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto input);
 
     }
 }

@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -58,5 +59,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] ProcessingBatchProgressUpdateDto input)
+        {
+            var result = await _processingBatchProgressService.UpdateAsync(id, input);
+
+            // ✅ Trường hợp thành công: chỉ trả về .Data
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data ?? new { });
+
+            // ❌ Trường hợp lỗi: trả về full ServiceResult (message, status, errors)
+            if (result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result);
+
+            return StatusCode(500, result); // fallback lỗi hệ thống
+        }
+
     }
 }

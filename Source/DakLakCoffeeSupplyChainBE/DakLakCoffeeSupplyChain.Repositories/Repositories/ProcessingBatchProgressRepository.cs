@@ -33,5 +33,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(p => p.ProcessingParameters)
                 .FirstOrDefaultAsync(p => p.ProgressId == id && !p.IsDeleted);
         }
+        public async Task<bool> UpdateAsync(ProcessingBatchProgress entity)
+        {
+            try
+            {
+                _context.ProcessingBatchProgresses.Update(entity);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
     }
 }
