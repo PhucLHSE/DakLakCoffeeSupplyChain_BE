@@ -289,6 +289,73 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteContractDeliveryBatchById(Guid deliveryBatchId)
+        {
+            try
+            {
+                // Tìm ContractDeliveryBatch theo ID kèm danh sách ContractDeliveryItems
+                var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: cdb => 
+                       cdb.DeliveryBatchId == deliveryBatchId && 
+                       !cdb.IsDeleted,
+                    include: query => query
+                       .Include(cdb => cdb.ContractDeliveryItems),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (contractDeliveryBatch == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa từng ContractItem trước (nếu có)
+                    if (contractDeliveryBatch.ContractDeliveryItems != null && 
+                        contractDeliveryBatch.ContractDeliveryItems.Any())
+                    {
+                        foreach (var item in contractDeliveryBatch.ContractDeliveryItems)
+                        {
+                            await _unitOfWork.ContractDeliveryItemRepository.RemoveAsync(item);
+                        }
+                    }
+
+                    // Xóa ContractDeliveryItem  khỏi repository
+                    await _unitOfWork.ContractDeliveryBatchRepository.RemoveAsync(contractDeliveryBatch);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId)
         {
             try
