@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<BusinessStaff?> FindByUserIdAsync(Guid userId);
         Task<int> CountStaffCreatedInYearAsync(int year);
         Task<BusinessStaff?> GetByIdWithUserAsync(Guid staffId);
+        Task<List<BusinessStaff>> GetBySupervisorIdAsync(Guid supervisorId);
 
     }
 }
