@@ -85,5 +85,30 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message); // fallback
         }
+        [HttpPut("{staffId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> UpdateBusinessStaff(Guid staffId, [FromBody] BusinessStaffUpdateDto dto)
+        {
+            if (staffId != dto.StaffId)
+                return BadRequest("StaffId trong route không khớp với DTO.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _businessStaffService.Update(dto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(new { message = result.Message, staffId = result.Data });
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+
     }
 }

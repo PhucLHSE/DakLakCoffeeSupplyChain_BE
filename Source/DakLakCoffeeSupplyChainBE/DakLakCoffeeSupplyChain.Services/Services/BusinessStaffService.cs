@@ -160,6 +160,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> Update(BusinessStaffUpdateDto dto)
+        {
+            try
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdWithUserAsync(dto.StaffId);
+                if (staff == null || staff.IsDeleted)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nhân viên.");
+                }
+
+                dto.MapToUpdateBusinessStaff(staff);
+                await _unitOfWork.BusinessStaffRepository.UpdateAsync(staff);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, staff.StaffId);
+                }
+
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+
 
 
 
