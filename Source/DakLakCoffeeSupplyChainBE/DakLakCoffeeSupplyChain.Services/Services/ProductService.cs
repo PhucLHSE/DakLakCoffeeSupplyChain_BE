@@ -30,7 +30,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Ưu tiên kiểm tra BusinessManager
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                predicate: m => m.UserId == userId,
+                predicate: m => 
+                   m.UserId == userId && 
+                   !m.IsDeleted,
                 asNoTracking: true
             );
 
@@ -42,7 +44,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Nếu không phải Manager, kiểm tra BusinessStaff
                 var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
-                    predicate: s => s.UserId == userId,
+                    predicate: s => 
+                       s.UserId == userId &&
+                       !s.IsDeleted,
                     asNoTracking: true
                 );
 
@@ -75,7 +79,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (products == null || !products.Any())
+            if (products == null || 
+                !products.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -104,6 +109,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                 predicate: p => p.ProductId == productId,
                 include: query => query
+                   .Include(p => p.ApprovedByNavigation)
                    .Include(p => p.CoffeeType)
                    .Include(p => p.Batch)
                    .Include(p => p.Inventory)
