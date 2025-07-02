@@ -110,5 +110,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
             return deliveryBatch;
         }
+
+        // Mapper ContractDeliveryBatchUpdateDto → ContractDeliveryBatch
+        public static void MapToUpdatedContractDeliveryBatch(
+            this ContractDeliveryBatchUpdateDto dto,
+            ContractDeliveryBatch contractDeliveryBatch)
+        {
+            contractDeliveryBatch.ContractId = dto.ContractId;
+            contractDeliveryBatch.DeliveryRound = dto.DeliveryRound;
+            contractDeliveryBatch.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
+            contractDeliveryBatch.TotalPlannedQuantity = dto.TotalPlannedQuantity;
+            contractDeliveryBatch.Status = dto.Status.ToString();
+            contractDeliveryBatch.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }

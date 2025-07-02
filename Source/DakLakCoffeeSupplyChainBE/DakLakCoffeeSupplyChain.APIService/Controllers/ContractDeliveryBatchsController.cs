@@ -99,6 +99,43 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PUT api/<ContractDeliveryBatchsController>/{deliveryBatchId}
+        [HttpPut("{deliveryBatchId}")]
+        public async Task<IActionResult> UpdateContractDeliveryBatchAsync(Guid deliveryBatchId, [FromBody] ContractDeliveryBatchUpdateDto contractDeliveryBatchDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (deliveryBatchId != contractDeliveryBatchDto.DeliveryBatchId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractDeliveryBatchService.Update(contractDeliveryBatchDto, userId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đợt giao hàng.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // DELETE api/<ContractDeliveryBatchsController>/{deliveryBatchId}
         [HttpDelete("{deliveryBatchId}")]
         [Authorize(Roles = "BusinessManager")]
