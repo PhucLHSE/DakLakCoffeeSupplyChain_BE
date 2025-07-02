@@ -17,11 +17,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchId = entity.BatchId,
                 BatchCode = entity.BatchCode,
                 SystemBatchCode = entity.SystemBatchCode,
+
                 FarmerId = entity.FarmerId,
-                FarmerName = entity.Farmer?.User?.Name ?? "N/A",     
+                FarmerName = entity.Farmer?.User?.Name ?? "N/A",
 
                 MethodId = entity.MethodId,
-                MethodName = entity.Method?.Name ?? "N/A",           
+                MethodName = entity.Method?.Name ?? "N/A",
+                CropSeasonId = entity.CropSeasonId,
+                CropSeasonName = entity.CropSeason?.SeasonName ?? "N/A", 
 
                 StageCount = entity.ProcessingBatchProgresses?.Count ?? 0,
                 TotalInputQuantity = entity.InputQuantity,

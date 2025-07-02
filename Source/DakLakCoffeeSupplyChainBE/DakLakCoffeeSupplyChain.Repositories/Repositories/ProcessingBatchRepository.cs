@@ -21,8 +21,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(b => b.Farmer)
                     .ThenInclude(f => f.User)
                 .Include(b => b.Method)
+                .Include(b => b.CropSeason) 
                 .Where(b => !b.IsDeleted)
                 .ToListAsync();
+        }
+
+        public IQueryable<ProcessingBatch> GetQueryable()
+        {
+            return _context.ProcessingBatches.AsQueryable();
         }
 
     }

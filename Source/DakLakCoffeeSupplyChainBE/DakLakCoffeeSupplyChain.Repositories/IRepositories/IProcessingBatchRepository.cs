@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IProcessingBatchRepository : IGenericRepository<ProcessingBatch>
     {
         Task<List<ProcessingBatch>> GetAll();
-       
+        IQueryable<ProcessingBatch> GetQueryable();
+
     }
 }
