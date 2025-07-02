@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAll(Guid userId);
 
         Task<IServiceResult> GetById(Guid productId);
+
+        Task<IServiceResult> Create(ProductCreateDto productCreateDto, Guid userId);
 
         Task<IServiceResult> DeleteById(Guid productId);
 

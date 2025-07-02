@@ -1465,7 +1465,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.OriginFarmLocation).HasMaxLength(255);
             entity.Property(e => e.OriginRegion).HasMaxLength(100);
             entity.Property(e => e.ProductCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.ProductName)
                 .IsRequired()

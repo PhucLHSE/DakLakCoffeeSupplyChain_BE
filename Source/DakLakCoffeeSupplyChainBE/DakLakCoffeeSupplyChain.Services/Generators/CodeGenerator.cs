@@ -140,6 +140,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         public async Task<string> GenerateFarmerCodeAsync()
         {
             var count = await _unitOfWork.FarmerRepository.CountFarmerInYearAsync(CurrentYear);
+
             return $"FRM-{CurrentYear}-{(count + 1):D4}";
         }
 
@@ -156,34 +157,65 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"REG-{CurrentYear}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateStaffCodeAsync()
         {
             var count = await _unitOfWork.BusinessStaffRepository.CountStaffCreatedInYearAsync(CurrentYear);
+
             return $"STF-{CurrentYear}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateInboundRequestCodeAsync()
         {
             var count = await _unitOfWork.WarehouseInboundRequests.CountInboundRequestsInYearAsync(DateTime.UtcNow.Year);
+
             return $"IR-{DateTime.UtcNow:yyyy}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateWarehouseCodeAsync()
         {
             var count = await _unitOfWork.Warehouses.CountWarehousesCreatedInYearAsync(CurrentYear);
+
             return $"WH-{CurrentYear}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateWarehouseReceiptCodeAsync()
         {
             var count = await _unitOfWork.WarehouseReceipts.CountCreatedInYearAsync(CurrentYear);
+
             return $"WR-{CurrentYear}-{(count + 1):D4}";
         }
+
         public async Task<string> GenerateInventoryCodeAsync()
         {
             var count = await _unitOfWork.Inventories.CountCreatedInYearAsync(DateTime.UtcNow.Year);
+
             return $"INV-{DateTime.UtcNow:yyyy}-{(count + 1):D4}";
         }
+
+        public async Task<string> GenerateProductCodeAsync(Guid managerId)
+        {
+            // Đếm số sản phẩm được tạo bởi manager này trong năm hiện tại
+            var count = await _unitOfWork.ProductRepository.CountByManagerIdInYearAsync(managerId, CurrentYear);
+
+            // Lấy ManagerCode để làm tiền tố
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => 
+                   m.ManagerId == managerId && 
+                   !m.IsDeleted,
+                asNoTracking: true
+            );
+
+            var managerCode = manager?.ManagerCode?.Replace(" ", "").ToUpper() ?? "BM-UNKNOWN";
+
+            // Format: PROD-001-BM2025
+            return $"PROD-{(count + 1):D3}-{managerCode}";
+        }
+
         public async Task<string> GenerateOutboundRequestCodeAsync()
         {
             var count = await _unitOfWork.WarehouseOutboundRequests.CountOutboundRequestsInYearAsync(CurrentYear);
+
             return $"WOR-{CurrentYear}-{(count + 1):D4}";
         }
     }

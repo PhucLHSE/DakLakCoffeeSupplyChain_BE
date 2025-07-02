@@ -1,6 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
-using DakLakCoffeeSupplyChain.Common.Enum.UserAccountEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -70,6 +70,38 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeName = product.CoffeeType?.TypeName ?? string.Empty,
                 InventoryLocation = product.Inventory?.Warehouse?.Location ?? string.Empty,
                 BatchCode = product.Batch?.BatchCode ?? string.Empty
+            };
+        }
+
+        // Mapper ProductCreateDto => Product
+        public static Product MapToNewProduct(this ProductCreateDto productCreateDto, string productCode, Guid createdBy)
+        {
+            return new Product
+            {
+                ProductId = Guid.NewGuid(),
+                ProductCode = productCode,
+                ProductName = productCreateDto.ProductName,
+                Description = productCreateDto.Description,
+                UnitPrice = productCreateDto.UnitPrice,
+                QuantityAvailable = productCreateDto.QuantityAvailable,
+                Unit = productCreateDto.Unit.ToString(), // enum sang string để lưu DB
+                BatchId = productCreateDto.BatchId,
+                InventoryId = productCreateDto.InventoryId,
+                CoffeeTypeId = productCreateDto.CoffeeTypeId,
+                OriginRegion = productCreateDto.OriginRegion,
+                OriginFarmLocation = productCreateDto.OriginFarmLocation,
+                GeographicalIndicationCode = productCreateDto.GeographicalIndicationCode,
+                CertificationUrl = productCreateDto.CertificationUrl,
+                EvaluatedQuality = productCreateDto.EvaluatedQuality,
+                EvaluationScore = productCreateDto.EvaluationScore,
+                Status = productCreateDto.Status.ToString(), // chuyển enum về string để lưu
+                ApprovalNote = productCreateDto.ApprovalNote,
+                ApprovedBy = productCreateDto.Status == ProductStatus.Approved ? productCreateDto.ApprovedBy : null,
+                ApprovedAt = productCreateDto.Status == ProductStatus.Approved ? productCreateDto.ApprovedAt : null,
+                CreatedBy = createdBy,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false
             };
         }
     }

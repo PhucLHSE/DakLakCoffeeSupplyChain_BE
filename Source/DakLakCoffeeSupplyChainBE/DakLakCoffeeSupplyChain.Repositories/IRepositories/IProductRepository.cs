@@ -13,5 +13,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<Product>> GetAllProductsAsync();
 
         Task<Product?> GetProductByIdAsync(Guid productId);
+
+        // Đếm số sản phẩm do BusinessManager tạo trong năm (lọc theo IsDeleted và CreatedBy).
+        Task<int> CountByManagerIdInYearAsync(Guid managerId, int year);
     }
 }
