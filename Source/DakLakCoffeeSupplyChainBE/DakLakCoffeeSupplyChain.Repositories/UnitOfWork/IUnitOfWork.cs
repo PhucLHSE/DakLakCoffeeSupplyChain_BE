@@ -84,6 +84,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 
         IExpertAdviceRepository ExpertAdviceRepository { get; }
 
+        IAgriculturalExpertRepository AgriculturalExpertRepository { get; }
 
     }
 }
