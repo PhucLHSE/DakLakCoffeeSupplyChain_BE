@@ -10,9 +10,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IInventoryService
     {
-        Task<IServiceResult> GetAllAsync();
+        Task<IServiceResult> GetAllAsync(Guid userId);
         Task<IServiceResult> GetByIdAsync(Guid id);
-        Task<IServiceResult> CreateAsync(InventoryCreateDto dto);
+        Task<IServiceResult> CreateAsync(InventoryCreateDto dto, Guid userId);
         Task<IServiceResult> SoftDeleteAsync(Guid id);
         Task<IServiceResult> HardDeleteAsync(Guid id);
     }

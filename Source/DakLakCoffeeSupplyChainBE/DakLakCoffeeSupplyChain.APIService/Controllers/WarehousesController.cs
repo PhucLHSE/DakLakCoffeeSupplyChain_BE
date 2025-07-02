@@ -41,7 +41,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetAllWarehouses()
         {
-            var result = await _warehouseService.GetAllAsync();
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized(new { message = "Không thể xác định người dùng từ token." });
+
+            var result = await _warehouseService.GetAllAsync(userId);
             return StatusCode(result.Status, result);
         }
 

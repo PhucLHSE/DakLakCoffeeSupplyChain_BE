@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -24,10 +25,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// </summary>
         [HttpGet]
         [EnableQuery]
-        [Authorize(Roles = "BusinessStaff,Admin")]
+        [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _inventoryService.GetAllAsync();
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _inventoryService.GetAllAsync(userId);
             return StatusCode(result.Status, result);
         }
 
@@ -35,24 +37,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// Lấy chi tiết tồn kho theo ID (view detail)
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "BusinessStaff,Admin")]
+        [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _inventoryService.GetByIdAsync(id);
             return StatusCode(result.Status, result);
         }
         [HttpPost]
-        [Authorize(Roles = "BusinessStaff,Admin")]
+        [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> Create([FromBody] InventoryCreateDto dto)
         {
-            var result = await _inventoryService.CreateAsync(dto);
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _inventoryService.CreateAsync(dto, userId);
             return StatusCode(result.Status, result);
         }
         /// <summary>
         /// Xoá mềm tồn kho (IsDeleted = true)
         /// </summary>
         [HttpDelete("soft/{id}")]
-        [Authorize(Roles = "BusinessStaff,Admin")]
+        [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var result = await _inventoryService.SoftDeleteAsync(id);
