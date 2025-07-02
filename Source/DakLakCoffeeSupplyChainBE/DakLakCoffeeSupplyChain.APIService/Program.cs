@@ -63,6 +63,7 @@ builder.Services.AddScoped<IFarmerService, FarmerService>();
 builder.Services.AddScoped<IFarmingCommitmentService, FarmingCommitmentService>();
 builder.Services.AddScoped<IBusinessStaffService, BusinessStaffService>();
 builder.Services.AddScoped<IExpertAdviceService, ExpertAdviceService>();
+builder.Services.AddScoped<IAgriculturalExpertService, AgriculturalExpertService>();
 
 
 //Add MemoryCache

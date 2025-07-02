@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private CropSeasonDetailRepository? cropSeasonDetailRepository;
         private IInventoryLogRepository? inventoryLogRepository;
         private IExpertAdviceRepository? expertAdviceRepository;
-
+        private IAgriculturalExpertRepository? agriculturalExpertRepository;
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
@@ -342,12 +342,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return inventoryLogRepository ??= new InventoryLogRepository(context);
             }
         }
-
         public IExpertAdviceRepository ExpertAdviceRepository
         {
              get
             {
                 return expertAdviceRepository ??= new ExpertAdviceRepository(context);
+            }
+        }
+        
+        public IAgriculturalExpertRepository AgriculturalExpertRepository
+        {
+            get
+            {
+                return agriculturalExpertRepository ??= new AgriculturalExpertRepository(context);
             }
         }
     }
