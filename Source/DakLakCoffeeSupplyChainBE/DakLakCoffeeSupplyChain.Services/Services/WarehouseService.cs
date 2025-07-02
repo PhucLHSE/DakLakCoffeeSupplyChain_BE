@@ -31,7 +31,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tên kho đã tồn tại.");
             }
 
-            // Lấy BusinessManager từ UserId
             var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
             if (manager == null || manager.IsDeleted)
             {
@@ -46,7 +45,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 WarehouseCode = warehouseCode,
                 Name = dto.Name,
                 Location = dto.Location,
-                ManagerId = manager.ManagerId, // ✅ Gán từ manager
+                ManagerId = manager.ManagerId,
                 Capacity = dto.Capacity,
                 IsDeleted = false,
                 CreatedAt = DateTime.UtcNow,
@@ -59,10 +58,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo kho thành công", warehouse.WarehouseId);
         }
 
-
-        public async Task<IServiceResult> GetAllAsync()
+        public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
-            var warehouses = await _unitOfWork.Warehouses.FindAsync(w => !w.IsDeleted);
+            // Check xem là BusinessManager hay BusinessStaff
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            Guid? targetManagerId = null;
+
+            if (manager != null && !manager.IsDeleted)
+            {
+                targetManagerId = manager.ManagerId;
+            }
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                {
+                    targetManagerId = staff.SupervisorId;
+                }
+            }
+
+            if (targetManagerId == null)
+            {
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được quyền truy cập kho.");
+            }
+
+            var warehouses = await _unitOfWork.Warehouses.FindAsync(w => !w.IsDeleted && w.ManagerId == targetManagerId);
 
             var result = warehouses.Select(w => new WarehouseViewDto
             {

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,10 +31,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
-        public async Task<List<Inventory>> GetAllWithIncludesAsync()
+        public async Task<List<Inventory>> GetAllWithIncludesAsync(Expression<Func<Inventory, bool>> predicate)
         {
             return await _context.Inventories
-                .Where(i => !i.IsDeleted)
+                .Where(predicate)
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
                     .ThenInclude(b => b.Products)
@@ -55,6 +56,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .CountAsync(i => i.CreatedAt.Year == year && !i.IsDeleted);
         }
+
     }
 
 }

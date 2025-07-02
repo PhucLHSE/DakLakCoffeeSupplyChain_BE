@@ -22,13 +22,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = codeGenerator;
         }
 
-        public async Task<IServiceResult> GetAllAsync()
+        public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
-            var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync();
-            if (inventories == null || !inventories.Any())
+            // Lấy ManagerId từ UserId
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            Guid? targetManagerId = null;
+
+            if (manager != null && !manager.IsDeleted)
             {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có dữ liệu tồn kho.", []);
+                targetManagerId = manager.ManagerId;
             }
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                {
+                    targetManagerId = staff.SupervisorId;
+                }
+            }
+
+            if (targetManagerId == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được quyền truy cập.");
+
+            var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
+                !i.IsDeleted && i.Warehouse.ManagerId == targetManagerId);
+
+            if (inventories == null || !inventories.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có dữ liệu tồn kho.", []);
 
             var result = inventories.Select(inv => new InventoryListItemDto
             {
@@ -44,6 +64,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách tồn kho thành công.", result);
         }
+
 
         public async Task<IServiceResult> GetByIdAsync(Guid id)
         {
@@ -72,36 +93,46 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết tồn kho thành công.", dto);
         }
 
-        public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto)
+        public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto, Guid userId)
         {
-            // ✅ Kiểm tra kho có tồn tại
+            // ✅ Xác định ManagerId của người dùng (manager hoặc staff)
+            Guid? targetManagerId = null;
+
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
+                targetManagerId = manager.ManagerId;
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                    targetManagerId = staff.SupervisorId;
+            }
+
+            if (targetManagerId == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+
+            // ✅ Kiểm tra kho có tồn tại và thuộc quyền quản lý
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
-            if (warehouse == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
+            if (warehouse == null || warehouse.ManagerId != targetManagerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền tạo tồn kho cho kho này.");
 
-            // ✅ Kiểm tra batch có tồn tại
-            //var batch = await _unitOfWork.ProcessingBatches.GetByIdAsync(dto.BatchId);
-            //if (batch == null)
-            //    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy batch.");
+            // (Tạm bỏ kiểm tra batch vì chưa gắn batch theo công ty)
 
-            // ✅ Kiểm tra tồn tại inventory cùng warehouse + batch
             var existing = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
             if (existing != null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tồn kho đã tồn tại cho kho và batch này.");
 
-            // ✅ Kiểm tra dung lượng kho còn trống
             var currentInventories = await _unitOfWork.Inventories
                 .GetAllAsync(i => i.WarehouseId == dto.WarehouseId && !i.IsDeleted);
             double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
-
             double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
+
             if (dto.Quantity > available)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể thêm {dto.Quantity}kg.");
             }
 
-            // ✅ Sinh mã bằng generator
             var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
 
             var newInventory = new Inventory
@@ -122,6 +153,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
         }
+
 
 
 

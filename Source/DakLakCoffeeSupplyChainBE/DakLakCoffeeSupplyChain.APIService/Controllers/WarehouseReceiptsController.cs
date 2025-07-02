@@ -40,10 +40,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpGet]
         [EnableQuery]
-        [Authorize(Roles = "Admin,BusinessStaff,Manager")]
+        [Authorize(Roles = "Admin,BusinessStaff,BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _receiptService.GetAllAsync();
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _receiptService.GetAllAsync(userId);
             return StatusCode(result.Status, result);
         }
 

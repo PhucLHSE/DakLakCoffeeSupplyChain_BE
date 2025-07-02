@@ -13,7 +13,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> CreateReceiptAsync(Guid staffUserId, WarehouseReceiptCreateDto dto);
         Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseReceiptConfirmDto dto);
 
-        Task<IServiceResult> GetAllAsync();
+        Task<IServiceResult> GetAllAsync(Guid userId);
         Task<IServiceResult> GetByIdAsync(Guid receiptId);
 
     }
