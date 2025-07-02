@@ -18,7 +18,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         private readonly IPasswordHasher _passwordHasher;
         private readonly ICodeGenerator _codeGenerator;
 
-        public UserAccountService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, ICodeGenerator codeGenerator)
+        public UserAccountService(
+            IUnitOfWork unitOfWork, 
+            IPasswordHasher passwordHasher, 
+            ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork 
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -42,7 +45,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (userAccounts == null || !userAccounts.Any())
+            if (userAccounts == null || 
+                !userAccounts.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -102,7 +106,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra Role (dữ liệu gốc cần có)
-                var role = await _unitOfWork.RoleRepository.GetRoleByNameAsync(userDto.RoleName);
+                var role = await _unitOfWork.RoleRepository
+                    .GetRoleByNameAsync(userDto.RoleName);
 
                 if (role == null)
                     return new ServiceResult(
@@ -111,7 +116,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
 
                 // Kiểm tra email đã tồn tại chưa
-                var emailExists = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(userDto.Email);
+                var emailExists = await _unitOfWork.UserAccountRepository
+                    .GetUserAccountByEmailAsync(userDto.Email);
 
                 if (emailExists != null)
                 {
@@ -124,7 +130,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra phone đã tồn tại chưa (nếu có nhập)
                 if (!string.IsNullOrWhiteSpace(userDto.PhoneNumber))
                 {
-                    var phoneExists = await _unitOfWork.UserAccountRepository.GetUserAccountByPhoneAsync(userDto.PhoneNumber);
+                    var phoneExists = await _unitOfWork.UserAccountRepository
+                        .GetUserAccountByPhoneAsync(userDto.PhoneNumber);
 
                     if (phoneExists != null)
                     {
@@ -145,7 +152,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Lấy cấu hình tuổi tối thiểu
-                var config = await _unitOfWork.SystemConfigurationRepository.GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
+                var config = await _unitOfWork.SystemConfigurationRepository
+                    .GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
 
                 // Mặc định 18 nếu chưa có cấu hình
                 int minAge = (int)(config?.MinValue ?? 18);
@@ -207,7 +215,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra User tồn tại
-                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userDto.UserId);
+                var user = await _unitOfWork.UserAccountRepository
+                    .GetByIdAsync(userDto.UserId);
 
                 if (user == null)
                 {
@@ -218,7 +227,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Kiểm tra RoleName → RoleId
-                var role = await _unitOfWork.RoleRepository.GetRoleByNameAsync(userDto.RoleName);
+                var role = await _unitOfWork.RoleRepository
+                    .GetRoleByNameAsync(userDto.RoleName);
 
                 if (role == null)
                 {
@@ -229,7 +239,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Kiểm tra Email đã tồn tại ở người khác chưa
-                var emailUser = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(userDto.Email);
+                var emailUser = await _unitOfWork.UserAccountRepository
+                    .GetUserAccountByEmailAsync(userDto.Email);
 
                 if (emailUser != null && emailUser.UserId != user.UserId)
                 {
@@ -242,9 +253,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra SĐT đã tồn tại ở người khác chưa
                 if (!string.IsNullOrWhiteSpace(userDto.PhoneNumber))
                 {
-                    var phoneUser = await _unitOfWork.UserAccountRepository.GetUserAccountByPhoneAsync(userDto.PhoneNumber);
+                    var phoneUser = await _unitOfWork.UserAccountRepository
+                        .GetUserAccountByPhoneAsync(userDto.PhoneNumber);
 
-                    if (phoneUser != null && phoneUser.UserId != user.UserId)
+                    if (phoneUser != null && 
+                        phoneUser.UserId != user.UserId)
                     {
                         return new ServiceResult(
                             Const.FAIL_UPDATE_CODE, 
@@ -263,7 +276,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Lấy cấu hình tuổi tối thiểu
-                var config = await _unitOfWork.SystemConfigurationRepository.GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
+                var config = await _unitOfWork.SystemConfigurationRepository
+                    .GetActiveByNameAsync("MIN_AGE_FOR_REGISTRATION");
 
                 // Mặc định 18 nếu chưa có cấu hình
                 int minAge = (int)(config?.MinValue ?? 18);

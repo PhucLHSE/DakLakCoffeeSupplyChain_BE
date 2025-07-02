@@ -61,7 +61,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetById(int roleId)
         {
             // Tìm role theo ID
-            var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId);
+            var role = await _unitOfWork.RoleRepository
+                .GetByIdAsync(roleId);
 
             // Kiểm tra nếu không tìm thấy role
             if (role == null)
@@ -90,7 +91,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra role đã tồn tại chưa
-                var roleExists = await _unitOfWork.RoleRepository.GetRoleByNameAsync(roleDto.RoleName);
+                var roleExists = await _unitOfWork.RoleRepository
+                    .GetRoleByNameAsync(roleDto.RoleName);
 
                 if (roleExists != null)
                 {
@@ -142,7 +144,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra Role tồn tại
-                var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleDto.RoleId);
+                var role = await _unitOfWork.RoleRepository
+                    .GetByIdAsync(roleDto.RoleId);
 
                 if (role == null)
                 {
@@ -153,9 +156,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Kiểm tra trùng tên (khác chính nó)
-                var roleExists = await _unitOfWork.RoleRepository.GetRoleByNameAsync(roleDto.RoleName);
+                var roleExists = await _unitOfWork.RoleRepository
+                    .GetRoleByNameAsync(roleDto.RoleName);
 
-                if (roleExists != null && roleExists.RoleId != roleDto.RoleId)
+                if (roleExists != null && 
+                    roleExists.RoleId != roleDto.RoleId)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -205,7 +210,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Tìm role theo ID
-                var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId);
+                var role = await _unitOfWork.RoleRepository
+                    .GetByIdAsync(roleId);
 
                 // Kiểm tra nếu không tồn tại
                 if (role == null)
@@ -255,7 +261,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Tìm role theo ID
-                var role = await _unitOfWork.RoleRepository.GetByIdAsync(roleId);
+                var role = await _unitOfWork.RoleRepository
+                    .GetByIdAsync(roleId);
 
                 // Kiểm tra nếu không tồn tại
                 if (role == null)
