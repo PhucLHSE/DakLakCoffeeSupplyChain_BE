@@ -40,6 +40,8 @@
 
         Task<string> GenerateInventoryCodeAsync();
 
+        Task<string> GenerateProductCodeAsync(Guid managerId);
+
         Task<string> GenerateOutboundRequestCodeAsync();
     }
 }

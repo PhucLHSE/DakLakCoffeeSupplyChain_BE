@@ -44,5 +44,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             return product;
         }
+
+        // Đếm số sản phẩm do BusinessManager tạo trong năm (lọc theo IsDeleted và CreatedBy).
+        public async Task<int> CountByManagerIdInYearAsync(Guid managerId, int year)
+        {
+            return await _context.Products
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.CreatedAt.Year == year &&
+                    p.CreatedBy == managerId
+                )
+                .CountAsync();
+        }
     }
 }

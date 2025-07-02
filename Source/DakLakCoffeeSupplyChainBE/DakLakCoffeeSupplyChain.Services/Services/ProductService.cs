@@ -11,17 +11,22 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Services.Generators;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class ProductService : IProductService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public ProductService(IUnitOfWork unitOfWork)
+        public ProductService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork 
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -135,6 +140,128 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     productDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(ProductCreateDto productCreateDto, Guid userId)
+        {
+            try
+            {
+                // Kiểm tra chỉ BusinessManager được phép tạo sản phẩm
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Chỉ người dùng có vai trò Quản lý kinh doanh (BusinessManager) mới được phép tạo sản phẩm."
+                    );
+                }
+
+                var managerId = manager.ManagerId;
+
+                // Kiểm tra loại cà phê
+                var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
+                    c => c.CoffeeTypeId == productCreateDto.CoffeeTypeId && 
+                    !c.IsDeleted
+                );
+
+                if (!coffeeTypeExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Loại cà phê không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra batch
+                var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
+                    b => b.BatchId == productCreateDto.BatchId && 
+                    !b.IsDeleted
+                );
+
+                if (!batchExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Mẻ sơ chế không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra kho
+                var inventoryExists = await _unitOfWork.Inventories.AnyAsync(
+                    i => i.InventoryId == productCreateDto.InventoryId && 
+                    !i.IsDeleted
+                );
+
+                if (!inventoryExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Kho không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Sinh mã sản phẩm tự động
+                var productCode = await _codeGenerator.GenerateProductCodeAsync(managerId);
+
+                // Map DTO sang Entity
+                var newProduct = productCreateDto.MapToNewProduct(productCode, managerId);
+
+                // Lưu vào DB
+                await _unitOfWork.ProductRepository.CreateAsync(newProduct);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var createdProduct = await _unitOfWork.ProductRepository.GetByIdAsync(
+                        predicate: p => 
+                           p.ProductId == newProduct.ProductId && 
+                           !p.IsDeleted,
+                        include: query => query
+                        .Include(p => p.CoffeeType)
+                        .Include(p => p.Inventory)
+                           .ThenInclude(i => i.Warehouse)
+                        .Include(p => p.Batch)
+                        .Include(p => p.ApprovedByNavigation),
+                        asNoTracking: true
+                    );
+
+                    if (createdProduct != null)
+                    {
+                        var responseDto = createdProduct.MapToProductViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu để trả về."
+                    );
+                }
+
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE,
+                    Const.FAIL_CREATE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
                 );
             }
         }

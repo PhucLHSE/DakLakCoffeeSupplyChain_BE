@@ -996,7 +996,7 @@ GO
 -- Products – Thông tin sản phẩm
 CREATE TABLE Products (
   ProductID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Mã sản phẩm duy nhất
-  ProductCode VARCHAR(20) UNIQUE,                                   -- PROD-2025-0001
+  ProductCode VARCHAR(50) UNIQUE,                                   -- PROD-001-BM-2025-0001
   ProductName NVARCHAR(100) NOT NULL,                               -- Tên thương mại sản phẩm
   Description NVARCHAR(MAX),                                        -- Mô tả chi tiết sản phẩm
   UnitPrice FLOAT,                                                  -- Giá bán B2B (VNĐ/kg)
@@ -2743,7 +2743,7 @@ INSERT INTO Products (
   ApprovedAt, CreatedAt, UpdatedAt, IsDeleted
 )
 VALUES (
-  @ProductID, 'PROD-2025-0001', N'Arabica DakLak - Natural',
+  @ProductID, 'PROD-001-BM-2025-0001', N'Arabica DakLak - Natural',
   N'Arabica chất lượng Specialty, được sơ chế theo phương pháp tự nhiên tại Ea Tu.',
   95000, 1385.5, N'kg',
   @ManagerID, @BatchID, @InventoryID, @CoffeeTypeID,
