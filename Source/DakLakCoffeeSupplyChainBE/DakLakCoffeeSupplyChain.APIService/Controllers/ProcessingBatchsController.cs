@@ -19,12 +19,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         // GET: api/processing-batch
-        
+
         [HttpGet]
         [EnableQuery]
+        //public async Task<IActionResult> GetAll()
+        //{
+        //    var result = await _processingbatchservice.GetAll();
+
+        //    if (result.Status == Const.SUCCESS_READ_CODE)
+        //        return Ok(result.Data);
+
+        //    if (result.Status == Const.WARNING_NO_DATA_CODE)
+        //        return NotFound(result.Message);
+
+        //    return StatusCode(500, result.Message);
+        //}
         public async Task<IActionResult> GetAll()
         {
-            var result = await _processingbatchservice.GetAll();
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return BadRequest("Không thể lấy userId từ token.");
+            }
+
+            var result = await _processingbatchservice.GetAllByUserId(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -34,5 +54,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
     }
 }

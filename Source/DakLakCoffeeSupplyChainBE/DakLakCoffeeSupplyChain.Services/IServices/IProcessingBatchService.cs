@@ -10,6 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IProcessingBatchService
     {
         Task<IServiceResult> GetAll();
-
+        Task<IServiceResult> GetAllByUserId(Guid userId);
     }
 }

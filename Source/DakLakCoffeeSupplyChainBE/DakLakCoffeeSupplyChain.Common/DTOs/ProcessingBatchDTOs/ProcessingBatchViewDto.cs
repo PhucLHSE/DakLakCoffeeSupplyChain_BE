@@ -11,6 +11,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public Guid BatchId { get; set; }
         public string BatchCode { get; set; }
         public string SystemBatchCode { get; set; }
+        public Guid CropSeasonId { get; set; }
+        public string CropSeasonName { get; set; }  
         public Guid FarmerId { get; set; }
         public string FarmerName { get; set; }
 
