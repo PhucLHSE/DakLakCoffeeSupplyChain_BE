@@ -1,6 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs;
+using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class WarehouseOutboundRequestsController : Controller
+    public class WarehouseOutboundRequestsController : ControllerBase
     {
         private readonly IWarehouseOutboundRequestService _requestService;
 
@@ -19,39 +19,77 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _requestService = requestService;
         }
 
+        // POST: api/WarehouseOutboundRequests
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> CreateRequest([FromBody] WarehouseOutboundRequestCreateDto dto)
         {
-            var managerUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
+                return Unauthorized("Cannot determine user from token.");
+
             var result = await _requestService.CreateRequestAsync(managerUserId, dto);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetDetail), new { outboundRequestId = result.Data }, result.Data);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
-        
+
+        // GET: api/WarehouseOutboundRequests/all
         [HttpGet("all")]
         [EnableQuery]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetAll()
         {
             var result = await _requestService.GetAllAsync();
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
+        // GET: api/WarehouseOutboundRequests/{outboundRequestId}
         [HttpGet("{outboundRequestId}")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetDetail(Guid outboundRequestId)
         {
             var result = await _requestService.GetDetailAsync(outboundRequestId);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
+        // PUT: api/WarehouseOutboundRequests/{id}/accept
         [HttpPut("{id}/accept")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> Accept(Guid id)
         {
-            var staffUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid staffUserId))
+                return Unauthorized("Cannot determine user from token.");
+
             var result = await _requestService.AcceptRequestAsync(id, staffUserId);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
     }
 }
