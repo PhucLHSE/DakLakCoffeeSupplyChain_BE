@@ -56,7 +56,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (businessBuyers == null || !businessBuyers.Any())
+            if (businessBuyers == null || 
+                !businessBuyers.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -127,7 +128,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Nếu không tìm thấy BusinessManager hoặc User null → lỗi
-                if (businessManager == null || businessManager.User == null)
+                if (businessManager == null || 
+                    businessManager.User == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE, 
@@ -138,7 +140,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var user = businessManager.User;
 
                 // Kiểm tra User không bị xóa và có Role là BusinessManager
-                if (user.IsDeleted || user.Role == null || user.Role.RoleName != "BusinessManager")
+                if (user.IsDeleted || 
+                    user.Role == null || 
+                    user.Role.RoleName != "BusinessManager")
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE, 
@@ -217,7 +221,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Nếu không tìm thấy
-                if (businessBuyer == null || businessBuyer.IsDeleted)
+                if (businessBuyer == null || 
+                    businessBuyer.IsDeleted)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
