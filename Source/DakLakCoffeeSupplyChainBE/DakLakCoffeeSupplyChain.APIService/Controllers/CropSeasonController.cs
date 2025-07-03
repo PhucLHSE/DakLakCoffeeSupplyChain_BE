@@ -1,9 +1,11 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -23,15 +25,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAllCropSeasonsAsync()
         {
-            var result = await _cropSeasonService.GetAll();
+            Guid userId;
+
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _cropSeasonService.GetAllByUserId(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message); 
+                return NotFound(result.Message);
 
-            return StatusCode(500, result.Message); 
+            return StatusCode(500, result.Message);
         }
 
         // GET: api/CropSeasons/{id}
@@ -41,21 +54,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _cropSeasonService.GetById(cropSeasonId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data); 
+                return Ok(result.Data);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message); 
+                return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
         }
-        [HttpPost]
 
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _cropSeasonService.Create(dto);
+            Guid userId;
+
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _cropSeasonService.Create(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -111,7 +135,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-
-
     }
 }

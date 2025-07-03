@@ -22,9 +22,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EstimatedYield = entity.EstimatedYield,
                 PlannedQuality = entity.PlannedQuality ?? string.Empty,
                 Status = Enum.TryParse<CropDetailStatus>(entity.Status, true, out var parsedStatus)
-                         ? parsedStatus : CropDetailStatus.Planned
+                            ? parsedStatus : CropDetailStatus.Planned,
+
+                FarmerId = entity.CropSeason?.FarmerId ?? Guid.Empty,
+                FarmerName = entity.CropSeason?.Farmer?.User?.Name ?? "Không rõ"
             };
         }
+
 
 
         public static CropSeasonDetail MapToNewCropSeasonDetail(this CropSeasonDetailCreateDto dto)

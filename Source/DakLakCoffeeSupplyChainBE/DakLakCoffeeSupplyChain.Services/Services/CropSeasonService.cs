@@ -8,6 +8,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +41,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
 
+        public async Task<IServiceResult> GetAllByUserId(Guid userId)
+        {
+            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+            if (farmer == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nông hộ tương ứng.");
+
+            var cropSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
+                predicate: cs => cs.FarmerId == farmer.FarmerId && !cs.IsDeleted,
+                include: query => query
+                    .Include(cs => cs.Farmer)
+                    .ThenInclude(f => f.User),
+                orderBy: query => query.OrderByDescending(cs => cs.StartDate),
+                asNoTracking: true
+            );
+
+            if (!cropSeasons.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có mùa vụ nào.");
+
+            var dtoList = cropSeasons.Select(cs => cs.MapToCropSeasonViewAllDto()).ToList();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
+        }
+
         public async Task<IServiceResult> GetById(Guid cropSeasonId)
         {
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
@@ -51,19 +74,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
 
-        public async Task<IServiceResult> Create(CropSeasonCreateDto dto)
+        public async Task<IServiceResult> Create(CropSeasonCreateDto dto, Guid userId)
         {
             try
             {
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+                if (farmer == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy nông hộ tương ứng.");
+
                 var validationResult = await ValidateCropSeasonCreate(dto);
                 if (validationResult != null)
                     return validationResult;
 
-                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.FarmerId);
                 var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(dto.RegistrationId);
 
                 string code = await _codeCropSeasonGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
-                var entity = dto.MapToCropSeasonCreateDto(code);
+                var entity = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId);
 
                 entity.Area = dto.Area; // Nếu null thì client sẽ cập nhật sau
 
@@ -90,10 +116,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.FarmerId);
-            if (farmer == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Nông hộ không tồn tại.");
-
             var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(dto.RegistrationId);
             if (registration == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Đăng ký canh tác không tồn tại.");
@@ -119,10 +141,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(dto.CropSeasonId);
             if (cropSeason == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mùa vụ.");
-
-            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(dto.FarmerId);
-            if (farmer == null)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Nông hộ không tồn tại.");
 
             var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(dto.RegistrationId);
             if (registration == null)

@@ -47,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IProcessingBatchProgressRepository? processingBatchProgressRepository;
         private IProcessingParameterRepository? processingParameterRepository;
         private IProcessingBatchRepository? processingBatchRepository;
-        private CropSeasonDetailRepository? cropSeasonDetailRepository;
+        private ICropSeasonDetailRepository? cropSeasonDetailRepository;
         private IInventoryLogRepository? inventoryLogRepository;
         private IExpertAdviceRepository? expertAdviceRepository;
         private IAgriculturalExpertRepository? agriculturalExpertRepository;

@@ -11,6 +11,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public double? Area { get; set; }
+        public Guid FarmerId { get; set; }
+
         public string FarmerName { get; set; } = string.Empty;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]

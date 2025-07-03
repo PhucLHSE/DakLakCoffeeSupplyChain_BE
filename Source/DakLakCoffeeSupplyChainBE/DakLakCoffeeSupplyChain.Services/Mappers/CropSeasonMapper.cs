@@ -21,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EndDate = entity.EndDate,
                 Area = entity.Area,
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
+                FarmerId = entity.FarmerId,
                 Status = status
             };
         }
@@ -63,13 +64,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static CropSeason MapToCropSeasonCreateDto(this CropSeasonCreateDto dto, string code)
+        public static CropSeason MapToCropSeasonCreateDto(this CropSeasonCreateDto dto, string code, Guid farmerId)
         {
             return new CropSeason
             {
                 CropSeasonId = Guid.NewGuid(),
                 CropSeasonCode = code,
-                FarmerId = dto.FarmerId,
+                FarmerId = farmerId,
                 RegistrationId = dto.RegistrationId,
                 CommitmentId = dto.CommitmentId,
                 SeasonName = dto.SeasonName,
@@ -79,7 +80,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = dto.Status.ToString(),
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                CropSeasonDetails = new List<CropSeasonDetail>() 
+                CropSeasonDetails = new List<CropSeasonDetail>()
             };
         }
 
@@ -92,6 +93,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.StartDate = dto.StartDate;
             entity.EndDate = dto.EndDate;
             entity.Note = dto.Note;
+            entity.Status = dto.Status.ToString();
             entity.UpdatedAt = DateTime.Now;
         }
     }
