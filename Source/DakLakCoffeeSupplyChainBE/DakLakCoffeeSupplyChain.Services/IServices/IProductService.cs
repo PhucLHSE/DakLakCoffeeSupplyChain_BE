@@ -16,6 +16,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Create(ProductCreateDto productCreateDto, Guid userId);
 
+        Task<IServiceResult> Update(ProductUpdateDto productUpdateDto, Guid userId);
+
         Task<IServiceResult> DeleteById(Guid productId);
 
         Task<IServiceResult> SoftDeleteById(Guid productId);

@@ -98,6 +98,44 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PUT api/<ProductsController>/{productId}
+        [HttpPut("{productId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> UpdateContractDeliveryBatchAsync(Guid productId, [FromBody] ProductUpdateDto productUpdateDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (productId != productUpdateDto.ProductId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _productService.Update(productUpdateDto, userId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy sản phẩm cần cập nhật.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // DELETE api/<ProductsController>/{productId}
         [HttpDelete("{productId}")]
         [Authorize(Roles = "BusinessManager")]
