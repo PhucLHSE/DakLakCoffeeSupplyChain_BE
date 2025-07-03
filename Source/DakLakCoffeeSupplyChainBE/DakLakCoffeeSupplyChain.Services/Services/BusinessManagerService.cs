@@ -42,7 +42,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (businessManagers == null || !businessManagers.Any())
+            if (businessManagers == null || 
+                !businessManagers.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -110,7 +111,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Kiểm tra người dùng có tồn tại, chưa bị xóa và có vai trò "BusinessManager"
-                if (user == null || user.IsDeleted || user.Role == null || user.Role.RoleName != "BusinessManager")
+                if (user == null || 
+                    user.IsDeleted || 
+                    user.Role == null || 
+                    user.Role.RoleName != "BusinessManager")
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -119,7 +123,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Kiểm tra xem người dùng đã là BusinessManager chưa (tránh trùng)
-                var existingManager = await _unitOfWork.BusinessManagerRepository.GetByUserIdAsync(userId);
+                var existingManager = await _unitOfWork.BusinessManagerRepository
+                    .GetByUserIdAsync(userId);
 
                 if (existingManager != null)
                 {
@@ -130,7 +135,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Kiểm tra doanh nghiệp đã được đăng ký chưa theo mã số thuế
-                var businessManagerExists = await _unitOfWork.BusinessManagerRepository.GetByTaxIdAsync(businessManagerDto.TaxId);
+                var businessManagerExists = await _unitOfWork.BusinessManagerRepository
+                    .GetByTaxIdAsync(businessManagerDto.TaxId);
 
                 if (businessManagerExists != null)
                 {
@@ -195,7 +201,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Nếu không tìm thấy
-                if (businessManager == null || businessManager.IsDeleted)
+                if (businessManager == null || 
+                    businessManager.IsDeleted)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -207,7 +214,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!string.IsNullOrEmpty(businessManagerDto.TaxId) &&
                     businessManager.TaxId != businessManagerDto.TaxId)
                 {
-                    var existedTax = await _unitOfWork.BusinessManagerRepository.GetByTaxIdAsync(businessManagerDto.TaxId);
+                    var existedTax = await _unitOfWork.BusinessManagerRepository
+                        .GetByTaxIdAsync(businessManagerDto.TaxId);
 
                     if (existedTax != null && existedTax.ManagerId != businessManagerDto.ManagerId)
                     {
