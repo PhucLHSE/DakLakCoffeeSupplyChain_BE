@@ -266,6 +266,167 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(ProductUpdateDto productUpdateDto, Guid userId)
+        {
+            try
+            {
+                Guid? managerId = null;
+
+                // Ưu tiên: nếu là BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => m.UserId == userId && !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra là Staff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s => s.UserId == userId && !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền cập nhật sản phẩm."
+                    );
+                }
+
+                // Lấy sản phẩm cần cập nhật
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                    predicate: p =>
+                        p.ProductId == productUpdateDto.ProductId &&
+                        !p.IsDeleted,
+                    include: query => query
+                        .Include(p => p.CoffeeType)
+                        .Include(p => p.Inventory)
+                            .ThenInclude(i => i.Warehouse)
+                        .Include(p => p.Batch)
+                        .Include(p => p.ApprovedByNavigation),
+                    asNoTracking: false
+                );
+
+                if (product == null || 
+                    product.CreatedBy != managerId)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy sản phẩm hoặc bạn không có quyền chỉnh sửa sản phẩm này."
+                    );
+                }
+
+                // Kiểm tra loại cà phê
+                var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
+                    c => c.CoffeeTypeId == productUpdateDto.CoffeeTypeId && 
+                    !c.IsDeleted
+                );
+
+                if (!coffeeTypeExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Loại cà phê không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra batch
+                var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
+                    b => b.BatchId == productUpdateDto.BatchId && 
+                    !b.IsDeleted
+                );
+
+                if (!batchExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Mẻ sơ chế không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra kho
+                var inventoryExists = await _unitOfWork.Inventories.AnyAsync(
+                    i => i.InventoryId == productUpdateDto.InventoryId && 
+                    !i.IsDeleted
+                );
+
+                if (!inventoryExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Kho không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Map DTO vào entity
+                productUpdateDto.MapToUpdateProduct(product);
+
+                // Cập nhật product ở repository
+                await _unitOfWork.ProductRepository.UpdateAsync(product);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu sau khi cập nhật
+                    var updatedProduct = await _unitOfWork.ProductRepository.GetByIdAsync(
+                        predicate: p =>
+                            p.ProductId == product.ProductId && 
+                            !p.IsDeleted,
+                        include: query => query
+                            .Include(p => p.CoffeeType)
+                            .Include(p => p.Inventory)
+                               .ThenInclude(i => i.Warehouse)
+                            .Include(p => p.Batch)
+                            .Include(p => p.ApprovedByNavigation),
+                        asNoTracking: true
+                    );
+
+                    if (updatedProduct != null)
+                    {
+                        var responseDto = updatedProduct.MapToProductViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteById(Guid productId)
         {
             try

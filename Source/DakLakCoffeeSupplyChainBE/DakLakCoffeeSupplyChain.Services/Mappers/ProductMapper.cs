@@ -104,5 +104,40 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
+        // Mapper ProductUpdateDto => Product
+        public static void MapToUpdateProduct(this ProductUpdateDto dto, Product product)
+        {
+            product.ProductName = dto.ProductName;
+            product.Description = dto.Description;
+            product.UnitPrice = dto.UnitPrice;
+            product.QuantityAvailable = dto.QuantityAvailable;
+            product.Unit = dto.Unit.ToString(); // enum sang string
+            product.BatchId = dto.BatchId;
+            product.InventoryId = dto.InventoryId;
+            product.CoffeeTypeId = dto.CoffeeTypeId;
+            product.OriginRegion = dto.OriginRegion;
+            product.OriginFarmLocation = dto.OriginFarmLocation;
+            product.GeographicalIndicationCode = dto.GeographicalIndicationCode;
+            product.CertificationUrl = dto.CertificationUrl;
+            product.EvaluatedQuality = dto.EvaluatedQuality;
+            product.EvaluationScore = dto.EvaluationScore;
+            product.Status = dto.Status.ToString(); // enum sang string
+            product.ApprovalNote = dto.ApprovalNote;
+
+            // Nếu trạng thái là Approved thì cập nhật ApprovedBy và ApprovedAt
+            if (dto.Status == ProductStatus.Approved)
+            {
+                product.ApprovedBy = dto.ApprovedBy;
+                product.ApprovedAt = dto.ApprovedAt;
+            }
+            else
+            {
+                product.ApprovedBy = null;
+                product.ApprovedAt = null;
+            }
+
+            product.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }
