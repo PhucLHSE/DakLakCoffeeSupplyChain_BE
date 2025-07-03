@@ -9,8 +9,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
         [Required]
         public Guid CropSeasonId { get; set; }
 
-        [Required]
-        public Guid FarmerId { get; set; }
+        //[Required]
+        //public Guid FarmerId { get; set; }
 
         [Required]
         public Guid RegistrationId { get; set; }

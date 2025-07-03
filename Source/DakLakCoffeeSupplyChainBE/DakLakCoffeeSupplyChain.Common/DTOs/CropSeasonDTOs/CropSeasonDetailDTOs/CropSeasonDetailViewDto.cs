@@ -6,6 +6,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
 {
     public class CropSeasonDetailViewDto
     {
+        public Guid FarmerId { get; set; }
+        public string FarmerName { get; set; } = string.Empty;
         public Guid DetailId { get; set; }
         public Guid CoffeeTypeId { get; set; }
         public string TypeName { get; set; } = string.Empty;

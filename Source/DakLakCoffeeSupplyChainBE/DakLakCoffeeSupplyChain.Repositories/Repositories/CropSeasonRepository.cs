@@ -31,6 +31,17 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId && !c.IsDeleted);
     }
 
+    public async Task<List<CropSeason>> GetCropSeasonsByUserIdAsync(Guid userId)
+    {
+        return await _context.CropSeasons
+            .AsNoTracking()
+            .Where(c => !c.IsDeleted && c.Farmer.UserId == userId)
+            .Include(c => c.Farmer)
+                .ThenInclude(f => f.User)
+            .OrderBy(c => c.StartDate)
+            .ToListAsync();
+    }
+
     public async Task<int> CountByYearAsync(int year)
     {
         return await _context.CropSeasons
