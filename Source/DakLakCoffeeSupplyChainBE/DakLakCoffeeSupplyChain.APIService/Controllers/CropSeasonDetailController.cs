@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,33 +19,45 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _cropSeasonDetailService = cropSeasonDetailService;
         }
 
-        // GET: api/CropSeasonDetails
         [HttpGet]
-        [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _cropSeasonDetailService.GetAll();
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+            // Kiểm tra trực tiếp tên role (không dùng RoleNames)
+            bool isAdmin = User.IsInRole("Admin");
 
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không có dòng mùa vụ nào.");
+            var result = await _cropSeasonDetailService.GetAll(userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result.Data);
+            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
         }
 
+
         // GET: api/CropSeasonDetails/{detailId}
         [HttpGet("{detailId}")]
-        public async Task<IActionResult> GetById(Guid detailId)
+        public async Task<IActionResult> GetDetail(Guid detailId)
         {
-            var result = await _cropSeasonDetailService.GetById(detailId);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
+            bool isAdmin = User.IsInRole("Admin");
+
+            var result = await _cropSeasonDetailService.GetById(detailId, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy dòng mùa vụ.");
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return Forbid(result.Message);
 
             return StatusCode(500, result.Message);
         }

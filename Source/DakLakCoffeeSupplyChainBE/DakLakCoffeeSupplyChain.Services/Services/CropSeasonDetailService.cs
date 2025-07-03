@@ -21,13 +21,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<IServiceResult> GetAll()
+        public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false)
         {
             try
             {
                 var details = await _unitOfWork.CropSeasonDetailRepository.GetAllAsync(
-                    predicate: d => !d.IsDeleted,
-                    include: query => query.Include(d => d.CoffeeType), // 👈 thêm dòng này
+                    predicate: d =>
+                        !d.IsDeleted &&
+                        (isAdmin || d.CropSeason.Farmer.UserId == userId),
+                    include: query => query
+                        .Include(d => d.CoffeeType)
+                        .Include(d => d.CropSeason)
+                            .ThenInclude(cs => cs.Farmer)
+                                .ThenInclude(f => f.User),
                     asNoTracking: true
                 );
 
@@ -46,20 +52,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
 
-        public async Task<IServiceResult> GetById(Guid detailId)
+        public async Task<IServiceResult> GetById(Guid detailId, Guid userId, bool isAdmin = false)
         {
             try
             {
                 var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
                     predicate: d => d.DetailId == detailId && !d.IsDeleted,
-                    include: query => query.Include(d => d.CoffeeType), // 👈 thêm dòng này
+                    include: query => query
+                        .Include(d => d.CoffeeType)
+                        .Include(d => d.CropSeason)
+                            .ThenInclude(cs => cs.Farmer)
+                                .ThenInclude(f => f.User), // 👈 Quan trọng: cần include cả User để lấy tên nông hộ
                     asNoTracking: true
                 );
 
                 if (detail == null)
-                {
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy chi tiết mùa vụ.");
-                }
+
+                // ✅ Phân quyền: chỉ admin hoặc chính chủ nông hộ mới được xem
+                if (!isAdmin && detail.CropSeason?.Farmer?.UserId != userId)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xem chi tiết mùa vụ này.");
 
                 var dto = detail.MapToCropSeasonDetailViewDto();
                 return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
@@ -69,6 +81,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+
 
         public async Task<IServiceResult> Create(CropSeasonDetailCreateDto dto)
         {
