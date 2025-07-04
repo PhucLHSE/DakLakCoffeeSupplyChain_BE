@@ -108,11 +108,52 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid productId)
+        public async Task<IServiceResult> GetById(Guid productId, Guid userId)
         {
+            Guid? managerId = null;
+
+            // Ưu tiên kiểm tra BusinessManager
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m =>
+                   m.UserId == userId &&
+                   !m.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (manager != null)
+            {
+                managerId = manager.ManagerId;
+            }
+            else
+            {
+                // Nếu không phải Manager, kiểm tra BusinessStaff
+                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                    predicate: s =>
+                       s.UserId == userId &&
+                       !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (staff != null)
+                {
+                    managerId = staff.SupervisorId;
+                }
+            }
+
+            if (managerId == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Manager hoặc Staff tương ứng với tài khoản."
+                );
+            }
+
             // Tìm sản phẩm theo ID
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(
-                predicate: p => p.ProductId == productId,
+                predicate: p =>
+                   p.ProductId == productId &&
+                   !p.IsDeleted &&
+                   p.CreatedBy == managerId,
                 include: query => query
                    .Include(p => p.ApprovedByNavigation)
                    .Include(p => p.CoffeeType)
@@ -427,7 +468,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(Guid productId)
+        public async Task<IServiceResult> DeleteProductById(Guid productId)
         {
             try
             {
@@ -485,7 +526,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteById(Guid productId)
+        public async Task<IServiceResult> SoftDeleteProductById(Guid productId)
         {
             try
             {
