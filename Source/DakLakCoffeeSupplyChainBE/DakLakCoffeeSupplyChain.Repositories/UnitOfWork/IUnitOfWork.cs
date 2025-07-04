@@ -79,12 +79,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IProcessingParameterRepository ProcessingParameterRepository { get; }
 
         IProcessingBatchRepository ProcessingBatchRepository { get; }
+
         ICropSeasonDetailRepository CropSeasonDetailRepository { get; }
+
         IInventoryLogRepository InventoryLogs { get; }
 
         IExpertAdviceRepository ExpertAdviceRepository { get; }
 
         IAgriculturalExpertRepository AgriculturalExpertRepository { get; }
 
+        IOrderRepository OrderRepository { get; }
     }
 }

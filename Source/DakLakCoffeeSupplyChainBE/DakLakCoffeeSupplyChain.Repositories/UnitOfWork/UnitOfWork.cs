@@ -51,6 +51,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IInventoryLogRepository? inventoryLogRepository;
         private IExpertAdviceRepository? expertAdviceRepository;
         private IAgriculturalExpertRepository? agriculturalExpertRepository;
+        private IOrderRepository? orderRepository;
+
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
@@ -355,6 +357,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return agriculturalExpertRepository ??= new AgriculturalExpertRepository(context);
+            }
+        }
+
+        public IOrderRepository OrderRepository
+        {
+            get
+            {
+                return orderRepository ??= new OrderRepository(context);
             }
         }
     }

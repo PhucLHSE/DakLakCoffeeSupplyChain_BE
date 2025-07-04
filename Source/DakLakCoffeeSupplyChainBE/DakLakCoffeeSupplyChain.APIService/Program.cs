@@ -64,7 +64,7 @@ builder.Services.AddScoped<IFarmingCommitmentService, FarmingCommitmentService>(
 builder.Services.AddScoped<IBusinessStaffService, BusinessStaffService>();
 builder.Services.AddScoped<IExpertAdviceService, ExpertAdviceService>();
 builder.Services.AddScoped<IAgriculturalExpertService, AgriculturalExpertService>();
-
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
@@ -120,6 +120,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
     odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Product>("Product");
+    odataBuilder.EntitySet<Order>("Order");
 
     return odataBuilder.GetEdmModel();
 }
@@ -184,7 +185,9 @@ app.UseHttpsRedirection();
 
 // Áp dụng CORS cho toàn bộ hệ thống (áp dụng policy phía trên)
 app.UseCors("AllowAllOrigins");
+
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
