@@ -54,7 +54,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetById(Guid productId)
         {
-            var result = await _productService.GetById(productId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _productService.GetById(productId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -141,7 +153,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> DeleteProductByIdAsync(Guid productId)
         {
-            var result = await _productService.DeleteById(productId);
+            var result = await _productService.DeleteProductById(productId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -160,7 +172,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid productId)
         {
-            var result = await _productService.SoftDeleteById(productId);
+            var result = await _productService.SoftDeleteProductById(productId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -176,7 +188,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> ProductExistsAsync(Guid productId)
         {
-            var result = await _productService.GetById(productId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return false; // Không xác định được user → không kiểm tra được
+            }
+
+            var result = await _productService.GetById(productId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }
