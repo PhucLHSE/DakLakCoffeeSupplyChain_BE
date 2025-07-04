@@ -209,10 +209,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(BusinessBuyerUpdateDto businessBuyerDto)
+        public async Task<IServiceResult> Update(BusinessBuyerUpdateDto businessBuyerDto, Guid userId)
         {
             try
             {
+                // Truy vấn ra BusinessManager từ userId
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    include: query => query
+                       .Include(m => m.User),
+                    asNoTracking: true
+                );
+
+                if (businessManager == null || 
+                    businessManager.User == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy thông tin quản lý doanh nghiệp."
+                    );
+                }
+
+                // Kiểm tra role
+                if (businessManager.User.IsDeleted ||
+                    businessManager.User.Role == null ||
+                    businessManager.User.Role.RoleName != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Người dùng không có quyền cập nhật khách hàng doanh nghiệp."
+                    );
+                }
+
+                var managerId = businessManager.ManagerId;
+
                 // Tìm đối tượng businessBuyer theo ID
                 var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
                     predicate: bb => bb.BuyerId == businessBuyerDto.BuyerId,
@@ -227,6 +259,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         "Khách hàng không tồn tại hoặc đã bị xóa.."
+                    );
+                }
+
+                // Kiểm tra quyền sở hữu
+                if (businessBuyer.CreatedBy != managerId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền cập nhật khách hàng không do doanh nghiệp của bạn tạo."
                     );
                 }
 
@@ -290,7 +331,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(Guid buyerId)
+        public async Task<IServiceResult> DeleteBusinessBuyerById(Guid buyerId)
         {
             try
             {
@@ -345,7 +386,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteById(Guid buyerId)
+        public async Task<IServiceResult> SoftDeleteBusinessBuyerById(Guid buyerId)
         {
             try
             {
