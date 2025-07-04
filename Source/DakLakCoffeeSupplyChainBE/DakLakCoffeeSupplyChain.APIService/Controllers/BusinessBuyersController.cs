@@ -99,7 +99,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<BusinessBuyersController>/{buyerId}
         [HttpPut("{buyerId}")]
-        public async Task<IActionResult> UpdateRoleAsync(Guid buyerId, [FromBody] BusinessBuyerUpdateDto businessBuyerDto)
+        public async Task<IActionResult> UpdateBusinessBuyerAsync(Guid buyerId, [FromBody] BusinessBuyerUpdateDto businessBuyerDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (buyerId != businessBuyerDto.BuyerId)
@@ -108,7 +108,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _businessBuyerService.Update(businessBuyerDto);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _businessBuyerService.Update(businessBuyerDto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -124,9 +136,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // DELETE api/<BusinessBuyersController>/{buyerId}
         [HttpDelete("{buyerId}")]
-        public async Task<IActionResult> DeleteRoleByIdAsync(Guid buyerId)
+        public async Task<IActionResult> DeleteBusinessBuyerByIdAsync(Guid buyerId)
         {
-            var result = await _businessBuyerService.DeleteById(buyerId);
+            var result = await _businessBuyerService.DeleteBusinessBuyerById(buyerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -144,7 +156,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{buyerId}")]
         public async Task<IActionResult> SoftDeleteBusinessBuyerByIdAsync(Guid buyerId)
         {
-            var result = await _businessBuyerService.SoftDeleteById(buyerId);
+            var result = await _businessBuyerService.SoftDeleteBusinessBuyerById(buyerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
