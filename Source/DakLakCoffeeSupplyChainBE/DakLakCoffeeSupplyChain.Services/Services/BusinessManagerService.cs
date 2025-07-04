@@ -66,8 +66,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid managerId)
+        public async Task<IServiceResult> GetById(Guid managerId, Guid userId, string userRole)
         {
+            // Kiểm tra role
+            if (userRole != "Admin" && 
+                userRole != "BusinessManager")
+            {
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Bạn không có quyền truy cập thông tin này."
+                );
+            }
+
+            // Nếu là BusinessManager thì chỉ được xem chính mình
+            if (userRole == "BusinessManager")
+            {
+                var currentManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                // Không khớp thì chặn
+                if (currentManager == null || 
+                    currentManager.ManagerId != managerId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_READ_CODE,
+                        "Bạn chỉ có quyền xem thông tin của chính bạn."
+                    );
+                }
+            }
+
             // Tìm quản lý doanh nghiệp theo ID
             var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                 predicate: bm => bm.ManagerId == managerId,
