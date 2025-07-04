@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> GetById(Guid managerId)
         {
-            var result = await _businessManagerService.GetById(managerId);
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _businessManagerService.GetById(managerId, userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -140,7 +155,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> BusinessManagerExistsAsync(Guid managerId)
         {
-            var result = await _businessManagerService.GetById(managerId);
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return false; // Không xác định được user → không kiểm tra được
+            }
+
+            var result = await _businessManagerService.GetById(managerId, userId, userRole);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }
