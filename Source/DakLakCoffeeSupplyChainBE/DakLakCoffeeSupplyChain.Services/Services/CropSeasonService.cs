@@ -67,18 +67,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
 
-        public async Task<IServiceResult> GetById(Guid cropSeasonId, Guid userId, bool isAdmin = false)
-        {
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
-            if (cropSeason == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+public async Task<IServiceResult> GetById(Guid cropSeasonId, Guid userId, bool isAdmin = false)
+{
+    try
+    {
+        var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
+            predicate: cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted,
+            include: query => query
+                .Include(cs => cs.Farmer)
+                    .ThenInclude(f => f.User)
+                .Include(cs => cs.CropSeasonDetails), // nếu cần hiện vùng trồng
+            asNoTracking: true
+        );
 
-            if (!isAdmin && cropSeason.Farmer?.UserId != userId)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập mùa vụ này.");
+        if (cropSeason == null)
+            return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
-            var dto = cropSeason.MapToCropSeasonViewDetailsDto();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
-        }
+        if (!isAdmin && cropSeason.Farmer?.UserId != userId)
+            return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập mùa vụ này.");
+
+        var dto = cropSeason.MapToCropSeasonViewDetailsDto();
+        return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
+    }
+    catch (Exception ex)
+    {
+        return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+    }
+}
+
 
         public async Task<IServiceResult> Create(CropSeasonCreateDto dto, Guid userId)
         {
