@@ -74,6 +74,9 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     {
         return await _context.CropSeasons.AnyAsync(predicate);
     }
-
+    public IQueryable<CropSeason> GetQuery()
+    {
+        return _context.CropSeasons.AsQueryable();
+    }
 
 }
