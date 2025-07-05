@@ -92,7 +92,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<BusinessManagersController>/{managerId}
         [HttpPut("{managerId}")]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> UpdateRoleAsync(Guid managerId, [FromBody] BusinessManagerUpdateDto businessManagerDto)
+        public async Task<IActionResult> UpdateBusinessManagerAsync(Guid managerId, [FromBody] BusinessManagerUpdateDto businessManagerDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (managerId != businessManagerDto.ManagerId)
@@ -118,9 +118,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // DELETE api/<BusinessManagersController>/{managerId}
         [HttpDelete("{managerId}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteRoleByIdAsync(Guid managerId)
+        public async Task<IActionResult> DeleteBusinessManagerByIdAsync(Guid managerId)
         {
-            var result = await _businessManagerService.DeleteById(managerId);
+            var result = await _businessManagerService.DeleteBusinessManagerById(managerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -139,7 +139,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> SoftDeleteBusinessManagerByIdAsync(Guid managerId)
         {
-            var result = await _businessManagerService.SoftDeleteById(managerId);
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _businessManagerService.SoftDeleteBusinessManagerById(managerId, userId, userRole);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");

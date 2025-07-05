@@ -297,7 +297,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(Guid managerId)
+        public async Task<IServiceResult> DeleteBusinessManagerById(Guid managerId)
         {
             try
             {
@@ -352,10 +352,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteById(Guid managerId)
+        public async Task<IServiceResult> SoftDeleteBusinessManagerById(Guid managerId, Guid userId, string userRole)
         {
             try
             {
+                // Kiểm tra role
+                if (userRole != "Admin" && 
+                    userRole != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không có quyền thực hiện thao tác này."
+                    );
+                }
+
+                // Nếu là BusinessManager thì chỉ được xóa chính mình
+                if (userRole == "BusinessManager")
+                {
+                    var currentManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                        predicate: m =>
+                            m.UserId == userId &&
+                            !m.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (currentManager == null || 
+                        currentManager.ManagerId != managerId)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            "Bạn chỉ được phép xóa thông tin của chính mình."
+                        );
+                    }
+                }
+
                 // Tìm quản lý doanh nghiệp theo ID
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: bm => bm.ManagerId == managerId,
