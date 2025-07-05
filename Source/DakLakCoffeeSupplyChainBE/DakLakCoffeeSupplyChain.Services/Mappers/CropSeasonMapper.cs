@@ -58,6 +58,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         ExpectedHarvestStart = d.ExpectedHarvestStart,
                         ExpectedHarvestEnd = d.ExpectedHarvestEnd,
                         EstimatedYield = d.EstimatedYield,
+                        FarmerId = entity.FarmerId,
+                        FarmerName = entity.Farmer?.User?.Name ?? "Không rõ",
                         PlannedQuality = d.PlannedQuality ?? string.Empty,
                         Status = Enum.TryParse<CropDetailStatus>(d.Status, out var detailStatus) ? detailStatus : CropDetailStatus.Planned
                     }).ToList() ?? new List<CropSeasonDetailViewDto>()
