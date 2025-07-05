@@ -13,11 +13,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
     {
         private readonly IFarmingCommitmentService _service = farmingCommitmentService;
 
-        // GET api/<FarmingCommitments>/
-        [HttpGet]
+        // GET api/<FarmingCommitments>/BusinessManager
+        [HttpGet("BusinessManger")]
         [EnableQuery]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllBusinessManagerCommitment()
         {
             Guid userId;
 
@@ -28,10 +28,39 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized("Không xác định được userId từ token.");
+                return Unauthorized("Không xác định được người đăng nhập từ token.");
             }
 
-            var result = await _service.GetAll(userId);
+            var result = await _service.GetAllBusinessManagerCommitment(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // GET api/<FarmingCommitments>/Farmer
+        [HttpGet("Farmer")]
+        [EnableQuery]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetAllFarmerCommitment()
+        {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được người đăng nhập từ token.");
+            }
+
+            var result = await _service.GetAllFarmerCommitment(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết

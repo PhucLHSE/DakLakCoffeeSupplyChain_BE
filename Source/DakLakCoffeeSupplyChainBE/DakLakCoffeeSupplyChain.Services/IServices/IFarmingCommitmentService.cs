@@ -4,7 +4,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IFarmingCommitmentService
     {
-        Task<IServiceResult> GetAll(Guid userId);
+        Task<IServiceResult> GetAllBusinessManagerCommitment(Guid userId);
+        Task<IServiceResult> GetAllFarmerCommitment(Guid userId);
         Task<IServiceResult> GetById(Guid commitmentId);
     }
 }
