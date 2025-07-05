@@ -80,11 +80,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid buyerId)
+        public async Task<IServiceResult> GetById(Guid buyerId, Guid userId)
         {
+            // Tìm BusinessManager tương ứng với userId
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => 
+                   m.UserId == userId && 
+                   m.IsDeleted != true,
+                asNoTracking: true
+            );
+
+            if (manager == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                );
+            }
+
             // Tìm buyer theo ID
             var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                predicate: bb => bb.BuyerId == buyerId,
+                predicate: bb => 
+                   bb.BuyerId == buyerId && 
+                   bb.CreatedBy == manager.ManagerId &&
+                   bb.IsDeleted != true,
                 include: query => query
                    .Include(bb => bb.CreatedByNavigation),
                 asNoTracking: true
