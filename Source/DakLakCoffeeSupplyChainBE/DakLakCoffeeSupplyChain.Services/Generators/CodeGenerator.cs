@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Generators
 {
@@ -109,10 +110,28 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateCropSeasonCodeAsync(int year)
         {
-            int count = await _unitOfWork.CropSeasonRepository.CountByYearAsync(year);
+            string prefix = $"SEASON-{year}-";
 
-            return $"SEASON-{year}-{(count + 1):D4}";
+            var latestCode = await _unitOfWork.CropSeasonRepository
+                .GetQuery()
+                .Where(x => x.CropSeasonCode.StartsWith(prefix))
+                .OrderByDescending(x => x.CropSeasonCode)
+                .Select(x => x.CropSeasonCode)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (!string.IsNullOrEmpty(latestCode))
+            {
+                var suffix = latestCode.Substring(prefix.Length);
+                if (int.TryParse(suffix, out int currentNumber))
+                {
+                    nextNumber = currentNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D4}";
         }
+
 
         public async Task<string> GenerateProcurementPlanCodeAsync()
         {
