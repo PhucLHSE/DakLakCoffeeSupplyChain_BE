@@ -11,7 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> GetAll(Guid userId);
 
-        Task<IServiceResult> GetById(Guid orderId);
+        Task<IServiceResult> GetById(Guid orderId, Guid userId);
 
         Task<IServiceResult> SoftDeleteOrderById(Guid orderId);
     }
