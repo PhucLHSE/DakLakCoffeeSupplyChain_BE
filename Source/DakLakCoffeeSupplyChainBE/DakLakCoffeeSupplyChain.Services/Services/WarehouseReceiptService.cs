@@ -257,5 +257,45 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu nhập thành công", dto);
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid receiptId, Guid userId)
+        {
+            var receipt = await _unitOfWork.WarehouseReceipts.GetDetailByIdAsync(receiptId);
+            if (receipt == null || receipt.IsDeleted)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu nhập kho.");
+
+            Guid? managerId = null;
+
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
+                managerId = manager.ManagerId;
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                    managerId = staff.SupervisorId;
+            }
+
+            if (managerId == null || receipt.Warehouse?.ManagerId != managerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không có quyền xóa phiếu nhập kho này.");
+
+            receipt.IsDeleted = true;
+            await _unitOfWork.WarehouseReceipts.UpdateAsync(receipt);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm phiếu nhập kho thành công.");
+        }
+        public async Task<IServiceResult> HardDeleteAsync(Guid receiptId)
+        {
+            var receipt = await _unitOfWork.WarehouseReceipts.GetByIdAsync(receiptId);
+            if (receipt == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu nhập kho.");
+
+            await _unitOfWork.WarehouseReceipts.RemoveAsync(receipt);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn phiếu nhập kho.");
+        }
+
+
     }
 }

@@ -101,5 +101,39 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpDelete("{id}/soft")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> SoftDelete(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _receiptService.SoftDeleteAsync(id, userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // DELETE: api/WarehouseReceipts/{id}/hard
+        [HttpDelete("{id}/hard")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> HardDelete(Guid id)
+        {
+            var result = await _receiptService.HardDeleteAsync(id);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
