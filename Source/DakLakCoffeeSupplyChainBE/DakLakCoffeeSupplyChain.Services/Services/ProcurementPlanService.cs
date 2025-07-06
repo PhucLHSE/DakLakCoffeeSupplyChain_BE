@@ -95,7 +95,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
                 Include(p => p.ProcurementPlansDetails).    //Order ProcurementPlansDetails bên mapper
-                ThenInclude(d => d.CoffeeType), 
+                ThenInclude(d => d.CoffeeType).
+                Include(p => p.ProcurementPlansDetails).
+                ThenInclude(p => p.ProcessMethod), 
                 asNoTracking: true
                 );
 

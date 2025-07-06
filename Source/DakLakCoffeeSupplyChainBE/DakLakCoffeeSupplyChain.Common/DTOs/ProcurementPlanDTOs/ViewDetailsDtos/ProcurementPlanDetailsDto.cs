@@ -13,7 +13,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public Guid PlanId { get; set; }
 
         public CoffeeTypePlanDetailsViewDto? CoffeeType { get; set; }
-        public int ProcessingMethodId { get; set; }
+        public string ProcessingMethodName { get; set; } = string.Empty;
 
         public double? TargetQuantity { get; set; }
 
