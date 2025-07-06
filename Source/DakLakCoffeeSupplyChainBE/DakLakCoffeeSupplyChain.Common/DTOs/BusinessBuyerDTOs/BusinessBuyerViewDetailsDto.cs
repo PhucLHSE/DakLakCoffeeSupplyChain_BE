@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.BusinessBuyerDTOs
 {
-    public class BusinessBuyerViewDetailDto
+    public class BusinessBuyerViewDetailsDto
     {
         public Guid BuyerId { get; set; }
 

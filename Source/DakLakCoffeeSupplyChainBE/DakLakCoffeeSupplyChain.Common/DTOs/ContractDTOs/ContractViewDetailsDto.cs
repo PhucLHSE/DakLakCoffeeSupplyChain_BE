@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 {
-    public class ContractViewDetailDto
+    public class ContractViewDetailsDto
     {
         public Guid ContractId { get; set; }
 

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs
 {
-    public class ContractDeliveryBatchViewDetailDto
+    public class ContractDeliveryBatchViewDetailsDto
     {
         public Guid DeliveryBatchId { get; set; }
 
