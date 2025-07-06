@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -140,6 +140,77 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     orderDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteOrderById(Guid orderId)
+        {
+            try
+            {
+                // Tìm order theo ID
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                    predicate: o => 
+                       o.OrderId == orderId && 
+                       !o.IsDeleted,
+                    include: query => query
+                       .Include(o => o.OrderItems),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (order == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu order là đã xóa
+                    order.IsDeleted = true;
+                    order.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Đánh dấu tất cả OrderItems là đã xóa
+                    foreach (var orderItem in order.OrderItems)
+                    {
+                        orderItem.IsDeleted = true;
+                        orderItem.UpdatedAt = DateHelper.NowVietnamTime();
+
+                        // Đảm bảo EF theo dõi thay đổi của orderItem
+                        await _unitOfWork.OrderItemRepository.UpdateAsync(orderItem);
+                    }
+
+                    // Cập nhật xoá mềm order ở repository
+                    await _unitOfWork.OrderRepository.UpdateAsync(order);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
