@@ -117,7 +117,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 asNoTracking: true
             );
 
-            // Kiểm tra nếu không tìm thấy contract
+            // Kiểm tra nếu không tìm thấy contractDeliveryBatch
             if (contractDeliveryBatch == null)
             {
                 return new ServiceResult(

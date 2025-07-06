@@ -47,5 +47,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        // GET api/<OrdersController>/{orderId}
+        [HttpGet("{orderId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> GetById(Guid orderId)
+        {
+            var result = await _orderService.GetById(orderId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
     }
 }

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -97,6 +98,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     orderDtos
+                );
+            }
+        }
+
+        public async Task<IServiceResult> GetById(Guid orderId)
+        {
+            // Tìm order theo ID
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                predicate: o =>
+                   o.OrderId == orderId &&
+                   !o.IsDeleted,
+                include: query => query
+                   .Include(o => o.DeliveryBatch)
+                      .ThenInclude(db => db.Contract)
+                   .Include(o => o.OrderItems.Where(oi => !oi.IsDeleted))
+                      .ThenInclude(oi => oi.Product),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy Order
+            if (order == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new OrderViewDetailsDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Sắp xếp danh sách OrderItems theo CreatedAt tăng dần
+                order.OrderItems = order.OrderItems
+                    .OrderBy(oi => oi.CreatedAt)
+                    .ToList();
+
+                // Map sang DTO chi tiết để trả về
+                var orderDto = order.MapToOrderViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    orderDto
                 );
             }
         }
