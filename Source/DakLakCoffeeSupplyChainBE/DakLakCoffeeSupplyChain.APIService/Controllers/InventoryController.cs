@@ -1,10 +1,8 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs;
-using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Query;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -22,68 +20,95 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _inventoryService = inventoryService;
         }
 
-        /// <summary>
-        /// Lấy danh sách tồn kho (view all)
-        /// </summary>
+        // GET: api/Inventories
         [HttpGet]
         [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                return Unauthorized("Không xác định được người dùng từ token.");
+                return StatusCode(500, "Không xác định được người dùng từ token.");
 
             var result = await _inventoryService.GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data); // 200
+                return Ok(result.Data);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message); // 404
+                return NotFound(result.Message);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return Forbid(result.Message); // 403
+                return Forbid(result.Message);
 
-            return StatusCode(500, result.Message); // fallback
+            return StatusCode(500, result.Message);
         }
-        /// <summary>
-        /// Lấy chi tiết tồn kho theo ID (view detail)
-        /// </summary>
+
+        // GET: api/Inventories/{id}
         [HttpGet("{id}")]
         [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _inventoryService.GetByIdAsync(id);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
+
+        // POST: api/Inventories
         [HttpPost]
         [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> Create([FromBody] InventoryCreateDto dto)
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return StatusCode(500, "Không xác định được người dùng từ token.");
+
             var result = await _inventoryService.CreateAsync(dto, userId);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
-        /// <summary>
-        /// Xoá mềm tồn kho (IsDeleted = true)
-        /// </summary>
+
+        // DELETE (Soft): api/Inventories/soft/{id}
         [HttpDelete("soft/{id}")]
         [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var result = await _inventoryService.SoftDeleteAsync(id);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
-        /// <summary>
-        /// Xoá thật tồn kho khỏi DB
-        /// </summary>
+        // DELETE (Hard): api/Inventories/hard/{id}
         [HttpDelete("hard/{id}")]
-        [Authorize(Roles = "Admin")] // Xoá thật thì giới hạn cho Admin
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
             var result = await _inventoryService.HardDeleteAsync(id);
-            return StatusCode(result.Status, result);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
     }
 }
