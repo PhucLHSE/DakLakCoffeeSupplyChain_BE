@@ -88,7 +88,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
-                    new { contractId = ((ContractViewDetailDto)result.Data).ContractId },
+                    new { contractId = ((ContractViewDetailsDto)result.Data).ContractId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)

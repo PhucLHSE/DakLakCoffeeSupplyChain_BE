@@ -100,7 +100,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
-                    new { buyerId = ((BusinessBuyerViewDetailDto)result.Data).BuyerId },
+                    new { buyerId = ((BusinessBuyerViewDetailsDto)result.Data).BuyerId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)

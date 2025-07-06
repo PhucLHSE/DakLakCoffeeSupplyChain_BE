@@ -37,15 +37,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractViewDetailDto
-        public static ContractViewDetailDto MapToContractViewDetailDto(this Contract contract)
+        // Mapper ContractViewDetailsDto
+        public static ContractViewDetailsDto MapToContractViewDetailDto(this Contract contract)
         {
             // Parse Status string to enum
             ContractStatus status = Enum.TryParse<ContractStatus>(contract.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ContractStatus.NotStarted;
 
-            return new ContractViewDetailDto
+            return new ContractViewDetailsDto
             {
                 ContractId = contract.ContractId,
                 ContractCode = contract.ContractCode ?? string.Empty,

@@ -27,10 +27,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper BusinessBuyerViewDetailDto
-        public static BusinessBuyerViewDetailDto MapToBusinessBuyerViewDetailDto(this BusinessBuyer businessBuyer)
+        // Mapper BusinessBuyerViewDetailsDto
+        public static BusinessBuyerViewDetailsDto MapToBusinessBuyerViewDetailDto(this BusinessBuyer businessBuyer)
         {
-            return new BusinessBuyerViewDetailDto
+            return new BusinessBuyerViewDetailsDto
             {
                 BuyerId = businessBuyer.BuyerId,
                 BuyerCode = businessBuyer.BuyerCode ?? string.Empty,

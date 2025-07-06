@@ -14,7 +14,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ContractDeliveryBatchMapper
     {
         // Mapper từ entity sang ViewAllDto
-        public static ContractDeliveryBatchViewAllDto MapToContractDeliveryBatchViewAllDto(this ContractDeliveryBatch contractDeliveryBatch)
+        public static ContractDeliveryBatchViewAllDto MapToContractDeliveryBatchViewAllDto(
+            this ContractDeliveryBatch contractDeliveryBatch)
         {
             // Parse Status string từ entity sang enum
             ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>(
@@ -36,8 +37,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractDeliveryBatchViewDetailDto
-        public static ContractDeliveryBatchViewDetailDto MapToContractDeliveryBatchViewDetailDto(this ContractDeliveryBatch contractDeliveryBatch)
+        // Mapper ContractDeliveryBatchViewDetailsDto
+        public static ContractDeliveryBatchViewDetailsDto MapToContractDeliveryBatchViewDetailDto(
+            this ContractDeliveryBatch contractDeliveryBatch)
         {
             // Parse Status string từ entity sang enum
             ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>(
@@ -45,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ? parsedStatus
                 : ContractDeliveryBatchStatus.Planned;
 
-            return new ContractDeliveryBatchViewDetailDto
+            return new ContractDeliveryBatchViewDetailsDto
             {
                 DeliveryBatchId = contractDeliveryBatch.DeliveryBatchId,
                 DeliveryBatchCode = contractDeliveryBatch.DeliveryBatchCode ?? string.Empty,

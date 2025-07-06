@@ -90,7 +90,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
-                    new { deliveryBatchId = ((ContractDeliveryBatchViewDetailDto)result.Data).DeliveryBatchId },
+                    new { deliveryBatchId = ((ContractDeliveryBatchViewDetailsDto)result.Data).DeliveryBatchId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
