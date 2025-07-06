@@ -89,5 +89,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IAgriculturalExpertRepository AgriculturalExpertRepository { get; }
 
         IOrderRepository OrderRepository { get; }
+
+        IOrderItemRepository OrderItemRepository { get; }
     }
 }
