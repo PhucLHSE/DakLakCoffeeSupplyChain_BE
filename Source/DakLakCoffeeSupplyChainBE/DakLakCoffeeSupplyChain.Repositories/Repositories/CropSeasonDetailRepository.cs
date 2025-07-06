@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Repositories
@@ -33,5 +34,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(d => d.CoffeeType)
                 .FirstOrDefaultAsync(d => d.DetailId == detailId && !d.IsDeleted);
         }
+        public async Task<bool> ExistsAsync(Expression<Func<CropSeasonDetail, bool>> predicate)
+        {
+            return await _context.CropSeasonDetails.AnyAsync(predicate);
+        }
+
     }
 }

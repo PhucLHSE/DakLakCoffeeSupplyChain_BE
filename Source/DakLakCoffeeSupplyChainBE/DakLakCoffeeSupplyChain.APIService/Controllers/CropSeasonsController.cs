@@ -98,7 +98,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.FAIL_UPDATE_CODE) return Conflict(result.Message);
             return NotFound(result.Message);
         }
-
         [HttpDelete("{cropSeasonId}")]
         public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
         {
@@ -106,10 +105,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropSeasonService.DeleteById(cropSeasonId, userId, false);
-            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok(result.Message);
-            return NotFound(result.Message);
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            bool isAdmin = role == "Admin";
+
+            var result = await _cropSeasonService.DeleteById(cropSeasonId, userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            return BadRequest(result.Message); // ❗ Dùng BadRequest thay vì NotFound nếu là lỗi quyền
         }
+
 
         [HttpPatch("soft-delete/{cropSeasonId}")]
         public async Task<IActionResult> SoftDeleteCropSeason(Guid cropSeasonId)
@@ -118,9 +124,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropSeasonService.SoftDeleteAsync(cropSeasonId, userId, false);
-            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok(result.Message);
-            return NotFound(result.Message);
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            bool isAdmin = role == "Admin";
+
+            var result = await _cropSeasonService.SoftDeleteAsync(cropSeasonId, userId, isAdmin);
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            return BadRequest(result.Message); // Dùng BadRequest thay vì NotFound
         }
+
     }
 }
