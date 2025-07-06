@@ -14,5 +14,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<WarehouseReceipt>> GetAllWithIncludesAsync();
         Task<WarehouseReceipt?> GetDetailByIdAsync(Guid id);
         Task<int> CountCreatedInYearAsync(int year);
+        IQueryable<WarehouseReceipt> GetQuery();
     }
 }

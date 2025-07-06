@@ -46,6 +46,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseReceipts
                 .CountAsync(r => r.ReceivedAt.HasValue && r.ReceivedAt.Value.Year == year && !r.IsDeleted);
         }
+        public IQueryable<WarehouseReceipt> GetQuery()
+        {
+            return _context.WarehouseReceipts.AsQueryable();
+        }
 
     }
 }

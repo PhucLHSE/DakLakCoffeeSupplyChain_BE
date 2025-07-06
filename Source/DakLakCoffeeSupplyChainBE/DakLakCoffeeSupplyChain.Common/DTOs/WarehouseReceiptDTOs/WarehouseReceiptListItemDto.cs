@@ -15,5 +15,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseReceiptDTOs
         public double ReceivedQuantity { get; set; }
         public DateTime? ReceivedAt { get; set; }
         public string? StaffName { get; set; }
+        public string? Note { get; set; }
     }
 }

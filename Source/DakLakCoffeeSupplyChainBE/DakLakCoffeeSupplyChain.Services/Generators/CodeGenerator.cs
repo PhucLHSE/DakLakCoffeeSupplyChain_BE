@@ -200,10 +200,28 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateWarehouseReceiptCodeAsync()
         {
-            var count = await _unitOfWork.WarehouseReceipts.CountCreatedInYearAsync(CurrentYear);
+            string prefix = $"WR-{CurrentYear}-";
 
-            return $"WR-{CurrentYear}-{(count + 1):D4}";
+            var latestCode = await _unitOfWork.WarehouseReceipts
+                .GetQuery()
+                .Where(x => x.ReceiptCode.StartsWith(prefix))
+                .OrderByDescending(x => x.ReceiptCode)
+                .Select(x => x.ReceiptCode)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (!string.IsNullOrEmpty(latestCode))
+            {
+                var suffix = latestCode.Substring(prefix.Length);
+                if (int.TryParse(suffix, out int currentNumber))
+                {
+                    nextNumber = currentNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D4}";
         }
+
 
         public async Task<string> GenerateInventoryCodeAsync()
         {

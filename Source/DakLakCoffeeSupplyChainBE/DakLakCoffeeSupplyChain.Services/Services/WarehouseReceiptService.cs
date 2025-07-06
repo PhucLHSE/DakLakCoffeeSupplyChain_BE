@@ -229,7 +229,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     BatchCode = r.Batch?.BatchCode,
                     ReceivedQuantity = (double)r.ReceivedQuantity,
                     ReceivedAt = r.ReceivedAt,
-                    StaffName = r.ReceivedByNavigation?.User?.Name
+                    StaffName = r.ReceivedByNavigation?.User?.Name,
+                    Note = r.Note
                 }).ToList();
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách phiếu nhập kho thành công", filtered);
