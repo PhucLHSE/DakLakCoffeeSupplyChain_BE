@@ -195,8 +195,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (cropSeason == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
+            // 🔒 Quyền hạn
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
+
+            // ❗ Chỉ xoá khi status là Cancelled
+            if (cropSeason.Status != "Cancelled")
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
+
+            // Nếu có vùng trồng thì không được xoá
+            if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không thể xoá mùa vụ đã có vùng trồng.");
 
             await _unitOfWork.CropSeasonRepository.DeleteCropSeasonDetailsBySeasonIdAsync(cropSeasonId);
             _unitOfWork.CropSeasonRepository.PrepareRemove(cropSeason);
@@ -217,6 +226,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
+            // ❗ Chỉ cho xoá mềm nếu status là Cancelled
+            if (cropSeason.Status != "Cancelled")
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
+
+            // Kiểm tra có vùng trồng chưa
+            var hasDetails = await _unitOfWork.CropSeasonDetailRepository
+                .ExistsAsync(d => d.CropSeasonId == cropSeasonId && !d.IsDeleted);
+
+            if (hasDetails)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không thể xoá mùa vụ đã có vùng trồng.");
+
             cropSeason.IsDeleted = true;
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
 
@@ -227,5 +247,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
+
     }
 }

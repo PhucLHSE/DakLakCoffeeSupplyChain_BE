@@ -14,12 +14,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<int> CountByYearAsync(int year);
 
         Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId);
+        Task<CropSeason?> GetByIdAsync(Guid cropSeasonId);
 
         Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId);
 
         Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate);
         IQueryable<CropSeason> GetQuery();
-
-
+        
     }
 }
