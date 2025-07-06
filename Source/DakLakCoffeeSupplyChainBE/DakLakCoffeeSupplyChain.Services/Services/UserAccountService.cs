@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -33,16 +34,66 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> GetAll()
+        public async Task<IServiceResult> GetAll(Guid userId, string userRole)
         {
-            // Truy vấn tất cả người dùng từ repository
-            var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
-                predicate: u => u.IsDeleted != true,
-                include: query => query
-                   .Include(u => u.Role),
-                orderBy: u => u.OrderBy(u => u.UserCode),
-                asNoTracking: true
-            );
+            // Kiểm tra quyền truy cập
+            if (userRole != "Admin" && 
+                userRole != "BusinessManager")
+            {
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Bạn không có quyền truy cập danh sách người dùng."
+                );
+            }
+
+            // Danh sách người dùng sẽ được gán tùy theo vai trò (Admin hoặc BusinessManager)
+            List<UserAccount> userAccounts;
+
+            // Truy vấn người dùng từ repository
+            if (userRole == "Admin")
+            {
+                // Admin có quyền xem toàn bộ người dùng
+                userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                    predicate: u => !u.IsDeleted,
+                    include: query => query
+                       .Include(u => u.Role),
+                    orderBy: u => u.OrderBy(u => u.UserCode),
+                    asNoTracking: true
+                );
+            }
+            else // BusinessManager
+            {
+                // Chỉ lấy các user là staff dưới quyền BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_READ_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
+                var staffs = await _unitOfWork.BusinessStaffRepository.GetAllAsync(
+                    predicate: s => 
+                       s.SupervisorId == manager.ManagerId && 
+                       !s.IsDeleted,
+                    include: s => s
+                       .Include(st => st.User)
+                          .ThenInclude(u => u.Role),
+                    asNoTracking: true
+                );
+
+                userAccounts = staffs
+                    .Where(s => s.User != null)
+                    .Select(s => s.User!)
+                    .ToList();
+            }
 
             // Kiểm tra nếu không có dữ liệu
             if (userAccounts == null || 
@@ -58,7 +109,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Map danh sách entity sang DTO
                 var userAccountDtos = userAccounts
-                    .Select(userAccounts => userAccounts.MapToUserAccountViewAllDto())
+                    .Select(userAccount => userAccount.MapToUserAccountViewAllDto())
                     .ToList();
 
                 return new ServiceResult(

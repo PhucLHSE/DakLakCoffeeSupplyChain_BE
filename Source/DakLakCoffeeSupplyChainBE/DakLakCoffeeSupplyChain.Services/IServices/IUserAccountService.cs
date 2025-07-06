@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IUserAccountService
     {
-        Task<IServiceResult> GetAll();
+        Task<IServiceResult> GetAll(Guid userId, string userRole);
 
         Task<IServiceResult> GetById(Guid userId);
 

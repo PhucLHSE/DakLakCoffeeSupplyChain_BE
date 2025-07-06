@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> GetAllUserAccountsAsync()
         {
-            var result = await _userAccountService.GetAll();
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _userAccountService.GetAll(userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);         
