@@ -16,9 +16,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
     {
         public WarehouseRepository(DakLakCoffee_SCMContext context) : base(context) { }
 
-        public async Task<bool> IsNameExistsAsync(string name)
+        public async Task<bool> IsNameExistsAsync(string name, Guid? excludeId = null)
         {
-            return await _context.Warehouses.AnyAsync(w => w.Name == name && !w.IsDeleted);
+            return await _context.Warehouses.AnyAsync(w =>
+                w.Name == name &&
+                !w.IsDeleted &&
+                (excludeId == null || w.WarehouseId != excludeId));
         }
         public async Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate)
         {
