@@ -21,5 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteById(Guid userId);
 
         Task<IServiceResult> SoftDeleteById(Guid userId);
+
+        Task<bool> CanAccessUser(Guid currentUserId, string currentUserRole, Guid targetUserId);
     }
 }

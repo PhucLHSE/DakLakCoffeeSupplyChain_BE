@@ -124,7 +124,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Tìm tài khoản người dùng theo ID
             var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
-                predicate: u => u.UserId == userId,
+                predicate: u => 
+                   u.UserId == userId && 
+                   !u.IsDeleted,
                 include: query => query
                    .Include(u => u.Role),
                 asNoTracking: true
@@ -491,6 +493,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ex.ToString()
                 );
             }
+        }
+
+        public async Task<bool> CanAccessUser(Guid currentUserId, string currentUserRole, Guid targetUserId)
+        {
+            // Admin xem được tất cả
+            if (currentUserRole == "Admin")
+                return true;
+
+            // Ai cũng được xem chính mình
+            if (currentUserId == targetUserId)
+                return true;
+
+            // BusinessManager được xem các BusinessStaff thuộc doanh nghiệp mình
+            if (currentUserRole == "BusinessManager")
+            {
+                var manager = await _unitOfWork.BusinessManagerRepository
+                    .GetByUserIdAsync(currentUserId);
+
+                if (manager == null) 
+                    return false;
+
+                // Kiểm tra nếu target là BusinessStaff và có Supervisor là Manager đó
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .GetByUserIdAsync(targetUserId);
+
+                if (staff != null && 
+                    staff.SupervisorId == manager.ManagerId)
+                    return true;
+            }
+
+            // Các role khác chỉ được xem bản thân
+            return false;
         }
     }
 }
