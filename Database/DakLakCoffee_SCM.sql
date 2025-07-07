@@ -1397,7 +1397,10 @@ GO
 
 -- Insert vào bảng Payments
 -- Business Manager đăng ký
-INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+INSERT INTO Payments (
+   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
+   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+)
 VALUES (
   'businessmanager@gmail.com', 2, 
   (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
@@ -1405,7 +1408,10 @@ VALUES (
 );
 
 -- Business Manager đóng phí tháng 6
-INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+INSERT INTO Payments (
+   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
+   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+)
 VALUES (
   'businessmanager@gmail.com', 2, 
   (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
@@ -1413,7 +1419,10 @@ VALUES (
 );
 
 -- Farmer đăng ký
-INSERT INTO Payments (Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID)
+INSERT INTO Payments (
+   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
+   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+)
 VALUES (
   'farmer@gmail.com', 4, 
   (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'), 
@@ -1466,8 +1475,14 @@ GO
 -- Lấy UserID của Business Manager
 DECLARE @BMUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com');
 
-INSERT INTO BusinessManagers (UserID, ManagerCode, CompanyName, Position, Department, CompanyAddress, TaxID, Website, ContactEmail)
-VALUES (@BMUserID, 'BM-2025-0001', N'Công ty Cà Phê DakLak', N'Giám đốc điều hành', N'Phòng điều phối', N'15 Lê Duẩn, BMT, Đắk Lắk', '6001234567', 'https://daklakcoffee.vn', 'lehoangphuc14122003@gmail.com');
+INSERT INTO BusinessManagers (
+   UserID, ManagerCode, CompanyName, Position, Department, 
+   CompanyAddress, TaxID, Website, ContactEmail
+)
+VALUES (
+   @BMUserID, 'BM-2025-0001', N'Công ty Cà Phê DakLak', N'Giám đốc điều hành', N'Phòng điều phối', 
+   N'15 Lê Duẩn, BMT, Đắk Lắk', '6001234567', 'https://daklakcoffee.vn', 'lehoangphuc14122003@gmail.com'
+);
 
 GO
 
@@ -1484,8 +1499,14 @@ GO
 -- Lấy UserID của Expert
 DECLARE @ExpertUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'expert@gmail.com');
 
-INSERT INTO AgriculturalExperts (UserID, ExpertCode, ExpertiseArea, Qualifications, YearsOfExperience, AffiliatedOrganization, Bio, Rating)
-VALUES (@ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8);
+INSERT INTO AgriculturalExperts (
+   UserID, ExpertCode, ExpertiseArea, Qualifications, 
+   YearsOfExperience, AffiliatedOrganization, Bio, Rating
+)
+VALUES (
+   @ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, 
+   N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8
+);
 
 GO
 
@@ -1588,8 +1609,13 @@ GO
 
 -- Insert bảng Contracts
 -- Giả định SellerID (BusinessManagerID) và BuyerID đã có
-DECLARE @SellerID UNIQUEIDENTIFIER = (SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001');
-DECLARE @BuyerID UNIQUEIDENTIFIER = (SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-001');
+DECLARE @SellerID UNIQUEIDENTIFIER = (
+   SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001'
+);
+
+DECLARE @BuyerID UNIQUEIDENTIFIER = (
+   SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-001'
+);
 
 -- Tạo hợp đồng
 DECLARE @ContractID UNIQUEIDENTIFIER = NEWID();
@@ -1678,7 +1704,10 @@ GO
 
 -- Insert ContractDeliveryBatches và ContractDeliveryItems
 -- Đợt 1 – Giao 30,000 kg (Arabica, Robusta, Honey)
-DECLARE @ContractID UNIQUEIDENTIFIER = (SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001');
+DECLARE @ContractID UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001'
+);
+
 DECLARE @Batch1 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches (
@@ -1688,9 +1717,17 @@ INSERT INTO ContractDeliveryBatches (
     @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0001');
-DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0001');
-DECLARE @CTI_Honey UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-003-CTR-2025-0001');
+DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0001'
+);
+
+DECLARE @CTI_Robusta UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0001'
+);
+
+DECLARE @CTI_Honey UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-003-CTR-2025-0001'
+);
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1710,8 +1747,13 @@ INSERT INTO ContractDeliveryBatches (
     @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Washed UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-004-CTR-2025-0001');
-DECLARE @CTI_Culi UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-005-CTR-2025-0001');
+DECLARE @CTI_Washed UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-004-CTR-2025-0001'
+);
+
+DECLARE @CTI_Culi UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-005-CTR-2025-0001'
+);
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1730,7 +1772,9 @@ INSERT INTO ContractDeliveryBatches (
     @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Natural UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-006-CTR-2025-0001');
+DECLARE @CTI_Natural UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-006-CTR-2025-0001'
+);
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1750,7 +1794,9 @@ INSERT INTO ContractDeliveryBatches (
     @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'planned', GETDATE(), GETDATE()
 );
 
-DECLARE @CTI_Typica UNIQUEIDENTIFIER = (SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-007-CTR-2025-0001');
+DECLARE @CTI_Typica UNIQUEIDENTIFIER = (
+   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-007-CTR-2025-0001'
+);
 
 INSERT INTO ContractDeliveryItems (
     DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
@@ -1828,11 +1874,25 @@ DECLARE @CTI_Honey UNIQUEIDENTIFIER = (
   SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-2025-0003'
 );
 
-DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
-DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
-DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
-DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
-DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+DECLARE @Natural INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
+);
+
+DECLARE @Washed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed'
+);
+
+DECLARE @Honey INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey'
+);
+
+DECLARE @SemiWashed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed'
+);
+
+DECLARE @Carbonic INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic'
+);
 
 -- Chi tiết: Arabica 5,000 kg
 INSERT INTO ProcurementPlansDetails (
@@ -1927,11 +1987,25 @@ DECLARE @CoffeeID_TR9 UNIQUEIDENTIFIER = (
   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0008'
 );
 
-DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
-DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
-DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
-DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
-DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+DECLARE @Natural INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
+);
+
+DECLARE @Washed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed'
+);
+
+DECLARE @Honey INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey'
+);
+
+DECLARE @SemiWashed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed'
+);
+
+DECLARE @Carbonic INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic'
+);
 
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
@@ -1977,8 +2051,13 @@ GO
 
 -- Insert vào bảng CultivationRegistrations
 -- Lấy FarmerID & PlanID để đăng ký
-DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
-DECLARE @PlanID UNIQUEIDENTIFIER = (SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001');
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+DECLARE @PlanID UNIQUEIDENTIFIER = (
+   SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
+);
 
 -- Tạo đơn đăng ký
 DECLARE @RegistrationID UNIQUEIDENTIFIER = NEWID();
@@ -1987,7 +2066,8 @@ INSERT INTO CultivationRegistrations (
     RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, TotalWantedPrice, Note
 )
 VALUES (
-    @RegistrationID, 'REG-2025-0001', @PlanID, @FarmerID, 1.8, 95, N'Đăng ký trồng cà phê Arabica với kỹ thuật tưới nhỏ giọt'
+    @RegistrationID, 'REG-2025-0001', @PlanID, @FarmerID, 1.8, 95, 
+	N'Đăng ký trồng cà phê Arabica với kỹ thuật tưới nhỏ giọt'
 );
 
 GO
@@ -2052,9 +2132,17 @@ GO
 
 -- Insert vào bảng CropSeasons
 -- Lấy các ID cần thiết
-DECLARE @RegistrationID UNIQUEIDENTIFIER = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001');
-DECLARE @FarmerID UNIQUEIDENTIFIER = (SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001');
-DECLARE @CommitmentID UNIQUEIDENTIFIER = (SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'COMMIT-2025-0001');
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (
+   SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
+);
+
+DECLARE @FarmerID UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
+);
+
+DECLARE @CommitmentID UNIQUEIDENTIFIER = (
+   SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'COMMIT-2025-0001'
+);
 
 INSERT INTO CropSeasons (
     CropSeasonCode, RegistrationID, FarmerID, CommitmentID,
@@ -2109,7 +2197,9 @@ DECLARE @FarmerID UNIQUEIDENTIFIER = (
 );
 
 -- planting - Trồng
-DECLARE @StageID INT = (SELECT StageID FROM CropStages WHERE StageCode = 'planting');
+DECLARE @StageID INT = (
+   SELECT StageID FROM CropStages WHERE StageCode = 'planting'
+);
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -2122,7 +2212,9 @@ VALUES (
 );
 
 -- flowering – Ra hoa
-DECLARE @StageID_Flowering INT = (SELECT StageID FROM CropStages WHERE StageCode = 'flowering');
+DECLARE @StageID_Flowering INT = (
+   SELECT StageID FROM CropStages WHERE StageCode = 'flowering'
+);
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -2135,7 +2227,9 @@ VALUES (
 );
 
 -- fruiting – Kết trái
-DECLARE @StageID_Fruiting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'fruiting');
+DECLARE @StageID_Fruiting INT = (
+   SELECT StageID FROM CropStages WHERE StageCode = 'fruiting'
+);
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -2148,7 +2242,9 @@ VALUES (
 );
 
 -- ripening – Chín
-DECLARE @StageID_Ripening INT = (SELECT StageID FROM CropStages WHERE StageCode = 'ripening');
+DECLARE @StageID_Ripening INT = (
+   SELECT StageID FROM CropStages WHERE StageCode = 'ripening'
+);
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -2161,7 +2257,9 @@ VALUES (
 );
 
 -- harvesting – Thu hoạch
-DECLARE @StageID_Harvesting INT = (SELECT StageID FROM CropStages WHERE StageCode = 'harvesting');
+DECLARE @StageID_Harvesting INT = (
+   SELECT StageID FROM CropStages WHERE StageCode = 'harvesting'
+);
 
 INSERT INTO CropProgresses (
     CropSeasonDetailID, UpdatedBy, StageID, StageDescription,
@@ -2175,11 +2273,26 @@ VALUES (
 
 GO
 
-DECLARE @Natural INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural');
-DECLARE @Washed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed');
-DECLARE @Honey INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey');
-DECLARE @SemiWashed INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed');
-DECLARE @Carbonic INT = (SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic');
+-- Insert vào bảng ProcessingStages
+DECLARE @Natural INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'natural'
+);
+
+DECLARE @Washed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'washed'
+);
+
+DECLARE @Honey INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'honey'
+);
+
+DECLARE @SemiWashed INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'semi-washed'
+);
+
+DECLARE @Carbonic INT = (
+   SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic'
+);
 
 -- Các bước cho phương pháp natural
 INSERT INTO ProcessingStages (MethodID, StageCode, StageName, Description, OrderIndex)
@@ -2272,6 +2385,7 @@ DECLARE @FarmerID UNIQUEIDENTIFIER = (
 
 -- Step 1: Harvest
 DECLARE @ProgressID1 UNIQUEIDENTIFIER = NEWID();
+
 DECLARE @StageID1 INT = (
   SELECT StageID FROM ProcessingStages 
   WHERE MethodID = @MethodID AND StageCode = 'harvest'
@@ -2288,6 +2402,7 @@ VALUES (
 
 -- Step 2: Drying
 DECLARE @ProgressID2 UNIQUEIDENTIFIER = NEWID();
+
 DECLARE @StageID2 INT = (
   SELECT StageID FROM ProcessingStages 
   WHERE MethodID = @MethodID AND StageCode = 'drying'
@@ -2304,6 +2419,7 @@ VALUES (
 
 -- Step 3: Hulling
 DECLARE @ProgressID3 UNIQUEIDENTIFIER = NEWID();
+
 DECLARE @StageID3 INT = (
   SELECT StageID FROM ProcessingStages 
   WHERE MethodID = @MethodID AND StageCode = 'hulling'
@@ -2320,6 +2436,7 @@ VALUES (
 
 -- Step 4: Grading
 DECLARE @ProgressID4 UNIQUEIDENTIFIER = NEWID();
+
 DECLARE @StageID4 INT = (
   SELECT StageID FROM ProcessingStages 
   WHERE MethodID = @MethodID AND StageCode = 'grading'
@@ -2442,6 +2559,7 @@ DECLARE @ProgressID1 UNIQUEIDENTIFIER = (
   SELECT ProgressID FROM ProcessingBatchProgresses 
   WHERE BatchID = @BatchID AND StepIndex = 1
 );
+
 DECLARE @WasteID1 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ProcessingBatchWastes (
@@ -2464,6 +2582,7 @@ DECLARE @ProgressID2 UNIQUEIDENTIFIER = (
   SELECT ProgressID FROM ProcessingBatchProgresses 
   WHERE BatchID = @BatchID AND StepIndex = 2
 );
+
 DECLARE @WasteID2 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ProcessingBatchWastes (
@@ -2487,6 +2606,7 @@ DECLARE @ProgressID3 UNIQUEIDENTIFIER = (
   SELECT ProgressID FROM ProcessingBatchProgresses 
   WHERE BatchID = @BatchID AND StepIndex = 3
 );
+
 DECLARE @WasteID3 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ProcessingBatchWastes (
@@ -2510,6 +2630,7 @@ DECLARE @ProgressID4 UNIQUEIDENTIFIER = (
   SELECT ProgressID FROM ProcessingBatchProgresses 
   WHERE BatchID = @BatchID AND StepIndex = 4
 );
+
 DECLARE @WasteID4 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ProcessingBatchWastes (
@@ -2560,8 +2681,13 @@ DECLARE @Staff1UserID UNIQUEIDENTIFIER = (
 );
 
 -- Tạo user phụ cho nhân viên kho 2 (nếu chưa có)
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0007', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 'Male', '1992-04-20', N'Buôn Hồ', 'BusinessStaff@12345', 3);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID
+)
+VALUES (
+   'USR-2025-0007', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 
+   'Male', '1992-04-20', N'Buôn Hồ', 'BusinessStaff@12345', 3
+);
 
 -- Lấy UserID của nhân viên 2
 DECLARE @Staff2UserID UNIQUEIDENTIFIER = (
@@ -2572,6 +2698,7 @@ DECLARE @Staff2UserID UNIQUEIDENTIFIER = (
 DECLARE @Warehouse1ID UNIQUEIDENTIFIER = (
   SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
 );
+
 DECLARE @Warehouse2ID UNIQUEIDENTIFIER = (
   SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL002'
 );
