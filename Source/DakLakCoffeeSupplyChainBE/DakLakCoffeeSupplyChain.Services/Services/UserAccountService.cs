@@ -154,10 +154,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Create(UserAccountCreateDto userDto)
+        public async Task<IServiceResult> Create(UserAccountCreateDto userDto, Guid userId, string userRole)
         {
             try
             {
+                // Kiểm tra quyền truy cập
+                if (userRole != "Admin" && 
+                    userRole != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Bạn không có quyền tạo tài khoản người dùng."
+                    );
+                }
+
+                // Vai trò để tạo – Chỉ BusinessManager bị giới hạn
+                if (userRole == "BusinessManager" && 
+                    userDto.RoleName != "BusinessStaff")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "BusinessManager chỉ được phép tạo tài khoản nhân viên doanh nghiệp (BusinessStaff)."
+                    );
+                }
+
                 // Kiểm tra Role (dữ liệu gốc cần có)
                 var role = await _unitOfWork.RoleRepository
                     .GetRoleByNameAsync(userDto.RoleName);
