@@ -91,9 +91,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> CreateUserAccountAsync([FromBody] UserAccountCreateDto userDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState); 
+                return BadRequest(ModelState);
 
-            var result = await _userAccountService.Create(userDto);
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _userAccountService.Create(userDto, userId, userRole);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), 
