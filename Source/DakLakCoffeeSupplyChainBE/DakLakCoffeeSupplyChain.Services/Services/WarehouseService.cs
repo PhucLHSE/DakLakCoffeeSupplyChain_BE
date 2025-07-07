@@ -101,7 +101,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            if (await _unitOfWork.Warehouses.IsNameExistsAsync(dto.Name))
+            // Loại trừ chính bản ghi hiện tại khỏi kiểm tra trùng tên
+            if (await _unitOfWork.Warehouses.IsNameExistsAsync(dto.Name, warehouse.WarehouseId))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tên kho đã tồn tại.");
 
             dto.MapToEntity(warehouse);
@@ -111,7 +112,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật kho thành công.");
         }
-
         public async Task<IServiceResult> DeleteAsync(Guid warehouseId)
         {
             var warehouse = await _unitOfWork.Warehouses.GetDeletableByIdAsync(warehouseId);
