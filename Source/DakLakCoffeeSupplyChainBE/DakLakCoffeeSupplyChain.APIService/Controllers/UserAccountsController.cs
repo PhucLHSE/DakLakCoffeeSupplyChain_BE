@@ -147,7 +147,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Kiểm tra quyền cập nhật userId
-            var canAccess = await _userAccountService.CanAccessUser(currentUserId, currentUserRole, userId);
+            var canAccess = await _userAccountService
+                .CanAccessUser(currentUserId, currentUserRole, userId);
 
             if (!canAccess)
                 return StatusCode(403, "Bạn không có quyền cập nhật thông tin người dùng này.");
@@ -171,7 +172,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> DeleteUserAccountByIdAsync(Guid userId)
         {
-            var result = await _userAccountService.DeleteById(userId);
+            Guid currentUserId;
+            string currentUserRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                currentUserId = User.GetUserId();
+                currentUserRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _userAccountService.DeleteById(userId, currentUserId, currentUserRole);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -205,7 +220,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Kiểm tra quyền xóa mềm userId
-            var canAccess = await _userAccountService.CanAccessUser(currentUserId, currentUserRole, userId);
+            var canAccess = await _userAccountService
+                .CanAccessUser(currentUserId, currentUserRole, userId);
 
             if (!canAccess)
                 return StatusCode(403, "Bạn không có quyền xóa người dùng này.");
