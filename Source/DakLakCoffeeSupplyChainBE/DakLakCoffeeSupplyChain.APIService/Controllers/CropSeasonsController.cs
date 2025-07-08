@@ -73,18 +73,43 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            // ✅ Validate model binding
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
+            // ✅ Lấy UserId từ token
             Guid userId;
-            try { userId = User.GetUserId(); }
-            catch { return Unauthorized("Không xác định được userId từ token."); }
+            try
+            {
+                userId = User.GetUserId(); // extension method custom của bạn
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
 
+            // ✅ Gọi service xử lý
             var result = await _cropSeasonService.Create(dto, userId);
+
+            // ✅ Nếu thành công: trả về CreatedAtAction
             if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return CreatedAtAction(nameof(GetById), new { cropSeasonId = ((CropSeasonViewDetailsDto)result.Data).CropSeasonId }, result.Data);
-            if (result.Status == Const.FAIL_CREATE_CODE) return Conflict(result.Message);
+            {
+                var response = (CropSeasonViewDetailsDto)result.Data;
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { cropSeasonId = response.CropSeasonId },
+                    response
+                );
+            }
+
+            // ❌ Nếu conflict (trùng mùa vụ, dữ liệu sai)
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            // ❗Các lỗi khác: trả lỗi 500
             return StatusCode(500, result.Message);
         }
+
 
         // ✅ Chỉ người sở hữu hoặc Admin/BM được update
         [HttpPut("{cropSeasonId}")]

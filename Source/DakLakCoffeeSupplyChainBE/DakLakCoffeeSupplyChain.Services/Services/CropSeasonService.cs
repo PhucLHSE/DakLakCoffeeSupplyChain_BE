@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -101,24 +102,59 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> Create(CropSeasonCreateDto dto, Guid userId)
         {
+            // 1. Tìm Farmer theo userId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
             if (farmer == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy nông hộ tương ứng.");
 
-            var validationResult = await ValidateCropSeasonCreate(dto);
-            if (validationResult != null)
-                return validationResult;
+            // 2. Tìm Cam kết + truy Registration
+            var commitment = await _unitOfWork.FarmingCommitmentRepository.GetWithRegistrationAsync(dto.CommitmentId);
+            if (commitment == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy cam kết canh tác.");
 
+            var registration = commitment.RegistrationDetail?.Registration;
+            if (registration == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy đơn đăng ký tương ứng với cam kết.");
+
+            // ✅ Kiểm tra FarmerId trong cam kết có trùng với user đang đăng nhập không
+            if (commitment.FarmerId != farmer.FarmerId)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết không thuộc về bạn.");
+
+            // ✅ Kiểm tra trạng thái duyệt: dùng Status hoặc ApprovedAt
+            if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
+
+
+            // 3. Validate ngày
+            if (dto.StartDate >= dto.EndDate)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
+
+            // 4. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration
+            bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
+                x => x.RegistrationId == registration.RegistrationId &&
+                     x.StartDate.HasValue &&
+                     x.StartDate.Value.Year == dto.StartDate.Year
+            );
+
+            if (isDuplicate)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE,
+                    $"Đăng ký {registration.RegistrationCode} đã có mùa vụ trong năm {dto.StartDate.Year}.");
+            }
+
+            // 5. Tạo mã mùa vụ
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
-            var entity = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId);
-            entity.Area = dto.Area;
 
+            // 6. Map sang entity
+            var entity = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId, registration.RegistrationId);
+            entity.Area = dto.Area ?? 0;
+
+            // 7. Ghi vào DB
             await _unitOfWork.CropSeasonRepository.CreateAsync(entity);
             var result = await _unitOfWork.SaveChangesAsync();
 
             if (result > 0)
             {
-                // 🔁 Truy vấn lại để lấy đủ thông tin liên quan
                 var fullEntity = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(entity.CropSeasonId);
                 if (fullEntity == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo mùa vụ thành công nhưng không lấy được dữ liệu.");
@@ -130,31 +166,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
         }
 
-        private async Task<IServiceResult?> ValidateCropSeasonCreate(CropSeasonCreateDto dto)
-        {
-            if (dto.StartDate >= dto.EndDate)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
-
-            var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(dto.RegistrationId);
-            if (registration == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Đăng ký canh tác không tồn tại.");
-
-            var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(dto.CommitmentId);
-            if (commitment == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết canh tác không tồn tại.");
-
-            bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                x => x.RegistrationId == dto.RegistrationId &&
-                     x.StartDate.HasValue &&
-                     x.StartDate.Value.Year == dto.StartDate.Year
-            );
-
-            if (isDuplicate)
-                return new ServiceResult(Const.FAIL_CREATE_CODE,
-                    $"Đăng ký {registration.RegistrationCode} đã có mùa vụ trong năm {dto.StartDate.Year}.");
-
-            return null;
-        }
 
         public async Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false)
         {
