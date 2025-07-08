@@ -198,6 +198,12 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"WH-{CurrentYear}-{(count + 1):D4}";
         }
 
+        public async Task<string> GenerateProcessingSystemBatchCodeAsync(int year)
+        {
+            var count = await _unitOfWork.ProcessingBatchRepository.CountSystemBatchCreatedInYearAsync(CurrentYear);
+            return $"BATCH-{CurrentYear}-{(count + 1):D4}";
+        }
+
         public async Task<string> GenerateWarehouseReceiptCodeAsync()
         {
             string prefix = $"WR-{CurrentYear}-";

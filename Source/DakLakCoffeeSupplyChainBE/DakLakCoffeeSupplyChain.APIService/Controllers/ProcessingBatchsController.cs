@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -48,6 +49,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpPost]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> Create([FromBody] ProcessingBatchCreateDto dto)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return BadRequest("Không thể lấy userId từ token.");
+            }
+
+            var result = await _processingbatchservice.CreateAsync(dto, userId);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return Conflict(result.Message);
+
+            return BadRequest(result.Message);
+        }
     }
 }
