@@ -180,7 +180,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                x => x.RegistrationId == dto.RegistrationId &&
+                     x => x.RegistrationId == cropSeason.RegistrationId &&  // ✅ dùng từ DB
                      x.StartDate.HasValue &&
                      x.StartDate.Value.Year == dto.StartDate.Year &&
                      x.CropSeasonId != dto.CropSeasonId

@@ -95,7 +95,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static void MapToExistingEntity(this CropSeasonUpdateDto dto, CropSeason entity)
         {
             entity.SeasonName = dto.SeasonName;
-            entity.RegistrationId = dto.RegistrationId;
             entity.CommitmentId = dto.CommitmentId;
             entity.Area = dto.Area;
             entity.StartDate = dto.StartDate;
