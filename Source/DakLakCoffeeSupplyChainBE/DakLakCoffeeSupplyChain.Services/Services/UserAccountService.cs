@@ -403,10 +403,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(Guid userId)
+        public async Task<IServiceResult> DeleteById(Guid userId, Guid currentUserId, string currentUserRole)
         {
             try
             {
+                // Admin có toàn quyền xóa
+                if (currentUserRole != "Admin" && 
+                    currentUserRole != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không có quyền xóa người dùng."
+                    );
+                }
+
                 // Tìm tài khoản người dùng theo ID từ repository
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                     predicate: u => u.UserId == userId,
@@ -425,6 +435,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Nếu là BusinessManager → kiểm tra quyền giám sát
+                    if (currentUserRole == "BusinessManager")
+                    {
+                        var manager = await _unitOfWork.BusinessManagerRepository.GetByUserIdAsync(currentUserId);
+
+                        if (manager == null)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_DELETE_CODE,
+                                "Không tìm thấy thông tin BusinessManager hiện tại."
+                            );
+                        }
+
+                        var staff = await _unitOfWork.BusinessStaffRepository
+                            .GetByUserIdAsync(userId);
+
+                        if (staff == null || 
+                            staff.SupervisorId != manager.ManagerId)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_DELETE_CODE,
+                                "Bạn không có quyền xóa người dùng này."
+                            );
+                        }
+                    }
+
                     // Xóa người dùng ra khỏi repository
                     await _unitOfWork.UserAccountRepository.RemoveAsync(user);
 

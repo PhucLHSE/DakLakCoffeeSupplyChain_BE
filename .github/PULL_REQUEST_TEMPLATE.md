@@ -1,5 +1,4 @@
 ## ☕ Feature: [Tên tính năng/API ngắn gọn]
-<!-- VD: Admin – Quản lý người dùng (UI) -->
 
 ### 📌 Objective
 [Mô tả mục tiêu của PR: bạn đang thêm, sửa, hoặc cải tiến điều gì? Liên quan đến vai trò hoặc luồng nào?]
