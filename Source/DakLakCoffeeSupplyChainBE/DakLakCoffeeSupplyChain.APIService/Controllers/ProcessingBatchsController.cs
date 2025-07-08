@@ -111,5 +111,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
+        [HttpDelete("hard/{id}")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> HardDelete(Guid id)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var result = await _processingbatchservice.HardDeleteAsync(id, userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
+
     }
 }
