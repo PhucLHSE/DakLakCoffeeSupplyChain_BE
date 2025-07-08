@@ -16,5 +16,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CommitmentId == id);
         }
+
+        public async Task<FarmingCommitment?> GetWithRegistrationAsync(Guid commitmentId)
+        {
+            return await _context.FarmingCommitments
+                .Include(c => c.RegistrationDetail)
+                    .ThenInclude(rd => rd.Registration)
+                .FirstOrDefaultAsync(c => c.CommitmentId == commitmentId && !c.IsDeleted);
+        }
+
     }
 }
