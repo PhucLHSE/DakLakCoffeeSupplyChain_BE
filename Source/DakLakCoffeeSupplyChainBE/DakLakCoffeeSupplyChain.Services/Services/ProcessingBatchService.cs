@@ -166,6 +166,72 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId)
+        {
+            try
+            {
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chỉ Farmer mới được phép cập nhật mẻ sơ chế.");
+
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: x => x.BatchId == dto.BatchId && !x.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (batch == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế cần cập nhật.");
+
+                if (batch.FarmerId != farmer.FarmerId)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không được phép cập nhật mẻ sơ chế của người khác.");
+
+                var cropSeasonExists = await _unitOfWork.CropSeasonRepository.AnyAsync(
+                    x => x.CropSeasonId == dto.CropSeasonId && !x.IsDeleted);
+                if (!cropSeasonExists)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Vụ mùa không tồn tại.");
+
+                var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
+                    x => x.CoffeeTypeId == dto.CoffeeTypeId && !x.IsDeleted);
+                if (!coffeeTypeExists)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại cà phê không tồn tại.");
+
+                var methodExists = await _unitOfWork.ProcessingMethodRepository.AnyAsync(
+                    x => x.MethodId == dto.MethodId);
+                if (!methodExists)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Phương pháp sơ chế không tồn tại.");
+
+                // Cập nhật dữ liệu
+                batch.BatchCode = dto.BatchCode?.Trim();
+                batch.CoffeeTypeId = dto.CoffeeTypeId;
+                batch.CropSeasonId = dto.CropSeasonId;
+                batch.MethodId = dto.MethodId;
+                batch.InputQuantity = dto.InputQuantity;
+                batch.InputUnit = dto.InputUnit?.Trim();
+                batch.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.ProcessingBatchRepository.PrepareUpdate(batch);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result <= 0)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+
+                var updated = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: x => x.BatchId == dto.BatchId,
+                    include: q => q
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User)
+                        .Include(x => x.Method),
+                    asNoTracking: true
+                );
+
+                var viewDto = updated?.MapToProcessingBatchViewDto();
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, viewDto);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
 
 
     }

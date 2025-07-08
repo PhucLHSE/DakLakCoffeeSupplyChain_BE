@@ -71,5 +71,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
+        [HttpPut]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> Update([FromBody] ProcessingBatchUpdateDto dto)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var result = await _processingbatchservice.UpdateAsync(dto, userId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
+
     }
 }
