@@ -10,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Bắt buộc phải đăng nhập cho toàn bộ controller
     public class CropSeasonDetailsController : ControllerBase
     {
         private readonly ICropSeasonDetailService _cropSeasonDetailService;
@@ -19,14 +20,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _cropSeasonDetailService = cropSeasonDetailService;
         }
 
+        // ✅ Xem tất cả vùng trồng: Admin, Manager, Farmer, Expert đều có thể xem
         [HttpGet]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetAll()
         {
             Guid userId;
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            // Kiểm tra trực tiếp tên role (không dùng RoleNames)
             bool isAdmin = User.IsInRole("Admin");
 
             var result = await _cropSeasonDetailService.GetAll(userId, isAdmin);
@@ -37,9 +39,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-
-        // GET: api/CropSeasonDetails/{detailId}
+        // ✅ Xem chi tiết vùng trồng: tất cả vai trò có thể xem vùng trồng của mình
         [HttpGet("{detailId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetDetail(Guid detailId)
         {
             Guid userId;
@@ -62,9 +64,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-
-        // POST: api/CropSeasonDetails
+        // ✅ Tạo vùng trồng: chỉ Admin, BusinessManager và Farmer được tạo
         [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> CreateAsync([FromBody] CropSeasonDetailCreateDto dto)
         {
             if (!ModelState.IsValid)
@@ -81,8 +83,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // PUT: api/CropSeasonDetails/{detailId}
+        // ✅ Cập nhật vùng trồng: chỉ Admin, BusinessManager, Farmer được phép sửa vùng trồng của mình
         [HttpPut("{detailId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> UpdateAsync(Guid detailId, [FromBody] CropSeasonDetailUpdateDto dto)
         {
             if (detailId != dto.DetailId)
@@ -105,8 +108,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // DELETE: api/CropSeasonDetails/{detailId}
+        // ✅ Xóa cứng: chỉ Admin và người tạo được phép xóa
         [HttpDelete("{detailId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> DeleteByIdAsync(Guid detailId)
         {
             var result = await _cropSeasonDetailService.DeleteById(detailId);
@@ -123,8 +127,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // PATCH: api/CropSeasonDetails/soft-delete/{detailId}
+        // ✅ Xóa mềm: chỉ Admin, BM, Farmer được thực hiện
         [HttpPatch("soft-delete/{detailId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> SoftDeleteAsync(Guid detailId)
         {
             var result = await _cropSeasonDetailService.SoftDeleteById(detailId);
@@ -141,4 +146,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
     }
+
 }

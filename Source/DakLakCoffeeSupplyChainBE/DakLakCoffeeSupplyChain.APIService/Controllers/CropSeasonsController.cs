@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Mặc định yêu cầu xác thực cho toàn bộ controller
     public class CropSeasonsController : ControllerBase
     {
         private readonly ICropSeasonService _cropSeasonService;
@@ -20,7 +21,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _cropSeasonService = cropSeasonService;
         }
 
+        // ✅ Ai cũng xem được mùa vụ liên quan (Admin, Manager, Farmer)
         [HttpGet]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetAllCropSeasonsAsync()
         {
             Guid userId;
@@ -36,25 +39,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác thực được người dùng. Vui lòng đăng nhập.");
             }
 
-            // Tách vai trò
             bool isAdmin = role == "Admin";
             bool isManager = role == "BusinessManager";
 
-            // Gọi Service với 2 cờ rõ ràng
             var result = await _cropSeasonService.GetAllByUserId(userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
-
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
         }
 
-
-
+        // ✅ Ai cũng được quyền xem chi tiết mùa vụ của mình
         [HttpGet("{cropSeasonId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetById(Guid cropSeasonId)
         {
             Guid userId;
@@ -68,7 +68,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // ✅ Chỉ Admin, BusinessManager, Farmer được tạo mùa vụ
         [HttpPost]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -84,7 +86,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // ✅ Chỉ người sở hữu hoặc Admin/BM được update
         [HttpPut("{cropSeasonId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
         {
             if (cropSeasonId != dto.CropSeasonId) return BadRequest("Id không khớp.");
@@ -98,7 +102,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.FAIL_UPDATE_CODE) return Conflict(result.Message);
             return NotFound(result.Message);
         }
+
+        // ✅ Chỉ Admin hoặc người tạo được xoá
         [HttpDelete("{cropSeasonId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
         {
             Guid userId;
@@ -109,15 +116,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             bool isAdmin = role == "Admin";
 
             var result = await _cropSeasonService.DeleteById(cropSeasonId, userId, isAdmin);
-
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
-            return BadRequest(result.Message); // ❗ Dùng BadRequest thay vì NotFound nếu là lỗi quyền
+            return BadRequest(result.Message);
         }
 
-
+        // ✅ Soft delete - chỉ Admin và người tạo được phép
         [HttpPatch("soft-delete/{cropSeasonId}")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> SoftDeleteCropSeason(Guid cropSeasonId)
         {
             Guid userId;
@@ -131,8 +138,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
-            return BadRequest(result.Message); // Dùng BadRequest thay vì NotFound
+            return BadRequest(result.Message);
         }
-
     }
+
 }
+
