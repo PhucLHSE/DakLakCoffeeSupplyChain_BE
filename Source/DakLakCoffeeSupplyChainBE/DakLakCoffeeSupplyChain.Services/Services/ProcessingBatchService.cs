@@ -319,7 +319,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid batchId, Guid userId, bool isAdmin)
+        {
+            ProcessingBatch? batch;
 
+            if (isAdmin)
+            {
+                batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
+                    include: q => q
+                        .Include(b => b.CropSeason)
+                        .Include(b => b.Farmer).ThenInclude(f => f.User)
+                        .Include(b => b.Method)
+                        .Include(b => b.Products).ThenInclude(p => p.CoffeeType)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.Stage)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.ProcessingParameters)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.UpdatedByNavigation),
+                    asNoTracking: true
+                );
+            }
+            else
+            {
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy farmer tương ứng.");
+                }
+
+                batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: x => x.BatchId == batchId && x.FarmerId == farmer.FarmerId && !x.IsDeleted,
+                    include: q => q
+                        .Include(b => b.CropSeason)
+                        .Include(b => b.Farmer).ThenInclude(f => f.User)
+                        .Include(b => b.Method)
+                        .Include(b => b.Products).ThenInclude(p => p.CoffeeType)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.Stage)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.ProcessingParameters)
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.UpdatedByNavigation),
+                    asNoTracking: true
+                );
+            }
+
+            if (batch == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
+
+            var dto = batch.MapToDetailsDto();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
+        }
 
     }
 }
