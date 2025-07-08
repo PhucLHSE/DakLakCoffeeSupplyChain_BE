@@ -190,6 +190,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
         public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid userId)
         {
+            Guid currentUserId;
+            string currentUserRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                currentUserId = User.GetUserId();
+                currentUserRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            // Kiểm tra quyền xóa mềm userId
+            var canAccess = await _userAccountService.CanAccessUser(currentUserId, currentUserRole, userId);
+
+            if (!canAccess)
+                return StatusCode(403, "Bạn không có quyền xóa người dùng này.");
+
             var result = await _userAccountService.SoftDeleteById(userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
