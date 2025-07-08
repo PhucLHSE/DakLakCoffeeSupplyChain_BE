@@ -132,6 +132,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            Guid currentUserId;
+            string currentUserRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                currentUserId = User.GetUserId();
+                currentUserRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            // Kiểm tra quyền cập nhật userId
+            var canAccess = await _userAccountService.CanAccessUser(currentUserId, currentUserRole, userId);
+
+            if (!canAccess)
+                return StatusCode(403, "Bạn không có quyền cập nhật thông tin người dùng này.");
+
             var result = await _userAccountService.Update(userDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
