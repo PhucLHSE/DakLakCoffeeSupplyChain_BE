@@ -232,6 +232,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid batchId, Guid userId)
+        {
+            try
+            {
+                // Lấy Farmer theo userId
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                {
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Farmer mới có quyền xóa mẻ sơ chế.");
+                }
+
+                // Tìm mẻ sơ chế cần xóa
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (batch == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
+                }
+
+                // Chặn xóa nếu không phải của Farmer hiện tại
+                if (batch.FarmerId != farmer.FarmerId)
+                {
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Không được xóa mẻ sơ chế của người khác.");
+                }
+
+                batch.IsDeleted = true;
+                batch.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.ProcessingBatchRepository.PrepareUpdate(batch);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm mẻ sơ chế thành công.");
+                }
+
+                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
 
 
     }
