@@ -12,6 +12,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<List<ProcessingBatch>> GetAll();
         IQueryable<ProcessingBatch> GetQueryable();
-
+        Task<int> CountSystemBatchCreatedInYearAsync(int year);
     }
 }
