@@ -150,7 +150,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpDelete("{buyerId}")]
         public async Task<IActionResult> DeleteBusinessBuyerByIdAsync(Guid buyerId)
         {
-            var result = await _businessBuyerService.DeleteBusinessBuyerById(buyerId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _businessBuyerService.DeleteBusinessBuyerById(buyerId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");

@@ -175,7 +175,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var existingBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
                     predicate: b => 
                        b.TaxId == businessBuyerDto.TaxId && 
-                       b.CreatedBy == managerId,
+                       b.CreatedBy == managerId &&
+                       !b.IsDeleted,
                     asNoTracking: true
                 );
 
@@ -190,7 +191,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Sinh mã định danh cho BusinessBuyer
                 string buyerCode = await _codeGenerator.GenerateBuyerCodeAsync(managerId);
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newBusinessBuyer = businessBuyerDto.MapToNewBusinessBuyer(managerId, buyerCode);
 
                 // Tạo Business Buyer ở repository
@@ -201,7 +202,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = newBusinessBuyer.MapToBusinessBuyerViewDetailDto();
                     responseDto.CreatedByName = businessManager.CompanyName;
 
@@ -221,6 +222,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -266,18 +268,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Tìm đối tượng businessBuyer theo ID
                 var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                    predicate: bb => bb.BuyerId == businessBuyerDto.BuyerId,
+                    predicate: bb => 
+                       bb.BuyerId == businessBuyerDto.BuyerId && 
+                       !bb.IsDeleted,
                     include: query => query
                        .Include(bb => bb.CreatedByNavigation)
                 );
 
                 // Nếu không tìm thấy
-                if (businessBuyer == null || 
-                    businessBuyer.IsDeleted)
+                if (businessBuyer == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
-                        "Khách hàng không tồn tại hoặc đã bị xóa.."
+                        "Khách hàng không tồn tại hoặc đã bị xóa."
                     );
                 }
 
@@ -312,7 +315,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 businessBuyerDto.MapToUpdateBusinessBuyer(businessBuyer);
 
                 // Cập nhật buyer ở repository
@@ -323,7 +326,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = businessBuyer.MapToBusinessBuyerViewDetailDto();
                     responseDto.CreatedByName = businessBuyer.CreatedByNavigation?.CompanyName ?? string.Empty;
 
@@ -343,6 +346,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -350,13 +354,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteBusinessBuyerById(Guid buyerId)
+        public async Task<IServiceResult> DeleteBusinessBuyerById(Guid buyerId, Guid userId)
         {
             try
             {
-                // Tìm buyer theo ID
+                // Tìm BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
+                // Tìm buyer theo ID và xác thực thuộc quyền quản lý
                 var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                    predicate: bb => bb.BuyerId == buyerId,
+                    predicate: bb => 
+                       bb.BuyerId == buyerId && 
+                       bb.CreatedBy == manager.ManagerId && 
+                       !bb.IsDeleted,
                     include: query => query
                        .Include(bb => bb.CreatedByNavigation),
                     asNoTracking: false
