@@ -27,6 +27,8 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .AsNoTracking()
             .Include(c => c.Farmer)
                 .ThenInclude(f => f.User)
+                 .Include(c => c.CropSeasonDetails)
+            .ThenInclude(d => d.CoffeeType)
             .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId && !c.IsDeleted);
     }
 

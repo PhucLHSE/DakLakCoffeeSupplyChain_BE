@@ -31,7 +31,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             if (isAdmin || isManager)
             {
-                // Truy vấn tất cả mùa vụ
                 var cropSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
                     predicate: cs => !cs.IsDeleted,
                     include: query => query.Include(cs => cs.Farmer).ThenInclude(f => f.User),
@@ -47,7 +46,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else
             {
-                // Là Farmer → truy vấn mùa vụ của chính mình
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
                 if (farmer == null)
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nông hộ tương ứng.");
@@ -78,6 +76,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Include(cs => cs.Farmer)
                             .ThenInclude(f => f.User)
                         .Include(cs => cs.CropSeasonDetails)
+                                .ThenInclude(d => d.CoffeeType) // ✅ THÊM dòng này
                         .Include(cs => cs.Commitment)             // ✅ Bắt buộc thêm
                         .Include(cs => cs.Registration),          // ✅ Bắt buộc thêm
                     asNoTracking: true
