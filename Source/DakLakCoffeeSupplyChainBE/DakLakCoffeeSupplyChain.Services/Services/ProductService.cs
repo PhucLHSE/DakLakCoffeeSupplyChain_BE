@@ -468,10 +468,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteProductById(Guid productId)
+        public async Task<IServiceResult> DeleteProductById(Guid productId, Guid userId)
         {
             try
             {
+                // Tìm BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Tìm sản phẩm theo ID
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p => p.ProductId == productId,
@@ -479,7 +495,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                        .Include(p => p.CoffeeType)
                        .Include(p => p.Batch)
                        .Include(p => p.Inventory)
-                       .ThenInclude(i => i.Warehouse),
+                          .ThenInclude(i => i.Warehouse),
                     asNoTracking: false
                 );
 
@@ -493,6 +509,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Kiểm tra quyền xoá
+                    if (product.CreatedBy != userId) // Không phải chính người tạo
+                    {
+                        // Truy tìm staff có CreatedBy trùng, và nằm dưới quyền manager hiện tại
+                        var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                            predicate: s =>
+                                s.UserId == product.CreatedBy &&
+                                s.SupervisorId == manager.ManagerId &&
+                                !s.IsDeleted,
+                            asNoTracking: true
+                        );
+
+                        if (staff == null)
+                        {
+                            return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                "Bạn không có quyền xóa sản phẩm do người khác tạo."
+                            );
+                        }
+                    }
+
                     // Xóa sản phẩm khỏi repository
                     await _unitOfWork.ProductRepository.RemoveAsync(product);
 
