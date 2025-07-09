@@ -27,12 +27,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
+        //public async Task<IServiceResult> CreateRequestAsync(Guid userId, WarehouseInboundRequestCreateDto dto)
+        //{
+        //    var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+        //    if (farmer == null)
+        //        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng với User.");
+
+        //    var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
+
+        //    var newRequest = new WarehouseInboundRequest
+        //    {
+        //        InboundRequestId = Guid.NewGuid(),
+        //        InboundRequestCode = inboundCode,
+        //        FarmerId = farmer.FarmerId,
+        //        BatchId = dto.BatchId ?? Guid.Empty,
+        //        RequestedQuantity = dto.RequestedQuantity,
+        //        PreferredDeliveryDate = dto.PreferredDeliveryDate,
+        //        Status = "Pending",
+        //        Note = dto.Note,
+        //        CreatedAt = DateTime.UtcNow,
+        //        UpdatedAt = DateTime.UtcNow
+        //    };
+
+        //    await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
+        //    await _unitOfWork.SaveChangesAsync();
+
+        //    await _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
+
+        //    return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
+        //}
         public async Task<IServiceResult> CreateRequestAsync(Guid userId, WarehouseInboundRequestCreateDto dto)
         {
+            // 1. Xác định Farmer từ user đang đăng nhập
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng với User.");
 
+            // 2. Kiểm tra Batch có tồn tại và có thuộc về Farmer hay không
+            if (dto.BatchId == null || dto.BatchId == Guid.Empty)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Thiếu thông tin lô chế biến.");
+
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId.Value);
+            if (batch == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô chế biến.");
+
+            if (batch.FarmerId != farmer.FarmerId)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu nhập kho cho lô chế biến này.");
+
+            // 3. Sinh mã và tạo yêu cầu nhập kho
             var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
 
             var newRequest = new WarehouseInboundRequest
@@ -40,10 +82,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 InboundRequestId = Guid.NewGuid(),
                 InboundRequestCode = inboundCode,
                 FarmerId = farmer.FarmerId,
-                BatchId = dto.BatchId ?? Guid.Empty,
+                BatchId = dto.BatchId.Value,
                 RequestedQuantity = dto.RequestedQuantity,
                 PreferredDeliveryDate = dto.PreferredDeliveryDate,
-                Status = "Pending",
+                Status = InboundRequestStatus.Pending.ToString(),
                 Note = dto.Note,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -56,6 +98,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
+
 
         public async Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId)
         {
