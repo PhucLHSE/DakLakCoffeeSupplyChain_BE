@@ -428,13 +428,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteBusinessBuyerById(Guid buyerId)
+        public async Task<IServiceResult> SoftDeleteBusinessBuyerById(Guid buyerId, Guid userId)
         {
             try
             {
-                // Tìm buyer theo ID
+                // Tìm BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
+                // Tìm buyer theo ID và xác thực quyền sở hữu
                 var businessBuyer = await _unitOfWork.BusinessBuyerRepository.GetByIdAsync(
-                    predicate: bb => bb.BuyerId == buyerId,
+                    predicate: bb =>
+                        bb.BuyerId == buyerId &&
+                        bb.CreatedBy == manager.ManagerId &&
+                        !bb.IsDeleted,
                     asNoTracking: false
                 );
 
