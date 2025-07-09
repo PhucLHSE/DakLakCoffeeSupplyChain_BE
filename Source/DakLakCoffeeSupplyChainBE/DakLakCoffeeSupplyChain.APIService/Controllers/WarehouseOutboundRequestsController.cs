@@ -42,10 +42,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/WarehouseOutboundRequests/all
         [HttpGet("all")]
         [EnableQuery]
-        [Authorize(Roles = "BusinessStaff")]
+        [Authorize(Roles = "BusinessManager, BusinessStaff")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _requestService.GetAllAsync();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _requestService.GetAllAsync(managerUserId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -58,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/WarehouseOutboundRequests/{outboundRequestId}
         [HttpGet("{outboundRequestId}")]
-        [Authorize(Roles = "BusinessStaff")]
+        [Authorize(Roles = "BusinessStaff, BusinessManager")]
         public async Task<IActionResult> GetDetail(Guid outboundRequestId)
         {
             var result = await _requestService.GetDetailAsync(outboundRequestId);
