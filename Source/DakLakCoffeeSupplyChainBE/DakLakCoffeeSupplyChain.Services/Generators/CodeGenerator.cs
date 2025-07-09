@@ -261,5 +261,29 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"WOR-{CurrentYear}-{(count + 1):D4}";
         }
+        public async Task<string> GenerateNotificationCodeAsync()
+        {
+            string prefix = $"NT-{CurrentYear}-";
+
+            var latestCode = await _unitOfWork.SystemNotificationRepository
+                .GetQuery()
+                .Where(x => x.NotificationCode.StartsWith(prefix))
+                .OrderByDescending(x => x.NotificationCode)
+                .Select(x => x.NotificationCode)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (!string.IsNullOrEmpty(latestCode))
+            {
+                var suffix = latestCode.Substring(prefix.Length);
+                if (int.TryParse(suffix, out int currentNumber))
+                {
+                    nextNumber = currentNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D4}";
+        }
+
     }
 }

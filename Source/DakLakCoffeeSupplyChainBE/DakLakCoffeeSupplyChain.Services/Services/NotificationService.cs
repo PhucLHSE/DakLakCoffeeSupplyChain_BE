@@ -1,6 +1,8 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Generators; // 👈 THÊM dòng này nếu cần
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,11 +11,17 @@ public class NotificationService : INotificationService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
+    private readonly ICodeGenerator _codeGenerator; // 👈 THÊM dòng này
 
-    public NotificationService(IUnitOfWork unitOfWork, IEmailService emailService)
+    public NotificationService(
+        IUnitOfWork unitOfWork,
+        IEmailService emailService,
+        ICodeGenerator codeGenerator // 👈 THÊM dòng này
+    )
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
+        _codeGenerator = codeGenerator;
     }
 
     public async Task<SystemNotification> NotifyInboundRequestCreatedAsync(Guid requestId, Guid farmerId)
@@ -24,7 +32,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -32,11 +40,22 @@ public class NotificationService : INotificationService
             CreatedBy = null
         };
 
-        // Tạo thông báo
         await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
 
-        // Lấy danh sách nhân viên doanh nghiệp để gửi thông báo
-        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
+        var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+        if (request == null)
+            return notification;
+
+        var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+            predicate: b => b.BatchId == request.BatchId,
+            include: b => b.Include(b => b.Farmer).ThenInclude(f => f.FarmingCommitments)
+        );
+
+        var managerId = batch?.Farmer?.FarmingCommitments?.FirstOrDefault(fc => !fc.IsDeleted)?.ApprovedBy;
+        if (managerId == null || managerId == Guid.Empty)
+            return notification;
+
+        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetBySupervisorIdAsync(managerId.Value);
 
         foreach (var staff in businessStaffs)
         {
@@ -52,15 +71,13 @@ public class NotificationService : INotificationService
             await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(staff.User?.Email))
-            {
                 await _emailService.SendEmailAsync(staff.User.Email, title, message);
-            }
         }
 
         await _unitOfWork.SaveChangesAsync();
-
         return notification;
     }
+
     public async Task<SystemNotification> NotifyInboundRequestApprovedAsync(Guid requestId, Guid farmerId)
     {
         var title = "✅ Yêu cầu nhập kho đã được duyệt";
@@ -69,7 +86,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -94,15 +111,13 @@ public class NotificationService : INotificationService
             await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(farmerUser.Email))
-            {
                 await _emailService.SendEmailAsync(farmerUser.Email, title, message);
-            }
         }
 
         await _unitOfWork.SaveChangesAsync();
-
         return notification;
     }
+
     public async Task<SystemNotification> NotifyOutboundRequestCreatedAsync(Guid requestId, Guid managerId)
     {
         var title = "📤 Yêu cầu xuất kho mới";
@@ -111,7 +126,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = "NT-" + DateTime.UtcNow.ToString("yyMMddHHmmss"),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
             Title = title,
             Message = message,
             Type = "WarehouseOutbound",
@@ -122,7 +137,6 @@ public class NotificationService : INotificationService
         await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
 
         var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
-
         foreach (var staff in businessStaffs)
         {
             var recipient = new SystemNotificationRecipient
@@ -137,18 +151,10 @@ public class NotificationService : INotificationService
             await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(staff.User?.Email))
-            {
                 await _emailService.SendEmailAsync(staff.User.Email, title, message);
-            }
         }
 
         await _unitOfWork.SaveChangesAsync();
-
         return notification;
     }
-
-
 }
-
-
-

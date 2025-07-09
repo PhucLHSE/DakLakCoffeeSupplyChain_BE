@@ -44,5 +44,6 @@
 
         Task<string> GenerateOutboundRequestCodeAsync();
         Task<string> GenerateProcessingSystemBatchCodeAsync(int year);
+        Task<string> GenerateNotificationCodeAsync();
     }
 }
