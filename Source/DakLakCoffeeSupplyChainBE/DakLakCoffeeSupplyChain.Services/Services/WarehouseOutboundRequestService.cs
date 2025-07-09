@@ -6,10 +6,10 @@ using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Services.Mappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
@@ -36,7 +36,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (manager == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy người dùng yêu cầu.");
 
-            // ✅ Sinh mã code sử dụng generator
             var generatedCode = await _codeGenerator.GenerateOutboundRequestCodeAsync();
 
             var request = new WarehouseOutboundRequest
@@ -65,6 +64,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }
 
+        public async Task<IServiceResult> GetAllAsync(Guid userId)
+        {
+            // Ưu tiên xác định là staff trước
+            var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+            if (staff != null && !staff.IsDeleted)
+            {
+                // Lọc theo supervisorId (tức manager của công ty)
+                var allRequests = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync();
+                var filtered = allRequests
+                    .Where(r => r.RequestedBy == staff.SupervisorId)
+                    .ToList();
+
+                if (!filtered.Any())
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());
+            }
+
+            // Nếu không phải là staff, thử xem có phải manager không
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
+            {
+                var allRequests = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync();
+                var filtered = allRequests
+                    .Where(r => r.RequestedBy == manager.ManagerId)
+                    .ToList();
+
+                if (!filtered.Any())
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());
+            }
+
+            return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng.");
+        }
+
+
         public async Task<IServiceResult> GetDetailAsync(Guid outboundRequestId)
         {
             var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(outboundRequestId);
@@ -72,45 +108,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null || request.IsDeleted)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu xuất kho.");
 
-            var dto = new WarehouseOutboundRequestDetailDto
-            {
-                OutboundRequestId = request.OutboundRequestId,
-                OutboundRequestCode = request.OutboundRequestCode,
-                WarehouseId = request.WarehouseId,
-                WarehouseName = request.Warehouse?.Name,
-                InventoryId = request.InventoryId,
-                InventoryName = request.Inventory?.Products?.FirstOrDefault()?.ProductName,
-                RequestedQuantity = request.RequestedQuantity,
-                Unit = request.Unit,
-                Purpose = request.Purpose,
-                Reason = request.Reason,
-                OrderItemId = request.OrderItemId,
-                RequestedBy = request.RequestedBy,
-                RequestedByName = request.RequestedByNavigation?.CompanyName,
-                Status = request.Status,
-                CreatedAt = request.CreatedAt,
-                UpdatedAt = request.UpdatedAt
-            };
-
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết yêu cầu thành công", dto);
-        }
-
-        public async Task<IServiceResult> GetAllAsync()
-        {
-            var requests = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync();
-
-            var result = requests.Select(x => new WarehouseOutboundRequestListItemDto
-            {
-                OutboundRequestId = x.OutboundRequestId,
-                OutboundRequestCode = x.OutboundRequestCode,
-                Status = x.Status,
-                WarehouseName = x.Warehouse?.Name,
-                RequestedQuantity = x.RequestedQuantity,
-                Unit = x.Unit,
-                CreatedAt = x.CreatedAt
-            }).ToList();
-
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", result);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết yêu cầu thành công", request.ToDetailDto());
         }
 
         public async Task<IServiceResult> AcceptRequestAsync(Guid requestId, Guid staffUserId)

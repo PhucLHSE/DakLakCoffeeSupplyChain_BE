@@ -67,7 +67,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _receiptService.GetAllAsync();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Không thể xác định người dùng từ token.");
+
+            var result = await _receiptService.GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -78,12 +82,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // GET: api/WarehouseOutboundReceipts/{id}
         [HttpGet("{id}")]
         [Authorize(Roles = "BusinessStaff")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var result = await _receiptService.GetByIdAsync(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Không thể xác định người dùng từ token.");
+
+            var result = await _receiptService.GetByIdAsync(id, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
