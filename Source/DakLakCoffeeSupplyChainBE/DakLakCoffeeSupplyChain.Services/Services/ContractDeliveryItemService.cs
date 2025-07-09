@@ -359,7 +359,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     contractDeliveryItem.IsDeleted = true;
                     contractDeliveryItem.UpdatedAt = DateHelper.NowVietnamTime();
 
-                    // Cập nhật xoá mềm contractDeliveryBatch ở repository
+                    // Cập nhật xoá mềm ContractDeliveryItem ở repository
                     await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(contractDeliveryItem);
 
                     // Lưu thay đổi
