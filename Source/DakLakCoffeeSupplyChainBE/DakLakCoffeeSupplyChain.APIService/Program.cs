@@ -65,6 +65,7 @@ builder.Services.AddScoped<IBusinessStaffService, BusinessStaffService>();
 builder.Services.AddScoped<IExpertAdviceService, ExpertAdviceService>();
 builder.Services.AddScoped<IAgriculturalExpertService, AgriculturalExpertService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
