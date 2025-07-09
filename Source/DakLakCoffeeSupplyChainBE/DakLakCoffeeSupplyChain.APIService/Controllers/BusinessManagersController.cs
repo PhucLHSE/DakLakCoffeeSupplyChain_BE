@@ -101,7 +101,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _businessManagerService.Update(businessManagerDto);
+            Guid userId;
+            string userRole;
+
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                userId = User.GetUserId();
+                userRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            var result = await _businessManagerService.Update(businessManagerDto, userId, userRole);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);

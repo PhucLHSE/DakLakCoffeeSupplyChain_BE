@@ -241,11 +241,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Generate password hash và user code
+                // Tạo password hash và user code
                 string passwordHash = _passwordHasher.Hash(userDto.Password); // hoặc bất kỳ method nào của bạn
                 string userCode = await _codeGenerator.GenerateUserCodeAsync(); // ví dụ: "USR-YYYY-####" hoặc Guid, tuỳ bạn
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newUser = userDto.MapToNewUserAccount(passwordHash, userCode, role.RoleId);
 
                 // Tạo người dùng ở repository
@@ -256,7 +256,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = newUser.MapToUserAccountViewDetailsDto();
                     responseDto.RoleName = role.RoleName;
 
@@ -276,6 +276,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -315,7 +316,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var emailUser = await _unitOfWork.UserAccountRepository
                     .GetUserAccountByEmailAsync(userDto.Email);
 
-                if (emailUser != null && emailUser.UserId != user.UserId)
+                if (emailUser != null && 
+                    emailUser.UserId != user.UserId)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE, 
@@ -365,7 +367,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 userDto.MapToUpdateUserAccount(user, role.RoleId);
 
                 // Cập nhật người dùng ở repository
@@ -376,7 +378,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = user.MapToUserAccountViewDetailsDto();
                     responseDto.RoleName = role.RoleName;
 
