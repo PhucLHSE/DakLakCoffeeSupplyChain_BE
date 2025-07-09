@@ -23,5 +23,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(l => l.LoggedAt)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<InventoryLog>> GetAllAsync()
+        {
+            return await _context.InventoryLogs
+                .Where(log => !log.IsDeleted)
+                .OrderByDescending(log => log.LoggedAt)
+                .ToListAsync();
+        }
     }
 }

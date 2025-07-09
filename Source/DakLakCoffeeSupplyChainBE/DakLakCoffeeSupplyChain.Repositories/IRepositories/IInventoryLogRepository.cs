@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IInventoryLogRepository : IGenericRepository<InventoryLog>
     {
         Task<IEnumerable<InventoryLog>> GetByInventoryIdAsync(Guid inventoryId);
+        Task<IEnumerable<InventoryLog>> GetAllAsync();
     }
 }
