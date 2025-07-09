@@ -26,7 +26,7 @@
 
 ---
 
-### 🧪 How to Test
+### 🛠️ How to Test
 1. **Login** bằng role phù hợp (VD: `BusinessManager`) để lấy JWT token
 2. Gửi request đến endpoint:
    - `POST /api/businessbuyers` (hoặc endpoint bạn thêm)
