@@ -10,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IInventoryLogService
     {
         Task<IServiceResult> GetByInventoryIdAsync(Guid inventoryId);
-        Task<IServiceResult> GetAllAsync();
+        Task<IServiceResult> GetAllAsync(Guid userId);
+        Task<IServiceResult> GetLogsByInventoryIdAsync(Guid inventoryId, Guid userId);
+
     }
 }

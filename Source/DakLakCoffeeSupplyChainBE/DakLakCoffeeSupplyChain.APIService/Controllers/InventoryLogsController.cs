@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -20,25 +21,37 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessStaff,BusinessManager,Admin")]
         public async Task<IActionResult> GetAll()
         {
-            try
-            {
-                var result = await _inventoryLogService.GetAllAsync();
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out Guid userId))
+                return StatusCode(500, "Không xác định được người dùng.");
 
-                if (result.Status == Const.SUCCESS_READ_CODE)
-                    return Ok(result.Data);
+            var result = await _inventoryLogService.GetAllAsync(userId);
 
-                if (result.Status == Const.WARNING_NO_DATA_CODE)
-                    return NotFound(result.Message);
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
 
-                if (result.Status == Const.FAIL_READ_CODE)
-                    return Forbid(result.Message);
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
 
-                return StatusCode(500, result.Message);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Đã xảy ra lỗi hệ thống: {ex.Message}");
-            }
+            return StatusCode(403, result.Message);
+        }
+        [HttpGet("by-inventory/{inventoryId}")]
+        [Authorize(Roles = "BusinessStaff,BusinessManager,Admin")]
+        public async Task<IActionResult> GetByInventoryId(Guid inventoryId)
+        {
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out Guid userId))
+                return StatusCode(500, "Không xác định được người dùng.");
+
+            var result = await _inventoryLogService.GetLogsByInventoryIdAsync(inventoryId, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(403, result.Message); // Nếu bị chặn quyền, trả 403
         }
     }
 }
