@@ -1,0 +1,39 @@
+﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+
+namespace DakLakCoffeeSupplyChain.APIService.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class OrderItemsController : ControllerBase
+    {
+        private readonly IOrderItemService _orderItemService;
+
+        public OrderItemsController(IOrderItemService orderItemService)
+            => _orderItemService = orderItemService;
+
+        // PATCH: api/<OrderItemsController>/soft-delete/{orderItemId}
+        [HttpPatch("soft-delete/{orderItemId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> SoftDeleteOrderItemByIdAsync(Guid orderItemId)
+        {
+            var result = await _orderItemService.SoftDeleteOrderItemById(orderItemId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn hàng thuộc hợp đồng với mã được cung cấp.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+    }
+}
