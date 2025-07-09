@@ -101,7 +101,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Tìm quản lý doanh nghiệp theo ID
             var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                predicate: bm => bm.ManagerId == managerId,
+                predicate: bm => 
+                   bm.ManagerId == managerId &&
+                   !bm.IsDeleted,
                 include: query => query
                    .Include(bm => bm.User),
                 asNoTracking: true
@@ -180,7 +182,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Sinh mã định danh cho BusinessManager
                 string managerCode = await _codeGenerator.GenerateManagerCodeAsync();
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newBusinessManager = businessManagerDto.MapToNewBusinessManager(userId, managerCode);
 
                 // Tạo quản lý doanh nghiệp ở repository
@@ -191,7 +193,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = newBusinessManager.MapToBusinessManagerViewDetailsDto();
                     responseDto.Email = user.Email;
                     responseDto.FullName = user.Name;
@@ -213,6 +215,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -220,24 +223,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(BusinessManagerUpdateDto businessManagerDto)
+        public async Task<IServiceResult> Update(BusinessManagerUpdateDto businessManagerDto, Guid userId, string userRole)
         {
             try
             {
-                // Tìm đối tượng BusinessManager theo ID
+                // Kiểm tra role
+                if (userRole != "Admin" &&
+                    userRole != "BusinessManager")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_READ_CODE,
+                        "Bạn không có quyền truy cập thông tin này."
+                    );
+                }
+
+                // Nếu là BusinessManager thì chỉ được cập nhật chính mình
+                if (userRole == "BusinessManager")
+                {
+                    var currentManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                        predicate: m => 
+                           m.UserId == userId && 
+                           !m.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (currentManager == null || 
+                        currentManager.ManagerId != businessManagerDto.ManagerId)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            "Bạn chỉ có quyền cập nhật thông tin của chính bạn."
+                        );
+                    }
+                }
+
+                // Tìm đối tượng BusinessManager cần update theo ID
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                    predicate: bm => bm.ManagerId == businessManagerDto.ManagerId,
+                    predicate: bm => 
+                       bm.ManagerId == businessManagerDto.ManagerId && 
+                       !bm.IsDeleted,
                     include: query => query
                        .Include(bm => bm.User)
                 );
 
                 // Nếu không tìm thấy
-                if (businessManager == null || 
-                    businessManager.IsDeleted)
+                if (businessManager == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
-                        "Quản lý doanh nghiệp không tồn tại hoặc đã bị xóa.."
+                        "Quản lý doanh nghiệp không tồn tại hoặc đã bị xóa."
                     );
                 }
 
@@ -248,7 +282,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var existedTax = await _unitOfWork.BusinessManagerRepository
                         .GetByTaxIdAsync(businessManagerDto.TaxId);
 
-                    if (existedTax != null && existedTax.ManagerId != businessManagerDto.ManagerId)
+                    if (existedTax != null && 
+                        existedTax.ManagerId != businessManagerDto.ManagerId)
                     {
                         return new ServiceResult(
                             Const.FAIL_UPDATE_CODE,
@@ -257,7 +292,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 businessManagerDto.MapToUpdateBusinessManager(businessManager);
 
                 // Cập nhật businessManager ở repository
@@ -268,7 +303,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = businessManager.MapToBusinessManagerViewDetailsDto();
                     responseDto.Email = businessManager.User.Email ?? string.Empty;
                     responseDto.FullName = businessManager.User.Name ?? string.Empty;
@@ -290,6 +325,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()

@@ -17,7 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Create(BusinessManagerCreateDto businessManagerDto, Guid userId);
 
-        Task<IServiceResult> Update(BusinessManagerUpdateDto businessManagerDto);
+        Task<IServiceResult> Update(BusinessManagerUpdateDto businessManagerDto, Guid userId, string userRole);
 
         Task<IServiceResult> DeleteBusinessManagerById(Guid managerId);
 

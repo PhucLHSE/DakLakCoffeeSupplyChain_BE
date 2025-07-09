@@ -35,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (roles == null || !roles.Any())
+            if (roles == null || 
+                !roles.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -102,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newRole = roleDto.MapToNewRole();
 
                 // Tạo vai trò ở repository
@@ -113,7 +114,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = newRole.MapToRoleViewDetailsDto();
 
                     return new ServiceResult(
@@ -132,6 +133,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -168,7 +170,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 roleDto.MapToUpdateRole(role);
 
                 // Cập nhật vai trò ở repository
@@ -179,7 +181,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Map the saved entity to a response DTO
+                    // Ánh xạ thực thể đã lưu sang DTO phản hồi
                     var responseDto = role.MapToRoleViewDetailsDto();
 
                     return new ServiceResult(
