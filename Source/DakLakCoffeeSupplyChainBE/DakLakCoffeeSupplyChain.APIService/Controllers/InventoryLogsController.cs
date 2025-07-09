@@ -53,5 +53,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(403, result.Message); // Nếu bị chặn quyền, trả 403
         }
+        [HttpDelete("soft/{logId}")]
+        [Authorize(Roles = "Admin,BusinessManager")]
+        public async Task<IActionResult> SoftDelete(Guid logId)
+        {
+            var result = await _inventoryLogService.SoftDeleteAsync(logId);
+            return result.Status == Const.SUCCESS_DELETE_CODE ? Ok(result.Message) : StatusCode(500, result.Message);
+        }
+
+        [HttpDelete("hard/{logId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> HardDelete(Guid logId)
+        {
+            var result = await _inventoryLogService.HardDeleteAsync(logId);
+            return result.Status == Const.SUCCESS_DELETE_CODE ? Ok(result.Message) : StatusCode(500, result.Message);
+        }
     }
 }

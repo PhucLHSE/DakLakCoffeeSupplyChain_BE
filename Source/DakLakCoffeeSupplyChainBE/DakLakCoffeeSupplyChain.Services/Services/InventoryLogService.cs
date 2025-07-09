@@ -108,6 +108,36 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy log tồn kho thành công", result);
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid logId)
+        {
+            var log = await _unitOfWork.InventoryLogs.GetByIdAsync(logId);
+            if (log == null || log.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy log hoặc đã bị xoá");
+
+            log.IsDeleted = true;
+            
+
+            await _unitOfWork.InventoryLogs.UpdateAsync(log);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại");
+        }
+
+        public async Task<IServiceResult> HardDeleteAsync(Guid logId)
+        {
+            var log = await _unitOfWork.InventoryLogs.GetByIdAsync(logId);
+            if (log == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy log");
+
+            await _unitOfWork.InventoryLogs.RemoveAsync(log);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá vĩnh viễn thành công")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá vĩnh viễn thất bại");
+        }
 
     }
 }
