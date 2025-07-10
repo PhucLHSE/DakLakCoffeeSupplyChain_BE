@@ -10,6 +10,32 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class WarehouseOutboundReceiptMapper
     {
+        public static WarehouseOutboundReceipt MapFromCreateDto(
+      this WarehouseOutboundReceiptCreateDto dto,
+      Guid outboundReceiptId,
+      string receiptCode,
+      Guid staffId,
+      Guid batchId)
+        {
+            return new WarehouseOutboundReceipt
+            {
+                OutboundReceiptId = outboundReceiptId,
+                OutboundReceiptCode = receiptCode,
+                OutboundRequestId = dto.OutboundRequestId,
+                WarehouseId = dto.WarehouseId,
+                InventoryId = dto.InventoryId,
+                BatchId = batchId,
+                Quantity = dto.ExportedQuantity,
+                ExportedBy = staffId,
+                ExportedAt = DateTime.UtcNow,
+                Note = dto.Note,
+                DestinationNote = "",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+        }
+
         public static WarehouseOutboundReceiptListItemDto ToListItemDto(this WarehouseOutboundReceipt r)
         {
             return new WarehouseOutboundReceiptListItemDto
