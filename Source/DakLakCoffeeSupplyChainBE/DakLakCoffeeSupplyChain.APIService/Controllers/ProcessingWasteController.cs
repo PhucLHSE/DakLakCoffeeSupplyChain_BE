@@ -90,6 +90,33 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
+        // PUT: api/processingwaste/{id}
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Farmer,Admin")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] ProcessingWasteUpdateDto dto)
+        {
+            // Lấy userId từ token
+            var userIdStr = User.FindFirst("userId")?.Value
+                             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+
+            // Gọi service để cập nhật chất thải
+            var result = await _processingWasteService.UpdateAsync(id, dto, userId, isAdmin);
+
+            // Trả về kết quả dựa trên trạng thái của service
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);  // Thành công, trả về dữ liệu đã cập nhật
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);  // Không tìm thấy dữ liệu cần cập nhật
+
+            return BadRequest(result.Message);  // Lỗi khi cập nhật (ví dụ: dữ liệu không hợp lệ)
+        }
+
 
     }
 }
