@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IOrderItemService
     {
+        Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto);
+
         Task<IServiceResult> SoftDeleteOrderItemById(Guid orderItemId);
     }
 }
