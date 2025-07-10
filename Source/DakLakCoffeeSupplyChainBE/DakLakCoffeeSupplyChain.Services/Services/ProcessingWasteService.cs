@@ -4,6 +4,7 @@ using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -68,7 +69,44 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos);
         }
+        public async Task<IServiceResult> GetByIdAsync(Guid wasteId, Guid userId, bool isAdmin)
+        {
+            // Get all users to resolve RecordedBy names
+            var users = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                predicate: u => !u.IsDeleted,
+                asNoTracking: true
+            );
+            var userMap = users.ToDictionary(u => u.UserId, u => u.Name);
 
+            // Fetch the waste entry
+            var waste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                predicate: w => w.WasteId == wasteId && !w.IsDeleted,
+                include: q => q.Include(w => w.Progress).ThenInclude(p => p.Batch),
+                asNoTracking: true
+            );
 
+            if (waste == null)
+            {
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dữ liệu chất thải.");
+            }
+
+            // If not admin, ensure this waste belongs to the requesting farmer
+            if (!isAdmin)
+            {
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập chất thải này.");
+                }
+            }
+
+            var recordedByName = waste.RecordedBy.HasValue && userMap.ContainsKey(waste.RecordedBy.Value)
+                ? userMap[waste.RecordedBy.Value]
+                : "N/A";
+
+            var dto = waste.MapToViewAllDto(recordedByName);
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
+        }
     }
 }

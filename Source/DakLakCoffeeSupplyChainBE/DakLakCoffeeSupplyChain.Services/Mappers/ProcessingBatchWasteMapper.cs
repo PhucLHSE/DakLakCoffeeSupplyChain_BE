@@ -31,5 +31,24 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+        public static ProcessingWasteViewDetailsDto MapToDetailsDto(this ProcessingBatchWaste waste, string recordedByName)
+        {
+            return new ProcessingWasteViewDetailsDto
+            {
+                WasteId = waste.WasteId,
+                WasteCode = waste.WasteCode ?? string.Empty,
+                ProgressId = waste.ProgressId,
+                WasteType = waste.WasteType ?? string.Empty,
+                Quantity = waste.Quantity ?? 0,
+                Unit = waste.Unit ?? string.Empty,
+                Note = waste.Note ?? string.Empty,
+                RecordedAt = waste.RecordedAt,
+                RecordedBy = recordedByName,
+                IsDisposed = waste.IsDisposed ?? false,
+                DisposedAt = waste.DisposedAt,
+                CreatedAt = waste.CreatedAt,
+                UpdatedAt = waste.UpdatedAt
+            };
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IProcessingWasteService
     {
         Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin);
+        Task<IServiceResult> GetByIdAsync(Guid wasteId, Guid userId, bool isAdmin);
+
     }
 }
