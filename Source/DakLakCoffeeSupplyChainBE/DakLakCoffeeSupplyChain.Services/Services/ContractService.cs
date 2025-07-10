@@ -33,7 +33,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll(Guid userId)
         {
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                predicate: m => m.UserId == userId,
+                predicate: m => 
+                   m.UserId == userId &&
+                   !m.IsDeleted,
                 asNoTracking: true
             );
 
@@ -59,7 +61,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Kiểm tra nếu không có dữ liệu
-            if (contracts == null || !contracts.Any())
+            if (contracts == null || 
+                !contracts.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -82,12 +85,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid contractId)
+        public async Task<IServiceResult> GetById(Guid contractId, Guid userId)
         {
+            // Lấy BusinessManager hiện tại từ userId
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m =>
+                   m.UserId == userId &&
+                   !m.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (manager == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                );
+            }
+
             // Tìm contract theo ID
             var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
                 predicate: c => 
-                   c.ContractId == contractId && 
+                   c.ContractId == contractId &&
+                   c.SellerId == manager.ManagerId &&
                    !c.IsDeleted,
                 include: query => query
                    .Include(c => c.Buyer)
@@ -140,7 +160,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (businessManager == null || businessManager.User == null)
+                if (businessManager == null 
+                    || businessManager.User == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -151,7 +172,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var user = businessManager.User;
 
                 // Kiểm tra quyền hạn
-                if (user.IsDeleted || user.Role == null || user.Role.RoleName != "BusinessManager")
+                if (user.IsDeleted || 
+                    user.Role == null || 
+                    user.Role.RoleName != "BusinessManager")
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -201,7 +224,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
 
                 // So sánh với tổng của hợp đồng (nếu được nhập)
-                if (contractDto.TotalQuantity.HasValue && totalItemQuantity > contractDto.TotalQuantity.Value)
+                if (contractDto.TotalQuantity.HasValue && 
+                    totalItemQuantity > contractDto.TotalQuantity.Value)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -209,7 +233,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                if (contractDto.TotalValue.HasValue && totalItemValue > contractDto.TotalValue.Value)
+                if (contractDto.TotalValue.HasValue && 
+                    totalItemValue > contractDto.TotalValue.Value)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -220,7 +245,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Sinh mã định danh cho Contract
                 string contractCode = await _codeGenerator.GenerateContractCodeAsync();
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newContract = contractDto.MapToNewContract(sellerId, contractCode);
 
                 // Tạo Contract ở repository
@@ -269,6 +294,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -295,7 +321,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Nếu không tìm thấy
-                if (contract == null || contract.IsDeleted)
+                if (contract == null || 
+                    contract.IsDeleted)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -330,7 +357,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 double totalItemValue = contractDto.ContractItems
                     .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
 
-                if (contractDto.TotalQuantity.HasValue && totalItemQuantity > contractDto.TotalQuantity.Value)
+                if (contractDto.TotalQuantity.HasValue && 
+                    totalItemQuantity > contractDto.TotalQuantity.Value)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -338,7 +366,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                if (contractDto.TotalValue.HasValue && totalItemValue > contractDto.TotalValue.Value)
+                if (contractDto.TotalValue.HasValue && 
+                    totalItemValue > contractDto.TotalValue.Value)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -346,7 +375,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 contract.MapToUpdateContract(contractDto);
 
                 // Đồng bộ lại ContractItems
@@ -452,6 +481,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -484,7 +514,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else
                 {
                     // Xóa từng ContractItem trước (nếu có)
-                    if (contract.ContractItems != null && contract.ContractItems.Any())
+                    if (contract.ContractItems != null && 
+                        contract.ContractItems.Any())
                     {
                         foreach (var item in contract.ContractItems)
                         {
