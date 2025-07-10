@@ -267,9 +267,73 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task<IServiceResult> SoftDeleteAsync(Guid wasteId, Guid userId, bool isAdmin)
+        {
+            try
+            {
+                var waste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                    x => x.WasteId == wasteId && !x.IsDeleted,
+                    include: q => q.Include(w => w.Progress).ThenInclude(p => p.Batch),
+                    asNoTracking: false
+                );
 
+                if (waste == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải.");
 
+                if (!isAdmin)
+                {
+                    var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                    if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
+                        return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xóa bản ghi này.");
+                }
 
+                waste.IsDeleted = true;
+                waste.UpdatedAt = DateHelper.NowVietnamTime();
+
+                _unitOfWork.ProcessingWasteRepository.PrepareUpdate(waste);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm thành công.")
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+        public async Task<IServiceResult> HardDeleteAsync(Guid wasteId, Guid userId, bool isAdmin)
+        {
+            try
+            {
+                var waste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                    x => x.WasteId == wasteId,
+                    include: q => q.Include(w => w.Progress).ThenInclude(p => p.Batch),
+                    asNoTracking: false
+                );
+
+                if (waste == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải.");
+
+                if (!isAdmin)
+                {
+                    var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                    if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
+                        return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xóa bản ghi này.");
+                }
+
+                _unitOfWork.ProcessingWasteRepository.PrepareRemove(waste);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa cứng thành công.")
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa cứng thất bại.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
 
     }
 }

@@ -116,7 +116,50 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);  // Lỗi khi cập nhật (ví dụ: dữ liệu không hợp lệ)
         }
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Farmer,Admin")]
+        public async Task<IActionResult> SoftDelete(Guid id)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
 
+            var isAdmin = User.IsInRole("Admin"); 
+
+            var result = await _processingWasteService.SoftDeleteAsync(id, userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
+
+        [HttpDelete("hard/{id}")]
+        [Authorize(Roles = "Farmer,Admin")]
+        public async Task<IActionResult> HardDelete(Guid id)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin"); 
+
+            var result = await _processingWasteService.HardDeleteAsync(id, userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
     }
 }
