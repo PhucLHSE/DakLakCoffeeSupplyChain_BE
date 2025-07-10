@@ -23,7 +23,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.Contract
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (PlannedQuantity is null || PlannedQuantity <= 0)
+            if (PlannedQuantity is null || 
+                PlannedQuantity <= 0)
             {
                 yield return new ValidationResult(
                     "Số lượng dự kiến phải lớn hơn 0.",

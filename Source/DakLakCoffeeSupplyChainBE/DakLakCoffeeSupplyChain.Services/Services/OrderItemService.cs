@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs;
+using DakLakCoffeeSupplyChain.Services.Mappers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -19,6 +22,183 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+        }
+
+        public async Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto)
+        {
+            try
+            {
+                // Kiểm tra Order có tồn tại không
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                    predicate: o =>
+                       o.OrderId == orderItemCreateDto.OrderId &&
+                       !o.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (order == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy đơn hàng tương ứng."
+                    );
+                }
+
+                // Kiểm tra ContractDeliveryItem có tồn tại không và thuộc cùng hợp đồng với Order
+                var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
+                    predicate: cdi =>
+                       cdi.DeliveryItemId == orderItemCreateDto.ContractDeliveryItemId &&
+                       !cdi.IsDeleted,
+                    include: query => query
+                       .Include(cdi => cdi.ContractItem),
+                    asNoTracking: true
+                );
+
+                if (contractDeliveryItem == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm thấy dòng đợt giao hàng tương ứng."
+                    );
+                }
+
+                // Xác định ContractItem tương ứng
+                var contractItem = contractDeliveryItem.ContractItem;
+
+                if (contractItem == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE, 
+                        "Không xác định được dòng hợp đồng tương ứng."
+                    );
+                }
+
+                // Kiểm tra Product có tồn tại không
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                    predicate: p =>
+                        p.ProductId == orderItemCreateDto.ProductId &&
+                        !p.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (product == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy sản phẩm tương ứng."
+                    );
+                }
+
+                // Kiểm tra OrderItem trùng trong đơn hàng (OrderId + ContractDeliveryItemId + ProductId)
+                bool isDuplicateOrderItem = await _unitOfWork.OrderItemRepository.AnyAsync(
+                    predicate: oi =>
+                        oi.OrderId == orderItemCreateDto.OrderId &&
+                        oi.ContractDeliveryItemId == orderItemCreateDto.ContractDeliveryItemId &&
+                        oi.ProductId == orderItemCreateDto.ProductId &&
+                        !oi.IsDeleted
+                );
+
+                if (isDuplicateOrderItem)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Sản phẩm này đã tồn tại trong đơn hàng theo đợt giao tương ứng."
+                    );
+                }
+
+                // Kiểm tra tổng quantity các OrderItem trong ContractDeliveryItem không vượt quá PlannedQuantity
+                double totalOrdered = await _unitOfWork.OrderItemRepository.SumQuantityByContractDeliveryItemAsync(
+                    orderItemCreateDto.ContractDeliveryItemId
+                );
+
+                double currentQuantity = orderItemCreateDto.Quantity ?? 0;
+                double plannedQuantity = contractDeliveryItem.PlannedQuantity;
+
+                if ((totalOrdered + currentQuantity) > plannedQuantity)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Số lượng vượt quá số lượng dự kiến trong đợt giao ({plannedQuantity} kg)."
+                    );
+                }
+
+                // Lấy UnitPrice và DiscountAmount từ ContractDeliveryItem nếu DTO không cung cấp
+                double? unitPrice = orderItemCreateDto.UnitPrice 
+                    ?? contractItem.UnitPrice;
+                double? discount = orderItemCreateDto.DiscountAmount 
+                    ?? contractItem.DiscountAmount;
+
+                if (unitPrice is null || 
+                    unitPrice <= 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không xác định được đơn giá từ DTO hoặc ContractDeliveryItem."
+                    );
+                }
+
+                if (discount < 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Giảm giá không hợp lệ."
+                    );
+                }
+
+                // Tạo OrderItem mới từ DTO
+                var newOrderItem = orderItemCreateDto.MapToNewOrderItem(
+                    unitPrice.Value, 
+                    discount.GetValueOrDefault()
+                );
+
+                // Tạo OrderItem ở repository
+                await _unitOfWork.OrderItemRepository.CreateAsync(newOrderItem);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy vấn lại để trả về thông tin đầy đủ (có ProductName)
+                    var createdOrderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
+                        predicate: oi => oi.OrderItemId == newOrderItem.OrderItemId,
+                        include: query => query
+                           .Include(oi => oi.Product),
+                        asNoTracking: true
+                    );
+
+                    if (createdOrderItem != null)
+                    {
+                        var responseDto = createdOrderItem.MapToOrderItemViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu vừa tạo."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
         }
 
         public async Task<IServiceResult> SoftDeleteOrderItemById(Guid orderItemId)

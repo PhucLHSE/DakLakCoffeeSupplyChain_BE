@@ -5,15 +5,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
+namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
 {
-    public class ContractItemCreateDto : IValidatableObject
+    public class OrderItemCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "ContractId là bắt buộc.")]
-        public Guid ContractId { get; set; }
+        [Required(ErrorMessage = "OrderId là bắt buộc.")]
+        public Guid OrderId { get; set; }
 
-        [Required(ErrorMessage = "CoffeeTypeId là bắt buộc.")]
-        public Guid CoffeeTypeId { get; set; }
+        [Required(ErrorMessage = "ContractDeliveryItemId là bắt buộc.")]
+        public Guid ContractDeliveryItemId { get; set; }
+
+        [Required(ErrorMessage = "ProductId là bắt buộc.")]
+        public Guid ProductId { get; set; }
 
         [Required(ErrorMessage = "Số lượng là bắt buộc.")]
         public double? Quantity { get; set; }
@@ -24,22 +27,24 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
         public double? DiscountAmount { get; set; } = 0.0;
 
         [MaxLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự.")]
-        public string Note { get; set; } = string.Empty;
+        public string? Note { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Quantity <= 0)
+            if (Quantity is null || 
+                Quantity <= 0)
             {
                 yield return new ValidationResult(
-                    "Số lượng phải lớn hơn 0.", 
+                    "Số lượng phải lớn hơn 0.",
                     new[] { nameof(Quantity) }
                 );
             }
 
-            if (UnitPrice <= 0)
+            if (UnitPrice is null 
+                || UnitPrice <= 0)
             {
                 yield return new ValidationResult(
-                    "Đơn giá phải lớn hơn 0.", 
+                    "Đơn giá phải lớn hơn 0.",
                     new[] { nameof(UnitPrice) }
                 );
             }
@@ -47,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
             if (DiscountAmount < 0)
             {
                 yield return new ValidationResult(
-                    "Giảm giá không được âm.", 
+                    "Giảm giá không được âm.",
                     new[] { nameof(DiscountAmount) }
                 );
             }
@@ -57,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
                 DiscountAmount > Quantity * UnitPrice)
             {
                 yield return new ValidationResult(
-                    "Giảm giá không được vượt quá tổng thành tiền.", 
+                    "Giảm giá không được vượt quá tổng thành tiền.",
                     new[] { nameof(DiscountAmount) }
                 );
             }
