@@ -95,5 +95,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpPut("{id}/cancel")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> Cancel(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _requestService.CancelRequestAsync(id, managerUserId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
