@@ -13,5 +13,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<ProcessingBatchWaste>> GetAllWastesAsync();
         Task<ProcessingBatchWaste?> GetWasteByIdAsync(Guid wasteId);
         Task<int> CountByProgressIdAsync(Guid progressId);
+        Task<int> CountCreatedInYearAsync(int year);
     }
 }
