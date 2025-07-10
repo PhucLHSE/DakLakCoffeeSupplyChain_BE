@@ -91,29 +91,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Tồn kho không đủ. Còn {inventory.Quantity}kg, yêu cầu xuất {dto.ExportedQuantity}kg.");
             }
 
-            var receipt = new WarehouseOutboundReceipt
-            {
-                OutboundReceiptId = Guid.NewGuid(),
-                OutboundReceiptCode = "WOR-" + Guid.NewGuid().ToString("N")[..8],
-                OutboundRequestId = request.OutboundRequestId,
-                WarehouseId = request.WarehouseId,
-                InventoryId = request.InventoryId,
-                BatchId = inventory.BatchId,
-                Quantity = dto.ExportedQuantity,
-                ExportedBy = staff.StaffId,
-                ExportedAt = DateTime.UtcNow,
-                Note = dto.Note,
-                DestinationNote = "",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+            // ✅ Dùng mapper để tạo entity
+            var outboundReceiptId = Guid.NewGuid();
+            var receiptCode = "WOR-" + outboundReceiptId.ToString("N")[..8];
+            var receipt = dto.MapFromCreateDto(
+                outboundReceiptId: outboundReceiptId,
+                receiptCode: receiptCode,
+                staffId: staff.StaffId,
+                batchId: inventory.BatchId
+            );
 
             await _unitOfWork.WarehouseOutboundReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo phiếu xuất kho thành công", receipt.OutboundReceiptId);
         }
+
 
         public async Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseOutboundReceiptConfirmDto dto)
         {
@@ -125,7 +118,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            var inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId);
+            var inventory = await _unitOfWork.Inventories.FindByIdAsync(receipt.InventoryId);
             if (inventory == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy tồn kho tương ứng.");
 
@@ -158,10 +151,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Tồn kho không đủ. Chỉ còn {inventory.Quantity}kg.");
             }
 
+            // ✅ Cập nhật tồn kho
             inventory.Quantity -= dto.ConfirmedQuantity;
             inventory.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Inventories.Update(inventory);
 
+            // ✅ Ghi log xuất kho
+            var log = new InventoryLog
+            {
+                LogId = Guid.NewGuid(),
+                InventoryId = inventory.InventoryId,
+                ActionType = "ConfirmOutbound",
+                QuantityChanged = -dto.ConfirmedQuantity,
+                Note = $"Xuất kho từ phiếu {receipt.OutboundReceiptCode}",
+                TriggeredBySystem = true,
+                LoggedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+            await _unitOfWork.InventoryLogs.CreateAsync(log);
+
+            // ✅ Cập nhật phiếu xuất & yêu cầu
             receipt.Quantity = dto.ConfirmedQuantity;
             receipt.DestinationNote = dto.DestinationNote ?? "";
             receipt.Note = (receipt.Note ?? "") + $" [Đã xác nhận lúc {DateTime.UtcNow:HH:mm dd/MM/yyyy}]";
@@ -174,5 +183,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu xuất kho thành công.", receipt.OutboundReceiptId);
         }
+
     }
 }

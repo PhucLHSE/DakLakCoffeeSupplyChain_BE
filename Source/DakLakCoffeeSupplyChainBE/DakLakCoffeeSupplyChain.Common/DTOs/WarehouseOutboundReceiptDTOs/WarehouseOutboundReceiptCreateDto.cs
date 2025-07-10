@@ -8,8 +8,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundReceiptDTOs
 {
     public class WarehouseOutboundReceiptCreateDto
     {
-        public Guid OutboundRequestId { get; set; }
-        public double ExportedQuantity { get; set; }
-        public string Note { get; set; }
+       
+            public Guid OutboundRequestId { get; set; }
+            public Guid WarehouseId { get; set; }       // thêm
+            public Guid InventoryId { get; set; }       // thêm
+            public double ExportedQuantity { get; set; }
+            public string Note { get; set; }
+        }
     }
-}
+
