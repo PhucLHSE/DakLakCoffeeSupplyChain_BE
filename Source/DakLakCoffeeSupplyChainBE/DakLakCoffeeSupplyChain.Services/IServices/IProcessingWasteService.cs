@@ -14,6 +14,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetByIdAsync(Guid wasteId, Guid userId, bool isAdmin);
         Task<IServiceResult> CreateAsync(ProcessingWasteCreateDto dto, Guid userId, bool isAdmin);
 
+        Task<IServiceResult> UpdateAsync(Guid wasteId, ProcessingWasteUpdateDto dto, Guid userId, bool isAdmin);
+
 
     }
 }

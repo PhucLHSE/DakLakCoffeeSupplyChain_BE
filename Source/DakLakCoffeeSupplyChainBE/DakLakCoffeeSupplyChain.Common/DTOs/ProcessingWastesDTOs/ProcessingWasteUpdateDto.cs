@@ -6,21 +6,15 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs
 {
-    public class ProcessingWasteCreateDto
+    public class ProcessingWasteUpdateDto
     {
-        public Guid ProgressId { get; set; }
-
+        public Guid WasteId { get; set; }
         public string WasteType { get; set; } = string.Empty;
-
+        public Guid ProgressId { get; set; }
+        public Guid? RecordedBy { get; set; }
+        public string Note { get; set; } 
+        public string Unit { get; set; }
         public double Quantity { get; set; }
-
-        public string Unit { get; set; } = string.Empty;
-
-        public string Note { get; set; } = string.Empty;
-
         public DateTime? RecordedAt { get; set; }
-
-
     }
-
 }

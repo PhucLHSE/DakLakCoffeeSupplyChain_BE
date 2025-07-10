@@ -1,5 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -113,46 +115,161 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
         public async Task<IServiceResult> CreateAsync(ProcessingWasteCreateDto dto, Guid userId, bool isAdmin)
         {
-            // Nếu không phải admin thì phải kiểm tra quyền truy cập tiến trình
-            if (!isAdmin)
+            try
             {
+                // Retrieve the farmer based on the userId
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin Farmer.");
+                if (farmer == null && !isAdmin)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ người dùng có vai trò Nông hộ (Farmer) mới được phép tạo xử lý chất thải.");
 
-                // Kiểm tra tiến trình (progress) có thuộc về farmer không
-                var progress = await _unitOfWork.ProcessingBatchProgressRepository.GetByIdAsync(
-                    predicate: p => p.ProgressId == dto.ProgressId && !p.IsDeleted,
-                    include: q => q.Include(p => p.Batch),
+                // Check if the progress exists
+                var progressExists = await _unitOfWork.ProcessingBatchProgressRepository.AnyAsync(
+                    x => x.ProgressId == dto.ProgressId && !x.IsDeleted);
+                if (!progressExists)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tiến trình sơ chế không tồn tại.");
+
+                // Validate if WasteType is provided
+                if (string.IsNullOrEmpty(dto.WasteType))
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại chất thải không được để trống.");
+
+                // Validate if Quantity is greater than zero
+                if (dto.Quantity <= 0)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Số lượng chất thải phải lớn hơn 0.");
+
+                // Validate if Unit is provided
+                if (string.IsNullOrEmpty(dto.Unit))
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Đơn vị không được để trống.");
+
+                // Prepare the ProcessingBatchWaste entity
+                var waste = new ProcessingBatchWaste
+                {
+                    WasteId = Guid.NewGuid(),
+                    WasteCode = await _codeGenerator.GenerateProcessingWasteCodeAsync(), // Assuming a WasteCode generator is available
+                    ProgressId = dto.ProgressId,
+                    WasteType = dto.WasteType,
+                    Quantity = dto.Quantity,
+                    Unit = dto.Unit.Trim(),
+                    Note = dto.Note?.Trim(),
+                    RecordedAt = dto.RecordedAt ?? DateTime.UtcNow,
+                    RecordedBy = farmer != null ? farmer.FarmerId : userId, // If it's an admin, use the admin userId, else use farmer
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false,
+                    IsDisposed = false // Set as not disposed initially
+                };
+
+                // Check for duplicate waste record for this progress (if required)
+                var isDuplicate = await _unitOfWork.ProcessingWasteRepository.AnyAsync(
+                    x => x.ProgressId == waste.ProgressId && x.WasteType == waste.WasteType && !x.IsDeleted);
+                if (isDuplicate)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại chất thải đã tồn tại cho tiến trình này.");
+                }
+
+                // Save the ProcessingBatchWaste entity
+                await _unitOfWork.ProcessingWasteRepository.CreateAsync(waste);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result <= 0)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo chất thải không thành công.");
+
+                // Retrieve the created waste record
+                var createdWaste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                    x => x.WasteId == waste.WasteId && !x.IsDeleted,
                     asNoTracking: true
                 );
 
-                if (progress == null || progress.Batch.FarmerId != farmer.FarmerId)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không có quyền ghi chất thải cho tiến trình này.");
+                if (createdWaste != null)
+                {
+                    // Fetch user details for recordedByName
+                    var recordedByUser = isAdmin
+                        ? await _unitOfWork.UserAccountRepository.GetByIdAsync(f => f.UserId == createdWaste.RecordedBy)
+                        : await _unitOfWork.UserAccountRepository.GetByIdAsync(f => f.UserId == farmer.UserId);
+
+                    var recordedByName = recordedByUser?.Name ?? "N/A";
+
+                    // Map to DTO and return success
+                    var viewDto = createdWaste.MapToViewAllDto(recordedByName);
+                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, viewDto);
+                }
+
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo thành công nhưng không truy xuất được bản ghi.");
             }
-
-            // Sinh mã chất thải
-            var wasteCount = await _unitOfWork.ProcessingWasteRepository.CountByProgressIdAsync(dto.ProgressId);
-            var wasteCode = $"WST-{DateTime.Now.Year}-{(wasteCount + 1):D3}";
-
-            // Map DTO sang entity
-            var waste = dto.MapToNewEntity(wasteCode, userId);
-
-            // Thêm vào DB
-            await _unitOfWork.ProcessingWasteRepository.CreateAsync(waste);
-            var saveResult = await _unitOfWork.SaveChangesAsync();
-
-            if (saveResult <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
-
-            // Trả về DTO view
-            var recordedByName = (await _unitOfWork.UserAccountRepository
-                 .GetByIdAsync(u => u.UserId == userId, asNoTracking: true))?.Name ?? "N/A";
-
-            var responseDto = waste.MapToViewAllDto(recordedByName);
-
-            return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, responseDto);
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
         }
+
+        public async Task<IServiceResult> UpdateAsync(Guid wasteId, ProcessingWasteUpdateDto dto, Guid userId, bool isAdmin)
+        {
+            try
+            {
+                // 1. Kiểm tra vai trò Farmer nếu không phải Admin
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (!isAdmin && farmer == null)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chỉ Farmer hoặc Admin mới được phép cập nhật chất thải.");
+
+                // 2. Lấy bản ghi chất thải cần cập nhật
+                var waste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                    predicate: x => x.WasteId == wasteId && !x.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (waste == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải cần cập nhật.");
+
+                // 3. Nếu không phải Admin, chỉ cho phép cập nhật bản ghi do chính Farmer đó tạo
+                if (!isAdmin && waste.RecordedBy != farmer.FarmerId)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không được phép cập nhật bản ghi chất thải của người khác.");
+
+                // 4. Kiểm tra tiến trình tồn tại
+                var progressExists = await _unitOfWork.ProcessingBatchProgressRepository.AnyAsync(
+                    x => x.ProgressId == dto.ProgressId && !x.IsDeleted);
+                if (!progressExists)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tiến trình sơ chế không tồn tại.");
+
+                // 5. Cập nhật dữ liệu
+                waste.ProgressId = dto.ProgressId;
+                waste.WasteType = dto.WasteType?.Trim();
+                waste.Quantity = dto.Quantity;
+                waste.Unit = dto.Unit?.Trim();
+                waste.Note = dto.Note?.Trim();
+                waste.RecordedAt = dto.RecordedAt ?? waste.RecordedAt;
+                waste.UpdatedAt = DateHelper.NowVietnamTime();
+
+                _unitOfWork.ProcessingWasteRepository.PrepareUpdate(waste);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result <= 0)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật bản ghi thất bại.");
+
+                // 6. Truy xuất lại bản ghi để trả về
+                var updated = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
+                    predicate: x => x.WasteId == wasteId && !x.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (updated == null)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thành công nhưng không truy xuất được bản ghi.");
+
+                // 7. Truy ngược Farmer → User để lấy recordedByName
+                var recordedFarmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.FarmerId == updated.RecordedBy);
+                var recordedUser = await _unitOfWork.UserAccountRepository.GetByIdAsync(u => u.UserId == recordedFarmer.UserId);
+                var recordedByName = recordedUser?.Name ?? "N/A";
+
+                // 8. Map và trả về DTO
+                var viewDto = updated.MapToViewAllDto(recordedByName);
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, viewDto);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+
+
 
     }
 }
