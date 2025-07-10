@@ -210,7 +210,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra loại cà phê
                 var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
                     c => c.CoffeeTypeId == productCreateDto.CoffeeTypeId && 
-                    !c.IsDeleted
+                         !c.IsDeleted
                 );
 
                 if (!coffeeTypeExists)
@@ -224,7 +224,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra batch
                 var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
                     b => b.BatchId == productCreateDto.BatchId && 
-                    !b.IsDeleted
+                         !b.IsDeleted
                 );
 
                 if (!batchExists)
@@ -238,7 +238,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra kho
                 var inventoryExists = await _unitOfWork.Inventories.AnyAsync(
                     i => i.InventoryId == productCreateDto.InventoryId && 
-                    !i.IsDeleted
+                         !i.IsDeleted
                 );
 
                 if (!inventoryExists)
@@ -252,7 +252,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Sinh mã sản phẩm tự động
                 var productCode = await _codeGenerator.GenerateProductCodeAsync(managerId);
 
-                // Map DTO sang Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newProduct = productCreateDto.MapToNewProduct(productCode, managerId);
 
                 // Lưu vào DB
@@ -278,6 +278,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdProduct != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = createdProduct.MapToProductViewDetailsDto();
 
                         return new ServiceResult(
@@ -300,6 +301,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.Message
@@ -315,7 +317,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Ưu tiên: nếu là BusinessManager
                 var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                    predicate: m => m.UserId == userId && !m.IsDeleted,
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
                     asNoTracking: true
                 );
 
@@ -327,7 +331,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Nếu không phải Manager, kiểm tra là Staff
                     var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
-                        predicate: s => s.UserId == userId && !s.IsDeleted,
+                        predicate: s => 
+                           s.UserId == userId && 
+                           !s.IsDeleted,
                         asNoTracking: true
                     );
 
@@ -371,7 +377,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra loại cà phê
                 var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
                     c => c.CoffeeTypeId == productUpdateDto.CoffeeTypeId && 
-                    !c.IsDeleted
+                         !c.IsDeleted
                 );
 
                 if (!coffeeTypeExists)
@@ -385,7 +391,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra batch
                 var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
                     b => b.BatchId == productUpdateDto.BatchId && 
-                    !b.IsDeleted
+                         !b.IsDeleted
                 );
 
                 if (!batchExists)
@@ -399,7 +405,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra kho
                 var inventoryExists = await _unitOfWork.Inventories.AnyAsync(
                     i => i.InventoryId == productUpdateDto.InventoryId && 
-                    !i.IsDeleted
+                         !i.IsDeleted
                 );
 
                 if (!inventoryExists)
@@ -410,7 +416,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Map DTO vào entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 productUpdateDto.MapToUpdateProduct(product);
 
                 // Cập nhật product ở repository
@@ -437,6 +443,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedProduct != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = updatedProduct.MapToProductViewDetailsDto();
 
                         return new ServiceResult(
@@ -461,6 +468,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -563,12 +571,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteProductById(Guid productId)
+        public async Task<IServiceResult> SoftDeleteProductById(Guid productId, Guid userId)
         {
             try
             {
-                // Tìm pruduct theo ID
-                var product = await _unitOfWork.ProductRepository.GetByIdAsync(productId);
+                // Tìm BusinessManager hiện tại từ userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
+                // Tìm product theo ID
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                    predicate: 
+                       p => p.ProductId == productId && 
+                       !p.IsDeleted
+                );
+
 
                 // Kiểm tra nếu không tồn tại
                 if (product == null)
@@ -580,6 +609,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Kiểm tra quyền xoá
+                    if (product.CreatedBy != userId) // Không phải người tạo
+                    {
+                        var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                            predicate: s =>
+                                s.UserId == product.CreatedBy &&
+                                s.SupervisorId == manager.ManagerId &&
+                                !s.IsDeleted,
+                            asNoTracking: true
+                        );
+
+                        if (staff == null)
+                        {
+                            return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                "Bạn không có quyền xóa mềm sản phẩm do người khác tạo."
+                            );
+                        }
+                    }
+
                     // Đánh dấu xoá mềm bằng IsDeleted
                     product.IsDeleted = true;
                     product.UpdatedAt = DateHelper.NowVietnamTime();
