@@ -1126,7 +1126,7 @@ GO
 -- WarehouseOutboundReceipts – Phiếu xuất kho
 CREATE TABLE WarehouseOutboundReceipts (
   OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),  -- Mã phiếu xuất kho
-  OutboundReceiptCode VARCHAR(20) UNIQUE,                          -- OUT-RECEIPT-2025-0078 (Format: OUT-RECEIPT-YYYY-####)
+  OutboundReceiptCode VARCHAR(50) UNIQUE,                          -- OUT-RECEIPT-2025-0078 (Format: OUT-RECEIPT-YYYY-####)
   OutboundRequestID UNIQUEIDENTIFIER NOT NULL,                     -- Gắn với yêu cầu xuất kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                           -- Kho xuất
   InventoryID UNIQUEIDENTIFIER NOT NULL,                           -- Dòng tồn kho đã xuất
@@ -2837,6 +2837,17 @@ VALUES (
   GETDATE(), 0
 );
 
+INSERT INTO InventoryLogs (
+  InventoryID, ActionType, QuantityChanged,
+  UpdatedBy, TriggeredBySystem, Note,
+  LoggedAt, IsDeleted
+)
+VALUES (
+  @InventoryID, N'decrease', 500,
+  @StaffID, 0, N'Xuất kho theo OUTREQ-2025-0032',
+  GETDATE(), 0
+);
+
 GO
 
 -- Insert vào bảng Products
@@ -2913,7 +2924,7 @@ DECLARE @OrderID UNIQUEIDENTIFIER = (
 );
 
 DECLARE @ProductID UNIQUEIDENTIFIER = (
-  SELECT ProductID FROM Products WHERE ProductCode = 'PROD-2025-0001'
+  SELECT ProductID FROM Products WHERE ProductCode = 'PROD-001-BM-2025-0001'
 );
 
 INSERT INTO OrderItems (
@@ -2926,6 +2937,92 @@ VALUES (
   500, 95000, 0.0, 95000 * 500,
   N'Standard delivery item', GETDATE(), GETDATE(), 0
 );
+
+GO
+
+-- Insert vào bảng WarehouseOutboundRequests
+DECLARE @InventoryID UNIQUEIDENTIFIER = (
+  SELECT InventoryID FROM Inventories WHERE InventoryCode = 'INV-2025-0001'
+);
+
+DECLARE @WarehouseID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
+);
+
+DECLARE @RequestedBy UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001'
+);
+
+DECLARE @OrderItemID UNIQUEIDENTIFIER = (
+  SELECT TOP 1 OrderItemID FROM OrderItems WHERE Quantity = 500
+);
+
+-- Insert yêu cầu xuất kho
+INSERT INTO WarehouseOutboundRequests (
+  OutboundRequestCode, WarehouseID, InventoryID,
+  RequestedQuantity, Unit, RequestedBy,
+  Purpose, OrderItemID, Reason, Status
+)
+VALUES (
+  'OUTREQ-2025-0032',
+  @WarehouseID,
+  @InventoryID,
+  500,
+  N'kg',
+  @RequestedBy,
+  N'Giao đơn hàng ORD-2025-0001',
+  @OrderItemID,
+  N'Yêu cầu xuất 500kg Arabica để giao cho khách hàng B2B.',
+  N'pending'
+);
+
+GO
+
+-- Insert vào bảng WarehouseOutboundReceipts
+DECLARE @OutboundRequestID UNIQUEIDENTIFIER = (
+  SELECT OutboundRequestID FROM WarehouseOutboundRequests WHERE OutboundRequestCode = 'OUTREQ-2025-0032'
+);
+
+DECLARE @StaffID UNIQUEIDENTIFIER = (
+  SELECT StaffID FROM BusinessStaffs WHERE StaffCode = 'STAFF-2025-0007'
+);
+
+DECLARE @BatchID UNIQUEIDENTIFIER = (
+  SELECT BatchID FROM ProcessingBatches WHERE SystemBatchCode = 'BATCH-2025-0001'
+);
+
+DECLARE @InventoryID UNIQUEIDENTIFIER = (
+  SELECT InventoryID FROM Inventories WHERE InventoryCode = 'INV-2025-0001'
+);
+
+DECLARE @WarehouseID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-DL001'
+);
+
+-- Insert phiếu xuất kho
+INSERT INTO WarehouseOutboundReceipts (
+  OutboundReceiptCode, OutboundRequestID, WarehouseID,
+  InventoryID, BatchID, Quantity, ExportedBy,
+  ExportedAt, DestinationNote, Note
+)
+VALUES (
+  'OUT-RECEIPT-2025-0078',
+  @OutboundRequestID,
+  @WarehouseID,
+  @InventoryID,
+  @BatchID,
+  500,
+  @StaffID,
+  GETDATE(),
+  N'Kho khách hàng B2B tại Bình Dương',
+  N'Xác nhận đã xuất 500kg Arabica đúng số lượng và tiêu chuẩn.'
+);
+
+-- Sau khi xuất kho 500kg, cập nhật lại số lượng tồn kho
+UPDATE Inventories
+SET Quantity = Quantity - 500,
+    UpdatedAt = GETDATE()
+WHERE InventoryID = @InventoryID;
 
 GO
 
@@ -2947,3 +3044,4 @@ DECLARE @AdminID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email
 
 INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
 VALUES (@MinAgeConfigID, @AdminID, 'manage');
+

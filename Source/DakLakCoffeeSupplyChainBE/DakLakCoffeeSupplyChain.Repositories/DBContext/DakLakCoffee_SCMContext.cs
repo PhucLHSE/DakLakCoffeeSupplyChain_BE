@@ -1878,7 +1878,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.ExportedAt).HasColumnType("datetime");
             entity.Property(e => e.InventoryId).HasColumnName("InventoryID");
             entity.Property(e => e.OutboundReceiptCode)
-                .HasMaxLength(20)
+                .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.OutboundRequestId).HasColumnName("OutboundRequestID");
             entity.Property(e => e.UpdatedAt)
