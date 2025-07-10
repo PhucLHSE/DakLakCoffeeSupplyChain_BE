@@ -113,7 +113,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<ProductsController>/{productId}
         [HttpPut("{productId}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> UpdateContractDeliveryBatchAsync(Guid productId, [FromBody] ProductUpdateDto productUpdateDto)
+        public async Task<IActionResult> UpdateProductAsync(Guid productId, [FromBody] ProductUpdateDto productUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (productId != productUpdateDto.ProductId)
@@ -182,9 +182,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PATCH: api/<ProductsController>/soft-delete/{productId}
         [HttpPatch("soft-delete/{productId}")]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid productId)
+        public async Task<IActionResult> SoftDeleteProductByIdAsync(Guid productId)
         {
-            var result = await _productService.SoftDeleteProductById(productId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _productService.SoftDeleteProductById(productId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
