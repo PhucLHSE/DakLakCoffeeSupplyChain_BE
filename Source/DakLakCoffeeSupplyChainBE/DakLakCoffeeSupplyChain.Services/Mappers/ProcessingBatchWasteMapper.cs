@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -50,5 +51,25 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = waste.UpdatedAt
             };
         }
+        public static ProcessingBatchWaste MapToNewEntity(this ProcessingWasteCreateDto dto, string code, Guid userId)
+        {
+            return new ProcessingBatchWaste
+            {
+                WasteId = Guid.NewGuid(),
+                WasteCode = code,
+                ProgressId = dto.ProgressId,
+                WasteType = dto.WasteType,
+                Quantity = dto.Quantity,
+                Unit = dto.Unit,
+                Note = dto.Note,
+                RecordedAt = dto.RecordedAt ?? DateTime.UtcNow,
+                RecordedBy = userId,
+                IsDisposed = false,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false
+            };
+        }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -65,9 +66,30 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
 
-            return StatusCode(403, result.Message); // Trường hợp không có quyền
+            return StatusCode(403, result.Message);
         }
+        [HttpPost]
+        [Authorize(Roles = "Farmer,Admin")]
+        public async Task<IActionResult> Create([FromBody] ProcessingWasteCreateDto dto)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+
+            var result = await _processingWasteService.CreateAsync(dto, userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
 
     }
 }

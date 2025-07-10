@@ -42,5 +42,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.ProcessingBatchWastes
                 .CountAsync(w => w.ProgressId == progressId && !w.IsDeleted);
         }
+        public async Task<int> CountCreatedInYearAsync(int year)
+        {
+            return await _context.ProcessingBatchWastes
+                .CountAsync(w => !w.IsDeleted && w.CreatedAt.Year == year);
+        }
     }
 }

@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 
@@ -17,10 +18,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class ProcessingWasteService : IProcessingWasteService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public ProcessingWasteService(IUnitOfWork unitOfWork)
+        public ProcessingWasteService(IUnitOfWork unitOfWork, ICodeGenerator CodeGenerator )
         {
             _unitOfWork = unitOfWork;
+            _codeGenerator = CodeGenerator;
         }
 
         public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin)
@@ -108,5 +111,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
+        public async Task<IServiceResult> CreateAsync(ProcessingWasteCreateDto dto, Guid userId, bool isAdmin)
+        {
+            // Nếu không phải admin thì phải kiểm tra quyền truy cập tiến trình
+            if (!isAdmin)
+            {
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin Farmer.");
+
+                // Kiểm tra tiến trình (progress) có thuộc về farmer không
+                var progress = await _unitOfWork.ProcessingBatchProgressRepository.GetByIdAsync(
+                    predicate: p => p.ProgressId == dto.ProgressId && !p.IsDeleted,
+                    include: q => q.Include(p => p.Batch),
+                    asNoTracking: true
+                );
+
+                if (progress == null || progress.Batch.FarmerId != farmer.FarmerId)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không có quyền ghi chất thải cho tiến trình này.");
+            }
+
+            // Sinh mã chất thải
+            var wasteCount = await _unitOfWork.ProcessingWasteRepository.CountByProgressIdAsync(dto.ProgressId);
+            var wasteCode = $"WST-{DateTime.Now.Year}-{(wasteCount + 1):D3}";
+
+            // Map DTO sang entity
+            var waste = dto.MapToNewEntity(wasteCode, userId);
+
+            // Thêm vào DB
+            await _unitOfWork.ProcessingWasteRepository.CreateAsync(waste);
+            var saveResult = await _unitOfWork.SaveChangesAsync();
+
+            if (saveResult <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+
+            // Trả về DTO view
+            var recordedByName = (await _unitOfWork.UserAccountRepository
+                 .GetByIdAsync(u => u.UserId == userId, asNoTracking: true))?.Name ?? "N/A";
+
+            var responseDto = waste.MapToViewAllDto(recordedByName);
+
+            return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, responseDto);
+        }
+
     }
 }
