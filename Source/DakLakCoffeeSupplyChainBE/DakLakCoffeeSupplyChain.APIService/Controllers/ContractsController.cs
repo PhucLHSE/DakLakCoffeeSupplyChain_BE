@@ -54,7 +54,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("{contractId}")]
         public async Task<IActionResult> GetById(Guid contractId)
         {
-            var result = await _contractService.GetById(contractId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractService.GetById(contractId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -160,7 +172,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> ContractExistsAsync(Guid contractId)
         {
-            var result = await _contractService.GetById(contractId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return false; // Không xác định được user → không kiểm tra được
+            }
+
+            var result = await _contractService.GetById(contractId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }
