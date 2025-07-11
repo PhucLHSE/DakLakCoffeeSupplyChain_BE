@@ -138,6 +138,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpDelete("{contractId}")]
         public async Task<IActionResult> DeleteContractByIdAsync(Guid contractId)
         {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            // Kiểm tra quyền sở hữu hợp đồng
+            var ownershipCheck = await _contractService.GetById(contractId, userId);
+
+            if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
+
+            if (ownershipCheck.Status != Const.SUCCESS_READ_CODE)
+                return StatusCode(500, ownershipCheck.Message);
+
+            // Nếu vượt qua kiểm tra quyền, tiến hành xóa
             var result = await _contractService.DeleteContractById(contractId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
@@ -156,6 +178,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{contractId}")]
         public async Task<IActionResult> SoftDeleteContractByIdAsync(Guid contractId)
         {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            // Kiểm tra quyền sở hữu hợp đồng
+            var ownershipCheck = await _contractService.GetById(contractId, userId);
+
+            if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
+
+            if (ownershipCheck.Status != Const.SUCCESS_READ_CODE)
+                return StatusCode(500, ownershipCheck.Message);
+
+            // Nếu vượt qua kiểm tra quyền, tiến hành xóa mềm
             var result = await _contractService.SoftDeleteContractById(contractId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
