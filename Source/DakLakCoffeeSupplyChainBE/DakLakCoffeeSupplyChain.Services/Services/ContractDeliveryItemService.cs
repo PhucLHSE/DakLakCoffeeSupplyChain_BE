@@ -283,12 +283,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                    predicate: cdt =>
-                       cdt.DeliveryItemId == deliveryItemId &&
-                       !cdt.IsDeleted,
+                    predicate: cdi => cdi.DeliveryItemId == deliveryItemId,
                     include: query => query
-                           .Include(cdt => cdt.ContractItem)
-                           .Include(cdt => cdt.DeliveryBatch),
+                           .Include(cdi => cdi.ContractItem)
+                           .Include(cdi => cdi.DeliveryBatch),
                     asNoTracking: false
                 );
 
@@ -341,7 +339,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                    predicate: cdi => cdi.DeliveryItemId == deliveryItemId,
+                    predicate: cdi => 
+                       cdi.DeliveryItemId == deliveryItemId && 
+                       !cdi.IsDeleted,
                     asNoTracking: false
                 );
 
