@@ -138,7 +138,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 var existing = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
                     predicate: d => d.DetailId == dto.DetailId && !d.IsDeleted,
-                    asNoTracking: false
+                    asNoTracking: false 
                 );
 
                 if (existing == null)
@@ -146,14 +146,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dòng mùa vụ.");
                 }
 
-                dto.MapToExistingEntity(existing);
+                dto.MapToExistingEntity(existing); 
 
                 await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(existing);
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
                 {
-                    var view = existing.MapToCropSeasonDetailViewDto();
+                    var updated = await _unitOfWork.CropSeasonDetailRepository.GetDetailWithIncludesAsync(dto.DetailId);
+                    var view = updated?.MapToCropSeasonDetailViewDto();
+
                     return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, view);
                 }
 
@@ -164,6 +166,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+
 
         public async Task<IServiceResult> DeleteById(Guid detailId)
         {

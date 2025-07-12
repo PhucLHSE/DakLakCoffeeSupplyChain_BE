@@ -179,7 +179,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                     x => x.RegistrationId == cropSeason.RegistrationId &&  // ✅ dùng từ DB
+                     x => x.RegistrationId == cropSeason.RegistrationId &&
                      x.StartDate.HasValue &&
                      x.StartDate.Value.Year == dto.StartDate.Year &&
                      x.CropSeasonId != dto.CropSeasonId
@@ -191,6 +191,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             dto.MapToExistingEntity(cropSeason);
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
 
+            // ✅ FIX: Ngắt navigation tránh bị EF tracking trùng entity
+            foreach (var detail in cropSeason.CropSeasonDetails)
+            {
+                detail.CoffeeType = null;
+            }
+
             await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
             var result = await _unitOfWork.SaveChangesAsync();
 
@@ -198,6 +204,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG)
                 : new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
         }
+
 
         public async Task<IServiceResult> DeleteById(Guid cropSeasonId, Guid userId, bool isAdmin)
         {

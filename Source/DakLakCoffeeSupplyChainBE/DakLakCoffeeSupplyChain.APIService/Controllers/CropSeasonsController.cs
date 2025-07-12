@@ -150,7 +150,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // ✅ Soft delete - chỉ Admin và người tạo được phép
         [HttpPatch("soft-delete/{cropSeasonId}")]
-        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")] 
         public async Task<IActionResult> SoftDeleteCropSeason(Guid cropSeasonId)
         {
             Guid userId;
