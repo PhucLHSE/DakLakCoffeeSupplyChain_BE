@@ -120,6 +120,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            // Kiểm tra quyền sở hữu hợp đồng
+            var ownershipCheck = await _contractService.GetById(contractId, userId);
+
+            if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
+
+            if (ownershipCheck.Status != Const.SUCCESS_READ_CODE)
+                return StatusCode(500, ownershipCheck.Message);
+
+            // Nếu user sở hữu hợp đồng, tiến hành update
+
             var result = await _contractService.Update(contractUpdateDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
