@@ -16,18 +16,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeId = entity.CoffeeTypeId,
                 TypeName = entity.CoffeeType?.TypeName ?? string.Empty,
                 ExpectedHarvestStart = entity.ExpectedHarvestStart,
-                ActualYield = entity.ActualYield ?? 0,
-                QualityGrade = entity.QualityGrade ?? "Chưa đánh giá",
                 ExpectedHarvestEnd = entity.ExpectedHarvestEnd,
                 EstimatedYield = entity.EstimatedYield,
+                ActualYield = entity.ActualYield ?? 0,
                 PlannedQuality = entity.PlannedQuality ?? string.Empty,
+                QualityGrade = entity.QualityGrade ?? "Chưa đánh giá",
                 Status = Enum.TryParse<CropDetailStatus>(entity.Status, true, out var parsedStatus)
                             ? parsedStatus : CropDetailStatus.Planned,
-
                 FarmerId = entity.CropSeason?.FarmerId ?? Guid.Empty,
                 FarmerName = entity.CropSeason?.Farmer?.User?.Name ?? "Không rõ"
             };
         }
+
 
 
 
@@ -54,11 +54,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.CoffeeTypeId = dto.CoffeeTypeId;
             entity.ExpectedHarvestStart = dto.ExpectedHarvestStart;
             entity.ExpectedHarvestEnd = dto.ExpectedHarvestEnd;
-            entity.EstimatedYield = dto.EstimatedYield;
-            entity.AreaAllocated = dto.AreaAllocated;
+            entity.EstimatedYield = dto.EstimatedYield ?? 0;
+            entity.AreaAllocated = dto.AreaAllocated ?? 0;
             entity.PlannedQuality = dto.PlannedQuality;
-            entity.Status = dto.Status.ToString();
-            entity.UpdatedAt = DateTime.Now;
+
+            entity.Status = dto.Status.ToString(); 
+
+            entity.UpdatedAt = DateHelper.NowVietnamTime(); 
         }
     }
-}
+    }
