@@ -1,8 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.ContractDeliveryItem;
-using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

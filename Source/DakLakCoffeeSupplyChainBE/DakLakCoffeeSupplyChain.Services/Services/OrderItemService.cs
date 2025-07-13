@@ -201,6 +201,203 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(OrderItemUpdateDto orderItemUpdateDto)
+        {
+            try
+            {
+                // Tìm orderItem theo ID
+                var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
+                    predicate: oi =>
+                       oi.OrderItemId == orderItemUpdateDto.OrderItemId &&
+                       !oi.IsDeleted,
+                    include: query => query
+                           .Include(oi => oi.ContractDeliveryItem),
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy
+                if (orderItem == null || 
+                    orderItem.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy mục đơn hàng cần cập nhật."
+                    );
+                }
+
+                // Kiểm tra đơn hàng có tồn tại không
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                    predicate: o =>
+                        o.OrderId == orderItemUpdateDto.OrderId &&
+                        !o.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (order == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Không tìm thấy đơn hàng tương ứng."
+                    );
+                }
+
+                // Kiểm tra ContractDeliveryItem
+                var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
+                    predicate: cdi =>
+                        cdi.DeliveryItemId == orderItemUpdateDto.ContractDeliveryItemId &&
+                        !cdi.IsDeleted,
+                    include: query => query
+                       .Include(cdi => cdi.ContractItem),
+                    asNoTracking: true
+                );
+
+                if (contractDeliveryItem == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy đợt giao hàng tương ứng."
+                    );
+                }
+
+                // Xác định ContractItem tương ứng
+                var contractItem = contractDeliveryItem.ContractItem;
+
+                if (contractItem == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE, 
+                        "Không xác định được dòng hợp đồng.");
+                }
+
+                // Kiểm tra Product có tồn tại không
+                var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                    predicate: p =>
+                        p.ProductId == orderItemUpdateDto.ProductId &&
+                        !p.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (product == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Không tìm thấy sản phẩm tương ứng."
+                    );
+                }
+
+                // Kiểm tra trùng OrderItem (trừ chính nó)
+                bool isDuplicate = await _unitOfWork.OrderItemRepository.AnyAsync(
+                    predicate: oi =>
+                        oi.OrderId == orderItemUpdateDto.OrderId &&
+                        oi.ContractDeliveryItemId == orderItemUpdateDto.ContractDeliveryItemId &&
+                        oi.ProductId == orderItemUpdateDto.ProductId &&
+                        oi.OrderItemId != orderItem.OrderItemId &&
+                        !oi.IsDeleted
+                );
+
+                if (isDuplicate)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Sản phẩm này đã tồn tại trong đơn hàng theo đợt giao tương ứng."
+                    );
+                }
+
+                // Kiểm tra tổng Quantity không vượt quá PlannedQuantity
+                double totalOrdered = await _unitOfWork.OrderItemRepository
+                    .SumQuantityByContractDeliveryItemAsync(orderItemUpdateDto.ContractDeliveryItemId, excludeOrderItemId: orderItem.OrderItemId);
+
+                double newQuantity = orderItemUpdateDto.Quantity ?? 0;
+                double plannedQuantity = contractDeliveryItem.PlannedQuantity;
+
+                if ((totalOrdered + newQuantity) > plannedQuantity)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Số lượng vượt quá số lượng dự kiến trong đợt giao ({plannedQuantity} kg)."
+                    );
+                }
+
+                // Lấy UnitPrice và DiscountAmount
+                double? unitPrice = orderItemUpdateDto.UnitPrice 
+                    ?? contractItem.UnitPrice;
+                double? discount = orderItemUpdateDto.DiscountAmount 
+                    ?? contractItem.DiscountAmount;
+
+                if (unitPrice is null || 
+                    unitPrice <= 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE, 
+                        "Không xác định được đơn giá hợp lệ."
+                    );
+                }
+
+                if (discount < 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE, 
+                        "Giảm giá không hợp lệ."
+                    );
+                }
+
+                // Cập nhật OrderItem từ DTO
+                orderItemUpdateDto.MapToUpdateOrderItem(
+                    orderItem, 
+                    unitPrice.Value, 
+                    discount.GetValueOrDefault()
+                );
+
+                // Cập nhật OrderItem ở repository
+                await _unitOfWork.OrderItemRepository.UpdateAsync(orderItem);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại dữ liệu mới để trả về
+                    var updatedItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
+                        predicate: oi => oi.OrderItemId == orderItem.OrderItemId,
+                        include: query => query
+                           .Include(oi => oi.Product),
+                        asNoTracking: true
+                    );
+
+                    if (updatedItem != null)
+                    {
+                        var responseDto = updatedItem.MapToOrderItemViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu vừa cập nhật."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteOrderItemById(Guid orderItemId)
         {
             try
