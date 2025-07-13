@@ -28,5 +28,27 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 )
                 .SumAsync(oi => (double?)oi.Quantity) ?? 0.0;
         }
+
+        // Tính tổng Quantity của các OrderItem thuộc ContractDeliveryItem, có thể loại trừ một OrderItem cụ thể (dùng khi cập nhật)
+        public async Task<double> SumQuantityByContractDeliveryItemAsync(
+            Guid contractDeliveryItemId, 
+            Guid? excludeOrderItemId = null)
+        {
+            var query = _context.OrderItems
+                .Where(oi =>
+                    oi.ContractDeliveryItemId == contractDeliveryItemId &&
+                    !oi.IsDeleted
+                );
+
+            if (excludeOrderItemId.HasValue)
+            {
+                query = query.Where(oi => oi.OrderItemId != excludeOrderItemId.Value);
+            }
+
+            double totalQuantity = await query
+                .SumAsync(oi => (double?)oi.Quantity ?? 0.0);
+
+            return totalQuantity;
+        }
     }
 }

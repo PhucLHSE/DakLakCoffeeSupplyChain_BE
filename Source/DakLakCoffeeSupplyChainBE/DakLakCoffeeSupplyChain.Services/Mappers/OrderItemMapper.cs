@@ -28,7 +28,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Create Mapper: OrderItemCreateDto → OrderItem
-        public static OrderItem MapToNewOrderItem(this OrderItemCreateDto dto, double unitPrice, double discountAmount)
+        public static OrderItem MapToNewOrderItem(
+            this OrderItemCreateDto dto, 
+            double unitPrice, 
+            double discountAmount)
         {
             double quantity = dto.Quantity ?? 0;
             double totalPrice = quantity * unitPrice - discountAmount;
@@ -48,6 +51,27 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false
             };
+        }
+
+        // Update Mapper: OrderItemUpdateDto → OrderItem (cập nhật thực thể có sẵn)
+        public static void MapToUpdateOrderItem(
+            this OrderItemUpdateDto dto,
+            OrderItem orderItem, 
+            double unitPrice, 
+            double discountAmount)
+        {
+            double quantity = dto.Quantity ?? 0;
+            double totalPrice = quantity * unitPrice - discountAmount;
+
+            orderItem.OrderId = dto.OrderId;
+            orderItem.ContractDeliveryItemId = dto.ContractDeliveryItemId;
+            orderItem.ProductId = dto.ProductId;
+            orderItem.Quantity = quantity;
+            orderItem.UnitPrice = unitPrice;
+            orderItem.DiscountAmount = discountAmount;
+            orderItem.TotalPrice = totalPrice;
+            orderItem.Note = dto.Note ?? string.Empty;
+            orderItem.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }
