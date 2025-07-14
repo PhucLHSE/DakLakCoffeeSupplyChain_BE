@@ -60,13 +60,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                     new Claim("name", user.Name),
                     new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User")
+                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User"),
+                    new Claim("avatar", user.ProfilePictureUrl ?? ""),
                 }),
                 Expires = DateTime.UtcNow.AddHours(3),
                 Issuer = _config["Jwt:Issuer"],
                 Audience = _config["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
+            }; 
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
