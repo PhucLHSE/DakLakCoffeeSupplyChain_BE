@@ -87,5 +87,34 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+
+        // GET api/FarmingCommitment/Farmer/AvailableForCropSeason
+        [HttpGet("Farmer/AvailableForCropSeason")]
+        [EnableQuery]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetAvailableCommitmentsForCropSeason()
+        {
+            Guid userId;
+
+            try
+            {
+                userId = User.GetUserId(); // Lấy từ token
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được người dùng.");
+            }
+
+            var result = await _service.GetAvailableForCropSeason(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
     }
 }

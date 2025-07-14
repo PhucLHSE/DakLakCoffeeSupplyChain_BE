@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -149,5 +150,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        //Minh làm thêm cái này để lọc 
+        public async Task<IServiceResult> GetAvailableForCropSeason(Guid userId)
+        {
+            // Tìm farmer
+            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                predicate: f => f.UserId == userId && !f.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (farmer == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Farmer tương ứng với tài khoản."
+                );
+            }
+
+            // Lấy tất cả cam kết active của farmer
+            var allCommitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                predicate: c =>
+                    c.FarmerId == farmer.FarmerId &&
+                    c.Status == FarmingCommitmentStatus.Active.ToString() &&
+                    !c.IsDeleted,
+                include: c => c.Include(c => c.Farmer).ThenInclude(f => f.User),
+                asNoTracking: true
+            );
+
+            // Lọc ra những commitment chưa bị dùng để tạo mùa vụ
+            var available = new List<Repositories.Models.FarmingCommitment>();
+
+            foreach (var c in allCommitments)
+            {
+                bool used = await _unitOfWork.CropSeasonRepository.ExistsAsync(
+                    cs => cs.CommitmentId == c.CommitmentId && !cs.IsDeleted
+                );
+
+                if (!used)
+                    available.Add(c);
+            }
+
+            var dtoList = available.Select(c => c.MapToFarmingCommitmentViewAllDto()).ToList();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                dtoList
+            );
+        }
+
     }
 }
