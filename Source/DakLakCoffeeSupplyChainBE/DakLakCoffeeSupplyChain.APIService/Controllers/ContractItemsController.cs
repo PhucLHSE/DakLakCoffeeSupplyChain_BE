@@ -100,7 +100,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{contractItemId}")]
         public async Task<IActionResult> SoftDeleteContractItemByIdAsync(Guid contractItemId)
         {
-            var result = await _contractItemService.SoftDeleteContractItemById(contractItemId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService.SoftDeleteContractItemById(contractItemId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");

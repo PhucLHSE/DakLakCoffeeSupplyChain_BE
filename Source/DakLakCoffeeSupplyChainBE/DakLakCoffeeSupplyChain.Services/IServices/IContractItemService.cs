@@ -16,6 +16,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> DeleteContractItemById(Guid contractItemId, Guid userId);
 
-        Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId);
+        Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId, Guid userId);
     }
 }
