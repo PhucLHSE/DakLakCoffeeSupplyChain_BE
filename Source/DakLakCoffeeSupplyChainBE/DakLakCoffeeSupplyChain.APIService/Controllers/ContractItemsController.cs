@@ -29,7 +29,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _contractItemService.Create(contractItemCreateDto);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService.Create(contractItemCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(201, result.Data);

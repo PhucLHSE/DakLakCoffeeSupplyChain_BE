@@ -29,10 +29,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> Create(ContractItemCreateDto contractItemDto)
+        public async Task<IServiceResult> Create(ContractItemCreateDto contractItemDto, Guid userId)
         {
             try
             {
+                // Kiểm tra BusinessManager có tồn tại hay không
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Kiểm tra Contract có tồn tại không
                 var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
                     predicate: c => 
@@ -61,9 +77,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE, 
-                        "Loại cà phê này đã có trong hợp đồng.");
+                        "Loại cà phê này đã có trong hợp đồng."
+                    );
                 }
-
 
                 // Sinh mã định danh cho ContractItem
                 string contractItemCode = await _codeGenerator.GenerateContractItemCodeAsync(contractItemDto.ContractId);
@@ -112,6 +128,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
