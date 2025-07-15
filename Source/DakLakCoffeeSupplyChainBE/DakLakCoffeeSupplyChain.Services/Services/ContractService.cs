@@ -32,6 +32,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetAll(Guid userId)
         {
+            // Lấy BusinessManager hiện tại từ userId
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                 predicate: m => 
                    m.UserId == userId &&

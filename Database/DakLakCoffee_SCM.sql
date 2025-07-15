@@ -47,7 +47,7 @@ CREATE TABLE UserAccounts (
   EmailVerified BIT DEFAULT 0,                                  -- Trạng thái xác thực email
   VerificationCode VARCHAR(10),                                 -- Mã xác thực nếu cần
   IsVerified BIT DEFAULT 0,                                     -- Đã xác thực (qua OTP/email)
-  LoginType NVARCHAR(20) DEFAULT 'local',                       -- Phương thức login: local, google,...
+  LoginType NVARCHAR(20) DEFAULT 'System',                      -- Phương thức login: system, google,...
   Status NVARCHAR(20) DEFAULT 'active',                         -- Trạng thái tài khoản
   RoleID INT NOT NULL,                                          -- Vai trò người dùng
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật
