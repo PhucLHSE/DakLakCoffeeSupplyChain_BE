@@ -153,7 +153,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> DeleteContractByIdAsync(Guid deliveryBatchId)
         {
-            var result = await _contractDeliveryBatchService.DeleteContractDeliveryBatchById(deliveryBatchId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractDeliveryBatchService.DeleteContractDeliveryBatchById(deliveryBatchId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
