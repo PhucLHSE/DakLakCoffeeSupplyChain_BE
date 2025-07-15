@@ -289,7 +289,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Sinh mã giao hàng
                 string deliveryBatchCode = await _codeGenerator.GenerateDeliveryBatchCodeAsync();
 
-                // Map DTO sang Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newDeliveryBatch = contractDeliveryBatchDto.MapToNewContractDeliveryBatch(deliveryBatchCode);
 
                 // Lưu vào DB
@@ -312,6 +312,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdContractDeliveryBatch != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = createdContractDeliveryBatch.MapToContractDeliveryBatchViewDetailDto();
 
                         return new ServiceResult(
@@ -334,6 +335,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION, 
                     ex.Message
@@ -444,7 +446,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 contractDeliveryBatchDto.MapToUpdatedContractDeliveryBatch(deliveryBatch);
 
                 // Đồng bộ ContractDeliveryItems
@@ -520,6 +522,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedBatch != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = updatedBatch.MapToContractDeliveryBatchViewDetailDto();
 
                         return new ServiceResult(
@@ -544,6 +547,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -551,15 +555,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteContractDeliveryBatchById(Guid deliveryBatchId)
+        public async Task<IServiceResult> DeleteContractDeliveryBatchById(Guid deliveryBatchId, Guid userId)
         {
             try
             {
+                // Lấy ManagerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s => 
+                           s.UserId == userId && 
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm ContractDeliveryBatch theo ID kèm danh sách ContractDeliveryItems
                 var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: cdb => 
                        cdb.DeliveryBatchId == deliveryBatchId && 
-                       !cdb.IsDeleted,
+                       !cdb.IsDeleted &&
+                       cdb.Contract != null &&
+                       cdb.Contract.SellerId == managerId,
                     include: query => query
                        .Include(cdb => cdb.ContractDeliveryItems),
                     asNoTracking: false
