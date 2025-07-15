@@ -600,7 +600,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: cdb => 
                        cdb.DeliveryBatchId == deliveryBatchId && 
-                       !cdb.IsDeleted &&
                        cdb.Contract != null &&
                        cdb.Contract.SellerId == managerId,
                     include: query => query
@@ -661,13 +660,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId)
+        public async Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId, Guid userId)
         {
             try
             {
+                // Lấy ManagerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s =>
+                           s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryBatch theo ID
                 var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
-                    predicate: cdb => cdb.DeliveryBatchId == deliveryBatchId,
+                    predicate: cdb => 
+                       cdb.DeliveryBatchId == deliveryBatchId &&
+                       cdb.Contract != null &&
+                       cdb.Contract.SellerId == managerId,
                     include: query => query
                        .Include(cdb => cdb.ContractDeliveryItems),
                     asNoTracking: false
