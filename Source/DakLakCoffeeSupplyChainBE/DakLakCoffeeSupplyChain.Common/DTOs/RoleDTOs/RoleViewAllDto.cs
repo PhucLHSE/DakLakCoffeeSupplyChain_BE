@@ -16,6 +16,5 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public RoleStatus Status { get; set; } = RoleStatus.Inactive;
-
     }
 }

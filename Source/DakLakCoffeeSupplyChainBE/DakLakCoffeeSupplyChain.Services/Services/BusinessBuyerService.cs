@@ -32,7 +32,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll(Guid userId)
         {
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                predicate: m => m.UserId == userId,
+                predicate: m => 
+                   m.UserId == userId && 
+                   !m.IsDeleted,
                 asNoTracking: true
             );
 

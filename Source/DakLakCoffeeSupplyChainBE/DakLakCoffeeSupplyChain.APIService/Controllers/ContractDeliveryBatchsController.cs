@@ -55,7 +55,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetById(Guid deliveryBatchId)
         {
-            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -176,7 +188,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> ContractDeliveryBatchExistsAsync(Guid deliveryBatchId)
         {
-            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return false;
+            }
+
+            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

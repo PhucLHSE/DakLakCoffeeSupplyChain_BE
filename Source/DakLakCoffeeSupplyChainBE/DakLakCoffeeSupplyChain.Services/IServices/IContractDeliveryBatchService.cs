@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> GetAll(Guid userId);
 
-        Task<IServiceResult> GetById(Guid deliveryBatchId);
+        Task<IServiceResult> GetById(Guid deliveryBatchId, Guid userId);
 
         Task<IServiceResult> Create(ContractDeliveryBatchCreateDto contractDeliveryBatchDto, Guid userId);
 
