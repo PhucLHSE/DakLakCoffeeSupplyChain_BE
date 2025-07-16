@@ -18,9 +18,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Update(UserAccountUpdateDto userDto);
 
-        Task<IServiceResult> DeleteById(Guid userId, Guid currentUserId, string currentUserRole);
+        Task<IServiceResult> DeleteUserAccountById(Guid userId, Guid currentUserId, string currentUserRole);
 
-        Task<IServiceResult> SoftDeleteById(Guid userId);
+        Task<IServiceResult> SoftDeleteUserAccountById(Guid userId);
 
         Task<bool> CanAccessUser(Guid currentUserId, string currentUserRole, Guid targetUserId);
     }

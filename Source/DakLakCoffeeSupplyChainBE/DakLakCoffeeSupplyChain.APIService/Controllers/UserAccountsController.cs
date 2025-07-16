@@ -38,7 +38,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _userAccountService.GetAll(userId, userRole);
+            var result = await _userAccountService
+                .GetAll(userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);         
@@ -69,12 +70,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Gọi service để kiểm tra quyền truy cập
-            var canAccess = await _userAccountService.CanAccessUser(currentUserId, currentUserRole, userId);
+            var canAccess = await _userAccountService
+                .CanAccessUser(currentUserId, currentUserRole, userId);
 
             if (!canAccess)
                 return StatusCode(403, "Bạn không có quyền truy cập thông tin người dùng này.");
 
-            var result = await _userAccountService.GetById(userId);
+            var result = await _userAccountService
+                .GetById(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              
@@ -88,7 +91,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<UserAccountsController>
         [HttpPost]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> CreateUserAccountAsync([FromBody] UserAccountCreateDto userDto)
+        public async Task<IActionResult> CreateUserAccountAsync(
+            [FromBody] UserAccountCreateDto userDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -107,7 +111,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _userAccountService.Create(userDto, userId, userRole);
+            var result = await _userAccountService
+                .Create(userDto, userId, userRole);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), 
@@ -123,7 +128,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<UserAccountsController>/{userId}
         [HttpPut("{userId}")]
         [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer,DeliveryStaff")]
-        public async Task<IActionResult> UpdateUserAccountAsync(Guid userId, [FromBody] UserAccountUpdateDto userDto)
+        public async Task<IActionResult> UpdateUserAccountAsync(
+            Guid userId, 
+            [FromBody] UserAccountUpdateDto userDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (userId != userDto.UserId)
@@ -153,7 +160,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!canAccess)
                 return StatusCode(403, "Bạn không có quyền cập nhật thông tin người dùng này.");
 
-            var result = await _userAccountService.Update(userDto);
+            var result = await _userAccountService
+                .Update(userDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -186,7 +194,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _userAccountService.DeleteById(userId, currentUserId, currentUserRole);
+            var result = await _userAccountService
+                .DeleteUserAccountById(userId, currentUserId, currentUserRole);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -226,7 +235,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!canAccess)
                 return StatusCode(403, "Bạn không có quyền xóa người dùng này.");
 
-            var result = await _userAccountService.SoftDeleteById(userId);
+            var result = await _userAccountService
+                .SoftDeleteUserAccountById(userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -242,7 +252,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> UserAccountExistsAsync(Guid userId)
         {
-            var result = await _userAccountService.GetById(userId);
+            var result = await _userAccountService
+                .GetById(userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

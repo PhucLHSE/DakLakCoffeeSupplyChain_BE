@@ -38,7 +38,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.GetAll(userId);
+            var result = await _productService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -66,7 +67,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.GetById(productId, userId);
+            var result = await _productService
+                .GetById(productId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -80,7 +82,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<ProductsController>
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> CreateProductAsync([FromBody] ProductCreateDto productCreateDto)
+        public async Task<IActionResult> CreateProductAsync(
+            [FromBody] ProductCreateDto productCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -97,7 +100,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.Create(productCreateDto, userId);
+            var result = await _productService
+                .Create(productCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -113,7 +117,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<ProductsController>/{productId}
         [HttpPut("{productId}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> UpdateProductAsync(Guid productId, [FromBody] ProductUpdateDto productUpdateDto)
+        public async Task<IActionResult> UpdateProductAsync(
+            Guid productId, 
+            [FromBody] ProductUpdateDto productUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (productId != productUpdateDto.ProductId)
@@ -134,7 +140,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.Update(productUpdateDto, userId);
+            var result = await _productService
+                .Update(productUpdateDto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -165,7 +172,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.DeleteProductById(productId, userId);
+            var result = await _productService
+                .DeleteProductById(productId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -196,7 +204,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _productService.SoftDeleteProductById(productId, userId);
+            var result = await _productService
+                .SoftDeleteProductById(productId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -224,7 +233,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false; // Không xác định được user → không kiểm tra được
             }
 
-            var result = await _productService.GetById(productId, userId);
+            var result = await _productService
+                .GetById(productId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

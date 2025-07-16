@@ -705,6 +705,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: cdb => 
                        cdb.DeliveryBatchId == deliveryBatchId &&
+                       !cdb.IsDeleted &&
                        cdb.Contract != null &&
                        cdb.Contract.SellerId == managerId,
                     include: query => query
