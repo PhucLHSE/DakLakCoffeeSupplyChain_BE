@@ -21,12 +21,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<ContractItemsController>
         [HttpPost]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> CreateContractDeliveryItemAsync([FromBody] ContractDeliveryItemCreateDto contractDeliveryItemCreateDto)
+        public async Task<IActionResult> CreateContractDeliveryItemAsync(
+            [FromBody] ContractDeliveryItemCreateDto contractDeliveryItemCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _contractDeliveryItemService.Create(contractDeliveryItemCreateDto);
+            var result = await _contractDeliveryItemService
+                .Create(contractDeliveryItemCreateDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(201, result.Data);
@@ -40,7 +42,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<ContractDeliveryItemsController>/{deliveryItemId}
         [HttpPut("{deliveryItemId}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> UpdateContractItemAsync(Guid deliveryItemId, [FromBody] ContractDeliveryItemUpdateDto contractDeliveryItemUpdate)
+        public async Task<IActionResult> UpdateContractItemAsync(
+            Guid deliveryItemId, 
+            [FromBody] ContractDeliveryItemUpdateDto contractDeliveryItemUpdate)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (deliveryItemId != contractDeliveryItemUpdate.DeliveryItemId)
@@ -49,7 +53,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _contractDeliveryItemService.Update(contractDeliveryItemUpdate);
+            var result = await _contractDeliveryItemService
+                .Update(contractDeliveryItemUpdate);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -80,7 +85,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryItemService.DeleteContractDeliveryItemById(deliveryItemId, userId);
+            var result = await _contractDeliveryItemService
+                .DeleteContractDeliveryItemById(deliveryItemId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -99,7 +105,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteContractDeliveryItemByIdAsync(Guid deliveryItemId)
         {
-            var result = await _contractDeliveryItemService.SoftDeleteContractDeliveryItemById(deliveryItemId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractDeliveryItemService
+                .SoftDeleteContractDeliveryItemById(deliveryItemId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
