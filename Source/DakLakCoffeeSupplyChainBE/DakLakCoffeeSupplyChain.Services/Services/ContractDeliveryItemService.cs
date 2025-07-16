@@ -277,13 +277,52 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId)
+        public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: 
+                           s => s.UserId == userId && 
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                    predicate: cdi => cdi.DeliveryItemId == deliveryItemId,
+                    predicate: cdi => 
+                       cdi.DeliveryItemId == deliveryItemId &&
+                       cdi.ContractItem.Contract.SellerId == managerId,
                     include: query => query
                            .Include(cdi => cdi.ContractItem)
                            .Include(cdi => cdi.DeliveryBatch),
