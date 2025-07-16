@@ -78,6 +78,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
 
+        // DELETE api/<OrdersController>/{orderId}
+        [HttpDelete("{orderId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> DeleteOrderByIdAsync(Guid orderId)
+        {
+            var result = await _orderService
+                .DeleteOrderById(orderId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn hàng cần xóa.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // PATCH: api/<OrdersController>/soft-delete/{orderId}
         [HttpPatch("soft-delete/{orderId}")]
         [Authorize(Roles = "BusinessManager")]

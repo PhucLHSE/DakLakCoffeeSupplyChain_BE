@@ -617,17 +617,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // Xóa từng ContractItem trước (nếu có)
+                    // Xóa từng ContractDeliveryItem trước (nếu có)
                     if (contractDeliveryBatch.ContractDeliveryItems != null && 
                         contractDeliveryBatch.ContractDeliveryItems.Any())
                     {
                         foreach (var item in contractDeliveryBatch.ContractDeliveryItems)
                         {
+                            // Xóa ContractDeliveryItem khỏi repository
                             await _unitOfWork.ContractDeliveryItemRepository.RemoveAsync(item);
                         }
                     }
 
-                    // Xóa ContractDeliveryItem  khỏi repository
+                    // Xóa ContractDeliveryBatch khỏi repository
                     await _unitOfWork.ContractDeliveryBatchRepository.RemoveAsync(contractDeliveryBatch);
 
                     // Lưu thay đổi
