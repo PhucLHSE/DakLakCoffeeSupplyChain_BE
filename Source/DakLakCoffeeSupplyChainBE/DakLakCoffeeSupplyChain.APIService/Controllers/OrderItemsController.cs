@@ -20,12 +20,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<OrderItemsController>
         [HttpPost]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> CreateOrderItemAsync([FromBody] OrderItemCreateDto orderItemCreateDto)
+        public async Task<IActionResult> CreateOrderItemAsync(
+            [FromBody] OrderItemCreateDto orderItemCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _orderItemService.Create(orderItemCreateDto);
+            var result = await _orderItemService
+                .Create(orderItemCreateDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(201, result.Data);
@@ -39,7 +41,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<OrderItemsController>/{orderItemId}
         [HttpPut("{orderItemId}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> UpdateContractItemAsync(Guid orderItemId, [FromBody] OrderItemUpdateDto orderItemUpdateDto)
+        public async Task<IActionResult> UpdateContractItemAsync(
+            Guid orderItemId, 
+            [FromBody] OrderItemUpdateDto orderItemUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (orderItemId != orderItemUpdateDto.OrderItemId)
@@ -48,7 +52,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _orderItemService.Update(orderItemUpdateDto);
+            var result = await _orderItemService
+                .Update(orderItemUpdateDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -67,7 +72,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> DeleteOrderItemByIdAsync(Guid orderItemId)
         {
-            var result = await _orderItemService.DeleteOrderItemById(orderItemId);
+            var result = await _orderItemService
+                .DeleteOrderItemById(orderItemId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -86,7 +92,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteOrderItemByIdAsync(Guid orderItemId)
         {
-            var result = await _orderItemService.SoftDeleteOrderItemById(orderItemId);
+            var result = await _orderItemService
+                .SoftDeleteOrderItemById(orderItemId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");

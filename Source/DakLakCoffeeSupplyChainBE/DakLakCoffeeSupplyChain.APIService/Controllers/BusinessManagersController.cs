@@ -25,7 +25,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllBussinessManagersAsync()
         {
-            var result = await _businessManagerService.GetAll();
+            var result = await _businessManagerService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -55,7 +56,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _businessManagerService.GetById(managerId, userId, userRole);
+            var result = await _businessManagerService
+                .GetById(managerId, userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -76,7 +78,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _businessManagerService.Create(businessManagerCreateDto, userId);
+            var result = await _businessManagerService
+                .Create(businessManagerCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), 
@@ -92,7 +95,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<BusinessManagersController>/{managerId}
         [HttpPut("{managerId}")]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> UpdateBusinessManagerAsync(Guid managerId, [FromBody] BusinessManagerUpdateDto businessManagerDto)
+        public async Task<IActionResult> UpdateBusinessManagerAsync(
+            Guid managerId, 
+            [FromBody] BusinessManagerUpdateDto businessManagerDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (managerId != businessManagerDto.ManagerId)
@@ -115,7 +120,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _businessManagerService.Update(businessManagerDto, userId, userRole);
+            var result = await _businessManagerService
+                .Update(businessManagerDto, userId, userRole);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -134,7 +140,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBusinessManagerByIdAsync(Guid managerId)
         {
-            var result = await _businessManagerService.DeleteBusinessManagerById(managerId);
+            var result = await _businessManagerService
+                .DeleteBusinessManagerById(managerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -166,7 +173,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId hoặc role từ token.");
             }
 
-            var result = await _businessManagerService.SoftDeleteBusinessManagerById(managerId, userId, userRole);
+            var result = await _businessManagerService
+                .SoftDeleteBusinessManagerById(managerId, userId, userRole);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -196,7 +204,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false; // Không xác định được user → không kiểm tra được
             }
 
-            var result = await _businessManagerService.GetById(managerId, userId, userRole);
+            var result = await _businessManagerService
+                .GetById(managerId, userId, userRole);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

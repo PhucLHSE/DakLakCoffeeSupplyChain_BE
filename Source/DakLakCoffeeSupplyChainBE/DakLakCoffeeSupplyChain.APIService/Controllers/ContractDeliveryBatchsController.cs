@@ -39,7 +39,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.GetAll(userId);
+            var result = await _contractDeliveryBatchService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -67,7 +68,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId, userId);
+            var result = await _contractDeliveryBatchService
+                .GetById(deliveryBatchId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -81,7 +83,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<ContractDeliveryBatchsController>
         [HttpPost]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> CreateContractDeliveryBatchAsync([FromBody] ContractDeliveryBatchCreateDto contractDeliveryBatchDto)
+        public async Task<IActionResult> CreateContractDeliveryBatchAsync(
+            [FromBody] ContractDeliveryBatchCreateDto contractDeliveryBatchDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -98,7 +101,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.Create(contractDeliveryBatchDto, userId);
+            var result = await _contractDeliveryBatchService
+                .Create(contractDeliveryBatchDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -113,7 +117,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<ContractDeliveryBatchsController>/{deliveryBatchId}
         [HttpPut("{deliveryBatchId}")]
-        public async Task<IActionResult> UpdateContractDeliveryBatchAsync(Guid deliveryBatchId, [FromBody] ContractDeliveryBatchUpdateDto contractDeliveryBatchDto)
+        public async Task<IActionResult> UpdateContractDeliveryBatchAsync(
+            Guid deliveryBatchId,
+            [FromBody] ContractDeliveryBatchUpdateDto contractDeliveryBatchDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (deliveryBatchId != contractDeliveryBatchDto.DeliveryBatchId)
@@ -134,7 +140,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.Update(contractDeliveryBatchDto, userId);
+            var result = await _contractDeliveryBatchService
+                .Update(contractDeliveryBatchDto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -165,7 +172,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.DeleteContractDeliveryBatchById(deliveryBatchId, userId);
+            var result = await _contractDeliveryBatchService
+                .DeleteContractDeliveryBatchById(deliveryBatchId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -196,7 +204,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractDeliveryBatchService.SoftDeleteContractDeliveryBatchById(deliveryBatchId, userId);
+            var result = await _contractDeliveryBatchService
+                .SoftDeleteContractDeliveryBatchById(deliveryBatchId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -224,7 +233,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false;
             }
 
-            var result = await _contractDeliveryBatchService.GetById(deliveryBatchId, userId);
+            var result = await _contractDeliveryBatchService
+                .GetById(deliveryBatchId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }
