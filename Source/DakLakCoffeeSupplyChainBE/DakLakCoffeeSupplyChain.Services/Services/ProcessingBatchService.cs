@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -45,240 +46,161 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
-        public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin = false)
+        public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager)
         {
-            List<ProcessingBatch> batches;
-
-            if (isAdmin)
+            if (isAdmin || isManager)
             {
-                // Admin xem tất cả
-                batches = await _unitOfWork.ProcessingBatchRepository
-                    .GetQueryable()
-                    .Include(pb => pb.CropSeason)
-                    .Include(pb => pb.Farmer).ThenInclude(f => f.User)
-                    .Include(pb => pb.Method)
-                    .Include(pb => pb.ProcessingBatchProgresses)
-                    .Where(pb => !pb.IsDeleted)
-                    .ToListAsync();
+                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: x => !x.IsDeleted,
+                    include: query => query
+                        .Include(x => x.Method)
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User)
+                        .Include(x => x.ProcessingBatchProgresses),
+                    orderBy: q => q.OrderByDescending(x => x.CreatedAt),
+                    asNoTracking: true
+                );
+
+                if (!batches.Any())
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+
+                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
             }
             else
             {
-                // Farmer chỉ xem batch của chính họ
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
                 if (farmer == null)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng.", new List<ProcessingBatchViewDto>());
-                }
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
 
-                batches = await _unitOfWork.ProcessingBatchRepository
-                    .GetQueryable()
-                    .Include(pb => pb.CropSeason)
-                    .Include(pb => pb.Farmer).ThenInclude(f => f.User)
-                    .Include(pb => pb.Method)
-                    .Include(pb => pb.ProcessingBatchProgresses)
-                    .Where(pb => pb.FarmerId == farmer.FarmerId && !pb.IsDeleted)
-                    .ToListAsync();
-            }
-
-            if (!batches.Any())
-            {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có dữ liệu ProcessingBatch.", new List<ProcessingBatchViewDto>());
-            }
-
-            var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
-        }
-        public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
-        {
-            try
-            {
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ người dùng có vai trò Nông hộ (Farmer) mới được phép tạo mẻ sơ chế.");
-
-                var cropSeasonExists = await _unitOfWork.CropSeasonRepository.AnyAsync(
-                    x => x.CropSeasonId == dto.CropSeasonId && !x.IsDeleted);
-                if (!cropSeasonExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Vụ mùa không tồn tại.");
-
-                var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
-                    x => x.CoffeeTypeId == dto.CoffeeTypeId && !x.IsDeleted);
-                if (!coffeeTypeExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại cà phê không tồn tại.");
-
-                var methodExists = await _unitOfWork.ProcessingMethodRepository.AnyAsync(
-                    x => x.MethodId == dto.MethodId);
-                if (!methodExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Phương pháp sơ chế không tồn tại.");
-
-                var systemBatchCode = await _codeGenerator.GenerateProcessingSystemBatchCodeAsync(DateTime.UtcNow.Year);
-
-                var batch = new ProcessingBatch
-                {
-                    BatchId = Guid.NewGuid(),
-                    SystemBatchCode = systemBatchCode,
-                    BatchCode = dto.BatchCode?.Trim(),
-                    CoffeeTypeId = dto.CoffeeTypeId,
-                    CropSeasonId = dto.CropSeasonId,
-                    FarmerId = farmer.FarmerId,
-                    MethodId = dto.MethodId,
-                    InputQuantity = dto.InputQuantity,
-                    InputUnit = dto.InputUnit?.Trim(),
-                    CreatedAt = DateTime.UtcNow,
-                    Status = "pending",
-                    IsDeleted = false
-                };
-
-                // kiểm tra trùng mã batchCode
-                var isDuplicate = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
-                    x => x.BatchCode == batch.BatchCode && !x.IsDeleted);
-                if (isDuplicate)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Mã lô đã tồn tại.");
-                }
-
-                // thiếu dòng này khiến SaveChangesAsync không có gì để lưu
-                await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
-
-                var result = await _unitOfWork.SaveChangesAsync();
-                if (result <= 0)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
-
-                var createdBatch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    x => x.BatchId == batch.BatchId && !x.IsDeleted,
-                    include: q => q
-                        .Include(b => b.CropSeason)
-                        .Include(b => b.Farmer).ThenInclude(f => f.User)
-                        .Include(b => b.Method),
-                    asNoTracking: true
-                );
-
-                if (createdBatch != null)
-                {
-                    var viewDto = createdBatch.MapToProcessingBatchViewDto();
-                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, viewDto);
-                }
-
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo thành công nhưng không truy xuất được bản ghi.");
-            }
-            catch (Exception ex)
-            {
-                var innerMessage = ex.InnerException?.Message ?? ex.Message;
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi lưu DB: {innerMessage}");
-            }
-        }
-        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId)
-        {
-            try
-            {
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chỉ Farmer mới được phép cập nhật mẻ sơ chế.");
-
-                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == dto.BatchId && !x.IsDeleted,
-                    asNoTracking: false
-                );
-
-                if (batch == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế cần cập nhật.");
-
-                if (batch.FarmerId != farmer.FarmerId)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không được phép cập nhật mẻ sơ chế của người khác.");
-
-                var cropSeasonExists = await _unitOfWork.CropSeasonRepository.AnyAsync(
-                    x => x.CropSeasonId == dto.CropSeasonId && !x.IsDeleted);
-                if (!cropSeasonExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Vụ mùa không tồn tại.");
-
-                var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
-                    x => x.CoffeeTypeId == dto.CoffeeTypeId && !x.IsDeleted);
-                if (!coffeeTypeExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại cà phê không tồn tại.");
-
-                var methodExists = await _unitOfWork.ProcessingMethodRepository.AnyAsync(
-                    x => x.MethodId == dto.MethodId);
-                if (!methodExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Phương pháp sơ chế không tồn tại.");
-
-                // Cập nhật dữ liệu
-                batch.BatchCode = dto.BatchCode?.Trim();
-                batch.CoffeeTypeId = dto.CoffeeTypeId;
-                batch.CropSeasonId = dto.CropSeasonId;
-                batch.MethodId = dto.MethodId;
-                batch.InputQuantity = dto.InputQuantity;
-                batch.InputUnit = dto.InputUnit?.Trim();
-                batch.UpdatedAt = DateTime.UtcNow;
-
-                _unitOfWork.ProcessingBatchRepository.PrepareUpdate(batch);
-                var result = await _unitOfWork.SaveChangesAsync();
-
-                if (result <= 0)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
-
-                var updated = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == dto.BatchId,
-                    include: q => q
+                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: x => !x.IsDeleted && x.FarmerId == farmer.FarmerId,
+                    include: query => query
+                        .Include(x => x.Method)
                         .Include(x => x.CropSeason)
                         .Include(x => x.Farmer).ThenInclude(f => f.User)
-                        .Include(x => x.Method),
+                        .Include(x => x.ProcessingBatchProgresses),
+                    orderBy: q => q.OrderByDescending(x => x.CreatedAt),
                     asNoTracking: true
                 );
 
-                var viewDto = updated?.MapToProcessingBatchViewDto();
-                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, viewDto);
-            }
-            catch (Exception ex)
-            {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+                if (!batches.Any())
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+
+                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
             }
         }
-        public async Task<IServiceResult> SoftDeleteAsync(Guid batchId, Guid userId)
+
+        public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
         {
-            try
+            // 1. Kiểm tra quyền và tìm Farmer
+            var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+            if (farmer == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo lô sơ chế.");
+
+            // 2. Kiểm tra mùa vụ
+            var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
+            if (cropSeason == null || cropSeason.IsDeleted)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Mùa vụ không hợp lệ.");
+
+            // 3. Kiểm tra phương pháp sơ chế
+            var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(dto.MethodId);
+            if (method == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Phương pháp sơ chế không hợp lệ.");
+
+            // 4. Sinh mã SystemBatchCode từ năm mùa vụ
+            int year = cropSeason.StartDate?.Year ?? DateTime.Now.Year;
+            string systemBatchCode = await _codeGenerator.GenerateProcessingSystemBatchCodeAsync(year);
+
+            // 5. Tạo entity mới
+            var batch = new ProcessingBatch
             {
-                // Lấy Farmer theo userId
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                {
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Farmer mới có quyền xóa mẻ sơ chế.");
-                }
+                BatchId = Guid.NewGuid(),
+                BatchCode = dto.BatchCode?.Trim(),
+                SystemBatchCode = systemBatchCode,
+                CropSeasonId = dto.CropSeasonId,
+                CoffeeTypeId = dto.CoffeeTypeId,
+                MethodId = dto.MethodId,
+                InputQuantity = dto.InputQuantity,
+                InputUnit = dto.InputUnit?.Trim(),
+                FarmerId = farmer.FarmerId,
+                Status = ProcessingStatus.NotStarted.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
 
-                // Tìm mẻ sơ chế cần xóa
-                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
-                    asNoTracking: false
-                );
+            // 6. Ghi DB
+            await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
+            var saveResult = await _unitOfWork.SaveChangesAsync();
 
-                if (batch == null)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
-                }
+            if (saveResult <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo lô sơ chế thất bại.");
 
-                // Chặn xóa nếu không phải của Farmer hiện tại
-                if (batch.FarmerId != farmer.FarmerId)
-                {
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Không được xóa mẻ sơ chế của người khác.");
-                }
+            // 7. Truy xuất lại bản ghi để trả về DTO
+            var created = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                x => x.BatchId == batch.BatchId,
+                include: q => q
+                    .Include(x => x.Method)
+                    .Include(x => x.CropSeason)
+                    .Include(x => x.Farmer).ThenInclude(f => f.User),
+                asNoTracking: true
+            );
 
-                batch.IsDeleted = true;
-                batch.UpdatedAt = DateTime.UtcNow;
+            var dtoResult = created?.MapToProcessingBatchViewDto();
+            return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, dtoResult);
+        }
 
-                _unitOfWork.ProcessingBatchRepository.PrepareUpdate(batch);
+        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin)
+        {
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
+            if (batch == null || batch.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-                var result = await _unitOfWork.SaveChangesAsync();
+            // Quyền truy cập
+            if (!isAdmin && batch.Farmer?.UserId != userId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật lô sơ chế này.");
 
-                if (result > 0)
-                {
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm mẻ sơ chế thành công.");
-                }
+            // Cập nhật thông tin
+            batch.CoffeeTypeId = dto.CoffeeTypeId;
+            batch.CropSeasonId = dto.CropSeasonId;
+            batch.MethodId = dto.MethodId;
+            batch.InputQuantity = dto.InputQuantity;
+            batch.InputUnit = dto.InputUnit?.Trim();
+            batch.Status = dto.Status.ToString();
+            batch.UpdatedAt = DateTime.UtcNow;
 
-                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
-            }
-            catch (Exception ex)
-            {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
-            }
+            await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công.")
+                : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại.");
+        }
+
+        public async Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin)
+        {
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                predicate: b => b.BatchId == id && !b.IsDeleted,
+                include: q => q.Include(b => b.Farmer).ThenInclude(f => f.User)
+            );
+
+            if (batch == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Lô sơ chế không tồn tại.");
+
+            if (!isAdmin && batch.Farmer?.UserId != userId)
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá lô sơ chế này.");
+
+            batch.IsDeleted = true;
+            batch.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
         }
         public async Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId)
         {
@@ -320,53 +242,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
-        public async Task<IServiceResult> GetByIdAsync(Guid batchId, Guid userId, bool isAdmin)
+        public async Task<IServiceResult> GetByIdAsync(Guid id, Guid userId, bool isAdmin)
         {
-            ProcessingBatch? batch;
-
-            if (isAdmin)
-            {
-                batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
-                    include: q => q
-                        .Include(b => b.CropSeason)
-                        .Include(b => b.Farmer).ThenInclude(f => f.User)
-                        .Include(b => b.Method)
-                        .Include(b => b.Products).ThenInclude(p => p.CoffeeType)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.Stage)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.ProcessingParameters)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.UpdatedByNavigation),
-                    asNoTracking: true
-                );
-            }
-            else
-            {
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy farmer tương ứng.");
-                }
-
-                batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == batchId && x.FarmerId == farmer.FarmerId && !x.IsDeleted,
-                    include: q => q
-                        .Include(b => b.CropSeason)
-                        .Include(b => b.Farmer).ThenInclude(f => f.User)
-                        .Include(b => b.Method)
-                        .Include(b => b.Products).ThenInclude(p => p.CoffeeType)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.Stage)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.ProcessingParameters)
-                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.UpdatedByNavigation),
-                    asNoTracking: true
-                );
-            }
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                x => x.BatchId == id && !x.IsDeleted,
+                include: q => q
+                    .Include(x => x.CropSeason)
+                    .Include(x => x.Method)
+                    .Include(x => x.Farmer).ThenInclude(f => f.User),
+                asNoTracking: true
+            );
 
             if (batch == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-            var dto = batch.MapToDetailsDto();
+            // Check quyền
+            if (!isAdmin && batch.Farmer?.UserId != userId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+
+            var dto = batch.MapToDetailsDto(); // map chi tiết
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
+
 
     }
 }

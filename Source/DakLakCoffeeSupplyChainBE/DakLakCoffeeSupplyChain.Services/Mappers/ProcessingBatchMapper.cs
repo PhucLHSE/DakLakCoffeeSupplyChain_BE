@@ -1,8 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StageCount = entity.ProcessingBatchProgresses?.Count ?? 0,
                 TotalInputQuantity = entity.InputQuantity,
                 TotalOutputQuantity = 0,
-                Status = entity.Status,
+                Status = Enum.TryParse<ProcessingStatus>(entity.Status, out var statusEnum)
+                         ? statusEnum
+                         : ProcessingStatus.NotStarted,
                 CreatedAt = entity.CreatedAt ?? DateTime.MinValue
             };
         }
@@ -53,7 +56,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 MethodName = batch.Method?.Name,
                 InputQuantity = batch.InputQuantity,
                 InputUnit = batch.InputUnit,
-                Status = batch.Status,
+                Status = Enum.TryParse<ProcessingStatus>(batch.Status, out var statusEnum)
+            ? statusEnum
+            : ProcessingStatus.NotStarted,
                 CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
                 UpdatedAt = batch.UpdatedAt,
 

@@ -1,10 +1,11 @@
-﻿using System;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
 {
@@ -27,7 +28,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public string InputUnit { get; set; }
 
         public double TotalOutputQuantity { get; set; }
-        public string Status { get; set; }
+        public ProcessingStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

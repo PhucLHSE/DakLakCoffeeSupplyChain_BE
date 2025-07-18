@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,5 +16,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public int MethodId { get; set; }
         public double InputQuantity { get; set; }
         public string InputUnit { get; set; }
+        public ProcessingStatus Status { get; set; }
     }
 }

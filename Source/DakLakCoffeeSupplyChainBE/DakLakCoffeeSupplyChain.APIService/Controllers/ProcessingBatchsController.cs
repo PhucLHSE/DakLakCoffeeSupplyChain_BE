@@ -80,8 +80,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
+            var isAdmin = User.IsInRole("Admin");
 
-            var result = await _processingbatchservice.UpdateAsync(dto, userId);
+            var result = await _processingbatchservice.UpdateAsync(dto, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -91,8 +92,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Farmer")]
+        [HttpPatch("{id}/soft-delete")]
+        [Authorize(Roles = "Farmer,Admin")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -101,7 +102,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
 
-            var result = await _processingbatchservice.SoftDeleteAsync(id, userId);
+            var isAdmin = User.IsInRole("Admin");
+
+            var result = await _processingbatchservice.SoftDeleteAsync(id, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
