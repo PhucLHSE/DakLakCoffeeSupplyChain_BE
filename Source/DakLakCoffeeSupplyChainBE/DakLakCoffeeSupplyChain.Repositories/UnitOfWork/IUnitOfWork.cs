@@ -35,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IProcurementPlanDetailsRepository ProcurementPlanDetailsRepository { get; }
 
         ICultivationRegistrationRepository CultivationRegistrationRepository { get; }
+        ICultivationRegistrationsDetailRepository CultivationRegistrationsDetailRepository { get; }
 
         IFarmingCommitmentRepository FarmingCommitmentRepository { get; }
 
@@ -93,7 +94,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IOrderItemRepository OrderItemRepository { get; }
 
         IProcessingBatchWasteRepository ProcessingWasteRepository { get; }
-        ICultivationRegistrationsDetailRepository CultivationRegistrationsDetailRepository { get; }
         IProcessingWasteDisposalRepository ProcessingWasteDisposalRepository { get; }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -198,6 +200,150 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Const.SUCCESS_READ_MSG,
                 dtoList
             );
+        }
+
+
+        public async Task<IServiceResult> Create(FarmingCommitmentCreateDto commitmentCreateDto)
+        {
+            try
+            {
+                // Tạm thời chưa có validation
+                
+                //Generate code
+                string commitmentCode = await _codeGenerator.GenerateFarmingCommitmentCodeAsync();
+
+                //Map dto to model
+                var newCommitment = commitmentCreateDto.MapToFarmingCommitment(commitmentCode);
+
+                //Lấy registration detail
+                var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                    predicate: r => r.CultivationRegistrationDetailId == newCommitment.RegistrationDetailId,
+                    include: r => r.Include( r => r.Registration),
+                    asNoTracking: true);
+                if(registrationDetail == null)
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm được chi tiết phiếu đăng ký"
+                    );
+
+                //Tự động map planId và farmerId từ Registration
+                newCommitment.PlanDetailId = registrationDetail.PlanDetailId;
+                newCommitment.FarmerId = registrationDetail.Registration.FarmerId;
+
+                //Tự động map giá cả và sản lượng, thời gian từ Registration
+                //newCommitment.ConfirmedPrice = registrationDetail.WantedPrice;
+                //newCommitment.CommittedQuantity = registrationDetail.EstimatedYield;
+                //newCommitment.EstimatedDeliveryStart = registrationDetail.ExpectedHarvestStart;
+                //newCommitment.EstimatedDeliveryEnd = registrationDetail.ExpectedHarvestEnd;
+                
+                // Save data to database
+                await _unitOfWork.FarmingCommitmentRepository.CreateAsync(newCommitment);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var commitment = await _unitOfWork.FarmingCommitmentRepository
+                        .GetByIdAsync(
+                            predicate: p => p.CommitmentId == newCommitment.CommitmentId,
+                            include: c => c.
+                            Include(f => f.Farmer).
+                                ThenInclude(f => f.User).
+                            Include(p => p.PlanDetail).
+                                ThenInclude(p => p.Plan).
+                                    ThenInclude(c => c.CreatedByNavigation),
+                            asNoTracking: true
+                        );
+                    if (commitment == null)
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            Const.WARNING_NO_DATA_MSG,
+                            new FarmingCommitmentViewDetailsDto() //Trả về DTO rỗng
+                        );
+                    var responseDto = commitment.MapToFarmingCommitmentViewDetailsDto();                    
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                    responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> BulkCreate(FarmingCommitmentBulkCreateDto bulkCreateDto)
+        {
+            try
+            {
+                var commitments = new List<FarmingCommitment>();
+
+                string commitmentCode = await _codeGenerator.GenerateFarmingCommitmentCodeAsync();
+                var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(commitmentCode);
+
+                foreach (var dto in bulkCreateDto.FarmingCommitmentCreateDtos)
+                {
+                    // Các bước này tương tự như create
+                    string newCommitmentCode = $"COMMIT-{DateHelper.NowVietnamTime().Year}-{(count):D4}";
+                    count++;
+                    var commitment = dto.MapToFarmingCommitment(newCommitmentCode);
+
+                    var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                    predicate: r => r.CultivationRegistrationDetailId == commitment.RegistrationDetailId,
+                    include: r => r.Include(r => r.Registration),
+                    asNoTracking: true);
+
+                    if (registrationDetail == null)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Không tìm được chi tiết phiếu đăng ký"
+                        );
+
+                    commitment.PlanDetailId = registrationDetail.PlanDetailId;
+                    commitment.FarmerId = registrationDetail.Registration.FarmerId;
+
+                    commitments.Add(commitment);
+                }
+
+                // Save all to DB
+                await _unitOfWork.FarmingCommitmentRepository.BulkCreateAsync(commitments);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                        commitments
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
         }
 
     }

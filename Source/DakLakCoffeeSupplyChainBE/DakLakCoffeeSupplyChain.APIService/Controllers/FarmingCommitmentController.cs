@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         private readonly IFarmingCommitmentService _service = farmingCommitmentService;
 
         // GET api/<FarmingCommitments>/BusinessManager
-        [HttpGet("BusinessManger")]
+        [HttpGet("BusinessManager")]
         [EnableQuery]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetAllBusinessManagerCommitment()
@@ -116,5 +117,45 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+
+        // POST api/<FarmingCommitment>
+        [HttpPost]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> Create([FromBody] FarmingCommitmentCreateDto commitment)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
+            }
+            var result = await _service.Create(commitment);
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById), new { 
+                    commitmentId = ((FarmingCommitmentViewDetailsDto)result.Data).CommitmentId 
+                }, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // POST api/<FarmingCommitment>
+        [HttpPost("BulkCreate")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> BulkCreate([FromBody] FarmingCommitmentBulkCreateDto commitments)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
+            }
+            var result = await _service.BulkCreate(commitments);
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }
