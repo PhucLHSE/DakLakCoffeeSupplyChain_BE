@@ -198,8 +198,28 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateProcessingSystemBatchCodeAsync(int year)
         {
-            var count = await _unitOfWork.ProcessingBatchRepository.CountSystemBatchCreatedInYearAsync(CurrentYear);
-            return $"BATCH-{CurrentYear}-{(count + 1):D4}";
+            // Lấy tất cả SystemBatchCode có cùng năm
+            var prefix = $"BATCH-{year}-";
+
+            var latestCode = await _unitOfWork.ProcessingBatchRepository
+                .GetQueryable()
+                .Where(x => x.SystemBatchCode.StartsWith(prefix))
+                .OrderByDescending(x => x.SystemBatchCode)
+                .Select(x => x.SystemBatchCode)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+
+            if (!string.IsNullOrEmpty(latestCode))
+            {
+                var suffix = latestCode.Substring(prefix.Length); // lấy "0005"
+                if (int.TryParse(suffix, out int currentNumber))
+                {
+                    nextNumber = currentNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D4}";
         }
 
         public async Task<string> GenerateProcessingWasteCodeAsync()
