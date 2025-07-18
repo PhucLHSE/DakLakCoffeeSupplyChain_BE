@@ -93,5 +93,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IOrderItemRepository OrderItemRepository { get; }
 
         IProcessingBatchWasteRepository ProcessingWasteRepository { get; }
+        IProcessingWasteDisposalRepository ProcessingWasteDisposalRepository { get; }
     }
 }
