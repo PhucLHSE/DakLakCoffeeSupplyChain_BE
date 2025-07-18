@@ -7,13 +7,13 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
     {
         [Required(ErrorMessage = "Kế hoạch chi tiết chưa được chọn.")]
         public Guid PlanDetailId { get; set; }
-        public double? EstimatedYield { get; set; }
+        [Required(ErrorMessage = "Sản lượng cam kết không được phép để trống")]
+        public double EstimatedYield { get; set; }
 
         [Required(ErrorMessage = "Mức giá mong muốn không được để trống")]
         public double WantedPrice { get; set; }
         public DateOnly? ExpectedHarvestStart { get; set; }
         public DateOnly? ExpectedHarvestEnd { get; set; }
-        //public CultivationRegistrationStatus Status { get; set; } = CultivationRegistrationStatus.Pending;
         public string Note { get; set; } = string.Empty;
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

@@ -1,11 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Base
 {
@@ -66,6 +61,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         public async Task CreateAsync(T entity)
         {
             await _context.Set<T>().AddAsync(entity);
+        }
+        public async Task BulkCreateAsync(IEnumerable<T> entities)
+        {
+            await _context.Set<T>().AddRangeAsync(entities);
         }
 
         //public async Task<int> CreateAsync(T entity)

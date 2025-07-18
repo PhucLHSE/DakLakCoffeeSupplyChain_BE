@@ -308,5 +308,11 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"{prefix}{nextNumber:D4}";
         }
 
+        public async Task<string> GenerateFarmingCommitmentCodeAsync()
+        {
+            var count = await _unitOfWork.FarmingCommitmentRepository.CountFarmingCommitmentsInYearAsync(CurrentYear);
+
+            return $"COMMIT-{CurrentYear}-{(count + 1):D4}";
+        }
     }
 }

@@ -42,8 +42,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EstimatedDeliveryEnd = entity.EstimatedDeliveryEnd,
                 CommitmentDate = entity.CommitmentDate,
                 ApprovedById = entity.ApprovedBy,
-                ApprovedBy = entity.ApprovedByNavigation.User.Name,
-                CompanyName = entity.ApprovedByNavigation.CompanyName,
+                ApprovedBy = entity.ApprovedByNavigation?.User?.Name ?? string.Empty,
+                CompanyName = entity.PlanDetail.Plan.CreatedByNavigation.CompanyName,
                 ApprovedAt = entity.ApprovedAt,
                 Status = EnumHelper.ParseEnumFromString(entity.Status, FarmingCommitmentStatus.Unknown),
                 RejectionReason = entity.RejectionReason,
@@ -51,6 +51,27 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ContractDeliveryItemId = entity.ContractDeliveryItemId,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt
+            };
+        }
+
+        // Mapper FarmingCommitmentCreateDto
+        public static FarmingCommitment MapToFarmingCommitment(this FarmingCommitmentCreateDto dto, string commitmentCode)
+        {
+            return new FarmingCommitment
+            {
+                CommitmentId = Guid.NewGuid(),
+                CommitmentCode = commitmentCode,
+                CommitmentName = dto.CommitmentName,
+                RegistrationDetailId = dto.RegistrationDetailId,
+                //PlanDetailId = dto.PlanDetailId,
+                //FarmerId = dto.FarmerId,
+                ConfirmedPrice = dto.ConfirmedPrice,
+                CommittedQuantity = dto.CommittedQuantity,
+                EstimatedDeliveryStart = dto.EstimatedDeliveryStart,
+                EstimatedDeliveryEnd = dto.EstimatedDeliveryEnd,
+                Status = FarmingCommitmentStatus.Pending_farmer.ToString(),
+                Note = dto.Note,
+                ContractDeliveryItemId = dto.ContractDeliveryItemId
             };
         }
     }

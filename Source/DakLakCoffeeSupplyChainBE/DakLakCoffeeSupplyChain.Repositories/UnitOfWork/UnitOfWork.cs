@@ -1,11 +1,7 @@
-﻿using DakLakCoffeeSupplyChain.Repositories;
-using DakLakCoffeeSupplyChain.Repositories.DBContext;
+﻿using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories.DakLakCoffeeSupplyChain.Repositories.IRepositories;
-using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.Repositories;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
 {
@@ -25,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private ISystemConfigurationRepository? systemConfigurationRepository;
         private IFarmerRepository? farmerRepository;
         private ICultivationRegistrationRepository? cultivationRegistrationRepository;
+        private ICultivationRegistrationsDetailRepository? cultivationRegistrationsDetailRepository;
         private IFarmingCommitmentRepository? farmingCommitmentRepository;
         private ICropSeasonRepository? cropSeasonRepository;
         private ICropStageRepository cropStageRepository;
@@ -54,7 +51,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IOrderRepository? orderRepository;
         private IOrderItemRepository? orderItemRepository;
         private IProcessingBatchWasteRepository? processingWasteRepository;
-        private ICultivationRegistrationsDetailRepository _cultivationRegistrationsDetailRepository;
         private IProcessingWasteDisposalRepository? processingWasteDisposalRepository;
 
         public UnitOfWork()
@@ -158,6 +154,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return cultivationRegistrationRepository ??= new CultivationRegistrationRepository(context);
+            }
+        }
+
+        public ICultivationRegistrationsDetailRepository CultivationRegistrationsDetailRepository
+        {
+            get
+            {
+                return cultivationRegistrationsDetailRepository ??= new CultivationRegistrationsDetailRepository(context);
             }
         }
 
@@ -387,13 +391,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingWasteRepository ??= new ProcessingBatchWasteRepository(context);
             }
         }
-        public ICultivationRegistrationsDetailRepository CultivationRegistrationsDetailRepository
-        {
-            get
-            {
-                return _cultivationRegistrationsDetailRepository ??= new CultivationRegistrationsDetailRepository(context);
-            }
-        }
+
         public IProcessingWasteDisposalRepository ProcessingWasteDisposalRepository
         {
             get
