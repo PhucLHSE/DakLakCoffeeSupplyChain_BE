@@ -64,7 +64,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!batches.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
-                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();    
                 return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
             }
             else
@@ -249,18 +249,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 include: q => q
                     .Include(x => x.CropSeason)
                     .Include(x => x.Method)
-                    .Include(x => x.Farmer).ThenInclude(f => f.User),
+                    .Include(x => x.Farmer).ThenInclude(f => f.User)
+                    .Include(x => x.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
+                    .ThenInclude(p => p.Stage),
                 asNoTracking: true
             );
 
             if (batch == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Check quyền
+            // Kiểm tra quyền truy cập
             if (!isAdmin && batch.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
 
-            var dto = batch.MapToDetailsDto(); // map chi tiết
+            var dto = batch.MapToDetailsDto(); // Chỉ map thông tin cần thiết, không bao gồm products
+
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
 

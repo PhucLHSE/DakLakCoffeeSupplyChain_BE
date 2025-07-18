@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
 
         public ProcessingStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<ProcessingBatchProgressViewAllDto> Progresses { get; set; }
     }
 
 }

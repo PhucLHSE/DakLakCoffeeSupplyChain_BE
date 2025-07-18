@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -61,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                
+                // 1. Kiểm tra batch tồn tại
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(input.BatchId);
                 if (batch == null || batch.IsDeleted)
                 {
@@ -81,7 +82,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // 3. Lấy danh sách Parameters theo Stage
                 var parameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
                     predicate: p => p.Progress.StageId == input.StageId && !p.IsDeleted,
-                    include: q => q.Include(p => p.Progress));
+                    include: q => q.Include(p => p.Progress)
+                );
 
                 // 4. Tạo mới progress
                 var progress = new ProcessingBatchProgress
@@ -98,7 +100,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     VideoUrl = input.VideoUrl,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                    UpdatedBy = batch.FarmerId, 
+                    UpdatedBy = batch.FarmerId,
                     IsDeleted = false,
                     ProcessingParameters = parameters?.Select(p => new ProcessingParameter
                     {
@@ -114,6 +116,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 };
 
                 await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(progress);
+
+                // 5. Nếu batch đang ở trạng thái NotStarted → chuyển sang InProgress
+                if (batch.Status == ProcessingStatus.NotStarted.ToString())
+                {
+                    batch.Status = ProcessingStatus.InProgress.ToString();
+                    batch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                }
+
+                // 6. Lưu thay đổi
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 return result > 0
@@ -125,6 +137,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+
+
         public async Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto dto)
         {
             // [Step 1] Lấy entity từ DB
