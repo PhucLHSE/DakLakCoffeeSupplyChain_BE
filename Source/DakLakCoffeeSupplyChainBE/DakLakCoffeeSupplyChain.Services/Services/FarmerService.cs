@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmerDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -65,6 +66,115 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     farmerDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeleteById(Guid farmerId)
+        {
+            try
+            {
+                // Tìm Farmer theo ID từ repository
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: u => u.FarmerId == farmerId,
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy farmer, trả về cảnh báo không có dữ liệu
+                if (farmer == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    farmer.IsDeleted = true;
+                    farmer.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật xoá mềm ở repository
+                    await _unitOfWork.FarmerRepository.UpdateAsync(farmer);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+        public async Task<IServiceResult> DeleteById(Guid farmerId)
+        {
+            try
+            {
+                // Tìm farmer theo ID từ repository
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: u => u.FarmerId == farmerId,
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy, trả về cảnh báo không có dữ liệu
+                if (farmer == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa khỏi repository
+                    await _unitOfWork.FarmerRepository.RemoveAsync(farmer);
+
+                    // Lưu thay đổi vào database
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra xem việc lưu có thành công không
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
                 );
             }
         }
