@@ -197,23 +197,62 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto)
+        public async Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate:
+                           s => s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                     predicate: cdi =>
                        cdi.DeliveryItemId == contractDeliveryItemDto.DeliveryItemId &&
+                       cdi.ContractItem.Contract.SellerId == managerId &&
                        !cdi.IsDeleted,
                     include: query => query
                            .Include(cdi => cdi.ContractItem)
+                              .ThenInclude(ci => ci.Contract)
                            .Include(cdi => cdi.DeliveryBatch),
                     asNoTracking: false
                 );
 
                 // Nếu không tìm thấy
-                if (contractDeliveryItem == null || contractDeliveryItem.IsDeleted)
+                if (contractDeliveryItem == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -231,7 +270,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (contractItem == null || contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
+                if (contractItem == null || 
+                    contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -270,7 +310,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 contractDeliveryItemDto.MapToUpdateContractDeliveryItem(contractDeliveryItem);
 
                 // Cập nhật contractDeliveryItem ở repository
@@ -283,7 +323,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại dữ liệu sau khi cập nhật
                     var updatedItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                        predicate: cdi => cdi.DeliveryItemId == contractDeliveryItem.DeliveryItemId,
+                        predicate: cdi => 
+                           cdi.DeliveryItemId == contractDeliveryItem.DeliveryItemId &&
+                           !cdi.IsDeleted,
                         include: query => query
                             .Include(cdi => cdi.ContractItem)
                                 .ThenInclude(ci => ci.CoffeeType)
@@ -293,6 +335,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedItem != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = updatedItem.MapToContractDeliveryItemViewDto();
 
                         return new ServiceResult(
@@ -309,6 +352,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         Const.FAIL_UPDATE_MSG
