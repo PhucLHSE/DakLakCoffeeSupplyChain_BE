@@ -31,6 +31,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetAll(Guid userId)
         {
+            // Lấy ManagerId từ userId
             Guid? managerId = null;
 
             // Ưu tiên kiểm tra BusinessManager
@@ -110,6 +111,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetById(Guid productId, Guid userId)
         {
+            // Lấy ManagerId từ userId
             Guid? managerId = null;
 
             // Ưu tiên kiểm tra BusinessManager
@@ -313,6 +315,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                // Lấy ManagerId từ userId
                 Guid? managerId = null;
 
                 // Ưu tiên: nếu là BusinessManager

@@ -29,15 +29,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> Create(ContractDeliveryItemCreateDto contractDeliveryItemDto)
+        public async Task<IServiceResult> Create(ContractDeliveryItemCreateDto contractDeliveryItemDto, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate:
+                           s => s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Kiểm tra ContractDeliveryBatch có tồn tại không
                 var contractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: cdb =>
                        cdb.DeliveryBatchId == contractDeliveryItemDto.DeliveryBatchId &&
-                       !cdb.IsDeleted,
+                       !cdb.IsDeleted &&
+                       cdb.Contract.SellerId == managerId,
+                    include: query => query
+                       .Include(cdb => cdb.Contract),
                     asNoTracking: true
                 );
 
@@ -59,7 +99,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (contractItem == null || contractItem.ContractId != contractDeliveryBatch.ContractId)
+                if (contractItem == null || 
+                    contractItem.ContractId != contractDeliveryBatch.ContractId)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE, 
@@ -68,7 +109,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Tổng FulfilledQuantity + PlannedQuantity <= Quantity trong ContractItem
-                double totalPlanned = await _unitOfWork.ContractDeliveryItemRepository.SumPlannedQuantityAsync(contractItem.ContractItemId);
+                double totalPlanned = await _unitOfWork.ContractDeliveryItemRepository
+                    .SumPlannedQuantityAsync(contractItem.ContractItemId);
 
                 if ((totalPlanned + (contractDeliveryItemDto.PlannedQuantity ?? 0)) > contractItem.Quantity)
                 {
@@ -95,13 +137,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã định danh cho ContractDeliveryItem
-                string deliveryItemCode = await _codeGenerator.GenerateContractDeliveryItemCodeAsync(contractDeliveryItemDto.DeliveryBatchId);
+                string deliveryItemCode = await _codeGenerator
+                    .GenerateContractDeliveryItemCodeAsync(contractDeliveryItemDto.DeliveryBatchId);
 
-                // Map DTO to Entity
-                var newContractDeliveryItem = contractDeliveryItemDto.MapToNewContractDeliveryItem(deliveryItemCode);
+                // Ánh xạ dữ liệu từ DTO vào entity
+                var newContractDeliveryItem = contractDeliveryItemDto
+                    .MapToNewContractDeliveryItem(deliveryItemCode);
 
                 // Tạo ContractDeliveryItem ở repository
-                await _unitOfWork.ContractDeliveryItemRepository.CreateAsync(newContractDeliveryItem);
+                await _unitOfWork.ContractDeliveryItemRepository
+                    .CreateAsync(newContractDeliveryItem);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -119,6 +164,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdDeliveryItem != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = createdDeliveryItem.MapToContractDeliveryItemViewDto();
 
                         return new ServiceResult(
@@ -143,6 +189,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -150,23 +197,62 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto)
+        public async Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate:
+                           s => s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                     predicate: cdi =>
                        cdi.DeliveryItemId == contractDeliveryItemDto.DeliveryItemId &&
+                       cdi.ContractItem.Contract.SellerId == managerId &&
                        !cdi.IsDeleted,
                     include: query => query
                            .Include(cdi => cdi.ContractItem)
+                              .ThenInclude(ci => ci.Contract)
                            .Include(cdi => cdi.DeliveryBatch),
                     asNoTracking: false
                 );
 
                 // Nếu không tìm thấy
-                if (contractDeliveryItem == null || contractDeliveryItem.IsDeleted)
+                if (contractDeliveryItem == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -184,7 +270,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (contractItem == null || contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
+                if (contractItem == null || 
+                    contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -223,7 +310,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 contractDeliveryItemDto.MapToUpdateContractDeliveryItem(contractDeliveryItem);
 
                 // Cập nhật contractDeliveryItem ở repository
@@ -236,7 +323,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại dữ liệu sau khi cập nhật
                     var updatedItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                        predicate: cdi => cdi.DeliveryItemId == contractDeliveryItem.DeliveryItemId,
+                        predicate: cdi => 
+                           cdi.DeliveryItemId == contractDeliveryItem.DeliveryItemId &&
+                           !cdi.IsDeleted,
                         include: query => query
                             .Include(cdi => cdi.ContractItem)
                                 .ThenInclude(ci => ci.CoffeeType)
@@ -246,6 +335,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedItem != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = updatedItem.MapToContractDeliveryItemViewDto();
 
                         return new ServiceResult(
@@ -262,6 +352,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         Const.FAIL_UPDATE_MSG
@@ -277,13 +368,52 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId)
+        public async Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: 
+                           s => s.UserId == userId && 
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
-                    predicate: cdi => cdi.DeliveryItemId == deliveryItemId,
+                    predicate: cdi => 
+                       cdi.DeliveryItemId == deliveryItemId &&
+                       cdi.ContractItem.Contract.SellerId == managerId,
                     include: query => query
                            .Include(cdi => cdi.ContractItem)
                            .Include(cdi => cdi.DeliveryBatch),
@@ -333,15 +463,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteContractDeliveryItemById(Guid deliveryItemId)
+        public async Task<IServiceResult> SoftDeleteContractDeliveryItemById(Guid deliveryItemId, Guid userId)
         {
             try
             {
+                // Lấy ManagerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s =>
+                           s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm contractDeliveryItem theo ID
                 var contractDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                     predicate: cdi => 
                        cdi.DeliveryItemId == deliveryItemId && 
-                       !cdi.IsDeleted,
+                       !cdi.IsDeleted &&
+                       cdi.ContractItem.Contract.SellerId == managerId,
                     asNoTracking: false
                 );
 

@@ -12,14 +12,14 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> GetAll(Guid userId);
 
-        Task<IServiceResult> GetById(Guid deliveryBatchId);
+        Task<IServiceResult> GetById(Guid deliveryBatchId, Guid userId);
 
         Task<IServiceResult> Create(ContractDeliveryBatchCreateDto contractDeliveryBatchDto, Guid userId);
 
         Task<IServiceResult> Update(ContractDeliveryBatchUpdateDto contractDeliveryBatchDto, Guid userId);
 
-        Task<IServiceResult> DeleteContractDeliveryBatchById(Guid deliveryBatchId);
+        Task<IServiceResult> DeleteContractDeliveryBatchById(Guid deliveryBatchId, Guid userId);
 
-        Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId);
+        Task<IServiceResult> SoftDeleteContractDeliveryBatchById(Guid deliveryBatchId, Guid userId);
     }
 }

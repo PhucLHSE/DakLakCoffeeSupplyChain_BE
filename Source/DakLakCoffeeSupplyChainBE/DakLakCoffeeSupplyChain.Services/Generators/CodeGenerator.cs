@@ -112,24 +112,22 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             string prefix = $"SEASON-{year}-";
 
-            var latestCode = await _unitOfWork.CropSeasonRepository
+            var codes = await _unitOfWork.CropSeasonRepository
                 .GetQuery()
                 .Where(x => x.CropSeasonCode.StartsWith(prefix))
-                .OrderByDescending(x => x.CropSeasonCode)
                 .Select(x => x.CropSeasonCode)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            int nextNumber = 1;
-            if (!string.IsNullOrEmpty(latestCode))
-            {
-                var suffix = latestCode.Substring(prefix.Length);
-                if (int.TryParse(suffix, out int currentNumber))
+            int maxNumber = codes
+                .Select(code =>
                 {
-                    nextNumber = currentNumber + 1;
-                }
-            }
+                    var suffix = code.Substring(prefix.Length);
+                    return int.TryParse(suffix, out int number) ? number : 0;
+                })
+                .DefaultIfEmpty(0)
+                .Max();
 
-            return $"{prefix}{nextNumber:D4}";
+            return $"{prefix}{(maxNumber + 1):D4}";
         }
 
 

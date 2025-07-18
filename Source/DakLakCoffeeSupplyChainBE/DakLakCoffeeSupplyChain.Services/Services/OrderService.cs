@@ -186,6 +186,76 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteOrderById(Guid orderId)
+        {
+            try
+            {
+                // Tìm Order theo ID kèm danh sách OrderItems
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                    predicate: o =>
+                       o.OrderId == orderId &&
+                       o.DeliveryBatch != null,
+                    include: query => query
+                       .Include(o => o.OrderItems),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (order == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa từng OrderItem trước (nếu có)
+                    if (order.OrderItems != null &&
+                        order.OrderItems.Any())
+                    {
+                        foreach (var item in order.OrderItems)
+                        {
+                            // Xóa OrderItem khỏi repository
+                            await _unitOfWork.OrderItemRepository
+                                .RemoveAsync(item);
+                        }
+                    }
+
+                    // Xóa Order khỏi repository
+                    await _unitOfWork.OrderRepository
+                        .RemoveAsync(order);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteOrderById(Guid orderId)
         {
             try
@@ -221,11 +291,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         orderItem.UpdatedAt = DateHelper.NowVietnamTime();
 
                         // Đảm bảo EF theo dõi thay đổi của orderItem
-                        await _unitOfWork.OrderItemRepository.UpdateAsync(orderItem);
+                        await _unitOfWork.OrderItemRepository
+                            .UpdateAsync(orderItem);
                     }
 
                     // Cập nhật xoá mềm order ở repository
-                    await _unitOfWork.OrderRepository.UpdateAsync(order);
+                    await _unitOfWork.OrderRepository
+                        .UpdateAsync(order);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

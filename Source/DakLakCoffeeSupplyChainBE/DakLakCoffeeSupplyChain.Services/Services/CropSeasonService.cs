@@ -122,6 +122,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // ✅ Kiểm tra trạng thái duyệt: dùng Status hoặc ApprovedAt
             if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
+            // 🔒 Kiểm tra nếu Commitment đã được dùng để tạo mùa vụ
+            bool hasUsed = await _unitOfWork.CropSeasonRepository.ExistsAsync(
+                x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted);
+
+            if (hasUsed)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết này đã được dùng để tạo một mùa vụ khác.");
+            }
 
 
             // 3. Validate ngày
@@ -132,7 +140,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.RegistrationId == registration.RegistrationId &&
                      x.StartDate.HasValue &&
-                     x.StartDate.Value.Year == dto.StartDate.Year
+                     x.StartDate.Value.Year == dto.StartDate.Year&&
+                       !x.IsDeleted
             );
 
             if (isDuplicate)

@@ -405,7 +405,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(Guid userId, Guid currentUserId, string currentUserRole)
+        public async Task<IServiceResult> DeleteUserAccountById(Guid userId, Guid currentUserId, string currentUserRole)
         {
             try
             {
@@ -496,7 +496,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteById(Guid userId)
+        public async Task<IServiceResult> SoftDeleteUserAccountById(Guid userId)
         {
             try
             {

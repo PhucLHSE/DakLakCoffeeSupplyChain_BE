@@ -39,7 +39,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractService.GetAll(userId);
+            var result = await _contractService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -66,7 +67,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractService.GetById(contractId, userId);
+            var result = await _contractService
+                .GetById(contractId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -79,7 +81,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<ContractsController>
         [HttpPost]
-        public async Task<IActionResult> CreateContractAsync([FromBody] ContractCreateDto contractCreateDto)
+        public async Task<IActionResult> CreateContractAsync(
+            [FromBody] ContractCreateDto contractCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -96,7 +99,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _contractService.Create(contractCreateDto, userId);
+            var result = await _contractService
+                .Create(contractCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -111,7 +115,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<ContractsController>/{contractId}
         [HttpPut("{contractId}")]
-        public async Task<IActionResult> UpdateContractAsync(Guid contractId, [FromBody] ContractUpdateDto contractUpdateDto)
+        public async Task<IActionResult> UpdateContractAsync(
+            Guid contractId, 
+            [FromBody] ContractUpdateDto contractUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (contractId != contractUpdateDto.ContractId)
@@ -135,7 +141,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Kiểm tra quyền sở hữu hợp đồng
-            var ownershipCheck = await _contractService.GetById(contractId, userId);
+            var ownershipCheck = await _contractService
+                .GetById(contractId, userId);
 
             if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
@@ -144,8 +151,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return StatusCode(500, ownershipCheck.Message);
 
             // Nếu user sở hữu hợp đồng, tiến hành update
-
-            var result = await _contractService.Update(contractUpdateDto);
+            var result = await _contractService
+                .Update(contractUpdateDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -176,7 +183,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Kiểm tra quyền sở hữu hợp đồng
-            var ownershipCheck = await _contractService.GetById(contractId, userId);
+            var ownershipCheck = await _contractService
+                .GetById(contractId, userId);
 
             if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
@@ -185,7 +193,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return StatusCode(500, ownershipCheck.Message);
 
             // Nếu vượt qua kiểm tra quyền, tiến hành xóa
-            var result = await _contractService.DeleteContractById(contractId);
+            var result = await _contractService
+                .DeleteContractById(contractId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -216,7 +225,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             // Kiểm tra quyền sở hữu hợp đồng
-            var ownershipCheck = await _contractService.GetById(contractId, userId);
+            var ownershipCheck = await _contractService
+                .GetById(contractId, userId);
 
             if (ownershipCheck.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập.");
@@ -225,7 +235,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return StatusCode(500, ownershipCheck.Message);
 
             // Nếu vượt qua kiểm tra quyền, tiến hành xóa mềm
-            var result = await _contractService.SoftDeleteContractById(contractId);
+            var result = await _contractService
+                .SoftDeleteContractById(contractId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -253,7 +264,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false; // Không xác định được user → không kiểm tra được
             }
 
-            var result = await _contractService.GetById(contractId, userId);
+            var result = await _contractService
+                .GetById(contractId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

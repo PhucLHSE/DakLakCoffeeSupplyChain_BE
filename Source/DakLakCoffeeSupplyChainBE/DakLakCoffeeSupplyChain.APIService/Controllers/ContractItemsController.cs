@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -23,12 +24,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<ContractItemsController>
         [HttpPost]
-        public async Task<IActionResult> CreateContractItemAsync([FromBody] ContractItemCreateDto contractItemCreateDto)
+        public async Task<IActionResult> CreateContractItemAsync(
+            [FromBody] ContractItemCreateDto contractItemCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _contractItemService.Create(contractItemCreateDto);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService
+                .Create(contractItemCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(201, result.Data);
@@ -41,7 +56,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<ContractItemsController>/{contractItemId}
         [HttpPut("{contractItemId}")]
-        public async Task<IActionResult> UpdateContractItemAsync(Guid contractItemId, [FromBody] ContractItemUpdateDto contractItemUpdateDto)
+        public async Task<IActionResult> UpdateContractItemAsync(
+            Guid contractItemId, 
+            [FromBody] ContractItemUpdateDto contractItemUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (contractItemId != contractItemUpdateDto.ContractItemId)
@@ -50,7 +67,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _contractItemService.Update(contractItemUpdateDto);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService
+                .Update(contractItemUpdateDto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -69,7 +99,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpDelete("{contractItemId}")]
         public async Task<IActionResult> DeleteContractItemByIdAsync(Guid contractItemId)
         {
-            var result = await _contractItemService.DeleteContractItemById(contractItemId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService
+                .DeleteContractItemById(contractItemId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -87,7 +130,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{contractItemId}")]
         public async Task<IActionResult> SoftDeleteContractItemByIdAsync(Guid contractItemId)
         {
-            var result = await _contractItemService.SoftDeleteContractItemById(contractItemId);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _contractItemService
+                .SoftDeleteContractItemById(contractItemId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");

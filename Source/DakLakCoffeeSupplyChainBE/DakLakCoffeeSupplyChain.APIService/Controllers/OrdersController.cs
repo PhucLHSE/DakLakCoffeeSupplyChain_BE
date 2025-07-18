@@ -37,7 +37,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _orderService.GetAll(userId);
+            var result = await _orderService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -65,7 +66,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _orderService.GetById(orderId, userId);
+            var result = await _orderService
+                .GetById(orderId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -76,12 +78,33 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
 
+        // DELETE api/<OrdersController>/{orderId}
+        [HttpDelete("{orderId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> DeleteOrderByIdAsync(Guid orderId)
+        {
+            var result = await _orderService
+                .DeleteOrderById(orderId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn hàng cần xóa.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // PATCH: api/<OrdersController>/soft-delete/{orderId}
         [HttpPatch("soft-delete/{orderId}")]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteOrderByIdAsync(Guid orderId)
         {
-            var result = await _orderService.SoftDeleteOrderById(orderId);
+            var result = await _orderService
+                .SoftDeleteOrderById(orderId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -109,7 +132,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false;
             }
 
-            var result = await _orderService.GetById(orderId, userId);
+            var result = await _orderService
+                .GetById(orderId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

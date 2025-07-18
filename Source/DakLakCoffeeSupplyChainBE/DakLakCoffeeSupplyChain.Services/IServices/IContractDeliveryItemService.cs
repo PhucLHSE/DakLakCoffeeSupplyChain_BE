@@ -10,12 +10,12 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IContractDeliveryItemService
     {
-        Task<IServiceResult> Create(ContractDeliveryItemCreateDto contractDeliveryItemDto);
+        Task<IServiceResult> Create(ContractDeliveryItemCreateDto contractDeliveryItemDto, Guid userId);
 
-        Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto);
+        Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto, Guid userId);
 
-        Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId);
+        Task<IServiceResult> DeleteContractDeliveryItemById(Guid deliveryItemId, Guid userId);
 
-        Task<IServiceResult> SoftDeleteContractDeliveryItemById(Guid deliveryItemId);
+        Task<IServiceResult> SoftDeleteContractDeliveryItemById(Guid deliveryItemId, Guid userId);
     }
 }

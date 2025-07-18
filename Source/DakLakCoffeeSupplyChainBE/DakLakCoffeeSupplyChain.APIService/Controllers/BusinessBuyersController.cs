@@ -39,7 +39,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.GetAll(userId);
+            var result = await _businessBuyerService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -66,7 +67,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.GetById(buyerId, userId);
+            var result = await _businessBuyerService
+                .GetById(buyerId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -79,7 +81,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<BusinessBuyersController>
         [HttpPost]
-        public async Task<IActionResult> CreateBusinessBuyerAsync([FromBody] BusinessBuyerCreateDto businessBuyerCreateDto)
+        public async Task<IActionResult> CreateBusinessBuyerAsync(
+            [FromBody] BusinessBuyerCreateDto businessBuyerCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -96,7 +99,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.Create(businessBuyerCreateDto, userId);
+            var result = await _businessBuyerService
+                .Create(businessBuyerCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -111,7 +115,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<BusinessBuyersController>/{buyerId}
         [HttpPut("{buyerId}")]
-        public async Task<IActionResult> UpdateBusinessBuyerAsync(Guid buyerId, [FromBody] BusinessBuyerUpdateDto businessBuyerDto)
+        public async Task<IActionResult> UpdateBusinessBuyerAsync(
+            Guid buyerId, 
+            [FromBody] BusinessBuyerUpdateDto businessBuyerDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (buyerId != businessBuyerDto.BuyerId)
@@ -132,7 +138,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.Update(businessBuyerDto, userId);
+            var result = await _businessBuyerService
+                .Update(businessBuyerDto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -162,7 +169,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.DeleteBusinessBuyerById(buyerId, userId);
+            var result = await _businessBuyerService
+                .DeleteBusinessBuyerById(buyerId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -192,7 +200,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _businessBuyerService.SoftDeleteBusinessBuyerById(buyerId, userId);
+            var result = await _businessBuyerService
+                .SoftDeleteBusinessBuyerById(buyerId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -220,7 +229,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return false;
             }
 
-            var result = await _businessBuyerService.GetById(buyerId, userId);
+            var result = await _businessBuyerService
+                .GetById(buyerId, userId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

@@ -26,7 +26,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAllRolesAsync()
         {
-            var result = await _roleService.GetAll();
+            var result = await _roleService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -41,7 +42,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("{roleId}")]
         public async Task<IActionResult> GetById(int roleId)
         {
-            var result = await _roleService.GetById(roleId);
+            var result = await _roleService
+                .GetById(roleId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -54,12 +56,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<RolesController>
         [HttpPost]
-        public async Task<IActionResult> CreateRoleAsync([FromBody] RoleCreateDto roleDto)
+        public async Task<IActionResult> CreateRoleAsync(
+            [FromBody] RoleCreateDto roleDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _roleService.Create(roleDto);
+            var result = await _roleService
+                .Create(roleDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), 
@@ -74,7 +78,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<RolesController>/{roleId}
         [HttpPut("{roleId}")]
-        public async Task<IActionResult> UpdateRoleAsync(int roleId, [FromBody] RoleUpdateDto roleDto)
+        public async Task<IActionResult> UpdateRoleAsync(
+            int roleId, 
+            [FromBody] RoleUpdateDto roleDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (roleId != roleDto.RoleId)
@@ -83,7 +89,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _roleService.Update(roleDto);
+            var result = await _roleService
+                .Update(roleDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -101,7 +108,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpDelete("{roleId}")]
         public async Task<IActionResult> DeleteRoleByIdAsync(int roleId)
         {
-            var result = await _roleService.DeleteById(roleId);
+            var result = await _roleService
+                .DeleteRoleById(roleId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -119,7 +127,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{roleId}")]
         public async Task<IActionResult> SoftDeleteRoleByIdAsync(int roleId)
         {
-            var result = await _roleService.SoftDeleteById(roleId);
+            var result = await _roleService
+                .SoftDeleteRoleById(roleId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -135,7 +144,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         private async Task<bool> RoleExistsAsync(int roleId)
         {
-            var result = await _roleService.GetById(roleId);
+            var result = await _roleService
+                .GetById(roleId);
 
             return result.Status == Const.SUCCESS_READ_CODE;
         }

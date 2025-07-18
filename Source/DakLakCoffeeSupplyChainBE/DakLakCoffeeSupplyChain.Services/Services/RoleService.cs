@@ -207,7 +207,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteById(int roleId)
+        public async Task<IServiceResult> DeleteRoleById(int roleId)
         {
             try
             {
@@ -258,7 +258,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteById(int roleId)
+        public async Task<IServiceResult> SoftDeleteRoleById(int roleId)
         {
             try
             {

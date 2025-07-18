@@ -29,10 +29,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> Create(ContractItemCreateDto contractItemDto)
+        public async Task<IServiceResult> Create(ContractItemCreateDto contractItemDto, Guid userId)
         {
             try
             {
+                // Kiểm tra BusinessManager có tồn tại hay không
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Kiểm tra Contract có tồn tại không
                 var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
                     predicate: c => 
@@ -61,9 +77,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE, 
-                        "Loại cà phê này đã có trong hợp đồng.");
+                        "Loại cà phê này đã có trong hợp đồng."
+                    );
                 }
-
 
                 // Sinh mã định danh cho ContractItem
                 string contractItemCode = await _codeGenerator.GenerateContractItemCodeAsync(contractItemDto.ContractId);
@@ -112,6 +128,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -119,10 +136,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(ContractItemUpdateDto contractItemDto)
+        public async Task<IServiceResult> Update(ContractItemUpdateDto contractItemDto, Guid userId)
         {
             try
             {
+                // Kiểm tra BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: 
+                       m => m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
                     predicate: ci => 
@@ -131,11 +164,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     include: query => query
                            .Include(ci => ci.CoffeeType)
                            .Include(ci => ci.Contract),
-                    asNoTracking: true
+                    asNoTracking: false
                 );
 
                 // Nếu không tìm thấy
-                if (contractItem == null || contractItem.IsDeleted)
+                if (contractItem == null || 
+                    contractItem.IsDeleted)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -173,7 +207,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại entity sau khi cập nhật (kèm CoffeeType)
                     var updatedItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
-                        predicate: ci => ci.ContractItemId == contractItemDto.ContractItemId,
+                        predicate: ci => 
+                           ci.ContractItemId == contractItemDto.ContractItemId &&
+                           !ci.IsDeleted,
                         include: query => query
                            .Include(ci => ci.CoffeeType),
                         asNoTracking: true
@@ -205,6 +241,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình xóa
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
@@ -212,10 +249,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteContractItemById(Guid contractItemId)
+        public async Task<IServiceResult> DeleteContractItemById(Guid contractItemId, Guid userId)
         {
             try
             {
+                // Tìm BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
                     predicate: ct => 
@@ -270,10 +323,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId)
+        public async Task<IServiceResult> SoftDeleteContractItemById(Guid contractItemId, Guid userId)
         {
             try
             {
+                // Tìm BusinessManager theo userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
                 // Tìm contractItem theo ID
                 var contractItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
                     predicate: ct => 
