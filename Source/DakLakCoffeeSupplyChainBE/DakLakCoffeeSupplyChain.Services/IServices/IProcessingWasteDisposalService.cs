@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWasteDisposalDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;

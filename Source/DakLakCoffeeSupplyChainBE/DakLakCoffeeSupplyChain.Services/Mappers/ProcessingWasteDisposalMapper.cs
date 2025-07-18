@@ -10,24 +10,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class ProcessingWasteDisposalMapper
     {
-        public static ProcessingWasteDisposalViewAllDto MapToViewAllDto(
-            this ProcessingWasteDisposal entity,
-            string handledByName 
-        )
+        public static ProcessingWasteDisposalDto MapToDto(this ProcessingWasteDisposal entity, string handledByName)
         {
-            return new ProcessingWasteDisposalViewAllDto
+            return new ProcessingWasteDisposalDto
             {
                 DisposalId = entity.DisposalId,
-                DisposalCode = entity.DisposalCode ?? string.Empty,
+                DisposalCode = entity.DisposalCode,
                 WasteId = entity.WasteId,
-                DisposalMethod = entity.DisposalMethod ?? string.Empty,
+                WasteName = entity.Waste?.WasteType ?? "N/A",
+                DisposalMethod = entity.DisposalMethod,
+                HandledBy = entity.HandledBy ?? Guid.Empty,
+                HandledByName = handledByName,
+                HandledAt = entity.HandledAt,
                 Notes = entity.Notes,
                 IsSold = entity.IsSold ?? false,
                 Revenue = entity.Revenue,
-                HandledAt = entity.HandledAt,
-                HandledByName = handledByName,
-                CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                CreatedAt = entity.CreatedAt
             };
         }
     }
