@@ -54,6 +54,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IOrderRepository? orderRepository;
         private IOrderItemRepository? orderItemRepository;
         private IProcessingBatchWasteRepository? processingWasteRepository;
+        private ICultivationRegistrationsDetailRepository _cultivationRegistrationsDetailRepository;
 
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
@@ -383,6 +384,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingWasteRepository ??= new ProcessingBatchWasteRepository(context);
+            }
+        }
+
+
+        public ICultivationRegistrationsDetailRepository CultivationRegistrationsDetailRepository
+        {
+            get
+            {
+                return _cultivationRegistrationsDetailRepository ??= new CultivationRegistrationsDetailRepository(context);
             }
         }
     }

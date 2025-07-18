@@ -68,7 +68,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // ✅ Chỉ Admin, BusinessManager, Farmer được tạo mùa vụ
         [HttpPost]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
@@ -88,27 +87,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            // ✅ Gọi service xử lý
+            // ✅ Gọi service xử lý tạo mùa vụ
             var result = await _cropSeasonService.Create(dto, userId);
 
-            // ✅ Nếu thành công: trả về CreatedAtAction
+            // ✅ Nếu tạo thành công: trả về CreatedAtAction
             if (result.Status == Const.SUCCESS_CREATE_CODE)
             {
                 var response = (CropSeasonViewDetailsDto)result.Data;
                 return CreatedAtAction(
-                    nameof(GetById),
-                    new { cropSeasonId = response.CropSeasonId },
-                    response
+                    nameof(GetById),                                  // action
+                    new { cropSeasonId = response.CropSeasonId },    // route values
+                    response                                          // response body
                 );
             }
 
-            // ❌ Nếu conflict (trùng mùa vụ, dữ liệu sai)
+            // ❌ Nếu lỗi logic như cam kết trùng, chưa duyệt, v.v...
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
 
-            // ❗Các lỗi khác: trả lỗi 500
+            // ❗ Nếu lỗi không rõ (exception hoặc lỗi hệ thống)
             return StatusCode(500, result.Message);
         }
+
 
 
         // ✅ Chỉ người sở hữu hoặc Admin/BM được update
