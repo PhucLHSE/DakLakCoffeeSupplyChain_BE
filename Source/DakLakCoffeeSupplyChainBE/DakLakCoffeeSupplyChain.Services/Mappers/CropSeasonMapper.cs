@@ -87,7 +87,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = dto.Status.ToString(),
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                CropSeasonDetails = new List<CropSeasonDetail>()
             };
         }
 
@@ -103,5 +102,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.Status = dto.Status.ToString();
             entity.UpdatedAt = DateTime.Now;
         }
+
+    
     }
 }

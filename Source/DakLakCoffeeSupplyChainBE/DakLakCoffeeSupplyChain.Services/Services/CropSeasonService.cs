@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -115,55 +116,88 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (registration == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy đơn đăng ký tương ứng với cam kết.");
 
-            // ✅ Kiểm tra FarmerId trong cam kết có trùng với user đang đăng nhập không
+            // 3. Kiểm tra quyền sở hữu cam kết
             if (commitment.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết không thuộc về bạn.");
 
-            // ✅ Kiểm tra trạng thái duyệt: dùng Status hoặc ApprovedAt
+            // 4. Kiểm tra trạng thái duyệt
             if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
-            // 🔒 Kiểm tra nếu Commitment đã được dùng để tạo mùa vụ
+
+            // 5. Kiểm tra nếu đã dùng để tạo mùa vụ
             bool hasUsed = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted);
-
             if (hasUsed)
-            {
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết này đã được dùng để tạo một mùa vụ khác.");
-            }
 
-
-            // 3. Validate ngày
+            // 6. Validate ngày
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // 4. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration
+            // 7. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.RegistrationId == registration.RegistrationId &&
                      x.StartDate.HasValue &&
-                     x.StartDate.Value.Year == dto.StartDate.Year&&
-                       !x.IsDeleted
-            );
-
+                     x.StartDate.Value.Year == dto.StartDate.Year &&
+                     !x.IsDeleted);
             if (isDuplicate)
-            {
                 return new ServiceResult(Const.FAIL_CREATE_CODE,
                     $"Đăng ký {registration.RegistrationCode} đã có mùa vụ trong năm {dto.StartDate.Year}.");
-            }
 
-            // 5. Tạo mã mùa vụ
+            // 8. Tạo mã mùa vụ
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
 
-            // 6. Map sang entity
-            var entity = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId, registration.RegistrationId);
-            entity.Area = dto.Area ?? 0;
+            // 9. Tạo entity CropSeason
+            var cropSeason = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId, registration.RegistrationId);
+            cropSeason.Area = dto.Area ?? 0;
+            cropSeason.CommitmentId = commitment.CommitmentId;
 
-            // 7. Ghi vào DB
-            await _unitOfWork.CropSeasonRepository.CreateAsync(entity);
+            await _unitOfWork.CropSeasonRepository.CreateAsync(cropSeason);
+
+            // 10. Lấy tất cả registration detail thuộc registration
+            var registrationDetails = await _unitOfWork.CultivationRegistrationsDetailRepository
+                .GetByRegistrationIdAsync(registration.RegistrationId);
+
+            var cropSeasonDetails = new List<CropSeasonDetail>();
+
+            foreach (var detail in registrationDetails)
+            {
+                var planDetail = await _unitOfWork.ProcurementPlanDetailsRepository
+                    .GetByIdAsync(detail.PlanDetailId);
+                if (planDetail == null)
+                    continue;
+
+                var cropSeasonDetail = new CropSeasonDetail
+                {
+                    DetailId = Guid.NewGuid(),
+                    CropSeasonId = cropSeason.CropSeasonId,
+                    CoffeeTypeId = planDetail.CoffeeTypeId,
+                    ExpectedHarvestStart = detail.ExpectedHarvestStart,
+                    ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
+                    EstimatedYield = detail.EstimatedYield,
+                    AreaAllocated = cropSeason.Area / registrationDetails.Count,
+                    PlannedQuality = null,
+                    QualityGrade = null,
+                    Status = CropDetailStatus.Planned.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                cropSeasonDetails.Add(cropSeasonDetail);
+            }
+
+            // 11. Lưu các vùng trồng
+            foreach (var d in cropSeasonDetails)
+            {
+                await _unitOfWork.CropSeasonDetailRepository.CreateAsync(d);
+            }
+
+            // 12. Lưu thay đổi
             var result = await _unitOfWork.SaveChangesAsync();
-
             if (result > 0)
             {
-                var fullEntity = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(entity.CropSeasonId);
+                var fullEntity = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeason.CropSeasonId);
                 if (fullEntity == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo mùa vụ thành công nhưng không lấy được dữ liệu.");
 
@@ -173,6 +207,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
         }
+
 
 
         public async Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false)
@@ -273,6 +308,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
-
     }
 }
