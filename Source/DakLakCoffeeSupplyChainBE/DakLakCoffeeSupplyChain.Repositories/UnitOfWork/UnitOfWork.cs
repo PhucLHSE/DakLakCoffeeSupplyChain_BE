@@ -392,7 +392,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return _cultivationRegistrationsDetailRepository ??= new CultivationRegistrationsDetailRepository(context);
-                
+            }
+        }
         public IProcessingWasteDisposalRepository ProcessingWasteDisposalRepository
         {
             get
