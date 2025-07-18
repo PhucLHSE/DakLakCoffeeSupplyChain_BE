@@ -68,6 +68,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IProcessingWasteService, ProcessingWasteService>();
+builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDisposalService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();

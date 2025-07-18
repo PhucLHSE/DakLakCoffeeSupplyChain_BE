@@ -163,7 +163,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi lưu DB: {innerMessage}");
             }
         }
         public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId)
