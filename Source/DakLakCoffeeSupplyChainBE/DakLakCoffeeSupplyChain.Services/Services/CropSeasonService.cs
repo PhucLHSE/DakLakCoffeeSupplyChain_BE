@@ -134,11 +134,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // 7. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration
+            // ✅ 7. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration, bỏ qua chính cam kết này
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.RegistrationId == registration.RegistrationId &&
                      x.StartDate.HasValue &&
                      x.StartDate.Value.Year == dto.StartDate.Year &&
+                     x.CommitmentId != dto.CommitmentId &&
                      !x.IsDeleted);
             if (isDuplicate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE,
@@ -209,7 +210,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
 
-
         public async Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false)
         {
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(dto.CropSeasonId);
@@ -223,11 +223,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
             bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                     x => x.RegistrationId == cropSeason.RegistrationId &&
-                     x.StartDate.HasValue &&
-                     x.StartDate.Value.Year == dto.StartDate.Year &&
-                     x.CropSeasonId != dto.CropSeasonId
-            );
+           x => x.RegistrationId == cropSeason.RegistrationId &&
+                x.CropSeasonId != cropSeason.CropSeasonId && // ⚠️ loại chính mùa vụ hiện tại
+                x.StartDate.HasValue &&
+                x.StartDate.Value.Year == dto.StartDate.Year &&
+                !x.IsDeleted
+       );
+
 
             if (isDuplicate)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Đã tồn tại mùa vụ khác cho đăng ký canh tác trong năm này.");
