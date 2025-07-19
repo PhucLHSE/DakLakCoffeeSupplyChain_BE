@@ -20,9 +20,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseOutboundRequest?> GetByIdAsync(Guid id)
         {
             return await _context.WarehouseOutboundRequests
+                .AsNoTracking()
                 .Include(r => r.Inventory)
                 .Include(r => r.Warehouse)
             .Include(r => r.RequestedByNavigation)
+                .FirstOrDefaultAsync(r => r.OutboundRequestId == id && !r.IsDeleted);
+        }
+        public async Task<WarehouseOutboundRequest?> GetByIdWithoutIncludesAsync(Guid id)
+        {
+            return await _context.WarehouseOutboundRequests
                 .FirstOrDefaultAsync(r => r.OutboundRequestId == id && !r.IsDeleted);
         }
 
@@ -33,6 +39,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<List<WarehouseOutboundRequest>> GetAllAsync()
         {
             return await _context.WarehouseOutboundRequests
+                .AsNoTracking()
                 .Where(x => !x.IsDeleted)
                 .Include(x => x.Warehouse)
                 .OrderByDescending(x => x.CreatedAt)

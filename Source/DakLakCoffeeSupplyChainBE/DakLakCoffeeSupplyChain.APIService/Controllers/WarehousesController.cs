@@ -1,10 +1,10 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseDTOs;
-using DakLakCoffeeSupplyChain.Common;
+﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
-using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -24,9 +24,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> Create([FromBody] WarehouseCreateDto dto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                return Unauthorized(new { message = "Cannot identify BusinessManager from token." });
+            Guid userId;
+
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
 
             var result = await _warehouseService.CreateAsync(dto, userId);
 
@@ -34,20 +35,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(new { message = result.Message });
+                return Conflict(result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
 
         // GET: api/Warehouses
         [HttpGet]
         [EnableQuery]
-        [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
+        [Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetAllWarehouses()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                return Unauthorized(new { message = "Cannot identify user from token." });
+            Guid userId;
+
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
 
             var result = await _warehouseService.GetAllAsync(userId);
 
@@ -55,14 +57,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok(result.Data);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return StatusCode(403, new { message = result.Message }); // ✅ FIXED: no more Forbid(message)
+                return Forbid(result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
 
         // GET: api/Warehouses/{id}
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin, BusinessManager, BusinessStaff")]
+        [Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _warehouseService.GetByIdAsync(id);
@@ -71,60 +73,60 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok(result.Data);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return NotFound(new { message = result.Message });
+                return NotFound(result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
 
         // PUT: api/Warehouses/{id}
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin, BusinessManager")]
+        [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> Update(Guid id, [FromBody] WarehouseUpdateDto dto)
         {
             var result = await _warehouseService.UpdateAsync(id, dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok(result.Message);
 
             if (result.Status == Const.FAIL_UPDATE_CODE)
-                return Conflict(new { message = result.Message });
+                return Conflict(result.Message);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return NotFound(new { message = result.Message });
+                return NotFound(result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
 
-        // DELETE (soft): api/Warehouses/{id}
-        [HttpDelete("{id}")]
+        // PATCH: api/Warehouses/soft-delete/{id}
+        [HttpPatch("soft-delete/{id}")]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> SoftDelete(Guid id)
         {
-            var result = await _warehouseService.DeleteAsync(id);
+            var result = await _warehouseService.DeleteAsync(id); // Soft delete
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok("Xóa mềm thành công.");
 
             if (result.Status == Const.FAIL_DELETE_CODE || result.Status == Const.FAIL_READ_CODE)
-                return Conflict(new { message = result.Message });
+                return Conflict("Xóa mềm thất bại: " + result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
 
-        // DELETE (hard): api/Warehouses/hard-delete/{id}
-        [HttpDelete("hard-delete/{id}")]
+        // DELETE: api/Warehouses/{id}
+        [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
             var result = await _warehouseService.HardDeleteAsync(id);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok("Xóa vĩnh viễn thành công.");
 
             if (result.Status == Const.FAIL_DELETE_CODE || result.Status == Const.FAIL_READ_CODE)
-                return Conflict(new { message = result.Message });
+                return Conflict("Xóa thất bại: " + result.Message);
 
-            return StatusCode(500, new { message = result.Message });
+            return StatusCode(500, result.Message);
         }
     }
 }

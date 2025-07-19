@@ -31,12 +31,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.CreateRequestAsync(managerUserId, dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return CreatedAtAction(nameof(GetDetail), new { outboundRequestId = result.Data }, result.Data);
+                return CreatedAtAction(nameof(GetDetail), new { outboundRequestId = result.Data }, result);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return NotFound(result.Message);
+                return NotFound(result);
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, result);
         }
 
         // GET: api/WarehouseOutboundRequests/all
@@ -52,12 +52,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.GetAllAsync(managerUserId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+                return Ok(result);
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(result);
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, result);
         }
 
         // GET: api/WarehouseOutboundRequests/{outboundRequestId}
@@ -68,12 +68,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.GetDetailAsync(outboundRequestId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+                return Ok(result);
 
             if (result.Status == Const.FAIL_READ_CODE)
-                return NotFound(result.Message);
+                return NotFound(result);
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, result);
         }
 
         // PUT: api/WarehouseOutboundRequests/{id}/accept
@@ -88,13 +88,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.AcceptRequestAsync(id, staffUserId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok(result);
 
             if (result.Status == Const.FAIL_UPDATE_CODE)
-                return Conflict(result.Message);
+                return Conflict(result);
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, result);
         }
+
+        // PUT: api/WarehouseOutboundRequests/{id}/cancel
         [HttpPut("{id}/cancel")]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> Cancel(Guid id)
@@ -106,12 +108,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _requestService.CancelRequestAsync(id, managerUserId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok(result);
 
             if (result.Status == Const.FAIL_UPDATE_CODE)
-                return Conflict(result.Message);
+                return Conflict(result);
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, result);
         }
     }
 }

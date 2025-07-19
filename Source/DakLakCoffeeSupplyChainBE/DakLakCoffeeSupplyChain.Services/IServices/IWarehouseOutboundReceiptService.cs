@@ -14,5 +14,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseOutboundReceiptConfirmDto dto);
         Task<IServiceResult> GetAllAsync(Guid userId);
         Task<IServiceResult> GetByIdAsync(Guid receiptId, Guid userId);
+
     }
 }

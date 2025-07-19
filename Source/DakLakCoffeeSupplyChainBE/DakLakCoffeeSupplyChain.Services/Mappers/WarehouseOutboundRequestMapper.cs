@@ -17,7 +17,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 OutboundRequestId = entity.OutboundRequestId,
                 OutboundRequestCode = entity.OutboundRequestCode,
                 Status = entity.Status,
+                WarehouseId = entity.WarehouseId,               // ✅ thêm vào
                 WarehouseName = entity.Warehouse?.Name,
+                InventoryId = entity.InventoryId,               // ✅ thêm vào
                 RequestedQuantity = entity.RequestedQuantity,
                 Unit = entity.Unit,
                 CreatedAt = entity.CreatedAt
