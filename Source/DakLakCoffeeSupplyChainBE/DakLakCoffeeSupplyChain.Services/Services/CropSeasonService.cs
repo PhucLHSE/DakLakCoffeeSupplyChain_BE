@@ -124,7 +124,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
 
-            // 5. Kiểm tra nếu đã dùng để tạo mùa vụ
+            // 5. Kiểm tra nếu cam kết đã được dùng
             bool hasUsed = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted);
             if (hasUsed)
@@ -134,28 +134,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // ✅ 7. Kiểm tra duplicate mùa vụ trong cùng năm theo Registration, bỏ qua chính cam kết này
-            bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                x => x.RegistrationId == registration.RegistrationId &&
-                     x.StartDate.HasValue &&
-                     x.StartDate.Value.Year == dto.StartDate.Year &&
-                     x.CommitmentId != dto.CommitmentId &&
-                     !x.IsDeleted);
-            if (isDuplicate)
-                return new ServiceResult(Const.FAIL_CREATE_CODE,
-                    $"Đăng ký {registration.RegistrationCode} đã có mùa vụ trong năm {dto.StartDate.Year}.");
+            // ❌ 7. BỎ kiểm tra duplicate mùa vụ theo đăng ký/năm – CHO PHÉP 1-N
 
             // 8. Tạo mã mùa vụ
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
 
-            // 9. Tạo entity CropSeason
+            // 9. Map entity
             var cropSeason = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId, registration.RegistrationId);
             cropSeason.Area = dto.Area ?? 0;
             cropSeason.CommitmentId = commitment.CommitmentId;
 
             await _unitOfWork.CropSeasonRepository.CreateAsync(cropSeason);
 
-            // 10. Lấy tất cả registration detail thuộc registration
+            // 10. Tạo vùng trồng từ RegistrationDetail
             var registrationDetails = await _unitOfWork.CultivationRegistrationsDetailRepository
                 .GetByRegistrationIdAsync(registration.RegistrationId);
 
@@ -163,12 +154,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             foreach (var detail in registrationDetails)
             {
-                var planDetail = await _unitOfWork.ProcurementPlanDetailsRepository
-                    .GetByIdAsync(detail.PlanDetailId);
+                var planDetail = await _unitOfWork.ProcurementPlanDetailsRepository.GetByIdAsync(detail.PlanDetailId);
                 if (planDetail == null)
                     continue;
 
-                var cropSeasonDetail = new CropSeasonDetail
+                cropSeasonDetails.Add(new CropSeasonDetail
                 {
                     DetailId = Guid.NewGuid(),
                     CropSeasonId = cropSeason.CropSeasonId,
@@ -183,18 +173,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsDeleted = false
-                };
-
-                cropSeasonDetails.Add(cropSeasonDetail);
+                });
             }
 
-            // 11. Lưu các vùng trồng
             foreach (var d in cropSeasonDetails)
             {
                 await _unitOfWork.CropSeasonDetailRepository.CreateAsync(d);
             }
 
-            // 12. Lưu thay đổi
             var result = await _unitOfWork.SaveChangesAsync();
             if (result > 0)
             {
@@ -222,22 +208,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            bool isDuplicate = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-           x => x.RegistrationId == cropSeason.RegistrationId &&
-                x.CropSeasonId != cropSeason.CropSeasonId && // ⚠️ loại chính mùa vụ hiện tại
-                x.StartDate.HasValue &&
-                x.StartDate.Value.Year == dto.StartDate.Year &&
-                !x.IsDeleted
-       );
+            // ❌ BỎ kiểm tra trùng mùa vụ cùng năm theo Registration – CHO PHÉP 1-N
 
-
-            if (isDuplicate)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Đã tồn tại mùa vụ khác cho đăng ký canh tác trong năm này.");
-
+            // Cập nhật entity
             dto.MapToExistingEntity(cropSeason);
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
 
-            // ✅ FIX: Ngắt navigation tránh bị EF tracking trùng entity
+            // FIX EF navigation trùng
             foreach (var detail in cropSeason.CropSeasonDetails)
             {
                 detail.CoffeeType = null;
