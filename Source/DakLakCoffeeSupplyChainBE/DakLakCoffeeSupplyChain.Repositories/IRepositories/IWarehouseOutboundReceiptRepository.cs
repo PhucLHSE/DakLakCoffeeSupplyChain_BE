@@ -13,7 +13,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<WarehouseOutboundReceipt?> GetByOutboundRequestIdAsync(Guid outboundRequestId);
         Task<List<WarehouseOutboundReceipt>> GetAllWithIncludesAsync();
         Task<WarehouseOutboundReceipt?> GetDetailByIdAsync(Guid receiptId);
-
+        void Update(WarehouseOutboundReceipt receipt);
+        Task<WarehouseOutboundReceipt?> GetByIdWithoutIncludesAsync(Guid id);
 
     }
 }

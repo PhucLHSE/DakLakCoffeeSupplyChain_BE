@@ -19,11 +19,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseOutboundReceipt?> GetByOutboundRequestIdAsync(Guid outboundRequestId)
         {
             return await _context.WarehouseOutboundReceipts
+                .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.OutboundRequestId == outboundRequestId && !r.IsDeleted);
         }
         public async Task<List<WarehouseOutboundReceipt>> GetAllWithIncludesAsync()
         {
             return await _context.WarehouseOutboundReceipts
+                .AsNoTracking()
                 .Include(r => r.Warehouse)
                 .Include(r => r.ExportedByNavigation).ThenInclude(u => u.User)
                 .Include(r => r.Batch)
@@ -35,12 +37,21 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseOutboundReceipt?> GetDetailByIdAsync(Guid receiptId)
         {
             return await _context.WarehouseOutboundReceipts
+                .AsNoTracking()
                 .Include(r => r.Warehouse)
                 .Include(r => r.ExportedByNavigation).ThenInclude(u => u.User)
                 .Include(r => r.Batch)
                 .FirstOrDefaultAsync(r => r.OutboundReceiptId == receiptId && !r.IsDeleted);
         }
-
+        public void Update(WarehouseOutboundReceipt receipt)
+        {
+            _context.WarehouseOutboundReceipts.Update(receipt);
+        }
+        public async Task<WarehouseOutboundReceipt?> GetByIdWithoutIncludesAsync(Guid id)
+        {
+            return await _context.WarehouseOutboundReceipts
+                .FirstOrDefaultAsync(r => r.OutboundReceiptId == id && !r.IsDeleted);
+        }
 
     }
 }
