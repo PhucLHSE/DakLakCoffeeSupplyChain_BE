@@ -596,8 +596,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Tìm product theo ID
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
-                    predicate: 
-                       p => p.ProductId == productId && 
+                    predicate: p => 
+                       p.ProductId == productId && 
                        !p.IsDeleted
                 );
 
