@@ -24,10 +24,47 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto)
+        public async Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate:
+                           s => s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Kiểm tra Order có tồn tại không
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(
                     predicate: o =>
@@ -169,6 +206,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdOrderItem != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = createdOrderItem.MapToOrderItemViewDto();
 
                         return new ServiceResult(
