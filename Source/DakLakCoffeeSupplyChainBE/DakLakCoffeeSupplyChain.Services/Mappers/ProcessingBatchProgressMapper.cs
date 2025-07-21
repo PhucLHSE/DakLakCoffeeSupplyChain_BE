@@ -12,13 +12,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class ProcessingBatchProgressMapper
     {
-        public static ProcessingBatchProgressViewAllDto MapToProcessingBatchProgressViewAllDto(this ProcessingBatchProgress entity)
+        public static ProcessingBatchProgressViewAllDto MapToProcessingBatchProgressViewAllDto(
+       this ProcessingBatchProgress entity,
+       ProcessingBatch batch)
         {
             return new ProcessingBatchProgressViewAllDto
             {
                 ProgressId = entity.ProgressId,
                 BatchId = entity.BatchId,
-                BatchCode = entity.Batch?.BatchCode ?? "N/A",
+                BatchCode = batch?.BatchCode ?? "N/A",
                 StepIndex = entity.StepIndex,
                 StageId = entity.StageId,
                 StageName = entity.Stage?.StageName ?? "N/A",
@@ -33,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+
         public static ProcessingBatchProgressDetailDto MapToProcessingBatchProgressDetailDto(this ProcessingBatchProgress entity)
         {
             return new ProcessingBatchProgressDetailDto

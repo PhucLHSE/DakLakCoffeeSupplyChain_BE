@@ -5,6 +5,7 @@ using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -23,7 +24,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _processingBatchProgressService.GetAllAsync();
+            var userIdStr = User.FindFirst("userId")?.Value
+                      ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return BadRequest("Không thể lấy userId từ token.");
+            }
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingBatchProgressService.GetAllByUserIdAsync(userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);

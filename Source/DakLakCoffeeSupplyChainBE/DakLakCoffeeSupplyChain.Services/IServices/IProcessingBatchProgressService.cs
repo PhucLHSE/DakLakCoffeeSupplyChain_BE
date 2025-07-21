@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IProcessingBatchProgressService
     {
-        Task<IServiceResult> GetAllAsync();
+        Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetByIdAsync(Guid progressId);
         Task<IServiceResult> CreateAsync(ProcessingBatchProgressCreateDto dto);
         Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto input);

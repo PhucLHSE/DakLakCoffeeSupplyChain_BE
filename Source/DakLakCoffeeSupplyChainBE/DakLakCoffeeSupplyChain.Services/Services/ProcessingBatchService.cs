@@ -48,49 +48,76 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
         public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager)
         {
-            if (isAdmin || isManager)
+            List<ProcessingBatch> batches;
+
+            if (isAdmin)
             {
-                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                // ✅ Admin: thấy tất cả batch
+                batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: x => !x.IsDeleted,
                     include: query => query
                         .Include(x => x.Method)
-                        .Include(x => x.CropSeason)
+                        .Include(x => x.CropSeason).ThenInclude(cs => cs.Commitment)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User)
+                        .Include(x => x.ProcessingBatchProgresses),
+                    orderBy: q => q.OrderByDescending(x => x.CreatedAt),
+                    asNoTracking: true
+                );
+            }
+            else if (isManager)
+            {
+                // ✅ BM: chỉ thấy batch có Commitment.ApprovedBy == BM's userId
+                batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: x =>
+                        !x.IsDeleted &&
+                        x.CropSeason != null &&
+                        x.CropSeason.Commitment != null &&
+                        x.CropSeason.Commitment.ApprovedBy == userId,
+                    include: query => query
+                        .Include(x => x.Method)
+                        .Include(x => x.CropSeason).ThenInclude(cs => cs.Commitment)
                         .Include(x => x.Farmer).ThenInclude(f => f.User)
                         .Include(x => x.ProcessingBatchProgresses),
                     orderBy: q => q.OrderByDescending(x => x.CreatedAt),
                     asNoTracking: true
                 );
 
-                if (!batches.Any())
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
-
-                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();    
-                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
+                if (batches == null || !batches.Any())
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ lô sơ chế nào.");
+                }
             }
             else
             {
+                // ✅ Farmer: chỉ thấy batch của chính mình
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
-                if (farmer == null)
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
 
-                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                if (farmer == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                }
+
+                batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: x => !x.IsDeleted && x.FarmerId == farmer.FarmerId,
                     include: query => query
                         .Include(x => x.Method)
-                        .Include(x => x.CropSeason)
+                        .Include(x => x.CropSeason).ThenInclude(cs => cs.Commitment)
                         .Include(x => x.Farmer).ThenInclude(f => f.User)
                         .Include(x => x.ProcessingBatchProgresses),
                     orderBy: q => q.OrderByDescending(x => x.CreatedAt),
                     asNoTracking: true
                 );
 
-                if (!batches.Any())
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
-
-                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
-                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
+                if (batches == null || !batches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Bạn chưa tạo lô sơ chế nào.");
+                }
             }
+
+            var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
+
 
         public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
         {

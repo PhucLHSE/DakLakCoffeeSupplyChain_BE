@@ -25,27 +25,80 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
 
-        public async Task<IServiceResult> GetAllAsync()
+        public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin, bool isManager)
         {
-            var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllWithIncludesAsync();
-
+            // 1. Lấy toàn bộ progress (bao gồm Stage nếu cần hiển thị)
+            var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                 predicate: x => !x.IsDeleted,
+                 include: q => q
+                  .Include(x => x.Stage)
+                  .Include(x => x.UpdatedByNavigation).ThenInclude(u => u.User), // 👈 Thêm dòng này
+              asNoTracking: true
+          );
             if (progresses == null || !progresses.Any())
             {
-                return new ServiceResult(
-                    Const.WARNING_NO_DATA_CODE,
-                    Const.WARNING_NO_DATA_MSG,
-                    new List<ProcessingBatchProgressViewAllDto>()
-                );
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG, new List<ProcessingBatchProgressViewAllDto>());
             }
 
-            var dtoList = progresses.Select(p => p.MapToProcessingBatchProgressViewAllDto()).ToList();
+            // 2. Lấy danh sách batch liên quan (chỉ BatchId và các field cần để lọc)
+            var batchIds = progresses.Select(p => p.BatchId).Distinct().ToList();
 
-            return new ServiceResult(
-                Const.SUCCESS_READ_CODE,
-                Const.SUCCESS_READ_MSG,
-                dtoList
+            var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                predicate: x => batchIds.Contains(x.BatchId) && !x.IsDeleted,
+                include: q => q
+                    .Include(b => b.CropSeason).ThenInclude(cs => cs.Commitment)
+                    .Include(b => b.Farmer),
+                asNoTracking: true
             );
+
+            // 3. Tạo dictionary để truy nhanh
+            var batchDict = batches.ToDictionary(b => b.BatchId, b => b);
+
+            // 4. Lọc theo role
+            if (!isAdmin)
+            {
+                if (isManager)
+                {
+                    
+                    progresses = progresses
+                        .Where(p => batchDict.ContainsKey(p.BatchId) &&
+                                    batchDict[p.BatchId].CropSeason?.Commitment?.ApprovedBy == userId)
+                        .ToList();
+
+                    
+                    if (!progresses.Any())
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_READ_CODE,
+                            "Bạn không có quyền truy cập bất kỳ tiến trình nào."
+                        );
+                    }
+                }
+                else
+                {
+                    // ✅ Farmer chỉ thấy progress thuộc batch của mình
+                    var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+                    if (farmer == null)
+                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+
+                    progresses = progresses
+                        .Where(p => batchDict.ContainsKey(p.BatchId) &&
+                                    batchDict[p.BatchId].FarmerId == farmer.FarmerId)
+                        .ToList();
+                }
+            }
+
+            // 5. Map DTO
+            var dtoList = progresses.Select(p =>
+            {
+                var batch = batchDict.ContainsKey(p.BatchId) ? batchDict[p.BatchId] : null;
+                return p.MapToProcessingBatchProgressViewAllDto(batch); // truyền batch để map thêm nếu cần
+            }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
+
+
         public async Task<IServiceResult> GetByIdAsync(Guid progressId)
         {
             var entity = await _unitOfWork.ProcessingBatchProgressRepository

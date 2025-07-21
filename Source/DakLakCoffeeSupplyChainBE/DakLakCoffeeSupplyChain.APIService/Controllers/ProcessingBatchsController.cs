@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -38,8 +39,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _processingbatchservice.GetAllByUserId(userId, isAdmin);
+            var result = await _processingbatchservice.GetAllByUserId(userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
