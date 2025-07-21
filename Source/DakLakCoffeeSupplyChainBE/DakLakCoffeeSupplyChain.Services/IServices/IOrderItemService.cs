@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IOrderItemService
     {
-        Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto);
+        Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto, Guid userId);
 
         Task<IServiceResult> Update(OrderItemUpdateDto orderItemUpdateDto);
 
