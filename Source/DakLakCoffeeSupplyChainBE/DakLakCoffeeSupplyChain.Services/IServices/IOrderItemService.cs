@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> Create(OrderItemCreateDto orderItemCreateDto, Guid userId);
 
-        Task<IServiceResult> Update(OrderItemUpdateDto orderItemUpdateDto);
+        Task<IServiceResult> Update(OrderItemUpdateDto orderItemUpdateDto, Guid userId);
 
         Task<IServiceResult> DeleteOrderItemById(Guid orderItemId, Guid userId);
 
