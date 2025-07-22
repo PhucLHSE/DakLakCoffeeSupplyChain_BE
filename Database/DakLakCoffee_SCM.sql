@@ -111,7 +111,7 @@ GO
 -- Table Wallets
 CREATE TABLE Wallets (
   WalletID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID ví
-  UserID UNIQUEIDENTIFIER NULL,                              -- NULL nếu là ví hệ thống
+  UserID UNIQUEIDENTIFIER UNIQUE NULL,                       -- NULL nếu là ví hệ thống
   WalletType NVARCHAR(50) NOT NULL,                          -- 'System', 'Business', 'Farmer', ...
   TotalBalance FLOAT NOT NULL DEFAULT 0,                     -- Tổng số dư hiện tại
   LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- Cập nhật gần nhất
@@ -246,6 +246,7 @@ CREATE TABLE CoffeeTypes (
   Description NVARCHAR(MAX),                                      -- Mô tả đặc điểm: hương, vị, độ đậm,...
   TypicalRegion NVARCHAR(255),                                    -- Vùng trồng phổ biến: Buôn Ma Thuột, Lâm Đồng,...
   SpecialtyLevel NVARCHAR(50),                                    -- Specialty, Fine Robusta,...
+  DefaultYieldPerHectare FLOAT,                                   -- Năng suất trung bình mặc định (kg/ha)
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -402,6 +403,7 @@ CREATE TABLE ProcurementPlansDetails (
     --DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
+	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (kg/ha)
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
     --BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
@@ -1022,7 +1024,7 @@ CREATE TABLE Products (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Products_CreatedBy 
-      FOREIGN KEY (CreatedBy) REFERENCES BusinessManagers(ManagerID),
+      FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID),
 
   CONSTRAINT FK_Products_BatchID 
       FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
@@ -1051,6 +1053,7 @@ CREATE TABLE Orders (
   Note NVARCHAR(MAX),                                             -- Ghi chú giao hàng
   Status NVARCHAR(50) DEFAULT 'pending',                          -- Trạng thái đơn: preparing, shipped, delivered,...
   CancelReason NVARCHAR(MAX),                                     -- Lý do hủy (nếu có)
+  CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Ai tạo đơn hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -1058,6 +1061,9 @@ CREATE TABLE Orders (
   -- FOREIGN KEYS
   CONSTRAINT FK_Orders_DeliveryBatchID 
       FOREIGN KEY (DeliveryBatchID) REFERENCES ContractDeliveryBatches(DeliveryBatchID),
+
+  CONSTRAINT FK_Orders_CreatedBy
+      FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID),
 );
 
 GO
@@ -1169,6 +1175,7 @@ CREATE TABLE Shipments (
   ShippedAt DATETIME,                                             -- Ngày bắt đầu giao
   DeliveryStatus NVARCHAR(50) DEFAULT 'in_transit',               -- Trạng thái: in_transit, delivered, failed
   ReceivedAt DATETIME,                                            -- Ngày nhận hàng thành công
+  CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Người tạo chuyến giao
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật cuối
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -1176,6 +1183,9 @@ CREATE TABLE Shipments (
   -- FOREIGN KEYS
   CONSTRAINT FK_Shipments_OrderID 
       FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
+
+  CONSTRAINT FK_Shipments_CreatedBy 
+      FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID),
 
   CONSTRAINT FK_Shipments_DeliveryStaffID 
       FOREIGN KEY (DeliveryStaffID) REFERENCES UserAccounts(UserID)
@@ -1217,6 +1227,7 @@ CREATE TABLE OrderComplaints (
   Status NVARCHAR(50) DEFAULT 'open',                          -- Trạng thái xử lý: open, investigating, resolved, rejected
   ResolutionNote NVARCHAR(MAX),                                -- Hướng xử lý hoặc kết quả
   ResolvedBy UNIQUEIDENTIFIER,                                 -- Người xử lý (doanh nghiệp bán)
+  CreatedBy UNIQUEIDENTIFIER NOT NULL,                         -- Người thao tác tạo bản ghi
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo khiếu nại
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày cập nhật cuối
   ResolvedAt DATETIME,                                         -- Ngày xử lý hoàn tất
@@ -1225,6 +1236,9 @@ CREATE TABLE OrderComplaints (
   -- FOREIGN KEYS
   CONSTRAINT FK_OrderComplaints_OrderItemID 
       FOREIGN KEY (OrderItemID) REFERENCES OrderItems(OrderItemID),
+
+  CONSTRAINT FK_OrderComplaints_CreatedBy 
+      FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID),
 
   CONSTRAINT FK_OrderComplaints_RaisedBy 
       FOREIGN KEY (RaisedBy) REFERENCES BusinessBuyers(BuyerID),
@@ -1473,7 +1487,9 @@ GO
 
 -- Insert vào bảng BusinessManagers
 -- Lấy UserID của Business Manager
-DECLARE @BMUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com');
+DECLARE @BMUserID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'
+);
 
 INSERT INTO BusinessManagers (
    UserID, ManagerCode, CompanyName, Position, Department, 
@@ -1488,7 +1504,9 @@ GO
 
 -- Insert vào bảng Farmers
 -- Lấy UserID của Farmer
-DECLARE @FarmerUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com');
+DECLARE @FarmerUserID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'
+);
 
 INSERT INTO Farmers (UserID, FarmerCode, FarmLocation, FarmSize, CertificationStatus)
 VALUES (@FarmerUserID, 'FRM-2025-0001', N'Xã Ea Tu, TP. Buôn Ma Thuột', 2.5, N'VietGAP');
@@ -1497,7 +1515,9 @@ GO
 
 -- Insert vào bảng AgriculturalExperts
 -- Lấy UserID của Expert
-DECLARE @ExpertUserID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'expert@gmail.com');
+DECLARE @ExpertUserID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'expert@gmail.com'
+);
 
 INSERT INTO AgriculturalExperts (
    UserID, ExpertCode, ExpertiseArea, Qualifications, 
@@ -1530,79 +1550,79 @@ VALUES (
 
 GO
 
--- CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
+-- Insert CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
 -- Định dạng TypeCode: CFT-2025-0001++
 
 -- Arabica (vùng cao Đắk Lắk như M'Đrắk, Krông Bông)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0001', N'Arabica', N'Coffea Arabica',
   N'Cà phê Arabica có vị chua thanh, hương thơm đặc trưng và hàm lượng caffeine thấp hơn Robusta.',
   N'M''Đrắk, Krông Bông – Đắk Lắk (vùng cao)',
-  N'Specialty'
+  N'Specialty', 1200 -- kg/ha
 );
 
 -- Robusta (chủ lực tại Đắk Lắk)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0002', N'Robusta', N'Coffea Canephora',
   N'Robusta có vị đậm đắng, hậu vị mạnh, hàm lượng caffeine cao, phù hợp espresso hoặc cà phê truyền thống Việt.',
   N'Buôn Ma Thuột, Krông Pắc, Ea Kar – Đắk Lắk',
-  N'Fine Robusta'
+  N'Fine Robusta', 2700
 );
 
 -- Culi (Robusta dạng đột biến, phổ biến tại Đắk Lắk)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0003', N'Culi', NULL,
   N'Hạt cà phê tròn đều do đột biến tự nhiên, thường mạnh và đậm hơn Arabica và Robusta thông thường.',
   N'Đắk Lắk',
-  N'Premium'
+  N'Premium', 2300
 );
 
 -- Robusta Honey (phương pháp sơ chế đặc biệt)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0004', N'Robusta Honey', N'Coffea Canephora (Honey Processed)',
   N'Cà phê Robusta được sơ chế theo phương pháp honey để giữ lại vị ngọt và hương trái cây tự nhiên.',
   N'Ea H’leo, Cư M’gar – Đắk Lắk',
-  N'Fine Robusta'
+  N'Fine Robusta', 2500
 );
 
 -- Robusta Natural (phơi nguyên trái)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0005', N'Robusta Natural', N'Coffea Canephora (Natural Processed)',
   N'Sơ chế tự nhiên (phơi nguyên trái), giữ được vị ngọt hậu, phù hợp thị trường rang xay cao cấp.',
   N'Ea H’leo, Krông Năng – Đắk Lắk',
-  N'Fine Robusta'
+  N'Fine Robusta', 2600
 );
 
 -- Typica (giống Arabica nguyên thủy, đang thử nghiệm tại Đắk Lắk)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0006', N'Typica', N'Coffea Arabica Typica',
   N'Một trong những giống cà phê Arabica nguyên thủy, đang được thử nghiệm tại vùng cao Krông Bông.',
   N'Krông Bông – Đắk Lắk',
-  N'Specialty'
+  N'Specialty', 1000
 );
 
 -- Robusta Washed (sơ chế ướt, phổ biến cho xuất khẩu cao cấp)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0007', N'Robusta Washed', N'Coffea Canephora (Washed Processed)',
   N'Cà phê Robusta được sơ chế ướt giúp vị trong trẻo hơn, hậu vị sạch, được ưa chuộng bởi thị trường châu Âu.',
   N'Krông Pắc, Buôn Ma Thuột – Đắk Lắk',
-  N'Fine Robusta'
+  N'Fine Robusta', 2550
 );
 
 -- Robusta TR9 (giống chọn lọc năng suất cao tại Đắk Lắk)
-INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel)
+INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
 VALUES (
   'CFT-2025-0008', N'Robusta TR9', N'Coffea Canephora TR9',
   N'Giống Robusta cao sản được Viện Eakmat chọn tạo, phù hợp điều kiện Đắk Lắk, cho năng suất vượt trội.',
   N'Ea Kar, Krông Ana – Đắk Lắk',
-  N'Standard'
+  N'Standard', 3200
 );
 
 GO
@@ -1822,7 +1842,6 @@ VALUES
 -- Carbonic maceration (hiếm)
 ('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
 
-
 GO
 
 -- Insert vào bảng ProcurementPlans và ProcurementPlansDetails
@@ -1897,32 +1916,32 @@ DECLARE @Carbonic INT = (
 -- Chi tiết: Arabica 5,000 kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, @Washed, 5000, N'Krông Bông',
-  100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0
+  100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0, 1100
 );
 
 -- Chi tiết: Robusta 12,500 kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, @Natural, 12500, N'Ea Kar',
-  150, 50, 65, N'Robusta thông thường – giao lần 1'
+  150, 50, 65, N'Robusta thông thường – giao lần 1', 2500
 );
 
 
 -- Chi tiết: Robusta Honey 2,500 kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-C003', @PlanID, @CoffeeID_Honey, @Honey, 2500, N'Cư M’gar',
-  100, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên'
+  100, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên', 2450
 );
 
 GO
@@ -2010,41 +2029,49 @@ DECLARE @Carbonic INT = (
 -- Chi tiết 1: Arabica
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ProgressPercentage
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note,
+  ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, @Washed, 3000, N'Krông Bông',
-  100, 80, 100, N'Thu mua dành cho thị trường specialty', 73.33
+  100, 80, 100, N'Thu mua dành cho thị trường specialty',
+  73.33, 950
 );
 
 -- Chi tiết 2: Typica
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note,
+  ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, @SemiWashed, 3000, N'M''Đrắk',
-  150, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025'
+  150, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025',
+  0, 1000
 );
 
 -- Chi tiết 3: Robusta Honey
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note,
+  ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, @Honey, 7000, N'Cư M’gar',
-  200, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi'
+  200, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi',
+  0, 2450
 );
 
 -- Chi tiết 4: Robusta TR9
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note,
+  ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, @Natural, 5000, N'Ea Kar',
-  300, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451'
+  300, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451',
+  0, 3100
 );
 
 GO
@@ -2685,7 +2712,7 @@ INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID
 )
 VALUES (
-   'USR-2025-0007', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 
+   'USR-2025-0006', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 
    'Male', '1992-04-20', N'Buôn Hồ', 'BusinessStaff@12345', 3
 );
 
@@ -2851,8 +2878,8 @@ VALUES (
 GO
 
 -- Insert vào bảng Products
-DECLARE @ManagerID UNIQUEIDENTIFIER = (
-  SELECT ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001'
+DECLARE @CreatedBy UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE Email = 'businessManager@gmail.com'
 );
 
 DECLARE @BatchID UNIQUEIDENTIFIER = (
@@ -2884,7 +2911,7 @@ VALUES (
   @ProductID, 'PROD-001-BM-2025-0001', N'Arabica DakLak - Natural',
   N'Arabica chất lượng Specialty, được sơ chế theo phương pháp tự nhiên tại Ea Tu.',
   95000, 1385.5, N'kg',
-  @ManagerID, @BatchID, @InventoryID, @CoffeeTypeID,
+  @CreatedBy, @BatchID, @InventoryID, @CoffeeTypeID,
   N'Đắk Lắk', N'Xã Ea Tu, TP. Buôn Ma Thuột', 'DLK-GI-0001',
   'https://certs.example.com/vietgap/arabica.pdf',
   N'Specialty', 84.5, N'approved', @ApprovedBy, N'Meets all cupping standards.',
@@ -2894,6 +2921,10 @@ VALUES (
 GO
 
 -- Insert vào bảng Orders
+DECLARE @CreatedBy UNIQUEIDENTIFIER = (
+  SELECT UserID FROM UserAccounts WHERE UserCode = 'USR-2025-0005'
+);
+
 DECLARE @DeliveryBatchID UNIQUEIDENTIFIER = (
   SELECT DeliveryBatchID FROM ContractDeliveryBatches WHERE DeliveryBatchCode = 'DELB-2025-0001'
 );
@@ -2903,13 +2934,15 @@ DECLARE @OrderID UNIQUEIDENTIFIER = NEWID();
 INSERT INTO Orders (
   OrderID, OrderCode, DeliveryBatchID, DeliveryRound,
   OrderDate, ActualDeliveryDate, TotalAmount,
-  Note, Status, CancelReason, CreatedAt, UpdatedAt, IsDeleted
+  Note, Status, CancelReason, CreatedAt, UpdatedAt, IsDeleted,
+  CreatedBy
 )
 VALUES (
   @OrderID, 'ORD-2025-0001', @DeliveryBatchID, 1,
   GETDATE(), GETDATE(), 95000 * 500,
   N'First batch of Arabica delivery', 'preparing', NULL,
-  GETDATE(), GETDATE(), 0
+  GETDATE(), GETDATE(), 0,
+  @CreatedBy
 );
 
 GO
@@ -3037,10 +3070,14 @@ GO
 
 -- Insert vào bảng SystemConfigurationUsers
 -- Lấy ID của tham số "MIN_AGE_FOR_REGISTRATION"
-DECLARE @MinAgeConfigID INT = (SELECT Id FROM SystemConfiguration WHERE Name = 'MIN_AGE_FOR_REGISTRATION');
+DECLARE @MinAgeConfigID INT = (
+   SELECT Id FROM SystemConfiguration WHERE Name = 'MIN_AGE_FOR_REGISTRATION'
+);
 
 -- Gán quyền 'manage' cho admin (giả sử admin là Phạm Huỳnh Xuân Đăng)
-DECLARE @AdminID UNIQUEIDENTIFIER = (SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com');
+DECLARE @AdminID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+);
 
 INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
 VALUES (@MinAgeConfigID, @AdminID, 'manage');
