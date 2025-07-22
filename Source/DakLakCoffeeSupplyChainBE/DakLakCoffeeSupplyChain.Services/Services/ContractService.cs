@@ -271,6 +271,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdContract != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = createdContract.MapToContractViewDetailDto();
 
                         return new ServiceResult(
@@ -458,6 +459,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedContract != null)
                     {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
                         var responseDto = updatedContract.MapToContractViewDetailDto();
 
                         return new ServiceResult(
@@ -518,7 +520,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (contract.ContractItems != null && 
                         contract.ContractItems.Any())
                     {
-                        foreach (var item in contract.ContractItems)
+                        foreach (var item in contract.ContractItems.Where(i => !i.IsDeleted))
                         {
                             await _unitOfWork.ContractItemRepository.RemoveAsync(item);
                         }
