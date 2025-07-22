@@ -124,17 +124,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
 
-            // 5. Kiểm tra nếu cam kết đã được dùng
-            bool hasUsed = await _unitOfWork.CropSeasonRepository.ExistsAsync(
+            // 5. (Tùy chọn) Kiểm tra thời gian mùa vụ có trùng nhau không
+            var existingSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
                 x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted);
-            if (hasUsed)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết này đã được dùng để tạo một mùa vụ khác.");
+
+            bool overlaps = existingSeasons.Any(cs =>
+                (dto.StartDate < cs.EndDate) && (dto.EndDate > cs.StartDate));
+
+            if (overlaps)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Thời gian mùa vụ trùng với một mùa vụ khác trong cùng cam kết.");
 
             // 6. Validate ngày
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // ❌ 7. BỎ kiểm tra duplicate mùa vụ theo đăng ký/năm – CHO PHÉP 1-N
+            // 7. BỎ kiểm tra duplicate mùa vụ theo cam kết – CHO PHÉP 1-N
 
             // 8. Tạo mã mùa vụ
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
