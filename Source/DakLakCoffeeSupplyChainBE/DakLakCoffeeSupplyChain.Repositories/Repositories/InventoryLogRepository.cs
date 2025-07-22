@@ -52,5 +52,25 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(log => log.LoggedAt)
                 .ToListAsync();
         }
+        public async Task<InventoryLog?> GetByIdWithAllRelationsAsync(Guid logId)
+        {
+            return await _context.InventoryLogs
+                .Include(l => l.Inventory)
+                    .ThenInclude(i => i.Warehouse)
+                .Include(l => l.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.Products) // ✅ Thêm dòng đúng này
+                .Include(l => l.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.CoffeeType)
+                .Include(l => l.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.CropSeason)
+                .Include(l => l.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.Farmer)
+                            .ThenInclude(f => f.User)
+                .FirstOrDefaultAsync(l => l.LogId == logId);
+        }
     }
 }
