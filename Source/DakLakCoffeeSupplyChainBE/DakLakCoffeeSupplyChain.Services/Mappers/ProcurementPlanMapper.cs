@@ -103,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ProcurementPlanCreateDto
-        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, string planCode, string planDetailCode)
+        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, string planCode)
         {
             return new ProcurementPlan
             {
@@ -120,7 +120,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 .Select(detail => new ProcurementPlansDetail
                 {
                     PlanDetailsId = Guid.NewGuid(),
-                    PlanDetailCode = planDetailCode,
                     CoffeeTypeId = detail.CoffeeTypeId,
                     ProcessMethodId = detail.ProcessMethodId,
                     TargetQuantity = detail.TargetQuantity,
