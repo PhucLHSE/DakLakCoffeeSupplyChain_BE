@@ -63,7 +63,7 @@ public partial class Product
 
     public virtual CoffeeType CoffeeType { get; set; }
 
-    public virtual BusinessManager CreatedByNavigation { get; set; }
+    public virtual UserAccount CreatedByNavigation { get; set; }
 
     public virtual Inventory Inventory { get; set; }
 

@@ -27,6 +27,8 @@ public partial class ProcurementPlansDetail
 
     public double? MaxPriceRange { get; set; }
 
+    public double? ExpectedYieldPerHectare { get; set; }
+
     public string Note { get; set; }
 
     public double? ProgressPercentage { get; set; }
