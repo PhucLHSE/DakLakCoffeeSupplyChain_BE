@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Nếu không phải Manager, kiểm tra BusinessStaff
                 var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
-                    predicate: s => 
+                    predicate: s =>
                        s.UserId == userId &&
                        !s.IsDeleted,
                     asNoTracking: true
@@ -70,11 +70,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
+            // Lấy tất cả UserId thuộc doanh nghiệp đó (Manager + Staff)
+            var allAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                predicate: u => !u.IsDeleted,
+                asNoTracking: true
+            );
+
+            var allowedUserIds = new List<Guid>();
+
+            foreach (var account in allAccounts)
+            {
+                var isManager = await _unitOfWork.BusinessManagerRepository.AnyAsync(
+                    m => m.ManagerId == managerId && 
+                         m.UserId == account.UserId
+                );
+
+                var isStaff = await _unitOfWork.BusinessStaffRepository.AnyAsync(
+                    s => s.SupervisorId == managerId && 
+                         s.UserId == account.UserId
+                );
+
+                if (isManager || isStaff)
+                {
+                    allowedUserIds.Add(account.UserId);
+                }
+            }
+
             // Lấy danh sách sản phẩm từ repository
             var products = await _unitOfWork.ProductRepository.GetAllAsync(
-                predicate: p => 
-                   p.IsDeleted != true &&
-                   p.CreatedBy == managerId,
+                predicate: p =>
+                   !p.IsDeleted &&
+                   allowedUserIds.Contains(p.CreatedBy),
                 include: query => query
                    .Include(p => p.CoffeeType)
                    .Include(p => p.Batch)
