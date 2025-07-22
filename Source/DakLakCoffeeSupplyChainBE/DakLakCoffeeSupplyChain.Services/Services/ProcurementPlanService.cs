@@ -173,18 +173,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Generate code
                 string procurementPlanCode = await _planCode.GenerateProcurementPlanCodeAsync();
                 string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+                var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
 
                 //Map dto to model
-                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode, procurementPlanDetailsCode);
+                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode);
 
                 //Nếu như BM để status kế hoạch là open nhưng chưa set StartDate thì kế hoạch sẽ tự động mở đăng ký luôn
                 //Nếu BM để status open và đã set StartDate thì kế hoạch mới mở đăng ký khi đến ngày đó thôi.
                 if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
                     newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-                //Logic TotalQuantity/TargetQuantity
+                // Logic TotalQuantity/TargetQuantity
+                // Tạo code hàng loạt
                 foreach(var item in newPlan.ProcurementPlansDetails)
+                {
+                    item.PlanDetailCode = $"PLD-{DateTime.UtcNow.Year}-{count:D4}";
+                    count++;
                     newPlan.TotalQuantity += item.TargetQuantity;                    
+                }
 
                 // Save data to database
                 await _unitOfWork.ProcurementPlanRepository.CreateAsync(newPlan);
@@ -368,7 +374,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var planDetailsIds = dto.ProcurementPlansDetailsUpdateDto.Select(i => i.PlanDetailsId).ToHashSet();
                 var now = DateHelper.NowVietnamTime();
 
-                // Xóa mềm plandetails
+                // Xóa mềm planDetails
                 foreach(var oldItem in plan.ProcurementPlansDetails)
                 {
                     if (!planDetailsIds.Contains(oldItem.PlanDetailsId) && !oldItem.IsDeleted)
