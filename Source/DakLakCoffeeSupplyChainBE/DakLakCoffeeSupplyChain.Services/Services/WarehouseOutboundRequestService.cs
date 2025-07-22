@@ -36,6 +36,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (manager == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy người dùng yêu cầu.");
 
+            // 🔍 Validate: kiểm tra tồn kho có đủ không
+            var inventory = await _unitOfWork.Inventories.GetByIdAsync(dto.InventoryId);
+            if (inventory == null || inventory.IsDeleted)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin tồn kho.");
+
+            if (inventory.WarehouseId != dto.WarehouseId)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Tồn kho không thuộc kho được chọn.");
+
+            if (dto.RequestedQuantity <= 0)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Số lượng yêu cầu phải lớn hơn 0.");
+
+            if (dto.RequestedQuantity > inventory.Quantity)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Tồn kho hiện tại chỉ còn {inventory.Quantity:n0} {inventory.Unit}, không thể yêu cầu xuất {dto.RequestedQuantity:n0}.");
+
             var generatedCode = await _codeGenerator.GenerateOutboundRequestCodeAsync();
 
             var request = new WarehouseOutboundRequest
@@ -63,6 +78,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }
+
 
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
