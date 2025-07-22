@@ -37,8 +37,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(predicate)
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.Products)
-                        .ThenInclude(p => p.CoffeeType)
+                    .ThenInclude(b => b.CoffeeType) // ✅ Lấy loại cà phê
+                .Include(i => i.Batch)
+                    .ThenInclude(b => b.Products)   // ✅ Nếu vẫn cần productName
                 .ToListAsync();
         }
 
@@ -47,8 +48,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.Products)
-                        .ThenInclude(p => p.CoffeeType)
+                    .ThenInclude(b => b.CoffeeType) // ✅ Bắt buộc để lấy CoffeeTypeName
+                .Include(i => i.Batch)
+                    .ThenInclude(b => b.Products)   // ✅ Nếu bạn cần ProductName
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
         public async Task<int> CountCreatedInYearAsync(int year)
