@@ -38,6 +38,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.InventoryLogs
                 .Where(log => !log.IsDeleted)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Warehouse)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.CoffeeType)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.CropSeason)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.Farmer)
                 .OrderByDescending(log => log.LoggedAt)
                 .ToListAsync();
         }
