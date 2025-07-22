@@ -27,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet]
         [EnableQuery]
         
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
             var userIdStr = User.FindFirst("userId")?.Value

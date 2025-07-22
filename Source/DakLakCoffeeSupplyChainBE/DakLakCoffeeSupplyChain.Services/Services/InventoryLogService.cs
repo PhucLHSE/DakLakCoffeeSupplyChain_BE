@@ -68,7 +68,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetLogsByInventoryIdAsync(Guid inventoryId, Guid userId)
         {
             // Lấy inventory cần truy xuất
-            var inventory = await _unitOfWork.Inventories.GetByIdAsync(inventoryId);
+            var inventory = await _unitOfWork.Inventories.GetByIdWithWarehouseAsync(inventoryId);
             if (inventory == null || inventory.IsDeleted)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy tồn kho");
 

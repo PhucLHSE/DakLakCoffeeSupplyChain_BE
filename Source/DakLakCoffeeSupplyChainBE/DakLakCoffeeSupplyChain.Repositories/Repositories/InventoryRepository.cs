@@ -58,6 +58,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .CountAsync(i => i.CreatedAt.Year == year && !i.IsDeleted);
         }
+        public async Task<Inventory?> GetByIdWithWarehouseAsync(Guid id)
+        {
+            return await _context.Inventories
+                .Include(i => i.Warehouse)
+                .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
+        }
 
     }
 

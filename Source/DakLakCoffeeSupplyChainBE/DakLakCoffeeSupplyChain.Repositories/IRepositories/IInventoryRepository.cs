@@ -17,6 +17,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<Inventory>> GetAllWithIncludesAsync(Expression<Func<Inventory, bool>> predicate);
         Task<Inventory?> GetDetailByIdAsync(Guid id);
         Task<int> CountCreatedInYearAsync(int year);
+        Task<Inventory?> GetByIdWithWarehouseAsync(Guid id);
+
     }
 }
 
