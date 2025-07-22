@@ -729,7 +729,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     contractDeliveryBatch.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Đánh dấu tất cả ContractDeliveryItems là đã xóa
-                    foreach (var item in contractDeliveryBatch.ContractDeliveryItems)
+                    foreach (var item in contractDeliveryBatch.ContractDeliveryItems.Where(i => !i.IsDeleted))
                     {
                         item.IsDeleted = true;
                         item.UpdatedAt = DateHelper.NowVietnamTime();

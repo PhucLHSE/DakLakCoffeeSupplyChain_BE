@@ -285,7 +285,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     order.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Đánh dấu tất cả OrderItems là đã xóa
-                    foreach (var orderItem in order.OrderItems)
+                    foreach (var orderItem in order.OrderItems.Where(i => !i.IsDeleted))
                     {
                         orderItem.IsDeleted = true;
                         orderItem.UpdatedAt = DateHelper.NowVietnamTime();
