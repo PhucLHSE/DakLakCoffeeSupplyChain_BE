@@ -16,6 +16,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryLogDTOs
         public bool TriggeredBySystem { get; set; }
         public string? UpdatedByName { get; set; }
 
+        public string InventoryCode { get; set; } = default!;
         public string WarehouseName { get; set; } = default!;
         public string BatchCode { get; set; } = default!;
         public string ProductName { get; set; } = default!;

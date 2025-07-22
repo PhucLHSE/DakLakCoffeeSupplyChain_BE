@@ -20,7 +20,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Note = log.Note,
                 LoggedAt = log.LoggedAt,
                 TriggeredBySystem = log.TriggeredBySystem ?? false,
-                UpdatedByName = updatedByName ?? "Không rõ"
+                UpdatedByName = updatedByName ?? "Không rõ",
+                InventoryCode = log.Inventory?.InventoryCode ?? "N/A",
+                CoffeeTypeName = log.Inventory?.Batch?.CoffeeType?.TypeName ?? "N/A",
+                WarehouseName = log.Inventory?.Warehouse?.Name ?? "N/A"
             };
         }
         public static InventoryLogByInventoryDto ToByInventoryDto(this InventoryLog log, string updatedByName)
@@ -34,9 +37,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 LoggedAt = log.LoggedAt,
                 TriggeredBySystem = log.TriggeredBySystem ?? false,
                 UpdatedByName = updatedByName ?? "Không rõ",
+                InventoryCode = log.Inventory?.InventoryCode ?? "N/A",
                 WarehouseName = log.Inventory?.Warehouse?.Name ?? "N/A",
                 BatchCode = log.Inventory?.Batch?.BatchCode ?? "N/A",
-                ProductName = log.Inventory?.Batch?.CoffeeType?.Products?.FirstOrDefault()?.ProductName ?? "N/A",
+                ProductName = log.Inventory?.Batch?.Products?.FirstOrDefault()?.ProductName ?? "N/A",
                 CoffeeTypeName = log.Inventory?.Batch?.CoffeeType?.TypeName ?? "N/A",
                 SeasonCode = log.Inventory?.Batch?.CropSeason?.CropSeasonCode ?? "N/A",
                 FarmerName = log.Inventory?.Batch?.Farmer?.User?.Name ?? "N/A"

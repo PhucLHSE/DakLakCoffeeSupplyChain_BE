@@ -139,5 +139,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá vĩnh viễn thất bại");
         }
 
+        public async Task<IServiceResult> GetByIdAsync(Guid logId, Guid userId)
+        {
+            var log = await _unitOfWork.InventoryLogs.GetByIdWithAllRelationsAsync(logId);
+            if (log == null || log.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy log tồn kho");
+
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            Guid? ownerManagerId = null;
+
+            if (manager != null && !manager.IsDeleted)
+                ownerManagerId = manager.ManagerId;
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                    ownerManagerId = staff.SupervisorId;
+            }
+
+            if (ownerManagerId == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được công ty của người dùng");
+
+            if (log.Inventory?.Warehouse?.ManagerId != ownerManagerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập log này");
+
+            var updatedByName = log.UpdatedBy.HasValue
+                ? _unitOfWork.UserAccountRepository.GetById(log.UpdatedBy.Value)?.Name ?? "Không rõ"
+                : "Hệ thống";
+
+            var dto = log.ToByInventoryDto(updatedByName);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết log thành công", dto);
+        }
+
+
     }
 }

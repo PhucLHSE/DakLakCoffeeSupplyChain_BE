@@ -15,5 +15,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryLogDTOs
         public DateTime LoggedAt { get; set; }
         public bool TriggeredBySystem { get; set; }
         public string? UpdatedByName { get; set; }
+        public string? InventoryCode { get; set; }
+        public string? WarehouseName { get; set; }
+        public string? CoffeeTypeName { get; set; }
     }
 }

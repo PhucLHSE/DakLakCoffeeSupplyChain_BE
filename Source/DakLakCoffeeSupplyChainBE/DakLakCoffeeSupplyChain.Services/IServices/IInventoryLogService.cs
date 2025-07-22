@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetLogsByInventoryIdAsync(Guid inventoryId, Guid userId);
         Task<IServiceResult> SoftDeleteAsync(Guid logId);
         Task<IServiceResult> HardDeleteAsync(Guid logId);
+        Task<IServiceResult> GetByIdAsync(Guid logId, Guid userId);
 
     }
 }

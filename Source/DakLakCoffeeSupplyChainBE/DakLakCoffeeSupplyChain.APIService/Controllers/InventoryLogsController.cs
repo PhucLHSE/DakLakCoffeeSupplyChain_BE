@@ -68,5 +68,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _inventoryLogService.HardDeleteAsync(logId);
             return result.Status == Const.SUCCESS_DELETE_CODE ? Ok(result.Message) : StatusCode(500, result.Message);
         }
+        [HttpGet("{logId}")]
+        [Authorize(Roles = "BusinessStaff,BusinessManager,Admin")]
+        public async Task<IActionResult> GetDetailById(Guid logId)
+        {
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out Guid userId))
+                return StatusCode(500, "Không xác định được người dùng.");
+
+            var result = await _inventoryLogService.GetByIdAsync(logId, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(403, result.Message);
+        }
+
     }
 }
