@@ -29,11 +29,15 @@ public partial class Order
 
     public string CancelReason { get; set; }
 
+    public Guid CreatedBy { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    public virtual UserAccount CreatedByNavigation { get; set; }
 
     public virtual ContractDeliveryBatch DeliveryBatch { get; set; }
 

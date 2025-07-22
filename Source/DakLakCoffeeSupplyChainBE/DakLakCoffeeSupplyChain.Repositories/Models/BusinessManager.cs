@@ -53,8 +53,6 @@ public partial class BusinessManager
 
     public virtual ICollection<ProcurementPlan> ProcurementPlans { get; set; } = new List<ProcurementPlan>();
 
-    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
-
     public virtual UserAccount User { get; set; }
 
     public virtual ICollection<WarehouseOutboundRequest> WarehouseOutboundRequests { get; set; } = new List<WarehouseOutboundRequest>();

@@ -27,6 +27,8 @@ public partial class OrderComplaint
 
     public Guid? ResolvedBy { get; set; }
 
+    public Guid CreatedBy { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -34,6 +36,8 @@ public partial class OrderComplaint
     public DateTime? ResolvedAt { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    public virtual UserAccount CreatedByNavigation { get; set; }
 
     public virtual OrderItem OrderItem { get; set; }
 

@@ -950,6 +950,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Orders_CreatedBy");
+
             entity.HasOne(d => d.DeliveryBatch).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.DeliveryBatchId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -983,6 +988,11 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.OrderComplaints)
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OrderComplaints_CreatedBy");
 
             entity.HasOne(d => d.OrderItem).WithMany(p => p.OrderComplaints)
                 .HasForeignKey(d => d.OrderItemId)
@@ -1480,9 +1490,9 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
-            entity.HasOne(d => d.ApprovedByNavigation).WithMany(p => p.Products)
-                .HasForeignKey(d => d.ApprovedBy)
-                .HasConstraintName("FK_Products_ApprovedBy");
+            entity.HasOne(d => d.ApprovedByNavigation).WithMany(p => p.ProductApprovedByNavigations)
+               .HasForeignKey(d => d.ApprovedBy)
+               .HasConstraintName("FK_Products_ApprovedBy");
 
             entity.HasOne(d => d.Batch).WithMany(p => p.Products)
                 .HasForeignKey(d => d.BatchId)
@@ -1494,7 +1504,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_CoffeeType");
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Products)
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ProductCreatedByNavigations)
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Products_CreatedBy");
@@ -1551,7 +1561,12 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
-            entity.HasOne(d => d.DeliveryStaff).WithMany(p => p.Shipments)
+            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.ShipmentCreatedByNavigations)
+               .HasForeignKey(d => d.CreatedBy)
+               .OnDelete(DeleteBehavior.ClientSetNull)
+               .HasConstraintName("FK_Shipments_CreatedBy");
+
+            entity.HasOne(d => d.DeliveryStaff).WithMany(p => p.ShipmentDeliveryStaffs)
                 .HasForeignKey(d => d.DeliveryStaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Shipments_DeliveryStaffID");
@@ -1749,6 +1764,8 @@ public partial class DakLakCoffee_SCMContext : DbContext
         {
             entity.HasKey(e => e.WalletId).HasName("PK__Wallets__84D4F92ED5E0669E");
 
+            entity.HasIndex(e => e.UserId, "UQ__Wallets__1788CCADDB1DF424").IsUnique();
+
             entity.Property(e => e.WalletId)
                 .HasDefaultValueSql("(newid())")
                 .HasColumnName("WalletID");
@@ -1760,8 +1777,8 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .IsRequired()
                 .HasMaxLength(50);
 
-            entity.HasOne(d => d.User).WithMany(p => p.Wallets)
-                .HasForeignKey(d => d.UserId)
+            entity.HasOne(d => d.User).WithOne(p => p.Wallet)
+                .HasForeignKey<Wallet>(d => d.UserId)
                 .HasConstraintName("FK_Wallets_UserID");
         });
 

@@ -59,13 +59,21 @@ public partial class UserAccount
 
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();
 
+    public virtual ICollection<OrderComplaint> OrderComplaints { get; set; } = new List<OrderComplaint>();
+
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
-    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+    public virtual ICollection<Product> ProductApprovedByNavigations { get; set; } = new List<Product>();
+
+    public virtual ICollection<Product> ProductCreatedByNavigations { get; set; } = new List<Product>();
 
     public virtual Role Role { get; set; }
 
-    public virtual ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
+    public virtual ICollection<Shipment> ShipmentCreatedByNavigations { get; set; } = new List<Shipment>();
+
+    public virtual ICollection<Shipment> ShipmentDeliveryStaffs { get; set; } = new List<Shipment>();
 
     public virtual ICollection<SystemConfigurationUser> SystemConfigurationUsers { get; set; } = new List<SystemConfigurationUser>();
 
@@ -73,5 +81,5 @@ public partial class UserAccount
 
     public virtual ICollection<SystemNotification> SystemNotifications { get; set; } = new List<SystemNotification>();
 
-    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
+    public virtual Wallet Wallet { get; set; }
 }
