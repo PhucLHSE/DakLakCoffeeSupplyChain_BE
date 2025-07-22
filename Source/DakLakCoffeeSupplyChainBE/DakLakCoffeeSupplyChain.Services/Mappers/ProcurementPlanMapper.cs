@@ -121,16 +121,29 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 {
                     PlanDetailsId = Guid.NewGuid(),
                     PlanDetailCode = planDetailCode,
-                    CoffeeTypeId = detail.CoffeeType,
+                    CoffeeTypeId = detail.CoffeeTypeId,
+                    ProcessMethodId = detail.ProcessMethodId,
                     TargetQuantity = detail.TargetQuantity,
                     TargetRegion = detail.TargetRegion,
                     MinimumRegistrationQuantity = detail.MinimumRegistrationQuantity,
                     MinPriceRange = detail.MinPriceRange,
                     MaxPriceRange = detail.MaxPriceRange,
                     Note = detail.Note,
-                    Status = detail.Status.ToString()
+                    Status = detail.Status.ToString(),
+                    ContractItemId = detail.ContractItemId
                 })]
             };
+        }
+
+        //Mapper ProcurementPlanUpdateDto
+        public static void MapToProcurementPlanUpdate(this ProcurementPlanUpdateDto dto, ProcurementPlan p)
+        {
+            p.Title = dto.Title.HasValue() ? dto.Title : p.Title;
+            p.Description = dto.Description.HasValue() ? dto.Description : p.Description;
+            p.StartDate = dto.StartDate.HasValue ? dto.StartDate : p.StartDate;
+            p.EndDate = dto.EndDate.HasValue ? dto.EndDate : p.EndDate;
+            p.Status = dto.Status.ToString().HasValue() ? dto.Status.ToString() : p.Status;
+            p.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

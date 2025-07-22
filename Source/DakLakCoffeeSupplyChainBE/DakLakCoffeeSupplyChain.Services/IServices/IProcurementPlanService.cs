@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetByIdExceptDisablePlanDetails(Guid planId);
         Task<IServiceResult> SoftDeleteById(Guid planId);
         Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto);
+        Task<IServiceResult> Update(ProcurementPlanUpdateDto procurementPlanDto, Guid userId, Guid planId);
     }
 }

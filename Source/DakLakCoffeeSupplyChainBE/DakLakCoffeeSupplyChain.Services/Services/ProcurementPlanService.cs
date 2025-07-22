@@ -1,5 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -199,7 +201,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         include: p => p.
                         Include(p => p.CreatedByNavigation).
                         Include(p => p.ProcurementPlansDetails).
-                        ThenInclude(d => d.CoffeeType),
+                            ThenInclude(d => d.CoffeeType).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.ProcessMethod),
                         asNoTracking: true
                         );
 
@@ -332,6 +336,149 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             catch (Exception ex)
             {
                 // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(ProcurementPlanUpdateDto dto, Guid userId, Guid planId)
+        {
+            try
+            {
+                //Lấy plan
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                    predicate: p => p.PlanId == planId && !p.IsDeleted,
+                    include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails)
+                        );
+
+                if (plan == null || plan.CreatedByNavigation.UserId != userId)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
+                    );
+
+                // Map dto to model
+                dto.MapToProcurementPlanUpdate(plan);
+
+                // Đồng bộ dữ liệu
+                var planDetailsIds = dto.ProcurementPlansDetailsUpdateDto.Select(i => i.PlanDetailsId).ToHashSet();
+                var now = DateHelper.NowVietnamTime();
+
+                // Xóa mềm plandetails
+                foreach(var oldItem in plan.ProcurementPlansDetails)
+                {
+                    if (!planDetailsIds.Contains(oldItem.PlanDetailsId) && !oldItem.IsDeleted)
+                    {
+                        plan.TotalQuantity -= oldItem.TargetQuantity;
+                        oldItem.IsDeleted = true;
+                        oldItem.UpdatedAt = now;
+                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(oldItem);
+                    }
+                }
+
+                // Cập nhật plan detail đang tồn tại
+                foreach (var itemDto in dto.ProcurementPlansDetailsUpdateDto)
+                {
+                    var existingPlanDetail = plan.ProcurementPlansDetails.
+                        FirstOrDefault(p => p.PlanDetailsId == itemDto.PlanDetailsId);
+                    
+                    if (existingPlanDetail != null)
+                    {
+                        plan.TotalQuantity = plan.TotalQuantity - existingPlanDetail.TargetQuantity + (itemDto.TargetQuantity ?? 0);
+                        existingPlanDetail.CoffeeTypeId = itemDto.CoffeeTypeId != Guid.Empty ? itemDto.CoffeeTypeId : existingPlanDetail.CoffeeTypeId;
+                        existingPlanDetail.ProcessMethodId = itemDto.ProcessMethodId != 0 ? itemDto.ProcessMethodId : existingPlanDetail.ProcessMethodId;
+                        existingPlanDetail.TargetQuantity = itemDto.TargetQuantity.HasValue ? itemDto.TargetQuantity : existingPlanDetail.TargetQuantity;
+                        existingPlanDetail.TargetRegion = itemDto.TargetRegion.HasValue() ? itemDto.TargetRegion : existingPlanDetail.TargetRegion;
+                        existingPlanDetail.MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity.HasValue ? itemDto.MinimumRegistrationQuantity : existingPlanDetail.MinimumRegistrationQuantity;
+                        existingPlanDetail.MinPriceRange = itemDto.MinPriceRange.HasValue ? itemDto.MinPriceRange : existingPlanDetail.MinPriceRange;
+                        existingPlanDetail.MaxPriceRange = itemDto.MaxPriceRange.HasValue ? itemDto.MaxPriceRange : existingPlanDetail.MaxPriceRange;
+                        existingPlanDetail.Note = itemDto.Note.HasValue() ? itemDto.Note : existingPlanDetail.Note;
+                        existingPlanDetail.ContractItemId = itemDto.ContractItemId.HasValue ? itemDto.ContractItemId : existingPlanDetail.ContractItemId;
+                        existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
+                        existingPlanDetail.UpdatedAt = now;
+
+                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(existingPlanDetail);
+                    }
+                }
+
+                // Tạo plan detail mới nếu có
+                if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
+                {
+                    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+                    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
+                    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
+                    {
+                        var newDetail = new ProcurementPlansDetail
+                        {
+                            PlanDetailsId = Guid.NewGuid(),
+                            PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
+                            CoffeeTypeId = detailDto.CoffeeTypeId,
+                            ProcessMethodId = detailDto.ProcessMethodId,
+                            TargetQuantity = detailDto.TargetQuantity,
+                            TargetRegion = detailDto.TargetRegion,
+                            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
+                            MinPriceRange = detailDto.MinPriceRange,
+                            MaxPriceRange = detailDto.MaxPriceRange,
+                            Note = detailDto.Note,
+                            Status = detailDto.Status.ToString(),
+                            ContractItemId = detailDto.ContractItemId,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        };
+
+                        count++;
+                        plan.ProcurementPlansDetails.Add(newDetail);
+                        plan.TotalQuantity += detailDto.TargetQuantity;
+
+                        await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
+                    }
+                }
+
+                // Save data to database
+                await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var updatedPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                        predicate: p => p.PlanId == plan.PlanId,
+                        include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.CoffeeType).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.ProcessMethod),
+                        asNoTracking: true
+                        );
+
+                    if (updatedPlan == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new ProcurementPlanViewDetailsSumaryDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = updatedPlan.MapToProcurementPlanViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE,
+                        Const.SUCCESS_CREATE_MSG,
+                    responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
                     ex.ToString()

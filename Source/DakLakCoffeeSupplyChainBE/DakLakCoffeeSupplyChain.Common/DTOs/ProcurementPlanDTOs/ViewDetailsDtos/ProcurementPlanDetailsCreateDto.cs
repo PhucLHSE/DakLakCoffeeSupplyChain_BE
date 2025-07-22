@@ -7,7 +7,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
     public class ProcurementPlanDetailsCreateDto : IValidatableObject
     {
         [Required(ErrorMessage = "Loại cà phê không được để trống.")]
-        public Guid CoffeeType { get; set; }
+        public Guid CoffeeTypeId { get; set; }
+
+        [Required(ErrorMessage = "Phương pháp sơ chế không được để trống")]
+        public int ProcessMethodId { get; set; }
 
         [Required(ErrorMessage = "Sản lượng mong muốn không được để trống.")]
         public double TargetQuantity { get; set; }
@@ -27,6 +30,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Disable;
+        public Guid? ContractItemId { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
