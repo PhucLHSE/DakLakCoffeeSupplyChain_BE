@@ -13,8 +13,6 @@ public partial class CropSeason
 
     public string CropSeasonCode { get; set; }
 
-    public Guid RegistrationId { get; set; }
-
     public Guid FarmerId { get; set; }
 
     public Guid CommitmentId { get; set; }
@@ -44,6 +42,4 @@ public partial class CropSeason
     public virtual Farmer Farmer { get; set; }
 
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();
-
-    public virtual CultivationRegistration Registration { get; set; }
 }

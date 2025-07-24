@@ -7,7 +7,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
     public class CropSeasonDetailCreateDto
     {
         public Guid CropSeasonId { get; set; }
-        public Guid CoffeeTypeId { get; set; }
+        public Guid CommitmentDetailId { get; set; }
         public DateOnly? ExpectedHarvestStart { get; set; }
         public DateOnly? ExpectedHarvestEnd { get; set; }
         public double? EstimatedYield { get; set; }

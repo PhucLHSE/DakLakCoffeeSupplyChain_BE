@@ -43,8 +43,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
                 CommitmentId = entity.CommitmentId,
                 CommitmentName = entity.Commitment?.CommitmentName ?? string.Empty,
-                RegistrationId = entity.RegistrationId,
-                RegistrationCode = entity.Registration?.RegistrationCode ?? string.Empty,
+                //RegistrationId = entity.RegistrationId,
+                //RegistrationCode = entity.Registration?.RegistrationCode ?? string.Empty,
                 Status = status,
 
                 Details = entity.CropSeasonDetails?
@@ -52,8 +52,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     .Select(d => new CropSeasonDetailViewDto
                     {
                         DetailId = d.DetailId,
-                        CoffeeTypeId = d.CoffeeTypeId,
-                        TypeName = d.CoffeeType?.TypeName ?? string.Empty,
+                        //CoffeeTypeId = d.CoffeeTypeId,
+                        //TypeName = d.CoffeeType?.TypeName ?? string.Empty,
                         AreaAllocated = d.AreaAllocated ?? 0,
                         ExpectedHarvestStart = d.ExpectedHarvestStart,
                         ExpectedHarvestEnd = d.ExpectedHarvestEnd,
@@ -69,8 +69,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static CropSeason MapToCropSeasonCreateDto(
           this CropSeasonCreateDto dto,
           string code,
-          Guid farmerId,
-          Guid registrationId // 👈 thêm vào đây
+          Guid farmerId
+          //Guid registrationId // 👈 thêm vào đây
       )
         {
             return new CropSeason
@@ -78,7 +78,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonId = Guid.NewGuid(),
                 CropSeasonCode = code,
                 FarmerId = farmerId,
-                RegistrationId = registrationId, // 👈 sử dụng tham số này
+                //RegistrationId = registrationId, // 👈 sử dụng tham số này
                 CommitmentId = dto.CommitmentId,
                 SeasonName = dto.SeasonName,
                 StartDate = dto.StartDate,
