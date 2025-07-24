@@ -19,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
             Task<bool> UpdateAsync(ProcessingBatchProgress entity);
             Task<bool> SoftDeleteAsync(Guid progressId);
             Task<bool> HardDeleteAsync(Guid progressId);
+            //Task<ProcessingBatchProgress?> GetByIdWithBatchAsync(Guid progressId);
         }
     }
 }
