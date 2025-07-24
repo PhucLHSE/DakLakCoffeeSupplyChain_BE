@@ -45,6 +45,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         {
             return ConvertToVietnamTime(DateTime.UtcNow);
         }
+
         // Trả về giờ hiện tại theo múi giờ Việt Nam và format theo kiểu DateOnly.
         public static DateOnly ParseDateOnlyFormatVietNamCurrentTime()
             => DateOnly.FromDateTime(NowVietnamTime());

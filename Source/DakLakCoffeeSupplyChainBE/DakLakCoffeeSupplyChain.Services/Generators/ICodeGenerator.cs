@@ -43,10 +43,13 @@
         Task<string> GenerateProductCodeAsync(Guid managerId);
 
         Task<string> GenerateOutboundRequestCodeAsync();
-        Task<string> GenerateProcessingSystemBatchCodeAsync(int year);
-        Task<string> GenerateNotificationCodeAsync();
-        Task<string> GenerateProcessingWasteCodeAsync();
-        Task<string> GenerateFarmingCommitmentCodeAsync();
 
+        Task<string> GenerateProcessingSystemBatchCodeAsync(int year);
+
+        Task<string> GenerateNotificationCodeAsync();
+
+        Task<string> GenerateProcessingWasteCodeAsync();
+
+        Task<string> GenerateFarmingCommitmentCodeAsync();
     }
 }
