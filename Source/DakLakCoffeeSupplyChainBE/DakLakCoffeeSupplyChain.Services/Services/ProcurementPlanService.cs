@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -153,7 +154,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
-        public async Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto)
+        public async Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto, Guid userId)
         {
             try
             {
@@ -170,18 +171,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 //Logic chỉ hiển thị lên public khi đến ngày StartDate và active chưa xong
 
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => m.UserId == userId,
+                    asNoTracking: true
+                );
+                if (businessManager == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+
                 //Generate code
                 string procurementPlanCode = await _planCode.GenerateProcurementPlanCodeAsync();
                 string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
                 var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
 
                 //Map dto to model
-                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode);
+                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode, businessManager.ManagerId);
 
                 //Nếu như BM để status kế hoạch là open nhưng chưa set StartDate thì kế hoạch sẽ tự động mở đăng ký luôn
                 //Nếu BM để status open và đã set StartDate thì kế hoạch mới mở đăng ký khi đến ngày đó thôi.
-                if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
-                    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+                //if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
+                //    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
                 // Logic TotalQuantity/TargetQuantity
                 // Tạo code hàng loạt
@@ -402,6 +413,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingPlanDetail.MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity.HasValue ? itemDto.MinimumRegistrationQuantity : existingPlanDetail.MinimumRegistrationQuantity;
                         existingPlanDetail.MinPriceRange = itemDto.MinPriceRange.HasValue ? itemDto.MinPriceRange : existingPlanDetail.MinPriceRange;
                         existingPlanDetail.MaxPriceRange = itemDto.MaxPriceRange.HasValue ? itemDto.MaxPriceRange : existingPlanDetail.MaxPriceRange;
+                        existingPlanDetail.ExpectedYieldPerHectare = itemDto.ExpectedYieldPerHectare.HasValue ? itemDto.ExpectedYieldPerHectare : existingPlanDetail.ExpectedYieldPerHectare;
                         existingPlanDetail.Note = itemDto.Note.HasValue() ? itemDto.Note : existingPlanDetail.Note;
                         existingPlanDetail.ContractItemId = itemDto.ContractItemId.HasValue ? itemDto.ContractItemId : existingPlanDetail.ContractItemId;
                         existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
@@ -429,8 +441,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
                             MinPriceRange = detailDto.MinPriceRange,
                             MaxPriceRange = detailDto.MaxPriceRange,
+                            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
                             Note = detailDto.Note,
-                            Status = detailDto.Status.ToString(),
+                            Status = ProcurementPlanDetailsStatus.Active.ToString(),
                             ContractItemId = detailDto.ContractItemId,
                             CreatedAt = now,
                             UpdatedAt = now

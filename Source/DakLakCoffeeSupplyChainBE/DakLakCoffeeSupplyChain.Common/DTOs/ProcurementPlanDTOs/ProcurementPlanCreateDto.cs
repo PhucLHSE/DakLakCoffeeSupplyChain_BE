@@ -14,10 +14,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
         public DateOnly? StartDate { get; set; }
         [Required(ErrorMessage = "Ngày kết thúc nhận đăng ký không được để trống.")]
         public DateOnly EndDate { get; set; }
-        [Required(ErrorMessage = "Chưa đăng nhập")]
-        public Guid CreatedById { get; set; }
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ProcurementPlanStatus Status { get; set; } = ProcurementPlanStatus.Draft;
+        //[Required(ErrorMessage = "Chưa đăng nhập")]
+        //public Guid CreatedById { get; set; }
+        //[JsonConverter(typeof(JsonStringEnumConverter))]
+        //public ProcurementPlanStatus Status { get; set; } = ProcurementPlanStatus.Draft;
 
         public ICollection<ProcurementPlanDetailsCreateDto> ProcurementPlansDetails { get; set; } = [];
 
@@ -44,11 +44,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
                         [nameof(EndDate)]);
 
             // Nếu trạng thái là DRAFT và StartDate có giá trị → so sánh logic
-            if (Status == ProcurementPlanStatus.Draft && StartDate.HasValue)
-                if (StartDate.Value > EndDate)
-                    yield return new ValidationResult(
-                            "Ngày bắt đầu không thể sau ngày kết thúc",
-                            [nameof(StartDate), nameof(EndDate)]);
+            //if (Status == ProcurementPlanStatus.Draft && StartDate.HasValue)
+            //    if (StartDate.Value > EndDate)
+            //        yield return new ValidationResult(
+            //                "Ngày bắt đầu không thể sau ngày kết thúc",
+            //                [nameof(StartDate), nameof(EndDate)]);
         }
     }
 }

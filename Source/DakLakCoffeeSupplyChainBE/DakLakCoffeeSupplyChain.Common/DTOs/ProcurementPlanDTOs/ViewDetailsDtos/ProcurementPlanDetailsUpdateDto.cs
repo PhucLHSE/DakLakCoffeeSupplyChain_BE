@@ -25,6 +25,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public double? MinPriceRange { get; set; }
 
         public double? MaxPriceRange { get; set; }
+        public double? ExpectedYieldPerHectare { get; set; }
 
         public string Note { get; set; } = string.Empty;
 

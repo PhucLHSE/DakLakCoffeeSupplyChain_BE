@@ -103,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ProcurementPlanCreateDto
-        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, string planCode)
+        public static ProcurementPlan MapToProcurementPlanCreateDto(this ProcurementPlanCreateDto dto, string planCode, Guid bmId)
         {
             return new ProcurementPlan
             {
@@ -114,8 +114,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 TotalQuantity = 0, // Cái này chưa có default 0 trong db
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                CreatedBy = dto.CreatedById,
-                Status = dto.Status.ToString(),
+                CreatedBy = bmId,
+                Status = ProcurementPlanStatus.Draft.ToString(),
                 ProcurementPlansDetails = [.. dto.ProcurementPlansDetails
                 .Select(detail => new ProcurementPlansDetail
                 {
@@ -127,8 +127,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     MinimumRegistrationQuantity = detail.MinimumRegistrationQuantity,
                     MinPriceRange = detail.MinPriceRange,
                     MaxPriceRange = detail.MaxPriceRange,
+                    ExpectedYieldPerHectare = detail.ExpectedYieldPerHectare,
                     Note = detail.Note,
-                    Status = detail.Status.ToString(),
+                    Status = ProcurementPlanDetailsStatus.Active.ToString(),
                     ContractItemId = detail.ContractItemId
                 })]
             };
