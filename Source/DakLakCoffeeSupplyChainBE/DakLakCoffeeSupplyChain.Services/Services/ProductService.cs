@@ -426,6 +426,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Lấy tất cả UserId thuộc doanh nghiệp đó (Manager + Staff)
+                var managerUsers = await _unitOfWork.BusinessManagerRepository.GetAllAsync(
+                    predicate: m => 
+                       m.ManagerId == managerId && 
+                       !m.IsDeleted, 
+                    asNoTracking: true
+                );
+
+                var staffUsers = await _unitOfWork.BusinessStaffRepository.GetAllAsync(
+                    predicate: s => 
+                       s.SupervisorId == managerId && 
+                       !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                var allowedUserIds = managerUsers
+                    .Select(m => m.UserId)
+                    .Concat(staffUsers.Select(s => s.UserId))
+                    .Distinct()
+                    .ToList();
+
                 // Lấy sản phẩm cần cập nhật
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p =>
@@ -440,8 +461,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: false
                 );
 
-                if (product == null || 
-                    product.CreatedBy != managerId)
+                if (product == null ||
+                    !allowedUserIds.Contains(product.CreatedBy))
                 {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,

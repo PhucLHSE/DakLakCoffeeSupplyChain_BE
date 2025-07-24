@@ -33,7 +33,7 @@ GO
 -- Table Users
 CREATE TABLE UserAccounts (
   UserID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- ID người dùng
-  UserCode VARCHAR(20) UNIQUE,                                  -- Auto-gen như USR-2024-0012 để phục vụ QR/mã truy xuất nếu cần hiển thị công khai.
+  UserCode VARCHAR(20) UNIQUE,                                  -- Auto-gen như USR-2024-0001 để phục vụ QR/mã truy xuất nếu cần hiển thị công khai.
   Email NVARCHAR(255) UNIQUE NOT NULL,                          -- Email
   PhoneNumber NVARCHAR(20) UNIQUE,                              -- SĐT (nếu đăng ký số)
   Name NVARCHAR(255) NOT NULL,                                  -- Họ tên đầy đủ
@@ -48,7 +48,7 @@ CREATE TABLE UserAccounts (
   VerificationCode VARCHAR(10),                                 -- Mã xác thực nếu cần
   IsVerified BIT DEFAULT 0,                                     -- Đã xác thực (qua OTP/email)
   LoginType NVARCHAR(20) DEFAULT 'System',                      -- Phương thức login: system, google,...
-  Status NVARCHAR(20) DEFAULT 'active',                         -- Trạng thái tài khoản
+  Status NVARCHAR(20) DEFAULT 'Active',                         -- Trạng thái tài khoản
   RoleID INT NOT NULL,                                          -- Vai trò người dùng
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày cập nhật
   IsDeleted BIT NOT NULL DEFAULT 0                              -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -88,7 +88,7 @@ CREATE TABLE Payments (
   PaymentAmount FLOAT NOT NULL,                                 -- Số tiền thanh toán
   PaymentMethod NVARCHAR(50),                                   -- Phương thức thanh toán (VNPay, Momo, Banking, ...)
   PaymentPurpose NVARCHAR(100) NOT NULL,                        -- Registration, MonthlyFee,...
-  PaymentStatus NVARCHAR(50) DEFAULT 'pending',                 -- Trạng thái: pending, success, failed, refunded
+  PaymentStatus NVARCHAR(50) DEFAULT 'Pending',                 -- Trạng thái: Pending, success, failed, refunded
   PaymentTime DATETIME,                                         -- Thời điểm thanh toán thành công
   AdminVerified BIT DEFAULT 0,                                  -- Được admin duyệt chưa: 0 = chưa, 1 = đã duyệt
   RefundReason NVARCHAR(MAX),                                   -- Lý do hoàn tiền (nếu bị từ chối)
@@ -172,7 +172,7 @@ GO
 -- Bảng lưu thông tin bổ sung chỉ dành riêng cho người dùng có vai trò là Farmer
 CREATE TABLE Farmers (
   FarmerID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- Mã định danh riêng cho vai trò Farmer
-  FarmerCode VARCHAR(20) UNIQUE,                                     -- FRM-2024-0007
+  FarmerCode VARCHAR(20) UNIQUE,                                     -- FRM-2024-0001
   UserID UNIQUEIDENTIFIER NOT NULL,                                  -- Liên kết đến tài khoản người dùng chung
   FarmLocation NVARCHAR(255),                                        -- Địa điểm canh tác chính
   FarmSize FLOAT,                                                    -- Diện tích nông trại (hecta)
@@ -246,7 +246,7 @@ CREATE TABLE CoffeeTypes (
   Description NVARCHAR(MAX),                                      -- Mô tả đặc điểm: hương, vị, độ đậm,...
   TypicalRegion NVARCHAR(255),                                    -- Vùng trồng phổ biến: Buôn Ma Thuột, Lâm Đồng,...
   SpecialtyLevel NVARCHAR(50),                                    -- Specialty, Fine Robusta,...
-  DefaultYieldPerHectare FLOAT,                                   -- Năng suất trung bình mặc định (kg/ha)
+  DefaultYieldPerHectare FLOAT,                                   -- Năng suất trung bình mặc định (Kg/ha)
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -288,7 +288,7 @@ GO
 -- ContractItems – Chi tiết sản phẩm trong hợp đồng
 CREATE TABLE ContractItems (
   ContractItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- Mã dòng sản phẩm trong hợp đồng
-  ContractItemCode VARCHAR(50) UNIQUE,                             -- CTI-2025-0150
+  ContractItemCode VARCHAR(50) UNIQUE,                             -- CTI-2025-0001
   ContractID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến hợp đồng
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với loại cà phê, không phải sản phẩm cụ thể
   Quantity FLOAT,                                                  -- Số lượng đặt mua
@@ -317,7 +317,7 @@ CREATE TABLE ContractDeliveryBatches (
   DeliveryRound INT NOT NULL,                    -- Đợt giao hàng số mấy (1, 2, 3...)
   ExpectedDeliveryDate DATE,                     -- Ngày dự kiến giao
   TotalPlannedQuantity FLOAT,                    -- Tổng sản lượng cần giao đợt này
-  Status NVARCHAR(50) DEFAULT 'planned',         -- planned, in_progress, fulfilled
+  Status NVARCHAR(50) DEFAULT 'Planned',         -- Planned, InProgress, Fulfilled
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0               -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -331,7 +331,7 @@ GO
 -- ContractDeliveryItems – chi tiết mặt hàng của từng đợt giao
 CREATE TABLE ContractDeliveryItems (
   DeliveryItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-  DeliveryItemCode VARCHAR(50) UNIQUE,          -- DLI-2025-0231
+  DeliveryItemCode VARCHAR(50) UNIQUE,          -- DLI-2025-0
   DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
   ContractItemID UNIQUEIDENTIFIER NOT NULL,
   PlannedQuantity FLOAT NOT NULL,               -- Số lượng mặt hàng cần giao trong đợt
@@ -369,11 +369,11 @@ CREATE TABLE ProcurementPlans (
 	PlanCode VARCHAR(20) UNIQUE,                                                       -- PLAN-2025-0001
     Title NVARCHAR(100) NOT NULL,                                                      -- Tên kế hoạch: "Thu mua cà phê Arabica 2025"
     Description NVARCHAR(MAX),                                                         -- Mô tả yêu cầu và thông tin bổ sung
-    TotalQuantity FLOAT,                                                               -- Tổng sản lượng cần thu mua (kg hoặc tấn)
+    TotalQuantity FLOAT,                                                               -- Tổng sản lượng cần thu mua (Kg hoặc tấn)
     CreatedBy UNIQUEIDENTIFIER NOT NULL,                                               -- Người tạo kế hoạch (doanh nghiệp)
     StartDate DATE,                                                                    -- Ngày bắt đầu nhận đăng ký
     EndDate DATE,                                                                      -- Ngày kết thúc nhận đăng ký
-    Status NVARCHAR(50) DEFAULT 'draft',                                               -- Tình trạng: draft, open, closed, cancelled
+    Status NVARCHAR(50) DEFAULT 'draft',                                               -- Tình trạng: draft, open, Closed, cancelled
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
@@ -394,21 +394,21 @@ CREATE TABLE ProcurementPlansDetails (
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
 	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
     --CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
-    TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (kg hoặc tấn)
+    TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (Kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
-    MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (kg)
+    MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (Kg)
     --BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
     --BeanColor NVARCHAR(50),                                                            -- Màu hạt
     --MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
     --DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
-	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (kg/ha)
+	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (Kg/ha)
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
     --BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
 	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
-    Status NVARCHAR(50) DEFAULT 'active',                                              -- Trạng thái: active, closed, disabled
+    Status NVARCHAR(50) DEFAULT 'Active',                                              -- Trạng thái: Active, Closed, Disabled
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                                   -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -438,7 +438,7 @@ CREATE TABLE CultivationRegistrations (
     RegisteredArea FLOAT,                                          -- Diện tích đăng ký (hecta)
     RegisteredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,      -- Thời điểm nộp đơn
     TotalWantedPrice FLOAT,                                        -- Tổng mức giá mong muốn
-    Status NVARCHAR(50) DEFAULT 'pending',                         -- Trạng thái: pending, approved,...
+    Status NVARCHAR(50) DEFAULT 'Pending',                         -- Trạng thái: Pending, Approved,...
     Note NVARCHAR(MAX),                                            -- Ghi chú từ farmer
     SystemNote NVARCHAR(MAX),                                      -- Ghi chú từ hệ thống
     IsDeleted BIT NOT NULL DEFAULT 0,                              -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -460,11 +460,11 @@ CREATE TABLE CultivationRegistrationsDetail (
     CultivationRegistrationDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(), -- ID chi tiết đơn đăng ký
     RegistrationID UNIQUEIDENTIFIER NOT NULL,                                     -- FK đến đơn chính
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                                       -- FK đến loại cây cụ thể
-    EstimatedYield FLOAT,                                                         -- Sản lượng ước tính (kg)
+    EstimatedYield FLOAT,                                                         -- Sản lượng ước tính (Kg)
     ExpectedHarvestStart DATE,                                                    -- Ngày bắt đầu thu hoạch
     ExpectedHarvestEnd DATE,                                                      -- Ngày kết thúc thu hoạch
 	WantedPrice FLOAT,															  -- Mức giá mong muốn
-    Status NVARCHAR(50) DEFAULT 'pending',                                        -- pending, approved,...
+    Status NVARCHAR(50) DEFAULT 'Pending',                                        -- Pending, Approved,...
     Note NVARCHAR(MAX),                                                           -- Ghi chú từ farmer
     SystemNote NVARCHAR(MAX),                                                     -- Ghi chú hệ thống
     ApprovedBy UNIQUEIDENTIFIER,                                                  -- Người duyệt (nullable)
@@ -503,7 +503,7 @@ CREATE TABLE FarmingCommitments (
     CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
     ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
     ApprovedAt DATETIME,                                               -- Ngày duyệt
-    Status NVARCHAR(50) DEFAULT 'active',                              -- Trạng thái cam kết
+    Status NVARCHAR(50) DEFAULT 'Active',                              -- Trạng thái cam kết
     RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
     Note NVARCHAR(MAX),                                                -- Ghi chú thêm
 	--ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
@@ -568,7 +568,7 @@ GO
 -- CropSeasons – Quản lý mùa vụ trồng
 CREATE TABLE CropSeasons (
     CropSeasonID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- ID của một mùa vụ
-	CropSeasonCode VARCHAR(20) UNIQUE,                                  -- SEASON-2025-0021
+	CropSeasonCode VARCHAR(20) UNIQUE,                                  -- SEASON-2025-0001
     --RegistrationID UNIQUEIDENTIFIER NOT NULL,                         -- Liên kết đơn đăng ký trồng
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                 -- Nông dân tạo mùa vụ
     CommitmentID UNIQUEIDENTIFIER NOT NULL UNIQUE,                      -- Cam kết từ doanh nghiệp
@@ -577,7 +577,7 @@ CREATE TABLE CropSeasons (
     StartDate DATE,                                                     -- Ngày bắt đầu
     EndDate DATE,                                                       -- Ngày kết thúc
     Note NVARCHAR(MAX),                                                 -- Ghi chú mùa vụ
-    Status NVARCHAR(50) DEFAULT 'active',                               -- Trạng thái: active, paused,...
+    Status NVARCHAR(50) DEFAULT 'Active',                               -- Trạng thái: Active, paused,...
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -608,7 +608,7 @@ CREATE TABLE CropSeasonDetails (
     AreaAllocated FLOAT,                                               -- Diện tích cho loại này
     PlannedQuality NVARCHAR(50),                                       -- Chất lượng dự kiến
     QualityGrade NVARCHAR(50),                                         -- Chất lượng thực tế
-    Status NVARCHAR(50) DEFAULT 'planned',                             -- planned, in_progress, completed
+    Status NVARCHAR(50) DEFAULT 'Planned',                             -- Planned, InProgress, completed
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -697,11 +697,11 @@ CREATE TABLE ProcessingBatches (
   FarmerID UNIQUEIDENTIFIER NOT NULL,                          -- FK đến nông dân thực hiện sơ chế
   BatchCode NVARCHAR(50) NOT NULL,                             -- Mã lô do người dùng tự đặt
   MethodID INT NOT NULL,                                       -- Mã phương pháp sơ chế (FK)
-  InputQuantity FLOAT NOT NULL,                                -- Số lượng đầu vào (kg quả cà phê)
-  InputUnit NVARCHAR(20) DEFAULT 'kg',                         -- Đơn vị (thường là kg)
+  InputQuantity FLOAT NOT NULL,                                -- Số lượng đầu vào (Kg quả cà phê)
+  InputUnit NVARCHAR(20) DEFAULT 'Kg',                         -- Đơn vị (thường là Kg)
   CreatedAt DATETIME,                                          -- Ngày tạo hồ sơ
   UpdatedAt DATETIME,                                          -- Ngày câp nhật hồ sơ
-  Status NVARCHAR(50),                                         -- Trạng thái: pending, processing, completed
+  Status NVARCHAR(50),                                         -- Trạng thái: Pending, processing, completed
   IsDeleted BIT NOT NULL DEFAULT 0                             -- 0 = chưa xoá, 1 = đã xoá mềm
 
   -- FOREIGN KEYS
@@ -729,7 +729,7 @@ CREATE TABLE ProcessingBatchProgresses (
   StageDescription NVARCHAR(MAX),                              -- Mô tả chi tiết quá trình
   ProgressDate DATE,                                           -- Ngày thực hiện bước
   OutputQuantity FLOAT,                                        -- Sản lượng thu được (nếu có)
-  OutputUnit NVARCHAR(20) DEFAULT 'kg',                        -- Đơn vị sản lượng
+  OutputUnit NVARCHAR(20) DEFAULT 'Kg',                        -- Đơn vị sản lượng
   UpdatedBy UNIQUEIDENTIFIER NOT NULL,                         -- Người ghi nhận bước này (Farmer)
   PhotoURL VARCHAR(255),                                       -- Link ảnh (nếu có)
   VideoURL VARCHAR(255),                                       -- Link video (tùy chọn)
@@ -850,7 +850,7 @@ CREATE TABLE ProcessingBatchWastes (
   ProgressID UNIQUEIDENTIFIER NOT NULL,                         -- FK tới bước gây ra phế phẩm
   WasteType NVARCHAR(100),                                      -- Loại phế phẩm: vỏ quả, hạt lép...
   Quantity FLOAT,                                               -- Khối lượng
-  Unit NVARCHAR(20),                                            -- Đơn vị: kg, g, pcs...
+  Unit NVARCHAR(20),                                            -- Đơn vị: Kg, g, pcs...
   Note NVARCHAR(MAX),                                           -- Ghi chú nếu có
   RecordedAt DATETIME,                                          -- Thời điểm ghi nhận
   RecordedBy UNIQUEIDENTIFIER,                                  -- Ai ghi nhận (Farmer/Manager)
@@ -896,7 +896,7 @@ CREATE TABLE Warehouses (
     ManagerID UNIQUEIDENTIFIER NOT NULL,                            -- Người quản lý chính (BusinessManager)
     Name NVARCHAR(100) NOT NULL,                                    -- Tên kho (VD: "Kho Cư M’gar")
     Location NVARCHAR(255),                                         -- Địa chỉ cụ thể
-    Capacity FLOAT,                                                 -- Dung lượng tối đa (kg, tấn...)
+    Capacity FLOAT,                                                 -- Dung lượng tối đa (Kg, tấn...)
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -942,7 +942,7 @@ CREATE TABLE Inventories (
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
     BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
     Quantity FLOAT NOT NULL,                                        -- Số lượng hiện tại trong kho
-    Unit NVARCHAR(20) DEFAULT 'kg',                                 -- Đơn vị tính (kg, tấn...)
+    Unit NVARCHAR(20) DEFAULT 'Kg',                                 -- Đơn vị tính (Kg, tấn...)
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời điểm cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -986,7 +986,7 @@ CREATE TABLE WarehouseInboundRequests (
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
-  Status NVARCHAR(50) DEFAULT 'pending',                            -- Trạng thái: pending, approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, rejected, completed
   Note NVARCHAR(MAX),                                               -- Ghi chú thêm từ Farmer
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật cuối
@@ -1042,9 +1042,9 @@ CREATE TABLE Products (
   ProductCode VARCHAR(50) UNIQUE,                                   -- PROD-001-BM-2025-0001
   ProductName NVARCHAR(100) NOT NULL,                               -- Tên thương mại sản phẩm
   Description NVARCHAR(MAX),                                        -- Mô tả chi tiết sản phẩm
-  UnitPrice FLOAT,                                                  -- Giá bán B2B (VNĐ/kg)
-  QuantityAvailable FLOAT,                                          -- Số lượng còn lại (kg)
-  Unit NVARCHAR(20) DEFAULT 'kg',                                   -- Đơn vị tính
+  UnitPrice FLOAT,                                                  -- Giá bán B2B (VNĐ/Kg)
+  QuantityAvailable FLOAT,                                          -- Số lượng còn lại (Kg)
+  Unit NVARCHAR(20) DEFAULT 'Kg',                                   -- Đơn vị tính
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                              -- Người tạo sản phẩm
   BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Mẻ sơ chế gốc
   InventoryID UNIQUEIDENTIFIER NOT NULL,                            -- Gắn với kho để lấy hàng
@@ -1055,7 +1055,7 @@ CREATE TABLE Products (
   CertificationURL NVARCHAR(255),                                   -- Link chứng nhận
   EvaluatedQuality NVARCHAR(100),                                   -- Chất lượng: Specialty...
   EvaluationScore FLOAT,                                            -- Điểm cupping
-  Status NVARCHAR(50) DEFAULT 'pending',                            -- Trạng thái sản phẩm
+  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái sản phẩm
   ApprovedBy UNIQUEIDENTIFIER,                                      -- Người duyệt
   ApprovalNote NVARCHAR(MAX),                                       -- Ghi chú duyệt
   ApprovedAt DATETIME,                                              -- Ngày duyệt
@@ -1092,7 +1092,7 @@ CREATE TABLE Orders (
   ActualDeliveryDate DATE,                                        -- Ngày giao thực tế
   TotalAmount FLOAT,                                              -- Tổng tiền đơn hàng
   Note NVARCHAR(MAX),                                             -- Ghi chú giao hàng
-  Status NVARCHAR(50) DEFAULT 'pending',                          -- Trạng thái đơn: preparing, shipped, delivered,...
+  Status NVARCHAR(50) DEFAULT 'Pending',                          -- Trạng thái đơn: preparing, shipped, delivered,...
   CancelReason NVARCHAR(MAX),                                     -- Lý do hủy (nếu có)
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Ai tạo đơn hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
@@ -1144,12 +1144,12 @@ CREATE TABLE WarehouseOutboundRequests (
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                              -- Kho chứa hàng cần xuất
   InventoryID UNIQUEIDENTIFIER NOT NULL,                              -- Dòng tồn kho cần xuất
   RequestedQuantity FLOAT NOT NULL,                                   -- Số lượng yêu cầu xuất
-  Unit NVARCHAR(20) DEFAULT 'kg',                                     -- Đơn vị tính
+  Unit NVARCHAR(20) DEFAULT 'Kg',                                     -- Đơn vị tính
   RequestedBy UNIQUEIDENTIFIER NOT NULL,                              -- Người tạo yêu cầu (BusinessStaff)
   Purpose NVARCHAR(100),                                              -- Mục đích xuất: Giao đơn hàng, Kiểm định, Nội bộ...
   OrderItemID UNIQUEIDENTIFIER,                                       -- (Nullable) Liên kết dòng đơn hàng nếu xuất cho B2B
   Reason NVARCHAR(MAX),                                               -- Ghi chú/giải thích chi tiết
-  Status NVARCHAR(50) DEFAULT 'pending',                              -- Trạng thái: pending, approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                              -- Trạng thái: Pending, Approved, rejected, completed
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày cập nhật cuối
   IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -1240,7 +1240,7 @@ CREATE TABLE ShipmentDetails (
   ShipmentID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với chuyến hàng
   OrderItemID UNIQUEIDENTIFIER NOT NULL,                         -- Gắn với dòng sản phẩm cụ thể trong đơn
   Quantity FLOAT,                                                -- Số lượng giao
-  Unit NVARCHAR(20) DEFAULT 'kg',                                -- Đơn vị tính
+  Unit NVARCHAR(20) DEFAULT 'Kg',                                -- Đơn vị tính
   Note NVARCHAR(MAX),                                            -- Ghi chú riêng dòng hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày cập nhật cuối
@@ -1358,7 +1358,7 @@ CREATE TABLE SystemConfiguration (
     Description NVARCHAR(255),                   -- Mô tả ý nghĩa tham số
     MinValue DECIMAL(18,2),                      -- Giá trị tối thiểu (nếu có)
     MaxValue DECIMAL(18,2),                      -- Giá trị tối đa (nếu có)
-    Unit NVARCHAR(20),                           -- Đơn vị đo (kg, %, times,...)
+    Unit NVARCHAR(20),                           -- Đơn vị đo (Kg, %, times,...)
     IsActive BIT NOT NULL DEFAULT 1,             -- Còn hiệu lực không?
     EffectedDateFrom DATETIME NOT NULL,          -- Thời điểm bắt đầu áp dụng
     EffectedDateTo DATETIME NULL,                -- Thời điểm kết thúc áp dụng (nếu có)
@@ -1600,7 +1600,7 @@ VALUES (
   'CFT-2025-0001', N'Arabica', N'Coffea Arabica',
   N'Cà phê Arabica có vị chua thanh, hương thơm đặc trưng và hàm lượng caffeine thấp hơn Robusta.',
   N'M''Đrắk, Krông Bông – Đắk Lắk (vùng cao)',
-  N'Specialty', 1200 -- kg/ha
+  N'Specialty', 1200 -- Kg/ha
 );
 
 -- Robusta (chủ lực tại Đắk Lắk)
@@ -1735,7 +1735,7 @@ DECLARE @TypicaID UNIQUEIDENTIFIER = (
     SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Typica'
 );
 
--- Thêm dòng hợp đồng: Arabica 20.000 kg
+-- Thêm dòng hợp đồng: Arabica 20.000 Kg
 INSERT INTO ContractItems (
     ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
     DiscountAmount, Note, CreatedAt, UpdatedAt
@@ -1744,7 +1744,7 @@ INSERT INTO ContractItems (
     N'Cà phê Arabica chất lượng cao', GETDATE(), GETDATE()
 );
 
--- Thêm dòng hợp đồng: Robusta 50.000 kg
+-- Thêm dòng hợp đồng: Robusta 50.000 Kg
 INSERT INTO ContractItems (
     ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
     DiscountAmount, Note, CreatedAt, UpdatedAt
@@ -1764,7 +1764,7 @@ VALUES
 GO
 
 -- Insert ContractDeliveryBatches và ContractDeliveryItems
--- Đợt 1 – Giao 30,000 kg (Arabica, Robusta, Honey)
+-- Đợt 1 – Giao 30,000 Kg (Arabica, Robusta, Honey)
 DECLARE @ContractID UNIQUEIDENTIFIER = (
    SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001'
 );
@@ -1775,7 +1775,7 @@ INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'planned', GETDATE(), GETDATE()
+    @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'Planned', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (
@@ -1798,14 +1798,14 @@ INSERT INTO ContractDeliveryItems (
 (NEWID(), 'DLI-2025-0002', @Batch1, @CTI_Robusta, 20000, 0, N'Robusta đợt 1', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0003', @Batch1, @CTI_Honey,   5000, 0, N'Honey đợt 1', GETDATE(), GETDATE());
 
--- Đợt 2 – Giao 20,000 kg (Robusta Washed, Culi)
+-- Đợt 2 – Giao 20,000 Kg (Robusta Washed, Culi)
 DECLARE @Batch2 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'planned', GETDATE(), GETDATE()
+    @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'Planned', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Washed UNIQUEIDENTIFIER = (
@@ -1823,14 +1823,14 @@ INSERT INTO ContractDeliveryItems (
 (NEWID(), 'DLI-2025-0004', @Batch2, @CTI_Washed, 12000, 0, N'Robusta Washed đợt 2', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0005', @Batch2, @CTI_Culi,   8000,  0, N'Culi đợt 2', GETDATE(), GETDATE());
 
--- Đợt 3 – Giao 25,000 kg (Robusta Natural, Arabica, Robusta)
+-- Đợt 3 – Giao 25,000 Kg (Robusta Natural, Arabica, Robusta)
 DECLARE @Batch3 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'planned', GETDATE(), GETDATE()
+    @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'Planned', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Natural UNIQUEIDENTIFIER = (
@@ -1845,14 +1845,14 @@ INSERT INTO ContractDeliveryItems (
 (NEWID(), 'DLI-2025-0007', @Batch3, @CTI_Arabica, 5000,  0, N'Arabica đợt 3', GETDATE(), GETDATE()),
 (NEWID(), 'DLI-2025-0008', @Batch3, @CTI_Robusta, 10000, 0, N'Robusta đợt 3', GETDATE(), GETDATE());
 
--- Đợt 4 – Giao 25,000 kg (Typica, Robusta, Robusta Washed)
+-- Đợt 4 – Giao 25,000 Kg (Typica, Robusta, Robusta Washed)
 DECLARE @Batch4 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'planned', GETDATE(), GETDATE()
+    @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'Planned', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Typica UNIQUEIDENTIFIER = (
@@ -1954,7 +1954,7 @@ DECLARE @Carbonic INT = (
    SELECT MethodID FROM ProcessingMethods WHERE MethodCode = 'carbonic'
 );
 
--- Chi tiết: Arabica 5,000 kg
+-- Chi tiết: Arabica 5,000 Kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
   MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage, ExpectedYieldPerHectare
@@ -1964,7 +1964,7 @@ VALUES (
   100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0, 1100
 );
 
--- Chi tiết: Robusta 12,500 kg
+-- Chi tiết: Robusta 12,500 Kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
   MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
@@ -1975,7 +1975,7 @@ VALUES (
 );
 
 
--- Chi tiết: Robusta Honey 2,500 kg
+-- Chi tiết: Robusta Honey 2,500 Kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
   MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
@@ -2456,7 +2456,7 @@ INSERT INTO ProcessingBatches (
 )
 VALUES (
   'BATCH-2025-0001', @CoffeeTypeID, @CropSeasonID, @FarmerID,
-  N'Lô Arabica đầu mùa', @MethodID, 1500.0, N'kg', GETDATE(), GETDATE(), N'processing'
+  N'Lô Arabica đầu mùa', @MethodID, 1500.0, N'Kg', GETDATE(), GETDATE(), N'processing'
 );
 
 GO
@@ -2488,7 +2488,7 @@ INSERT INTO ProcessingBatchProgresses (
 )
 VALUES (
   @ProgressID1, @BatchID, 1, @StageID1, N'Hái trái cà phê chín tại vườn.',
-  GETDATE(), 1410, N'kg', @FarmerID, NULL, NULL
+  GETDATE(), 1410, N'Kg', @FarmerID, NULL, NULL
 );
 
 -- Step 2: Drying
@@ -2505,7 +2505,7 @@ INSERT INTO ProcessingBatchProgresses (
 )
 VALUES (
   @ProgressID2, @BatchID, 2, @StageID2, N'Phơi nguyên trái từ 10–25 ngày tùy thời tiết.',
-  GETDATE(), 1420, N'kg', @FarmerID, NULL, NULL
+  GETDATE(), 1420, N'Kg', @FarmerID, NULL, NULL
 );
 
 -- Step 3: Hulling
@@ -2522,7 +2522,7 @@ INSERT INTO ProcessingBatchProgresses (
 )
 VALUES (
   @ProgressID3, @BatchID, 3, @StageID3, N'Xay tách vỏ khô để lấy nhân.',
-  GETDATE(), 1430, N'kg', @FarmerID, NULL, NULL
+  GETDATE(), 1430, N'Kg', @FarmerID, NULL, NULL
 );
 
 -- Step 4: Grading
@@ -2539,7 +2539,7 @@ INSERT INTO ProcessingBatchProgresses (
 )
 VALUES (
   @ProgressID4, @BatchID, 4, @StageID4, N'Phân loại theo kích thước, trọng lượng và màu sắc.',
-  GETDATE(), 1440, N'kg', @FarmerID, NULL, NULL
+  GETDATE(), 1440, N'Kg', @FarmerID, NULL, NULL
 );
 
 -- Insert vào bảng ProcessingParameters
@@ -2657,7 +2657,7 @@ INSERT INTO ProcessingBatchWastes (
   WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
 )
 VALUES (
-  @WasteID1, 'WASTE-2025-0001', @ProgressID1, N'Trái non/hỏng', 30, N'kg',
+  @WasteID1, 'WASTE-2025-0001', @ProgressID1, N'Trái non/hỏng', 30, N'Kg',
   N'Loại bỏ trái non, trái dập trong quá trình hái.', GETDATE(), @FarmerUserID
 );
 
@@ -2680,7 +2680,7 @@ INSERT INTO ProcessingBatchWastes (
   WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
 )
 VALUES (
-  @WasteID2, 'WASTE-2025-0002', @ProgressID2, N'Vỏ quả khô', 80, N'kg', 
+  @WasteID2, 'WASTE-2025-0002', @ProgressID2, N'Vỏ quả khô', 80, N'Kg', 
   N'Phế phẩm từ vỏ sau khi phơi nguyên trái.', GETDATE(), @FarmerUserID
 );
 
@@ -2704,7 +2704,7 @@ INSERT INTO ProcessingBatchWastes (
   WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
 )
 VALUES (
-  @WasteID3, 'WASTE-2025-0003', @ProgressID3, N'Vỏ trấu', 50, N'kg',
+  @WasteID3, 'WASTE-2025-0003', @ProgressID3, N'Vỏ trấu', 50, N'Kg',
   N'Vỏ trấu sau khi xay bóc nhân.', GETDATE(), @FarmerUserID
 );
 
@@ -2728,7 +2728,7 @@ INSERT INTO ProcessingBatchWastes (
   WasteID, WasteCode, ProgressID, WasteType, Quantity, Unit, Note, RecordedAt, RecordedBy
 )
 VALUES (
-  @WasteID4, 'WASTE-2025-0004', @ProgressID4, N'Hạt lép/hỏng', 20, N'kg',
+  @WasteID4, 'WASTE-2025-0004', @ProgressID4, N'Hạt lép/hỏng', 20, N'Kg',
   N'Hạt không đạt tiêu chuẩn kích cỡ hoặc màu sắc.', GETDATE(), @FarmerUserID
 );
 
@@ -2903,7 +2903,7 @@ INSERT INTO Inventories (
 )
 VALUES (
   'INV-2025-0001', @WarehouseID, @BatchID, 1385.5,
-  N'kg', GETDATE(), GETDATE(), 0
+  N'Kg', GETDATE(), GETDATE(), 0
 );
 
 GO
@@ -2974,11 +2974,11 @@ INSERT INTO Products (
 VALUES (
   @ProductID, 'PROD-001-BM-2025-0001', N'Arabica DakLak - Natural',
   N'Arabica chất lượng Specialty, được sơ chế theo phương pháp tự nhiên tại Ea Tu.',
-  95000, 1385.5, N'kg',
+  95000, 1385.5, N'Kg',
   @CreatedBy, @BatchID, @InventoryID, @CoffeeTypeID,
   N'Đắk Lắk', N'Xã Ea Tu, TP. Buôn Ma Thuột', 'DLK-GI-0001',
   'https://certs.example.com/vietgap/arabica.pdf',
-  N'Specialty', 84.5, N'approved', @ApprovedBy, N'Meets all cupping standards.',
+  N'Specialty', 84.5, N'Approved', @ApprovedBy, N'Meets all cupping standards.',
   GETDATE(), GETDATE(), GETDATE(), 0
 );
 
@@ -3065,12 +3065,12 @@ VALUES (
   @WarehouseID,
   @InventoryID,
   500,
-  N'kg',
+  N'Kg',
   @RequestedBy,
   N'Giao đơn hàng ORD-2025-0001',
   @OrderItemID,
-  N'Yêu cầu xuất 500kg Arabica để giao cho khách hàng B2B.',
-  N'pending'
+  N'Yêu cầu xuất 500Kg Arabica để giao cho khách hàng B2B.',
+  N'Pending'
 );
 
 GO
@@ -3112,10 +3112,10 @@ VALUES (
   @StaffID,
   GETDATE(),
   N'Kho khách hàng B2B tại Bình Dương',
-  N'Xác nhận đã xuất 500kg Arabica đúng số lượng và tiêu chuẩn.'
+  N'Xác nhận đã xuất 500Kg Arabica đúng số lượng và tiêu chuẩn.'
 );
 
--- Sau khi xuất kho 500kg, cập nhật lại số lượng tồn kho
+-- Sau khi xuất kho 500Kg, cập nhật lại số lượng tồn kho
 UPDATE Inventories
 SET Quantity = Quantity - 500,
     UpdatedAt = GETDATE()
