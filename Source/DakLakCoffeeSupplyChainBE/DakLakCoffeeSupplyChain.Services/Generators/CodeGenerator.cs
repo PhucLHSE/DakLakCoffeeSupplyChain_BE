@@ -274,7 +274,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             var managerCode = manager?.ManagerCode?.Replace(" ", "").ToUpper() ?? "BM-UNKNOWN";
 
-            // Format: PROD-001-BM2025
+            // Format: PROD-001-BM-2025-0001
             return $"PROD-{(count + 1):D3}-{managerCode}";
         }
 
