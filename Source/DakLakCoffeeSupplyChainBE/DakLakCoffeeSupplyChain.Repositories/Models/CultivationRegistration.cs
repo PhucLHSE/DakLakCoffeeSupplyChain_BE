@@ -33,11 +33,11 @@ public partial class CultivationRegistration
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
-
     public virtual ICollection<CultivationRegistrationsDetail> CultivationRegistrationsDetails { get; set; } = new List<CultivationRegistrationsDetail>();
 
     public virtual Farmer Farmer { get; set; }
+
+    public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
 
     public virtual ProcurementPlan Plan { get; set; }
 }

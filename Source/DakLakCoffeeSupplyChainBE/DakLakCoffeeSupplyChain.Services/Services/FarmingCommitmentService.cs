@@ -124,6 +124,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                    c.CommitmentId == commitmentId &&
                    !c.IsDeleted,
                 include: fm => fm.
+                Include(fm => fm.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
@@ -199,7 +201,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 //Lấy registration detail
                 var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
-                    predicate: r => r.CultivationRegistrationDetailId == newCommitment.RegistrationDetailId,
+                    predicate: r => r.RegistrationId == newCommitment.RegistrationId,
                     include: r => r.Include( r => r.Registration),
                     asNoTracking: true);
                 if(registrationDetail == null)
@@ -209,7 +211,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
 
                 //Tự động map planId và farmerId từ Registration
-                newCommitment.PlanDetailId = registrationDetail.PlanDetailId;
+                //newCommitment.PlanDetailId = registrationDetail.PlanDetailId;
                 newCommitment.FarmerId = registrationDetail.Registration.FarmerId;
 
                 //Tự động map giá cả và sản lượng, thời gian từ Registration
@@ -228,11 +230,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .GetByIdAsync(
                             predicate: p => p.CommitmentId == newCommitment.CommitmentId,
                             include: c => c.
+                            Include( p => p.Plan).
+                                ThenInclude(fm => fm.CreatedByNavigation).
                             Include(f => f.Farmer).
                                 ThenInclude(f => f.User).
-                            Include(p => p.PlanDetail).
-                                ThenInclude(p => p.Plan).
-                                    ThenInclude(c => c.CreatedByNavigation),
+                            Include(p => p.Plan).
+                                ThenInclude(c => c.CreatedByNavigation),
                             asNoTracking: true
                         );
                     if (commitment == null)
@@ -283,7 +286,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var commitment = dto.MapToFarmingCommitment(newCommitmentCode);
 
                     var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
-                    predicate: r => r.CultivationRegistrationDetailId == commitment.RegistrationDetailId,
+                    predicate: r => r.RegistrationId == commitment.RegistrationId,
                     include: r => r.Include(r => r.Registration),
                     asNoTracking: true);
 
@@ -293,7 +296,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "Không tìm được chi tiết phiếu đăng ký"
                         );
 
-                    commitment.PlanDetailId = registrationDetail.PlanDetailId;
+                    commitment.PlanId = registrationDetail.PlanDetailId;
                     commitment.FarmerId = registrationDetail.Registration.FarmerId;
 
                     commitments.Add(commitment);

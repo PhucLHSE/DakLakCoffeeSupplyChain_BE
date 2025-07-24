@@ -49,7 +49,7 @@ public partial class ProcurementPlansDetail
 
     public virtual ICollection<CultivationRegistrationsDetail> CultivationRegistrationsDetails { get; set; } = new List<CultivationRegistrationsDetail>();
 
-    public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
+    public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetails { get; set; } = new List<FarmingCommitmentsDetail>();
 
     public virtual ProcurementPlan Plan { get; set; }
 
