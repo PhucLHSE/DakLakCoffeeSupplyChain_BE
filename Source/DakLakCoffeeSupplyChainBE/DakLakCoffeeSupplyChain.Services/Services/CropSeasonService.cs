@@ -121,8 +121,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết không thuộc về bạn.");
 
             // 4. Kiểm tra trạng thái duyệt
-            if (commitment.Status != FarmingCommitmentStatus.Active.ToString())
+            if (!string.Equals(commitment.Status, FarmingCommitmentStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase))
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
+
 
             // 5. (Tùy chọn) Kiểm tra thời gian mùa vụ có trùng nhau không
             var existingSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
