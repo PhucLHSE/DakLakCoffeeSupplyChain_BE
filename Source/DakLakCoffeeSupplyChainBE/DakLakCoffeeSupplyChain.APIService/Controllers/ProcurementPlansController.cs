@@ -164,8 +164,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // PATCH api/<ProcurementPlan>/{planId}
+        // PATCH api/<ProcurementPlan>/Update/{planId}
         [HttpPatch("Update/{planId}")]
+        [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> UpdateAsync(Guid planId,
             [FromBody] ProcurementPlanUpdateDto updateDto)
         {
@@ -186,6 +187,42 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var result = await _procurementPlanService
                 .Update(updateDto, userId, planId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy kế hoạch.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH api/<ProcurementPlan>/UpdateStatus/{planId}
+        [HttpPatch("UpdateStatus/{planId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> UpdateStatusAsync(Guid planId,
+            [FromBody] ProcurementPlanUpdateStatusDto updateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _procurementPlanService
+                .UpdateStatus(updateDto, userId, planId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
