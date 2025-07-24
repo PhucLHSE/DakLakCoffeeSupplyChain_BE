@@ -70,5 +70,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             _context.ProcessingBatchProgresses.Remove(entity);
             return true;
         }
+        //public async Task<ProcessingBatchProgress?> GetByIdWithBatchAsync(Guid progressId)
+        //{
+        //    return await _context.ProcessingBatchProgresses
+        //        .Where(p => p.ProgressId == progressId && !p.IsDeleted)
+        //        .Include(p => p.ProcessingBatch)
+        //        .FirstOrDefaultAsync();
+        //}
+
     }
 }

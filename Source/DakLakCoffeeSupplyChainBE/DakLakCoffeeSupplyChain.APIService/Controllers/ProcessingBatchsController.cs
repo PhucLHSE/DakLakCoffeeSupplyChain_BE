@@ -52,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpPost]
-        [Authorize(Roles = "Farmer")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> Create([FromBody] ProcessingBatchCreateDto dto)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -74,7 +74,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(result.Message);
         }
         [HttpPut]
-        [Authorize(Roles = "Farmer")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> Update([FromBody] ProcessingBatchUpdateDto dto)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -82,9 +82,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
-            var isAdmin = User.IsInRole("Admin");
 
-            var result = await _processingbatchservice.UpdateAsync(dto, userId, isAdmin);
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingbatchservice.UpdateAsync(dto, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -95,7 +97,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(result.Message);
         }
         [HttpPatch("{id}/soft-delete")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -105,8 +107,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest("Không thể lấy userId từ token.");
 
             var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _processingbatchservice.SoftDeleteAsync(id, userId, isAdmin);
+            var result = await _processingbatchservice.SoftDeleteAsync(id, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -117,7 +120,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(result.Message);
         }
         [HttpDelete("hard/{id}")]
-        [Authorize(Roles = "Farmer")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -125,8 +128,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
+            var isAdmin = User.IsInRole("Admin");
 
-            var result = await _processingbatchservice.HardDeleteAsync(id, userId);
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingbatchservice.HardDeleteAsync(id, userId, isManager, isAdmin);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -137,7 +143,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(result.Message);
         }
         [HttpGet("{id}")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -147,8 +153,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest("Không thể lấy userId từ token.");
 
             var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _processingbatchservice.GetByIdAsync(id, userId, isAdmin);
+            var result = await _processingbatchservice.GetByIdAsync(id, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);

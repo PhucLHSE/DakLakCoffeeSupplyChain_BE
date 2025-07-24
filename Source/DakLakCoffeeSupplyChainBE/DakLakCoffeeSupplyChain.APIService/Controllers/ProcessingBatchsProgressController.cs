@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -22,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpGet]
         [EnableQuery]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -46,6 +48,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpGet("detail/{id}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _processingBatchProgressService.GetByIdAsync(id);
@@ -58,10 +61,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ProcessingBatchProgressCreateDto input)
+
+        [HttpPost("{batchId}")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> Create(Guid batchId, [FromBody] ProcessingBatchProgressCreateDto input)
         {
-            var result = await _processingBatchProgressService.CreateAsync(input);
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingBatchProgressService.CreateAsync(batchId, input, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(StatusCodes.Status201Created, result.Message);
@@ -71,23 +85,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+
         [HttpPut("{id}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> Update(Guid id, [FromBody] ProcessingBatchProgressUpdateDto input)
         {
             var result = await _processingBatchProgressService.UpdateAsync(id, input);
 
-            // ✅ Trường hợp thành công: chỉ trả về .Data
+          
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data ?? new { });
 
-            // ❌ Trường hợp lỗi: trả về full ServiceResult (message, status, errors)
+            
             if (result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
                 return BadRequest(result);
 
             return StatusCode(500, result); // fallback lỗi hệ thống
         }
         [HttpDelete("soft/{id}")]
-        // [Authorize(Roles = "BusinessStaff,Farmer")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var result = await _processingBatchProgressService.SoftDeleteAsync(id);
@@ -101,6 +118,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpDelete("hard/{id}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
             var result = await _processingBatchProgressService.HardDeleteAsync(id);
@@ -112,6 +130,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
+        }
+        [HttpPost("{batchId}/advance")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> AdvanceToNextStep([FromRoute] Guid batchId, [FromBody] AdvanceProcessingBatchProgressDto dto)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                     ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return BadRequest("Không thể lấy userId từ token.");
+            }
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingBatchProgressService.AdvanceProgressByBatchIdAsync(batchId, dto, userId, isAdmin, isManager);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE || result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result);
+
+            return StatusCode(500, result);
         }
     }
 }

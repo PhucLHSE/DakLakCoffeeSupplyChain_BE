@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
@@ -20,11 +19,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
+
         public ProcessingBatchService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork;
             _codeGenerator = codeGenerator;
         }
+
+        private bool HasPermissionToAccess(ProcessingBatch batch, Guid userId, bool isAdmin, bool isManager)
+        {
+            if (isAdmin || isManager) return true;
+            return batch.Farmer?.UserId == userId;
+        }
+
         public async Task<IServiceResult> GetAll()
         {
             var batches = await _unitOfWork.ProcessingBatchRepository.GetAll();
@@ -46,13 +53,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
+
         public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager)
         {
             List<ProcessingBatch> batches;
 
             if (isAdmin)
             {
-                // ✅ Admin: thấy tất cả batch
                 batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: x => !x.IsDeleted,
                     include: query => query
@@ -66,7 +73,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else if (isManager)
             {
-                // Bước 1: Truy ra ManagerId từ UserId
                 var manager = await _unitOfWork.BusinessManagerRepository
                     .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
 
@@ -75,7 +81,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var managerId = manager.ManagerId;
 
-                // Bước 2: Lọc batch mà Commitment.ApprovedBy == ManagerId
                 batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: x =>
                         !x.IsDeleted &&
@@ -96,10 +101,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ lô sơ chế nào.");
                 }
             }
-
             else
             {
-                // ✅ Farmer: chỉ thấy batch của chính mình
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
 
                 if (farmer == null)
@@ -128,29 +131,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
 
-
         public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
         {
-            // 1. Kiểm tra quyền và tìm Farmer
+            // ❌ Cấm BusinessManager tạo batch
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+            if (manager != null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Business Manager không được tạo lô sơ chế.");
+
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo lô sơ chế.");
 
-            // 2. Kiểm tra mùa vụ
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
             if (cropSeason == null || cropSeason.IsDeleted)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Mùa vụ không hợp lệ.");
 
-            // 3. Kiểm tra phương pháp sơ chế
             var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(dto.MethodId);
             if (method == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Phương pháp sơ chế không hợp lệ.");
 
-            // 4. Sinh mã SystemBatchCode từ năm mùa vụ
             int year = cropSeason.StartDate?.Year ?? DateTime.Now.Year;
             string systemBatchCode = await _codeGenerator.GenerateProcessingSystemBatchCodeAsync(year);
 
-            // 5. Tạo entity mới
             var batch = new ProcessingBatch
             {
                 BatchId = Guid.NewGuid(),
@@ -168,14 +170,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 IsDeleted = false
             };
 
-            // 6. Ghi DB
             await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
             var saveResult = await _unitOfWork.SaveChangesAsync();
 
             if (saveResult <= 0)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo lô sơ chế thất bại.");
 
-            // 7. Truy xuất lại bản ghi để trả về DTO
             var created = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
                 x => x.BatchId == batch.BatchId,
                 include: q => q
@@ -189,17 +189,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, dtoResult);
         }
 
-        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin)
+        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin, bool isManager)
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
             if (batch == null || batch.IsDeleted)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Quyền truy cập
-            if (!isAdmin && batch.Farmer?.UserId != userId)
+            if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật lô sơ chế này.");
 
-            // Cập nhật thông tin
             batch.CoffeeTypeId = dto.CoffeeTypeId;
             batch.CropSeasonId = dto.CropSeasonId;
             batch.MethodId = dto.MethodId;
@@ -216,7 +214,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại.");
         }
 
-        public async Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin)
+        public async Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
                 predicate: b => b.BatchId == id && !b.IsDeleted,
@@ -226,7 +224,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Lô sơ chế không tồn tại.");
 
-            if (!isAdmin && batch.Farmer?.UserId != userId)
+            if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá lô sơ chế này.");
 
             batch.IsDeleted = true;
@@ -239,47 +237,36 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
         }
-        public async Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId)
+
+        public async Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
         {
             try
             {
-                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
-                if (farmer == null)
-                {
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Farmer mới có quyền xóa mẻ sơ chế.");
-                }
-
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == batchId,
-                    asNoTracking: false
+                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
+                    include: q => q.Include(x => x.Farmer).ThenInclude(f => f.User)
                 );
 
                 if (batch == null)
-                {
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
-                }
 
-                if (batch.FarmerId != farmer.FarmerId)
-                {
+                if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
                     return new ServiceResult(Const.FAIL_DELETE_CODE, "Không được xóa mẻ sơ chế của người khác.");
-                }
 
                 await _unitOfWork.ProcessingBatchRepository.RemoveAsync(batch);
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn mẻ sơ chế.");
-                }
-
-                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn mẻ sơ chế.")
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
             }
             catch (Exception ex)
             {
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
-        public async Task<IServiceResult> GetByIdAsync(Guid id, Guid userId, bool isAdmin)
+
+        public async Task<IServiceResult> GetByIdAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
                 x => x.BatchId == id && !x.IsDeleted,
@@ -295,15 +282,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Kiểm tra quyền truy cập
-            if (!isAdmin && batch.Farmer?.UserId != userId)
+            if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
 
-            var dto = batch.MapToDetailsDto(); // Chỉ map thông tin cần thiết, không bao gồm products
-
+            var dto = batch.MapToDetailsDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
-
-
     }
 }
