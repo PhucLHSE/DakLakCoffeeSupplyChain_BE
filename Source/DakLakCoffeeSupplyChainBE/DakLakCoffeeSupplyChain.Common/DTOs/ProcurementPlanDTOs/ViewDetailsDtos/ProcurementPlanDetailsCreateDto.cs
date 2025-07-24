@@ -25,11 +25,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         [Required(ErrorMessage = "Giá thương lượng tối đa không được để trống.")]
         public double MaxPriceRange { get; set; }
+        public double? ExpectedYieldPerHectare { get; set; }
 
         public string Note { get; set; } = string.Empty;
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Disable;
+        //[JsonConverter(typeof(JsonStringEnumConverter))]
+        //public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Disable;
         public Guid? ContractItemId { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
