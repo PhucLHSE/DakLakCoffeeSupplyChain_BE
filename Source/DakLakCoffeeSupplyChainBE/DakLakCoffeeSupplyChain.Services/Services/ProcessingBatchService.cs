@@ -66,13 +66,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else if (isManager)
             {
-                // ✅ BM: chỉ thấy batch có Commitment.ApprovedBy == BM's userId
+                // Bước 1: Truy ra ManagerId từ UserId
+                var manager = await _unitOfWork.BusinessManagerRepository
+                    .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+
+                if (manager == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+
+                var managerId = manager.ManagerId;
+
+                // Bước 2: Lọc batch mà Commitment.ApprovedBy == ManagerId
                 batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: x =>
                         !x.IsDeleted &&
                         x.CropSeason != null &&
                         x.CropSeason.Commitment != null &&
-                        x.CropSeason.Commitment.ApprovedBy == userId,
+                        x.CropSeason.Commitment.ApprovedBy == managerId,
                     include: query => query
                         .Include(x => x.Method)
                         .Include(x => x.CropSeason).ThenInclude(cs => cs.Commitment)
@@ -87,6 +96,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ lô sơ chế nào.");
                 }
             }
+
             else
             {
                 // ✅ Farmer: chỉ thấy batch của chính mình
