@@ -176,12 +176,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Tìm sản phẩm theo ID
+            // Lấy tất cả UserId thuộc doanh nghiệp đó (Manager + Staff)
+            var allAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                predicate: u => !u.IsDeleted,
+                asNoTracking: true
+            );
+
+            var allowedUserIds = new List<Guid>();
+
+            foreach (var account in allAccounts)
+            {
+                var isManager = await _unitOfWork.BusinessManagerRepository.AnyAsync(
+                    m => m.ManagerId == managerId &&
+                         m.UserId == account.UserId
+                );
+
+                var isStaff = await _unitOfWork.BusinessStaffRepository.AnyAsync(
+                    s => s.SupervisorId == managerId &&
+                         s.UserId == account.UserId
+                );
+
+                if (isManager || isStaff)
+                {
+                    allowedUserIds.Add(account.UserId);
+                }
+            }
+
+            // Tìm sản phẩm theo ID, CreatedBy phải thuộc allowedUserIds
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                 predicate: p =>
                    p.ProductId == productId &&
                    !p.IsDeleted &&
-                   p.CreatedBy == managerId,
+                   allowedUserIds.Contains(p.CreatedBy),
                 include: query => query
                    .Include(p => p.ApprovedByNavigation)
                    .Include(p => p.CoffeeType)
