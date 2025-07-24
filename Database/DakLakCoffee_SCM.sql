@@ -489,41 +489,78 @@ GO
 -- FarmingCommitments – Cam kết chính thức giữa Farmer và hệ thống
 CREATE TABLE FarmingCommitments (
     CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
-	CommitmentCode VARCHAR(20) UNIQUE,                                 -- COMMIT-2025-0038
-	CommitmentName VARCHAR(255),									   -- Tên của bảng cam kết
-    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
-    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
+	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0038
+	CommitmentName NVARCHAR(MAX),									   -- Tên của bảng cam kết
+    PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch chính
+    RegistrationID UNIQUEIDENTIFIER NOT NULL,                          -- FK đến đơn đăng ký chính
+    --RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
+    --PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
-    ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
-    CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
-    EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
-    EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
+    --ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
+    --CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
+    --EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
+    --EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
     CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
     ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
     ApprovedAt DATETIME,                                               -- Ngày duyệt
     Status NVARCHAR(50) DEFAULT 'active',                              -- Trạng thái cam kết
     RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
     Note NVARCHAR(MAX),                                                -- Ghi chú thêm
-	ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
+	--ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-    CONSTRAINT FK_FarmingCommitments_RegistrationDetailID 
-	    FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
+    --CONSTRAINT FK_FarmingCommitments_RegistrationDetailID 
+	   -- FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
 
-    CONSTRAINT FK_FarmingCommitments_PlanDetailID 
-	    FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
+    --CONSTRAINT FK_FarmingCommitments_PlanDetailID 
+	    --FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
 
     CONSTRAINT FK_FarmingCommitments_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
+    CONSTRAINT FK_FarmingCommitments_PlanID 
+	    FOREIGN KEY (PlanID) REFERENCES ProcurementPlans(PlanID),
+
+    CONSTRAINT FK_FarmingCommitments_RegistrationID 
+	    FOREIGN KEY (RegistrationID) REFERENCES CultivationRegistrations(RegistrationID),
+
     CONSTRAINT FK_FarmingCommitments_ApprovedBy 
 	    FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID),
 
-	CONSTRAINT FK_FarmingCommitments_ContractDeliveryItem 
+	--CONSTRAINT FK_FarmingCommitments_ContractDeliveryItem 
+ --       FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
+);
+
+GO
+
+CREATE TABLE FarmingCommitmentsDetails (
+    CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID chi tiết cam kết
+    CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0038
+    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
+    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
+    ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
+    CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
+    EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
+    EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
+    Note NVARCHAR(MAX),                                                -- Ghi chú thêm
+    ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
+    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	IsDeleted BIT NOT NULL DEFAULT 0
+
+    -- Foreign Keys
+    CONSTRAINT FK_FarmingCommitmentsDetails_RegistrationDetailID 
+	   FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_PlanDetailID 
+	    FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_ContractDeliveryItem 
         FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
+
 );
 
 GO
@@ -532,9 +569,9 @@ GO
 CREATE TABLE CropSeasons (
     CropSeasonID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- ID của một mùa vụ
 	CropSeasonCode VARCHAR(20) UNIQUE,                                  -- SEASON-2025-0021
-    RegistrationID UNIQUEIDENTIFIER NOT NULL,                           -- Liên kết đơn đăng ký trồng
+    --RegistrationID UNIQUEIDENTIFIER NOT NULL,                         -- Liên kết đơn đăng ký trồng
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                 -- Nông dân tạo mùa vụ
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,                             -- Cam kết từ doanh nghiệp
+    CommitmentID UNIQUEIDENTIFIER NOT NULL UNIQUE,                      -- Cam kết từ doanh nghiệp
     SeasonName NVARCHAR(100),                                           -- Tên mùa vụ (vd: Mùa vụ 2025)
     Area FLOAT,                                                         -- Diện tích canh tác (ha)
     StartDate DATE,                                                     -- Ngày bắt đầu
@@ -546,8 +583,8 @@ CREATE TABLE CropSeasons (
 	IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-    CONSTRAINT FK_CropSeasons_RegistrationID 
-	    FOREIGN KEY (RegistrationID) REFERENCES CultivationRegistrations(RegistrationID),
+    --CONSTRAINT FK_CropSeasons_RegistrationID 
+	    --FOREIGN KEY (RegistrationID) REFERENCES CultivationRegistrations(RegistrationID),
 
     CONSTRAINT FK_CropSeasons_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
@@ -562,7 +599,8 @@ GO
 CREATE TABLE CropSeasonDetails (
     DetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID chi tiết mùa vụ
     CropSeasonID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến mùa vụ
-    CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                            -- Liên kết loại cà phê chính xác
+    --CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                            -- Liên kết loại cà phê chính xác
+    CommitmentDetailID UNIQUEIDENTIFIER NOT NULL UNIQUE,               -- FK đến chi tiết cam kết, lấy coffeeTypeID từ đây
     ExpectedHarvestStart DATE,                                         -- Ngày bắt đầu thu hoạch dự kiến
     ExpectedHarvestEnd DATE,                                           -- Ngày kết thúc thu hoạch dự kiến
     EstimatedYield FLOAT,                                              -- Sản lượng dự kiến
@@ -579,8 +617,11 @@ CREATE TABLE CropSeasonDetails (
     CONSTRAINT FK_CropSeasonDetails_CropSeasonID 
 	    FOREIGN KEY (CropSeasonID) REFERENCES CropSeasons(CropSeasonID),
 
-	CONSTRAINT FK_CropSeasonDetails_CoffeeTypeID 
-        FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
+    CONSTRAINT FK_CropSeasonDetails_CommitmentDetailID
+        FOREIGN KEY (CommitmentDetailID) REFERENCES FarmingCommitmentsDetails (CommitmentDetailID)
+
+	--CONSTRAINT FK_CropSeasonDetails_CoffeeTypeID 
+        --FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO
@@ -1363,24 +1404,24 @@ GO
 
 -- Insert mẫu vào bảng UserAccounts
 -- Admin
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', 'Admin@12345', 1);
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
+VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 1, 1, 1);
 
 -- Business Manager
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0002', 'businessManager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', 'BusinessManager@12345', 2);
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
+VALUES ('USR-2025-0002', 'businessManager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 2, 1, 1);
 
 -- Farmer
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', 'Farmer@12345', 4);
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
+VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1);
 
 -- Expert
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', 'Expert@12345', 5);
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
+VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 5, 1, 1);
 
 -- Business Staff
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID)
-VALUES ('USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', '1999-09-12', N'Đắk Lắk', 'BusinessStaff@12345', 3);
+INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
+VALUES ('USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', '1999-09-12', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1);
 
 GO
 
@@ -2125,18 +2166,16 @@ GO
 
 -- Insert vào bảng FarmingCommitments
 -- Lấy PlanID, PlanDetailID và ManagerID để hoàn tất cam kết
-DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
-    SELECT CultivationRegistrationDetailID FROM CultivationRegistrationsDetail
-    WHERE RegistrationID = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001')
-    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001')
+DECLARE @RegistrationID UNIQUEIDENTIFIER = (
+    SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
+);
+
+DECLARE @PlanID UNIQUEIDENTIFIER = (
+    SELECT PlanID FROM ProcurementPlans WHERE PlanCode = 'PLAN-2025-0001'
 );
 
 DECLARE @FarmerID UNIQUEIDENTIFIER = (
     SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
-);
-
-DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
-    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
 );
 
 DECLARE @ManagerID UNIQUEIDENTIFIER = (
@@ -2145,13 +2184,37 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 );
 
 INSERT INTO FarmingCommitments (
-    CommitmentCode, RegistrationDetailID, PlanDetailID, FarmerID,
-    ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
+    CommitmentCode, RegistrationID, PlanID, FarmerID,
+    CommitmentName,
     ApprovedBy, ApprovedAt, Note
 )
 VALUES (
-    'COMMIT-2025-0001', @RegistrationDetailID, @PlanDetailID, @FarmerID,
-    96.5, 2100, '2026-01-20', '2026-01-30', @ManagerID, GETDATE(),
+    'FC-2025-0001', @RegistrationID, @PlanID, @FarmerID,
+    N'Bảng cam kết Kế hoạch thu mua cà phê 2025-2026', @ManagerID, GETDATE(),
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
+);
+
+GO
+
+-- Insert vào bảng FarmingCommitmentsDetails
+DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
+    SELECT CultivationRegistrationDetailID FROM CultivationRegistrationsDetail
+    WHERE RegistrationID = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001')
+    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001')
+);
+
+DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+);
+
+INSERT INTO FarmingCommitmentsDetails (
+    CommitmentDetailCode, RegistrationDetailID, PlanDetailID,
+    ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
+    Note
+)
+VALUES (
+    'FCD-2025-0001', @RegistrationDetailID, @PlanDetailID,
+    96.5, 2100, '2026-01-20', '2026-01-30',
     N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
 );
 
@@ -2159,24 +2222,21 @@ GO
 
 -- Insert vào bảng CropSeasons
 -- Lấy các ID cần thiết
-DECLARE @RegistrationID UNIQUEIDENTIFIER = (
-   SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001'
-);
 
 DECLARE @FarmerID UNIQUEIDENTIFIER = (
    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
 );
 
 DECLARE @CommitmentID UNIQUEIDENTIFIER = (
-   SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'COMMIT-2025-0001'
+   SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'FC-2025-0001'
 );
 
 INSERT INTO CropSeasons (
-    CropSeasonCode, RegistrationID, FarmerID, CommitmentID,
+    CropSeasonCode, FarmerID, CommitmentID,
     SeasonName, Area, StartDate, EndDate, Note
 )
 VALUES (
-    'SEASON-2025-0001', @RegistrationID, @FarmerID, @CommitmentID,
+    'SEASON-2025-0001', @FarmerID, @CommitmentID,
     N'Mùa vụ Arabica Krông Bông 2025', 1.8, '2025-07-01', '2026-01-20',
     N'Mùa vụ đầu tiên với công nghệ giám sát AI và tưới nhỏ giọt'
 );
@@ -2184,8 +2244,12 @@ VALUES (
 GO
 
 -- Insert vào bảng CropSeasonDetails
-DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
-    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+--DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
+--    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
+--);
+
+DECLARE @CommitmentDetailID UNIQUEIDENTIFIER = (
+    SELECT CommitmentDetailID FROM FarmingCommitmentsDetails WHERE CommitmentDetailCode = 'FCD-2025-0001'
 );
 
 DECLARE @CropSeasonID UNIQUEIDENTIFIER = (
@@ -2195,11 +2259,11 @@ DECLARE @CropSeasonID UNIQUEIDENTIFIER = (
 DECLARE @CropSeasonDetailID UNIQUEIDENTIFIER = 'b21d7b4c-b5ca-4e4c-a39b-ae09a2e13a4a';
 
 INSERT INTO CropSeasonDetails (
-    DetailID, CropSeasonID, CoffeeTypeID, ExpectedHarvestStart, ExpectedHarvestEnd,
+    DetailID, CropSeasonID, CommitmentDetailID, ExpectedHarvestStart, ExpectedHarvestEnd,
     EstimatedYield, ActualYield, AreaAllocated, PlannedQuality, QualityGrade
 )
 VALUES (
-    @CropSeasonDetailID, @CropSeasonID, @CoffeeTypeID, '2025-11-01', '2026-01-15',
+    @CropSeasonDetailID, @CropSeasonID, @CommitmentDetailID, '2025-11-01', '2026-01-15',
     2200, 0, 1.8, N'Specialty', NULL
 );
 
