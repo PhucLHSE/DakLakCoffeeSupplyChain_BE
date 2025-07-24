@@ -13,19 +13,11 @@ public partial class FarmingCommitment
 
     public string CommitmentName { get; set; }
 
-    public Guid RegistrationDetailId { get; set; }
+    public Guid PlanId { get; set; }
 
-    public Guid PlanDetailId { get; set; }
+    public Guid RegistrationId { get; set; }
 
     public Guid FarmerId { get; set; }
-
-    public double? ConfirmedPrice { get; set; }
-
-    public double? CommittedQuantity { get; set; }
-
-    public DateOnly? EstimatedDeliveryStart { get; set; }
-
-    public DateOnly? EstimatedDeliveryEnd { get; set; }
 
     public DateTime CommitmentDate { get; set; }
 
@@ -39,8 +31,6 @@ public partial class FarmingCommitment
 
     public string Note { get; set; }
 
-    public Guid? ContractDeliveryItemId { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -49,13 +39,11 @@ public partial class FarmingCommitment
 
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
-    public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
-
-    public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
+    public virtual CropSeason CropSeason { get; set; }
 
     public virtual Farmer Farmer { get; set; }
 
-    public virtual ProcurementPlansDetail PlanDetail { get; set; }
+    public virtual ProcurementPlan Plan { get; set; }
 
-    public virtual CultivationRegistrationsDetail RegistrationDetail { get; set; }
+    public virtual CultivationRegistration Registration { get; set; }
 }

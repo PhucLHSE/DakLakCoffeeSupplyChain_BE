@@ -176,12 +176,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Tìm sản phẩm theo ID
+            // Lấy tất cả UserId thuộc doanh nghiệp đó (Manager + Staff)
+            var allAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                predicate: u => !u.IsDeleted,
+                asNoTracking: true
+            );
+
+            var allowedUserIds = new List<Guid>();
+
+            foreach (var account in allAccounts)
+            {
+                var isManager = await _unitOfWork.BusinessManagerRepository.AnyAsync(
+                    m => m.ManagerId == managerId &&
+                         m.UserId == account.UserId
+                );
+
+                var isStaff = await _unitOfWork.BusinessStaffRepository.AnyAsync(
+                    s => s.SupervisorId == managerId &&
+                         s.UserId == account.UserId
+                );
+
+                if (isManager || isStaff)
+                {
+                    allowedUserIds.Add(account.UserId);
+                }
+            }
+
+            // Tìm sản phẩm theo ID, CreatedBy phải thuộc allowedUserIds
             var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                 predicate: p =>
                    p.ProductId == productId &&
                    !p.IsDeleted &&
-                   p.CreatedBy == managerId,
+                   allowedUserIds.Contains(p.CreatedBy),
                 include: query => query
                    .Include(p => p.ApprovedByNavigation)
                    .Include(p => p.CoffeeType)
@@ -217,6 +243,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                // Cho phép cả BusinessManager và BusinessStaff tạo sản phẩm
+                Guid? managerId = null;
+
                 // Kiểm tra chỉ BusinessManager được phép tạo sản phẩm
                 var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: m =>
@@ -225,15 +254,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (manager == null)
+                if (manager != null)
                 {
-                    return new ServiceResult(
-                        Const.FAIL_CREATE_CODE,
-                        "Chỉ người dùng có vai trò Quản lý kinh doanh (BusinessManager) mới được phép tạo sản phẩm."
-                    );
+                    managerId = manager.ManagerId;
                 }
+                else
+                {
+                    // Nếu là Staff → lấy SupervisorId làm ManagerId
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s => 
+                           s.UserId == userId && 
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
 
-                var managerId = manager.ManagerId;
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Chỉ BusinessManager hoặc BusinessStaff mới được phép tạo sản phẩm."
+                        );
+                    }
+                }
 
                 // Kiểm tra loại cà phê
                 var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
@@ -278,10 +324,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã sản phẩm tự động
-                var productCode = await _codeGenerator.GenerateProductCodeAsync(managerId);
+                var productCode = await _codeGenerator.GenerateProductCodeAsync(managerId.Value);
 
                 // Ánh xạ dữ liệu từ DTO vào entity
-                var newProduct = productCreateDto.MapToNewProduct(productCode, managerId);
+                var newProduct = productCreateDto.MapToNewProduct(productCode, userId);
 
                 // Lưu vào DB
                 await _unitOfWork.ProductRepository.CreateAsync(newProduct);
@@ -380,6 +426,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Lấy tất cả UserId thuộc doanh nghiệp đó (Manager + Staff)
+                var managerUsers = await _unitOfWork.BusinessManagerRepository.GetAllAsync(
+                    predicate: m => 
+                       m.ManagerId == managerId && 
+                       !m.IsDeleted, 
+                    asNoTracking: true
+                );
+
+                var staffUsers = await _unitOfWork.BusinessStaffRepository.GetAllAsync(
+                    predicate: s => 
+                       s.SupervisorId == managerId && 
+                       !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                var allowedUserIds = managerUsers
+                    .Select(m => m.UserId)
+                    .Concat(staffUsers.Select(s => s.UserId))
+                    .Distinct()
+                    .ToList();
+
                 // Lấy sản phẩm cần cập nhật
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p =>
@@ -394,8 +461,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: false
                 );
 
-                if (product == null || 
-                    product.CreatedBy != managerId)
+                if (product == null ||
+                    !allowedUserIds.Contains(product.CreatedBy))
                 {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,

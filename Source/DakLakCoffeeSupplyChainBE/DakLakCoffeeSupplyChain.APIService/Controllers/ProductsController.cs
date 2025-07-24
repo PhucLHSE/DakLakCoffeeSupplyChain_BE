@@ -81,7 +81,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<ProductsController>
         [HttpPost]
-        [Authorize(Roles = "BusinessManager")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> CreateProductAsync(
             [FromBody] ProductCreateDto productCreateDto)
         {

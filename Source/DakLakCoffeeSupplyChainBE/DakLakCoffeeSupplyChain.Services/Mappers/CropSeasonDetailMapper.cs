@@ -13,8 +13,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 DetailId = entity.DetailId,
                 AreaAllocated = entity.AreaAllocated ?? 0,
-                CoffeeTypeId = entity.CoffeeTypeId,
-                TypeName = entity.CoffeeType?.TypeName ?? string.Empty,
+                CoffeeTypeId = entity.CommitmentDetail.PlanDetail.CoffeeTypeId,
+                TypeName = entity.CommitmentDetail.PlanDetail.CoffeeType?.TypeName ?? string.Empty,
                 ExpectedHarvestStart = entity.ExpectedHarvestStart,
                 ExpectedHarvestEnd = entity.ExpectedHarvestEnd,
                 EstimatedYield = entity.EstimatedYield,
@@ -37,7 +37,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 DetailId = Guid.NewGuid(),
                 CropSeasonId = dto.CropSeasonId,
-                CoffeeTypeId = dto.CoffeeTypeId,
+                CommitmentDetailId = dto.CommitmentDetailId,
                 ExpectedHarvestStart = dto.ExpectedHarvestStart,
                 ExpectedHarvestEnd = dto.ExpectedHarvestEnd,
                 EstimatedYield = dto.EstimatedYield,
@@ -51,7 +51,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
         public static void MapToExistingEntity(this CropSeasonDetailUpdateDto dto, CropSeasonDetail entity)
         {
-            entity.CoffeeTypeId = dto.CoffeeTypeId;
+            //entity.CoffeeTypeId = dto.CoffeeTypeId;
             entity.ExpectedHarvestStart = dto.ExpectedHarvestStart;
             entity.ExpectedHarvestEnd = dto.ExpectedHarvestEnd;
             entity.EstimatedYield = dto.EstimatedYield ?? 0;

@@ -31,7 +31,7 @@ public partial class ContractDeliveryItem
 
     public virtual ContractDeliveryBatch DeliveryBatch { get; set; }
 
-    public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
+    public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetails { get; set; } = new List<FarmingCommitmentsDetail>();
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }

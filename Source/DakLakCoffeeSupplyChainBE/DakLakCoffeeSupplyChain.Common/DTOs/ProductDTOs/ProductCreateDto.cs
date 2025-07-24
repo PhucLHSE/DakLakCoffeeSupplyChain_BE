@@ -66,28 +66,29 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
         public string ApprovalNote { get; set; } = string.Empty;
 
         // Optional fields (do system control)
+        [JsonIgnore]
         public Guid? ApprovedBy { get; set; }
 
+        [JsonIgnore]
         public DateTime? ApprovedAt { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Status == ProductStatus.Approved)
-            {
-                if (ApprovedBy == null || ApprovedAt == null)
-                {
-                    yield return new ValidationResult(
-                        "Trạng thái duyệt yêu cầu phải có thông tin người duyệt và ngày duyệt.",
-                        new[] { nameof(ApprovedBy), nameof(ApprovedAt) }
-                    );
-                }
-            }
-
-            if (!string.IsNullOrEmpty(CertificationUrl) && string.IsNullOrWhiteSpace(EvaluatedQuality))
+            if (!string.IsNullOrEmpty(CertificationUrl) && 
+                string.IsNullOrWhiteSpace(EvaluatedQuality))
             {
                 yield return new ValidationResult(
                     "Nếu có chứng nhận, bạn cần cung cấp chất lượng đánh giá.",
                     new[] { nameof(EvaluatedQuality) }
+                );
+            }
+
+            // Không cho phép tạo với trạng thái Approved
+            if (Status == ProductStatus.Approved)
+            {
+                yield return new ValidationResult(
+                    "Không thể tạo sản phẩm với trạng thái 'Approved'. Vui lòng tạo với trạng thái 'Draft' hoặc 'Pending' và chờ phê duyệt.",
+                    new[] { nameof(Status) }
                 );
             }
         }

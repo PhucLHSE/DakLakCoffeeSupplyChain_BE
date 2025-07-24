@@ -27,8 +27,9 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .AsNoTracking()
             .Include(c => c.Farmer)
                 .ThenInclude(f => f.User)
-                 .Include(c => c.CropSeasonDetails)
-            .ThenInclude(d => d.CoffeeType)
+            .Include(c => c.CropSeasonDetails)
+                .ThenInclude(d => d.CommitmentDetail)
+                   .ThenInclude(d => d.PlanDetail)
             .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId && !c.IsDeleted);
     }
 
@@ -53,11 +54,11 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     {
         return await _context.CropSeasons
             .Include(cs => cs.CropSeasonDetails)
-                .ThenInclude(d => d.CoffeeType)
+                .ThenInclude(d => d.CommitmentDetail)
+                    .ThenInclude(d => d.PlanDetail)
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
-            .Include(cs => cs.Registration)
             .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
     }
 

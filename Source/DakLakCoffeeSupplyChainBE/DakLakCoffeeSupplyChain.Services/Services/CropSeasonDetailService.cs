@@ -30,7 +30,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         !d.IsDeleted &&
                         (isAdmin || d.CropSeason.Farmer.UserId == userId),
                     include: query => query
-                        .Include(d => d.CoffeeType)
+                        .Include(d => d.CommitmentDetail)
+                            .ThenInclude(d => d.PlanDetail)
                         .Include(d => d.CropSeason)
                             .ThenInclude(cs => cs.Farmer)
                                 .ThenInclude(f => f.User),
@@ -59,7 +60,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
                     predicate: d => d.DetailId == detailId && !d.IsDeleted,
                     include: query => query
-                        .Include(d => d.CoffeeType)
+                        .Include(d => d.CommitmentDetail)
+                            .ThenInclude(d => d.PlanDetail)
                         .Include(d => d.CropSeason)
                             .ThenInclude(cs => cs.Farmer)
                                 .ThenInclude(f => f.User), // 👈 Quan trọng: cần include cả User để lấy tên nông hộ
@@ -109,7 +111,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     var created = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
                         predicate: d => d.DetailId == entity.DetailId,
-                        include: query => query.Include(d => d.CoffeeType),
+                        include: query => query.Include(d => d.CommitmentDetail).ThenInclude(d => d.PlanDetail),
                         asNoTracking: true
                     );
 

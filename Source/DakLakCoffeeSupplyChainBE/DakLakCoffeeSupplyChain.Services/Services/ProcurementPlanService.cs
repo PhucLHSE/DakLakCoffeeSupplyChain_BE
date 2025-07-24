@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -153,7 +154,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
-        public async Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto)
+        public async Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto, Guid userId)
         {
             try
             {
@@ -170,18 +171,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 //Logic chỉ hiển thị lên public khi đến ngày StartDate và active chưa xong
 
+                var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => m.UserId == userId,
+                    asNoTracking: true
+                );
+                if (businessManager == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+
                 //Generate code
                 string procurementPlanCode = await _planCode.GenerateProcurementPlanCodeAsync();
                 string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
                 var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
 
                 //Map dto to model
-                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode);
+                var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode, businessManager.ManagerId);
 
                 //Nếu như BM để status kế hoạch là open nhưng chưa set StartDate thì kế hoạch sẽ tự động mở đăng ký luôn
                 //Nếu BM để status open và đã set StartDate thì kế hoạch mới mở đăng ký khi đến ngày đó thôi.
-                if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
-                    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+                //if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
+                //    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
                 // Logic TotalQuantity/TargetQuantity
                 // Tạo code hàng loạt
@@ -402,6 +413,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingPlanDetail.MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity.HasValue ? itemDto.MinimumRegistrationQuantity : existingPlanDetail.MinimumRegistrationQuantity;
                         existingPlanDetail.MinPriceRange = itemDto.MinPriceRange.HasValue ? itemDto.MinPriceRange : existingPlanDetail.MinPriceRange;
                         existingPlanDetail.MaxPriceRange = itemDto.MaxPriceRange.HasValue ? itemDto.MaxPriceRange : existingPlanDetail.MaxPriceRange;
+                        existingPlanDetail.ExpectedYieldPerHectare = itemDto.ExpectedYieldPerHectare.HasValue ? itemDto.ExpectedYieldPerHectare : existingPlanDetail.ExpectedYieldPerHectare;
                         existingPlanDetail.Note = itemDto.Note.HasValue() ? itemDto.Note : existingPlanDetail.Note;
                         existingPlanDetail.ContractItemId = itemDto.ContractItemId.HasValue ? itemDto.ContractItemId : existingPlanDetail.ContractItemId;
                         existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
@@ -429,8 +441,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
                             MinPriceRange = detailDto.MinPriceRange,
                             MaxPriceRange = detailDto.MaxPriceRange,
+                            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
                             Note = detailDto.Note,
-                            Status = detailDto.Status.ToString(),
+                            Status = ProcurementPlanDetailsStatus.Active.ToString(),
                             ContractItemId = detailDto.ContractItemId,
                             CreatedAt = now,
                             UpdatedAt = now
@@ -480,6 +493,75 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+        public async Task<IServiceResult> UpdateStatus(ProcurementPlanUpdateStatusDto dto, Guid userId, Guid planId)
+        {
+            try
+            {
+                //Lấy plan
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                    predicate: p => p.PlanId == planId && !p.IsDeleted,
+                    include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails)
+                        );
+
+                if (plan == null || plan.CreatedByNavigation.UserId != userId)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
+                    );
+
+                // Cập nhật lại plan
+                plan.Status = dto.Status.ToString();
+                plan.StartDate = dto.Status.ToString() == "Open" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.StartDate;
+                plan.EndDate = dto.Status.ToString() == "Closed" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.EndDate;
+                plan.UpdatedAt = DateHelper.NowVietnamTime();
+
+                await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    var updatedPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                        predicate: p => p.PlanId == plan.PlanId,
+                        include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.CoffeeType).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.ProcessMethod),
+                        asNoTracking: true
+                        );
+
+                    if (updatedPlan == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new ProcurementPlanViewDetailsSumaryDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = updatedPlan.MapToProcurementPlanViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }
