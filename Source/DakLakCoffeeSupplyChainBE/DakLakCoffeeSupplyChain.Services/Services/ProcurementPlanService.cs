@@ -504,5 +504,74 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> UpdateStatus(ProcurementPlanUpdateStatusDto dto, Guid userId, Guid planId)
+        {
+            try
+            {
+                //Lấy plan
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                    predicate: p => p.PlanId == planId && !p.IsDeleted,
+                    include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails)
+                        );
+
+                if (plan == null || plan.CreatedByNavigation.UserId != userId)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
+                    );
+
+                // Cập nhật lại plan
+                plan.Status = dto.Status.ToString();
+                plan.StartDate = dto.Status.ToString() == "Open" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.StartDate;
+                plan.EndDate = dto.Status.ToString() == "Closed" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.EndDate;
+                plan.UpdatedAt = DateHelper.NowVietnamTime();
+
+                await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    var updatedPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                        predicate: p => p.PlanId == plan.PlanId,
+                        include: p => p.
+                        Include(p => p.CreatedByNavigation).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.CoffeeType).
+                        Include(p => p.ProcurementPlansDetails).
+                            ThenInclude(d => d.ProcessMethod),
+                        asNoTracking: true
+                        );
+
+                    if (updatedPlan == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new ProcurementPlanViewDetailsSumaryDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = updatedPlan.MapToProcurementPlanViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }
