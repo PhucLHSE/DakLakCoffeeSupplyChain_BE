@@ -19,6 +19,8 @@ public partial class FarmingCommitment
 
     public Guid FarmerId { get; set; }
 
+    public double? TotalPrice { get; set; }
+
     public DateTime CommitmentDate { get; set; }
 
     public Guid? ApprovedBy { get; set; }
@@ -42,6 +44,8 @@ public partial class FarmingCommitment
     public virtual CropSeason CropSeason { get; set; }
 
     public virtual Farmer Farmer { get; set; }
+
+    public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetails { get; set; } = new List<FarmingCommitmentsDetail>();
 
     public virtual ProcurementPlan Plan { get; set; }
 

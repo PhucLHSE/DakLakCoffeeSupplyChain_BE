@@ -500,6 +500,7 @@ CREATE TABLE FarmingCommitments (
     --CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
     --EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
     --EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
+    TotalPrice FLOAT DEFAULT 0,                                        -- Tổng giá tiền
     CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
     ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
     ApprovedAt DATETIME,                                               -- Ngày duyệt
@@ -539,6 +540,7 @@ GO
 CREATE TABLE FarmingCommitmentsDetails (
     CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID chi tiết cam kết
     CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0038
+    CommitmentID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến cam kết chính
     RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
     ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
@@ -559,7 +561,10 @@ CREATE TABLE FarmingCommitmentsDetails (
 	    FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
 
     CONSTRAINT FK_FarmingCommitmentsDetails_ContractDeliveryItem 
-        FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
+        FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_CommitmentID 
+        FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID)
 
 );
 
@@ -2186,12 +2191,12 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 INSERT INTO FarmingCommitments (
     CommitmentCode, RegistrationID, PlanID, FarmerID,
     CommitmentName,
-    ApprovedBy, ApprovedAt, Note
+    ApprovedBy, ApprovedAt, Note, TotalPrice
 )
 VALUES (
     'FC-2025-0001', @RegistrationID, @PlanID, @FarmerID,
     N'Bảng cam kết Kế hoạch thu mua cà phê 2025-2026', @ManagerID, GETDATE(),
-    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 960000
 );
 
 GO
@@ -2207,14 +2212,18 @@ DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
     SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
 );
 
+DECLARE @CommitmentID UNIQUEIDENTIFIER = (
+    SELECT CommitmentID FROM FarmingCommitments WHERE CommitmentCode = 'FC-2025-0001'
+);
+
 INSERT INTO FarmingCommitmentsDetails (
-    CommitmentDetailCode, RegistrationDetailID, PlanDetailID,
+    CommitmentDetailCode, RegistrationDetailID, PlanDetailID, CommitmentID,
     ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
     Note
 )
 VALUES (
-    'FCD-2025-0001', @RegistrationDetailID, @PlanDetailID,
-    96.5, 2100, '2026-01-20', '2026-01-30',
+    'FCD-2025-0001', @RegistrationDetailID, @PlanDetailID, @CommitmentID,
+    960000, 2100, '2026-01-20', '2026-01-30',
     N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
 );
 

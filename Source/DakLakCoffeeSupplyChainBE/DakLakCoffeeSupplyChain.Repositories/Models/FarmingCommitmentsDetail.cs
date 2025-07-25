@@ -11,6 +11,8 @@ public partial class FarmingCommitmentsDetail
 
     public string CommitmentDetailCode { get; set; }
 
+    public Guid CommitmentId { get; set; }
+
     public Guid RegistrationDetailId { get; set; }
 
     public Guid PlanDetailId { get; set; }
@@ -32,6 +34,8 @@ public partial class FarmingCommitmentsDetail
     public DateTime UpdatedAt { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    public virtual FarmingCommitment Commitment { get; set; }
 
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
 
