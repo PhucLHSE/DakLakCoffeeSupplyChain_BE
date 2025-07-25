@@ -35,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
                 predicate: fm => fm.IsDeleted != true && fm.ApprovedByNavigation.User.UserId == userId,
                 include: fm => fm.
+                Include(fm => fm.Plan).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
@@ -85,6 +86,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
                 predicate: fm => fm.IsDeleted != true && fm.Farmer.User.UserId == userId,
                 include: fm => fm.
+                Include(fm => fm.Plan).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
@@ -176,7 +178,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     c.FarmerId == farmer.FarmerId &&
                     c.Status == FarmingCommitmentStatus.Active.ToString() &&
                     !c.IsDeleted,
-                include: c => c.Include(c => c.Farmer).ThenInclude(f => f.User),
+                include: c => c
+                .Include(c => c.Plan)
+                .Include(c => c.Farmer)
+                    .ThenInclude(f => f.User),
                 asNoTracking: true
             );
 

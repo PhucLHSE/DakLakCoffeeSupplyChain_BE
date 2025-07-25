@@ -16,10 +16,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
                 FarmerName = fm.Farmer.User.Name,
-                //ConfirmedPrice = fm.ConfirmedPrice,
-                //CommittedQuantity = fm.CommittedQuantity,
-                //EstimatedDeliveryStart = fm.EstimatedDeliveryStart,
-                //EstimatedDeliveryEnd = fm.EstimatedDeliveryEnd,
+                PlanTitle = fm.Plan.Title,
+                CommitmentDate = fm.CommitmentDate,
                 Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown)
             };
         }
