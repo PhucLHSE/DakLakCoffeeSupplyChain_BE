@@ -72,7 +72,9 @@ CREATE TABLE PaymentConfigurations (
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   IsActive BIT DEFAULT 1,                                        -- Có đang được áp dụng không
-  CONSTRAINT FK_PaymentConfigurations_Role 
+
+  -- Foreign Keys
+  CONSTRAINT FK_PaymentConfigurations_Role                       -- FK tới bảng Roles
       FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
 );
 
@@ -100,10 +102,10 @@ CREATE TABLE Payments (
 
   -- Foreign Keys
   CONSTRAINT FK_RegistrationPayments_RoleID 
-    FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),              -- FK tới bảng Roles
+      FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),              -- FK tới bảng Roles
   
   CONSTRAINT FK_RegistrationPayments_UserID 
-    FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)        -- FK tới bảng UserAccounts (nếu đã tạo tài khoản)
+      FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)        -- FK tới bảng UserAccounts (nếu đã tạo tài khoản)
 );
 
 GO
@@ -117,9 +119,9 @@ CREATE TABLE Wallets (
   LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- Cập nhật gần nhất
   IsDeleted BIT NOT NULL DEFAULT 0,
 
-  -- FK nếu có user
-  CONSTRAINT FK_Wallets_UserID FOREIGN KEY (UserID)
-    REFERENCES UserAccounts(UserID)
+   -- Foreign Keys
+  CONSTRAINT FK_Wallets_UserID                               -- FK nếu có user
+      FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
 );
 
 GO
@@ -135,6 +137,7 @@ CREATE TABLE WalletTransactions (
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0,
 
+  -- Foreign Keys
   CONSTRAINT FK_WalletTransactions_WalletID FOREIGN KEY (WalletID)
     REFERENCES Wallets(WalletID),
 
@@ -148,7 +151,7 @@ GO
 CREATE TABLE BusinessManagers (
   ManagerID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
   UserID UNIQUEIDENTIFIER NOT NULL,
-  ManagerCode VARCHAR(20) UNIQUE,                               -- BM-2024-0012
+  ManagerCode VARCHAR(20) UNIQUE,                               -- BM-2024-0001
   CompanyName NVARCHAR(100) NOT NULL,                           -- Tên doanh nghiệp
   Position NVARCHAR(50),                                        -- Chức vụ trong công ty
   Department NVARCHAR(100),                                     -- Bộ phận (optional)
@@ -193,7 +196,7 @@ GO
 -- Thông tin chuyên gia nông nghiệp
 CREATE TABLE AgriculturalExperts (
     ExpertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID riêng của chuyên gia
-	ExpertCode VARCHAR(20) UNIQUE,                                     -- EXP-2024-012
+	ExpertCode VARCHAR(20) UNIQUE,                                     -- EXP-2024-0001
     UserID UNIQUEIDENTIFIER NOT NULL UNIQUE,                           -- Khóa ngoại liên kết bảng Users
     ExpertiseArea NVARCHAR(255),                                       -- Lĩnh vực chuyên môn: Bệnh cây, Tưới tiêu, Canh tác hữu cơ,...
     Qualifications NVARCHAR(255),                                      -- Bằng cấp/chứng chỉ: KS Nông nghiệp, MSc Plant Pathology,...
@@ -257,7 +260,7 @@ GO
 -- Contracts – Hợp đồng B2B giữa doanh nghiệp bán và bên mua
 CREATE TABLE Contracts (
   ContractID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- Mã hợp đồng
-  ContractCode VARCHAR(20) UNIQUE,                                  -- CTR-2025-0023
+  ContractCode VARCHAR(20) UNIQUE,                                  -- CTR-2025-0001
   SellerID UNIQUEIDENTIFIER NOT NULL,                               -- Bên bán (doanh nghiệp)
   BuyerID UNIQUEIDENTIFIER NOT NULL,                                -- Bên mua (Trader)
   ContractNumber NVARCHAR(100),                                     -- Số hợp đồng
@@ -312,7 +315,7 @@ GO
 -- ContractDeliveryBatches – đại diện từng đợt giao trong hợp đồng
 CREATE TABLE ContractDeliveryBatches (
   DeliveryBatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-  DeliveryBatchCode VARCHAR(50) UNIQUE,          -- DELB-2025-0012
+  DeliveryBatchCode VARCHAR(50) UNIQUE,          -- DELB-2025-0001
   ContractID UNIQUEIDENTIFIER NOT NULL,
   DeliveryRound INT NOT NULL,                    -- Đợt giao hàng số mấy (1, 2, 3...)
   ExpectedDeliveryDate DATE,                     -- Ngày dự kiến giao
@@ -322,8 +325,9 @@ CREATE TABLE ContractDeliveryBatches (
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0               -- 0 = chưa xoá, 1 = đã xoá mềm
 
+  -- Foreign Keys
   CONSTRAINT FK_ContractDeliveryBatches_ContractID 
-    FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID)
+      FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID)
 );
 
 GO
@@ -331,7 +335,7 @@ GO
 -- ContractDeliveryItems – chi tiết mặt hàng của từng đợt giao
 CREATE TABLE ContractDeliveryItems (
   DeliveryItemID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-  DeliveryItemCode VARCHAR(50) UNIQUE,          -- DLI-2025-0
+  DeliveryItemCode VARCHAR(50) UNIQUE,          -- DLI-2025-0001
   DeliveryBatchID UNIQUEIDENTIFIER NOT NULL,
   ContractItemID UNIQUEIDENTIFIER NOT NULL,
   PlannedQuantity FLOAT NOT NULL,               -- Số lượng mặt hàng cần giao trong đợt
@@ -341,6 +345,7 @@ CREATE TABLE ContractDeliveryItems (
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0              -- 0 = chưa xoá, 1 = đã xoá mềm
 
+  -- Foreign Keys
   CONSTRAINT FK_ContractDeliveryItems_BatchID 
     FOREIGN KEY (DeliveryBatchID) REFERENCES ContractDeliveryBatches(DeliveryBatchID),
 
@@ -353,7 +358,7 @@ GO
 -- Danh mục phương pháp sơ chế (natural, washed,...)
 CREATE TABLE ProcessingMethods (
   MethodID INT PRIMARY KEY IDENTITY(1,1),                      -- ID nội bộ
-  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'natural', 'washed'...
+  MethodCode VARCHAR(50) UNIQUE NOT NULL,                      -- Mã code định danh: 'Natural', 'Washed'...
   Name NVARCHAR(100) NOT NULL,                                 -- Tên hiển thị: 'Sơ chế khô'
   Description NVARCHAR(MAX),                                   -- Mô tả chi tiết
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,       -- Ngày tạo dòng dữ liệu
@@ -426,7 +431,7 @@ GO
 -- CultivationRegistrations – Đơn đăng ký trồng cây của Farmer
 CREATE TABLE CultivationRegistrations (
     RegistrationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID đơn đăng ký
-	RegistrationCode VARCHAR(20) UNIQUE,                           -- REG-2025-0045
+	RegistrationCode VARCHAR(20) UNIQUE,                           -- REG-2025-0001
     PlanID UNIQUEIDENTIFIER NOT NULL,                              -- Kế hoạch thu mua
     FarmerID UNIQUEIDENTIFIER NOT NULL,                            -- Nông dân nộp đơn
     RegisteredArea FLOAT,                                          -- Diện tích đăng ký (hecta)
@@ -483,7 +488,7 @@ GO
 -- FarmingCommitments – Cam kết chính thức giữa Farmer và hệ thống
 CREATE TABLE FarmingCommitments (
     CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
-	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0038
+	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0001
 	CommitmentName NVARCHAR(MAX),									   -- Tên của bảng cam kết
     PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch chính
     RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                   -- FK đến đơn đăng ký chính
@@ -501,7 +506,6 @@ CREATE TABLE FarmingCommitments (
 	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-
     CONSTRAINT FK_FarmingCommitments_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
@@ -517,9 +521,10 @@ CREATE TABLE FarmingCommitments (
 
 GO
 
+-- FarmingCommitmentsDetails – Chi tiết từng dòng cam kết
 CREATE TABLE FarmingCommitmentsDetails (
     CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID chi tiết cam kết
-    CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0038
+    CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0001
     CommitmentID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến cam kết chính
     RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
@@ -534,18 +539,17 @@ CREATE TABLE FarmingCommitmentsDetails (
 	IsDeleted BIT NOT NULL DEFAULT 0
 
     -- Foreign Keys
-    CONSTRAINT FK_FarmingCommitmentsDetails_RegistrationDetailID 
+    CONSTRAINT FK_FarmingCommitmentsDetails_RegistrationDetailID       -- FK tới bảng CultivationRegistrationsDetail
 	   FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
 
-    CONSTRAINT FK_FarmingCommitmentsDetails_PlanDetailID 
+    CONSTRAINT FK_FarmingCommitmentsDetails_PlanDetailID               -- FK tới bảng ProcurementPlansDetails
 	    FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
 
-    CONSTRAINT FK_FarmingCommitmentsDetails_ContractDeliveryItem 
+    CONSTRAINT FK_FarmingCommitmentsDetails_ContractDeliveryItem       -- FK tới bảng ContractDeliveryItems
         FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
 
-    CONSTRAINT FK_FarmingCommitmentsDetails_CommitmentID 
+    CONSTRAINT FK_FarmingCommitmentsDetails_CommitmentID               -- FK tới bảng FarmingCommitments
         FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID)
-
 );
 
 GO
@@ -562,13 +566,12 @@ CREATE TABLE CropSeasons (
     StartDate DATE,                                                     -- Ngày bắt đầu
     EndDate DATE,                                                       -- Ngày kết thúc
     Note NVARCHAR(MAX),                                                 -- Ghi chú mùa vụ
-    Status NVARCHAR(50) DEFAULT 'Active',                               -- Trạng thái: Active, paused,...
+    Status NVARCHAR(50) DEFAULT 'Active',                               -- Trạng thái: Active, Paused,...
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Thời điểm cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-
     CONSTRAINT FK_CropSeasons_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
@@ -582,7 +585,7 @@ GO
 CREATE TABLE CropSeasonDetails (
     DetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID chi tiết mùa vụ
     CropSeasonID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến mùa vụ
-    CommitmentDetailID UNIQUEIDENTIFIER NOT NULL UNIQUE,               -- FK đến chi tiết cam kết, lấy coffeeTypeID từ đây
+    CommitmentDetailID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến chi tiết cam kết, lấy coffeeTypeID từ đây
     ExpectedHarvestStart DATE,                                         -- Ngày bắt đầu thu hoạch dự kiến
     ExpectedHarvestEnd DATE,                                           -- Ngày kết thúc thu hoạch dự kiến
     EstimatedYield FLOAT,                                              -- Sản lượng dự kiến
@@ -590,7 +593,7 @@ CREATE TABLE CropSeasonDetails (
     AreaAllocated FLOAT,                                               -- Diện tích cho loại này
     PlannedQuality NVARCHAR(50),                                       -- Chất lượng dự kiến
     QualityGrade NVARCHAR(50),                                         -- Chất lượng thực tế
-    Status NVARCHAR(50) DEFAULT 'Planned',                             -- Planned, InProgress, completed
+    Status NVARCHAR(50) DEFAULT 'Planned',                             -- Planned, InProgress, Completed
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -601,9 +604,6 @@ CREATE TABLE CropSeasonDetails (
 
     CONSTRAINT FK_CropSeasonDetails_CommitmentDetailID
         FOREIGN KEY (CommitmentDetailID) REFERENCES FarmingCommitmentsDetails (CommitmentDetailID)
-
-	--CONSTRAINT FK_CropSeasonDetails_CoffeeTypeID 
-        --FOREIGN KEY (CoffeeTypeID) REFERENCES CoffeeTypes(CoffeeTypeID)
 );
 
 GO
@@ -611,7 +611,7 @@ GO
 -- CropStages – Danh mục các giai đoạn mùa vụ)
 CREATE TABLE CropStages (
     StageID INT PRIMARY KEY IDENTITY(1,1), 
-    StageCode VARCHAR(50) UNIQUE NOT NULL,    -- Mã giai đoạn: planting, harvesting,...
+    StageCode VARCHAR(50) UNIQUE NOT NULL,    -- Mã giai đoạn: Planting, Harvesting,...
     StageName NVARCHAR(100),                  -- Tên hiển thị: Gieo trồng, Ra hoa,...
     Description NVARCHAR(MAX),                -- Mô tả chi tiết giai đoạn
     OrderIndex INT,                           -- Thứ tự giai đoạn
@@ -655,7 +655,7 @@ GO
 CREATE TABLE ProcessingStages (
   StageID INT PRIMARY KEY IDENTITY(1,1),                         -- ID bước xử lý
   MethodID INT NOT NULL,                                         -- Phương pháp sơ chế áp dụng (FK)
-  StageCode VARCHAR(50) NOT NULL,                                -- Mã bước: 'drying', 'fermentation'...
+  StageCode VARCHAR(50) NOT NULL,                                -- Mã bước: 'Drying', 'Fermentation'...
   StageName NVARCHAR(100) NOT NULL,                              -- Tên hiển thị: 'Phơi', 'Lên men'
   Description NVARCHAR(MAX),                                     -- Mô tả chi tiết
   OrderIndex INT NOT NULL,                                       -- Thứ tự thực hiện
@@ -664,8 +664,9 @@ CREATE TABLE ProcessingStages (
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Ngày cập nhật cuối
   IsDeleted BIT NOT NULL DEFAULT 0                               -- 0 = chưa xoá, 1 = đã xoá mềm
 
+  -- Foreign Keys
   CONSTRAINT FK_ProcessingStages_Method 
-    FOREIGN KEY (MethodID) REFERENCES ProcessingMethods(MethodID)
+      FOREIGN KEY (MethodID) REFERENCES ProcessingMethods(MethodID)
 );
 
 GO
@@ -673,7 +674,7 @@ GO
 -- Hồ sơ lô sơ chế (Batch sơ chế của từng Farmer)
 CREATE TABLE ProcessingBatches (
   BatchID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),        -- ID định danh lô sơ chế
-  SystemBatchCode  VARCHAR(20) UNIQUE,                         -- BATCH-2025-0010
+  SystemBatchCode  VARCHAR(20) UNIQUE,                         -- BATCH-2025-0001
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                      -- Loại cà phê được sơ chế
   CropSeasonID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến mùa vụ
   FarmerID UNIQUEIDENTIFIER NOT NULL,                          -- FK đến nông dân thực hiện sơ chế
@@ -702,7 +703,7 @@ CREATE TABLE ProcessingBatches (
 
 GO
 
--- Ghi nhận tiến trình từng bước trong sơ chế (drying, dehulling...)
+-- Ghi nhận tiến trình từng bước trong sơ chế (Drying, Dehulling...)
 CREATE TABLE ProcessingBatchProgresses (
   ProgressID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- ID từng bước sơ chế
   BatchID UNIQUEIDENTIFIER NOT NULL,                           -- FK tới lô sơ chế
@@ -736,7 +737,7 @@ GO
 CREATE TABLE ProcessingParameters (
   ParameterID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- ID thông số
   ProgressID UNIQUEIDENTIFIER NOT NULL,                        -- FK tới bước sơ chế cụ thể
-  ParameterName NVARCHAR(100),                                 -- Tên thông số: humidity, temperature...
+  ParameterName NVARCHAR(100),                                 -- Tên thông số: Humidity, Temperature...
   ParameterValue NVARCHAR(100) NULL,                           -- Giá trị đo được
   Unit NVARCHAR(20) NULL,                                      -- Đơn vị: %, °C,...
   RecordedAt DATETIME,                                         -- Ngày ghi nhận
@@ -754,7 +755,7 @@ GO
 -- GeneralFarmerReports – Bảng báo cáo sự cố chung từ Farmer
 CREATE TABLE GeneralFarmerReports (
     ReportID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                 -- ID báo cáo chung
-	ReportCode VARCHAR(20) UNIQUE,                                         -- REP-2025-0003
+	ReportCode VARCHAR(20) UNIQUE,                                         -- REP-2025-0001
     ReportType VARCHAR(50) NOT NULL CHECK (ReportType IN ('Crop', 'Processing')),  -- Phân loại
     CropProgressID UNIQUEIDENTIFIER,                                       -- FK nếu là mùa vụ
     ProcessingProgressID UNIQUEIDENTIFIER,                                 -- FK nếu là sơ chế
@@ -788,8 +789,8 @@ CREATE TABLE ExpertAdvice (
     AdviceID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             
     ReportID UNIQUEIDENTIFIER NOT NULL,                       -- FK tới báo cáo chung
     ExpertID UNIQUEIDENTIFIER NOT NULL,                       -- Ai phản hồi
-    ResponseType VARCHAR(50),                                 -- preventive, corrective, observation
-    AdviceSource VARCHAR(50) DEFAULT 'human',                 -- human hoặc AI
+    ResponseType VARCHAR(50),                                 -- Preventive, Corrective, Observation
+    AdviceSource VARCHAR(50) DEFAULT 'human',                 -- Human hoặc AI
     AdviceText NVARCHAR(MAX),                                 -- Nội dung tư vấn
     AttachedFileUrl VARCHAR(255),
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -808,7 +809,7 @@ GO
 -- ProcessingBatchEvaluations – Đánh giá chất lượng batch
 CREATE TABLE ProcessingBatchEvaluations (
   EvaluationID UNIQUEIDENTIFIER PRIMARY KEY,                    -- ID đánh giá
-  EvaluationCode VARCHAR(20) UNIQUE,                            -- EVAL-2025-0048
+  EvaluationCode VARCHAR(20) UNIQUE,                            -- EVAL-2025-0001
   BatchID UNIQUEIDENTIFIER NOT NULL,                            -- FK tới batch
   EvaluatedBy UNIQUEIDENTIFIER,                                 -- Ai đánh giá (Expert/Manager)
   EvaluationResult NVARCHAR(50),                                -- Kết quả: Pass, Fail, Rework
@@ -820,7 +821,7 @@ CREATE TABLE ProcessingBatchEvaluations (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Evaluations_Batch 
-    FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID)
+      FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID)
 );
 
 GO
@@ -832,7 +833,7 @@ CREATE TABLE ProcessingBatchWastes (
   ProgressID UNIQUEIDENTIFIER NOT NULL,                         -- FK tới bước gây ra phế phẩm
   WasteType NVARCHAR(100),                                      -- Loại phế phẩm: vỏ quả, hạt lép...
   Quantity FLOAT,                                               -- Khối lượng
-  Unit NVARCHAR(20),                                            -- Đơn vị: Kg, g, pcs...
+  Unit NVARCHAR(20),                                            -- Đơn vị: Kg, G, pcs...
   Note NVARCHAR(MAX),                                           -- Ghi chú nếu có
   RecordedAt DATETIME,                                          -- Thời điểm ghi nhận
   RecordedBy UNIQUEIDENTIFIER,                                  -- Ai ghi nhận (Farmer/Manager)
@@ -844,7 +845,7 @@ CREATE TABLE ProcessingBatchWastes (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_Wastes_Progress 
-    FOREIGN KEY (ProgressID) REFERENCES ProcessingBatchProgresses(ProgressID)
+      FOREIGN KEY (ProgressID) REFERENCES ProcessingBatchProgresses(ProgressID)
 );
 
 GO
@@ -854,7 +855,7 @@ CREATE TABLE ProcessingWasteDisposals (
   DisposalID UNIQUEIDENTIFIER PRIMARY KEY,                -- ID xử lý phế phẩm
   DisposalCode VARCHAR(20) UNIQUE,                        -- DISP-2025-0001
   WasteID UNIQUEIDENTIFIER NOT NULL,                      -- FK tới dòng phế phẩm
-  DisposalMethod NVARCHAR(100) NOT NULL,                  -- Phương pháp xử lý: compost, sell, discard
+  DisposalMethod NVARCHAR(100) NOT NULL,                  -- Phương pháp xử lý: Compost, Sell, Discard
   HandledBy UNIQUEIDENTIFIER,                             -- Ai thực hiện xử lý
   HandledAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm xử lý
   Notes NVARCHAR(MAX),                                    -- Ghi chú thêm nếu có
@@ -866,7 +867,7 @@ CREATE TABLE ProcessingWasteDisposals (
 
   -- FOREIGN KEY
   CONSTRAINT FK_Disposals_Waste 
-    FOREIGN KEY (WasteID) REFERENCES ProcessingBatchWastes(WasteID)
+      FOREIGN KEY (WasteID) REFERENCES ProcessingBatchWastes(WasteID)
 );
 
 GO
@@ -893,7 +894,7 @@ GO
 -- BusinessStaffs – Thông tin nhân viên doanh nghiệp
 CREATE TABLE BusinessStaffs (
   StaffID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- Mã định danh riêng của nhân viên
-  StaffCode VARCHAR(20) UNIQUE,                                  -- STAFF-2025-0007
+  StaffCode VARCHAR(20) UNIQUE,                                  -- STAFF-2025-0001
   UserID UNIQUEIDENTIFIER NOT NULL UNIQUE,                       -- FK đến bảng Users (1:1)
   SupervisorID UNIQUEIDENTIFIER,                                 -- Người quản lý trực tiếp (nếu có) – có thể là Manager
   Position NVARCHAR(100),                                        -- Chức danh: Thủ kho, Kế toán kho,...
@@ -924,7 +925,7 @@ CREATE TABLE Inventories (
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
     BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
     Quantity FLOAT NOT NULL,                                        -- Số lượng hiện tại trong kho
-    Unit NVARCHAR(20) DEFAULT 'Kg',                                 -- Đơn vị tính (Kg, tấn...)
+    Unit NVARCHAR(20) DEFAULT 'Kg',                                 -- Đơn vị tính (Kg, Tấn...)
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời điểm cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -943,7 +944,7 @@ GO
 CREATE TABLE InventoryLogs (
     LogID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- Mã nhật ký
     InventoryID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với dòng tồn kho nào
-    ActionType NVARCHAR(50) NOT NULL,                               -- Loại hành động: increase, decrease, correction
+    ActionType NVARCHAR(50) NOT NULL,                               -- Loại hành động: Increase, Decrease, Correction
     QuantityChanged FLOAT NOT NULL,                                 -- Lượng thay đổi (+/-)
     UpdatedBy UNIQUEIDENTIFIER,                                     -- Ai thực hiện thay đổi
     TriggeredBySystem BIT DEFAULT 0,                                -- Có phải hệ thống tự động ghi không
@@ -1122,7 +1123,7 @@ GO
 -- WarehouseOutboundRequests – Yêu cầu xuất kho từ nhân sự nội bộ
 CREATE TABLE WarehouseOutboundRequests (
   OutboundRequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),     -- Mã yêu cầu xuất kho
-  OutboundRequestCode VARCHAR(20) UNIQUE,                             -- OUTREQ-2025-0032
+  OutboundRequestCode VARCHAR(20) UNIQUE,                             -- OUTREQ-2025-0001
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                              -- Kho chứa hàng cần xuất
   InventoryID UNIQUEIDENTIFIER NOT NULL,                              -- Dòng tồn kho cần xuất
   RequestedQuantity FLOAT NOT NULL,                                   -- Số lượng yêu cầu xuất
@@ -1138,16 +1139,16 @@ CREATE TABLE WarehouseOutboundRequests (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseOutboundRequests_Warehouse 
-    FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
+      FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
 
   CONSTRAINT FK_WarehouseOutboundRequests_Inventory 
-    FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
+      FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
 
   CONSTRAINT FK_WarehouseOutboundRequests_Manager 
-    FOREIGN KEY (RequestedBy) REFERENCES BusinessManagers(ManagerID),
+      FOREIGN KEY (RequestedBy) REFERENCES BusinessManagers(ManagerID),
 
   CONSTRAINT FK_WarehouseOutboundRequests_OrderItem 
-    FOREIGN KEY (OrderItemID) REFERENCES OrderItems(OrderItemID)
+      FOREIGN KEY (OrderItemID) REFERENCES OrderItems(OrderItemID)
 );
 
 GO
@@ -1155,7 +1156,7 @@ GO
 -- WarehouseOutboundReceipts – Phiếu xuất kho
 CREATE TABLE WarehouseOutboundReceipts (
   OutboundReceiptID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),  -- Mã phiếu xuất kho
-  OutboundReceiptCode VARCHAR(50) UNIQUE,                          -- OUT-RECEIPT-2025-0078 (Format: OUT-RECEIPT-YYYY-####)
+  OutboundReceiptCode VARCHAR(50) UNIQUE,                          -- OUT-RECEIPT-2025-0001 (Format: OUT-RECEIPT-YYYY-####)
   OutboundRequestID UNIQUEIDENTIFIER NOT NULL,                     -- Gắn với yêu cầu xuất kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                           -- Kho xuất
   InventoryID UNIQUEIDENTIFIER NOT NULL,                           -- Dòng tồn kho đã xuất
@@ -1171,19 +1172,19 @@ CREATE TABLE WarehouseOutboundReceipts (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseOutboundReceipts_Request 
-    FOREIGN KEY (OutboundRequestID) REFERENCES WarehouseOutboundRequests(OutboundRequestID),
+      FOREIGN KEY (OutboundRequestID) REFERENCES WarehouseOutboundRequests(OutboundRequestID),
 
   CONSTRAINT FK_WarehouseOutboundReceipts_Warehouse 
-    FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
+      FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
 
   CONSTRAINT FK_WarehouseOutboundReceipts_Inventory 
-    FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
+      FOREIGN KEY (InventoryID) REFERENCES Inventories(InventoryID),
 
   CONSTRAINT FK_WarehouseOutboundReceipts_Batch 
-    FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
+      FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
 
   CONSTRAINT FK_WarehouseOutboundReceipts_Exporter 
-    FOREIGN KEY (ExportedBy) REFERENCES BusinessStaffs(StaffID)
+      FOREIGN KEY (ExportedBy) REFERENCES BusinessStaffs(StaffID)
 );
 
 GO
@@ -1191,12 +1192,12 @@ GO
 -- Shipments – Thông tin chuyến giao hàng
 CREATE TABLE Shipments (
   ShipmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),        -- Mã giao hàng
-  ShipmentCode VARCHAR(20) UNIQUE,                                -- SHIP-2025-0201
+  ShipmentCode VARCHAR(20) UNIQUE,                                -- SHIP-2025-0001
   OrderID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với đơn hàng
   DeliveryStaffID UNIQUEIDENTIFIER NOT NULL,                      -- Nhân viên giao hàng
   ShippedQuantity FLOAT,                                          -- Khối lượng đã giao
   ShippedAt DATETIME,                                             -- Ngày bắt đầu giao
-  DeliveryStatus NVARCHAR(50) DEFAULT 'in_transit',               -- Trạng thái: in_transit, delivered, failed
+  DeliveryStatus NVARCHAR(50) DEFAULT 'In_Transit',               -- Trạng thái: In_Transit, Delivered, Failed
   ReceivedAt DATETIME,                                            -- Ngày nhận hàng thành công
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Người tạo chuyến giao
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo yêu cầu
@@ -1241,13 +1242,13 @@ GO
 -- OrderComplaints – Khiếu nại đơn hàng
 CREATE TABLE OrderComplaints (
   ComplaintID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã khiếu nại
-  ComplaintCode VARCHAR(20) UNIQUE,                            -- CMP-2025-0012
+  ComplaintCode VARCHAR(20) UNIQUE,                            -- CMP-2025-0001
   OrderItemID UNIQUEIDENTIFIER NOT NULL,                       -- Dòng hàng bị khiếu nại
   RaisedBy UNIQUEIDENTIFIER NOT NULL,                          -- Người mua khiếu nại
   ComplaintType NVARCHAR(100),                                 -- Loại khiếu nại: "Sai chất lượng", "Thiếu số lượng", "Vỡ bao bì"
   Description NVARCHAR(MAX),                                   -- Nội dung chi tiết
   EvidenceURL NVARCHAR(255),                                   -- Link ảnh/video minh chứng (nếu có)
-  Status NVARCHAR(50) DEFAULT 'open',                          -- Trạng thái xử lý: open, investigating, resolved, rejected
+  Status NVARCHAR(50) DEFAULT 'Open',                          -- Trạng thái xử lý: Open, Investigating, Resolved, Rejected
   ResolutionNote NVARCHAR(MAX),                                -- Hướng xử lý hoặc kết quả
   ResolvedBy UNIQUEIDENTIFIER,                                 -- Người xử lý (doanh nghiệp bán)
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                         -- Người thao tác tạo bản ghi
@@ -1275,16 +1276,17 @@ GO
 -- SystemNotifications – Thông báo hệ thống
 CREATE TABLE SystemNotifications (
   NotificationID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã thông báo
-  NotificationCode VARCHAR(20) UNIQUE,                            -- NOTI-2025-0053
+  NotificationCode VARCHAR(20) UNIQUE,                            -- NOTI-2025-0001
   Title NVARCHAR(255),                                            -- Tiêu đề
   Message NVARCHAR(MAX),                                          -- Nội dung chi tiết
-  Type NVARCHAR(50),                                              -- Loại thông báo: "low_stock", "issue_reported",...
+  Type NVARCHAR(50),                                              -- Loại thông báo: "Low_Stock", "Issue_Reported",...
   CreatedBy UNIQUEIDENTIFIER,                                     -- Người khởi tạo (nullable)
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời gian tạo
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
+  -- FOREIGN KEYS
   CONSTRAINT FK_SystemNotifications_CreatedBy 
-    FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID)
+      FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID)
 );
 
 GO
@@ -1300,10 +1302,10 @@ CREATE TABLE SystemNotificationRecipients (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_NotificationRecipients_Notification 
-    FOREIGN KEY (NotificationID) REFERENCES SystemNotifications(NotificationID),
+      FOREIGN KEY (NotificationID) REFERENCES SystemNotifications(NotificationID),
 
   CONSTRAINT FK_NotificationRecipients_Recipient 
-    FOREIGN KEY (RecipientID) REFERENCES UserAccounts(UserID)
+      FOREIGN KEY (RecipientID) REFERENCES UserAccounts(UserID)
 );
 
 GO
@@ -1386,24 +1388,49 @@ GO
 
 -- Insert mẫu vào bảng UserAccounts
 -- Admin
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
-VALUES ('USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', '1990-01-01', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 1, 1, 1);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0001', 'admin@gmail.com', '0344033388', N'Phạm Huỳnh Xuân Đăng', 'Male', 
+   '1990-01-01', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 1, 1, 1
+);
 
 -- Business Manager
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
-VALUES ('USR-2025-0002', 'businessManager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', '1985-05-10', N'Hồ Chí Minh', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 2, 1, 1);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0002', 'businessManager@gmail.com', '0325194357', N'Lê Hoàng Phúc', 'Male', 
+   '1985-05-10', N'Hồ Chí Minh', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 2, 1, 1
+);
 
 -- Farmer
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
-VALUES ('USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', '1988-03-15', N'Buôn Ma Thuột', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0003', 'farmer@gmail.com', '0942051066', N'Nguyễn Nhật Minh', 'Male', 
+   '1988-03-15', N'Buôn Ma Thuột', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1
+);
 
 -- Expert
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
-VALUES ('USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', '1978-08-22', N'Hà Nội', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 5, 1, 1);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', 
+   '1978-08-22', N'Hà Nội', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 5, 1, 1
+);
 
 -- Business Staff
-INSERT INTO UserAccounts (UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified)
-VALUES ('USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', '1999-09-12', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1);
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0005', 'businessStaff@gmail.com', '0941716075', N'Phạm Trường Nam', 'Male', 
+   '1999-09-12', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1
+);
 
 GO
 
@@ -2136,7 +2163,8 @@ DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO CultivationRegistrationsDetail (
     CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
-    ExpectedHarvestStart, ExpectedHarvestEnd, Note, WantedPrice
+    ExpectedHarvestStart, ExpectedHarvestEnd, 
+	Note, WantedPrice
 )
 VALUES (
     @RegistrationDetailID, @RegistrationID, @PlanDetailID, 2200,
@@ -2167,8 +2195,8 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 
 INSERT INTO FarmingCommitments (
     CommitmentCode, RegistrationID, PlanID, FarmerID,
-    CommitmentName,
-    ApprovedBy, ApprovedAt, Note, TotalPrice
+    CommitmentName, ApprovedBy, ApprovedAt, 
+	Note, TotalPrice
 )
 VALUES (
     'FC-2025-0001', @RegistrationID, @PlanID, @FarmerID,
@@ -2208,7 +2236,6 @@ GO
 
 -- Insert vào bảng CropSeasons
 -- Lấy các ID cần thiết
-
 DECLARE @FarmerID UNIQUEIDENTIFIER = (
    SELECT FarmerID FROM Farmers WHERE FarmerCode = 'FRM-2025-0001'
 );
@@ -2230,10 +2257,6 @@ VALUES (
 GO
 
 -- Insert vào bảng CropSeasonDetails
---DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
---    SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeCode = 'CFT-2025-0001'
---);
-
 DECLARE @CommitmentDetailID UNIQUEIDENTIFIER = (
     SELECT CommitmentDetailID FROM FarmingCommitmentsDetails WHERE CommitmentDetailCode = 'FCD-2025-0001'
 );
@@ -2736,12 +2759,22 @@ DECLARE @BM_ManagerID UNIQUEIDENTIFIER = (
 );
 
 -- Thêm kho 1: Kho Cư M’gar
-INSERT INTO Warehouses (WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted)
-VALUES ('WH-2025-DL001', @BM_ManagerID, N'Kho Cư M’gar', N'Thôn 3, Xã Cư M’gar, Đắk Lắk', 50000, GETDATE(), GETDATE(), 0);
+INSERT INTO Warehouses (
+   WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+   'WH-2025-DL001', @BM_ManagerID, N'Kho Cư M’gar', N'Thôn 3, 
+   Xã Cư M’gar, Đắk Lắk', 50000, GETDATE(), GETDATE(), 0
+);
 
 -- Thêm kho 2: Kho Buôn Hồ
-INSERT INTO Warehouses (WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted)
-VALUES ('WH-2025-DL002', @BM_ManagerID, N'Kho Buôn Hồ', N'Đường Nguyễn Huệ, Phường An Bình, TX. Buôn Hồ', 35000, GETDATE(), GETDATE(), 0);
+INSERT INTO Warehouses (
+   WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+   'WH-2025-DL002', @BM_ManagerID, N'Kho Buôn Hồ', N'Đường Nguyễn Huệ, 
+   Phường An Bình, TX. Buôn Hồ', 35000, GETDATE(), GETDATE(), 0
+);
 
 GO
 

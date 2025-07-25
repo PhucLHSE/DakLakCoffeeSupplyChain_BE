@@ -39,7 +39,7 @@ public partial class FarmingCommitmentsDetail
 
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
 
-    public virtual CropSeasonDetail CropSeasonDetail { get; set; }
+    public virtual ICollection<CropSeasonDetail> CropSeasonDetails { get; set; } = new List<CropSeasonDetail>();
 
     public virtual ProcurementPlansDetail PlanDetail { get; set; }
 
