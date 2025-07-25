@@ -42,5 +42,4 @@ public partial class CropProgress
     public virtual CropStage Stage { get; set; }
 
     public virtual Farmer UpdatedByNavigation { get; set; }
-
 }
