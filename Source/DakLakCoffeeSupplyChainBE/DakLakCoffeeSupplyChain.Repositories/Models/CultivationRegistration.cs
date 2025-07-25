@@ -37,7 +37,7 @@ public partial class CultivationRegistration
 
     public virtual Farmer Farmer { get; set; }
 
-    public virtual ICollection<FarmingCommitment> FarmingCommitments { get; set; } = new List<FarmingCommitment>();
+    public virtual FarmingCommitment FarmingCommitment { get; set; }
 
     public virtual ProcurementPlan Plan { get; set; }
 }
