@@ -186,15 +186,36 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteOrderById(Guid orderId)
+        public async Task<IServiceResult> DeleteOrderById(Guid orderId, Guid userId)
         {
             try
             {
+                // Chỉ chấp nhận BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không phải BusinessManager nên không có quyền xóa đơn hàng."
+                    );
+                }
+
+                var managerId = manager.ManagerId;
+
                 // Tìm Order theo ID kèm danh sách OrderItems
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(
                     predicate: o =>
                        o.OrderId == orderId &&
-                       o.DeliveryBatch != null,
+                       !o.IsDeleted &&
+                       o.DeliveryBatch != null &&
+                       o.DeliveryBatch.Contract != null &&
+                       o.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
                        .Include(o => o.OrderItems),
                     asNoTracking: false
