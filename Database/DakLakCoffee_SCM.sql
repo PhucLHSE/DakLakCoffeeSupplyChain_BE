@@ -393,19 +393,13 @@ CREATE TABLE ProcurementPlansDetails (
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
 	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
-    --CropType NVARCHAR(100) NOT NULL,                                                   -- Loại cây trồng: Arabica, Robusta,...
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (Kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (Kg)
-    --BeanSize NVARCHAR(50),                                                             -- Kích thước hạt (ví dụ: screen 16–18)
-    --BeanColor NVARCHAR(50),                                                            -- Màu hạt
-    --MoistureContent FLOAT,                                                             -- Hàm lượng ẩm
-    --DefectRate FLOAT,                                                                  -- Tỷ lệ lỗi hạt cho phép
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
 	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (Kg/ha)
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
-    --BeanColorImageUrl NVARCHAR(255),                                                   -- Link ảnh mẫu hạt
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
 	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
     Status NVARCHAR(50) DEFAULT 'Active',                                              -- Trạng thái: Active, Closed, Disabled
@@ -492,14 +486,8 @@ CREATE TABLE FarmingCommitments (
 	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0038
 	CommitmentName NVARCHAR(MAX),									   -- Tên của bảng cam kết
     PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch chính
-    RegistrationID UNIQUEIDENTIFIER NOT NULL,                          -- FK đến đơn đăng ký chính
-    --RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
-    --PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
+    RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                   -- FK đến đơn đăng ký chính
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
-    --ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
-    --CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
-    --EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
-    --EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
     TotalPrice FLOAT DEFAULT 0,                                        -- Tổng giá tiền
     CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
     ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
@@ -513,11 +501,6 @@ CREATE TABLE FarmingCommitments (
 	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-    --CONSTRAINT FK_FarmingCommitments_RegistrationDetailID 
-	   -- FOREIGN KEY (RegistrationDetailID) REFERENCES CultivationRegistrationsDetail(CultivationRegistrationDetailID),
-
-    --CONSTRAINT FK_FarmingCommitments_PlanDetailID 
-	    --FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
 
     CONSTRAINT FK_FarmingCommitments_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
@@ -530,9 +513,6 @@ CREATE TABLE FarmingCommitments (
 
     CONSTRAINT FK_FarmingCommitments_ApprovedBy 
 	    FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID),
-
-	--CONSTRAINT FK_FarmingCommitments_ContractDeliveryItem 
- --       FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID)
 );
 
 GO
@@ -576,7 +556,7 @@ CREATE TABLE CropSeasons (
 	CropSeasonCode VARCHAR(20) UNIQUE,                                  -- SEASON-2025-0001
     --RegistrationID UNIQUEIDENTIFIER NOT NULL,                         -- Liên kết đơn đăng ký trồng
     FarmerID UNIQUEIDENTIFIER NOT NULL,                                 -- Nông dân tạo mùa vụ
-    CommitmentID UNIQUEIDENTIFIER NOT NULL UNIQUE,                      -- Cam kết từ doanh nghiệp
+    CommitmentID UNIQUEIDENTIFIER NOT NULL,                             -- Cam kết từ doanh nghiệp
     SeasonName NVARCHAR(100),                                           -- Tên mùa vụ (vd: Mùa vụ 2025)
     Area FLOAT,                                                         -- Diện tích canh tác (ha)
     StartDate DATE,                                                     -- Ngày bắt đầu
@@ -588,8 +568,6 @@ CREATE TABLE CropSeasons (
 	IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
-    --CONSTRAINT FK_CropSeasons_RegistrationID 
-	    --FOREIGN KEY (RegistrationID) REFERENCES CultivationRegistrations(RegistrationID),
 
     CONSTRAINT FK_CropSeasons_FarmerID 
 	    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
@@ -604,7 +582,6 @@ GO
 CREATE TABLE CropSeasonDetails (
     DetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID chi tiết mùa vụ
     CropSeasonID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến mùa vụ
-    --CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                            -- Liên kết loại cà phê chính xác
     CommitmentDetailID UNIQUEIDENTIFIER NOT NULL UNIQUE,               -- FK đến chi tiết cam kết, lấy coffeeTypeID từ đây
     ExpectedHarvestStart DATE,                                         -- Ngày bắt đầu thu hoạch dự kiến
     ExpectedHarvestEnd DATE,                                           -- Ngày kết thúc thu hoạch dự kiến

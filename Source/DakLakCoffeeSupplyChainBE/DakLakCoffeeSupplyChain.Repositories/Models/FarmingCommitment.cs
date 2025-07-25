@@ -41,7 +41,7 @@ public partial class FarmingCommitment
 
     public virtual BusinessManager ApprovedByNavigation { get; set; }
 
-    public virtual CropSeason CropSeason { get; set; }
+    public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
 
     public virtual Farmer Farmer { get; set; }
 
