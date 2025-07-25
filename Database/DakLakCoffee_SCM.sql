@@ -2,18 +2,18 @@
 
 GO
 
-IF EXISTS (SELECT * FROM sys.databases WHERE name = 'DakLakCoffee_SCMDB')
+IF EXISTS (SELECT * FROM sys.databases WHERE name = 'DakLakCoffee_SCM')
 BEGIN
-    DROP DATABASE DakLakCoffee_SCMDB;
+    DROP DATABASE DakLakCoffee_SCM;
 END
 
 GO
 
-CREATE DATABASE DakLakCoffee_SCMDB;
+CREATE DATABASE DakLakCoffee_SCM;
 
 GO
 
-USE DakLakCoffee_SCMDB;
+USE DakLakCoffee_SCM;
 
 GO
 
