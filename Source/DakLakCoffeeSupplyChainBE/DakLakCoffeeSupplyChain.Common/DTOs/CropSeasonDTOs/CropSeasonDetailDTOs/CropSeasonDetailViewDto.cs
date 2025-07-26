@@ -14,8 +14,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
 
         public Guid CoffeeTypeId { get; set; }
         public string TypeName { get; set; } = string.Empty;
-        public string CoffeeTypeName { get; set; } = string.Empty;
-
         public double? AreaAllocated { get; set; }
         public DateOnly? ExpectedHarvestStart { get; set; }
         public DateOnly? ExpectedHarvestEnd { get; set; }

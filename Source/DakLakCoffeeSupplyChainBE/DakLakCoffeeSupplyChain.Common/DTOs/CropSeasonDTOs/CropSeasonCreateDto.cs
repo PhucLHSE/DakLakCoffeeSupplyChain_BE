@@ -9,7 +9,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
         //public Guid RegistrationId { get; set; }
         public Guid CommitmentId { get; set; }
         public string SeasonName { get; set; } = string.Empty;
-        public double? Area { get; set; }
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
         public string? Note { get; set; }

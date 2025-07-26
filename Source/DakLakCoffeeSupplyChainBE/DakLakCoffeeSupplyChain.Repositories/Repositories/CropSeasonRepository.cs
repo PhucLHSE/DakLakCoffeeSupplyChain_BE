@@ -56,6 +56,7 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .Include(cs => cs.CropSeasonDetails)
                 .ThenInclude(d => d.CommitmentDetail)
                     .ThenInclude(d => d.PlanDetail)
+                                        .ThenInclude(pd => pd.CoffeeType) 
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)

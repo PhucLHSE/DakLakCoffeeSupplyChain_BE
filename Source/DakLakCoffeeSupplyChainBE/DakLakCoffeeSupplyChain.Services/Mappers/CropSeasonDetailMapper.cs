@@ -9,12 +9,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     {
         public static CropSeasonDetailViewDto MapToCropSeasonDetailViewDto(this CropSeasonDetail entity)
         {
+            var planDetail = entity.CommitmentDetail?.PlanDetail;
+            var coffeeType = planDetail?.CoffeeType;
+
             return new CropSeasonDetailViewDto
             {
                 DetailId = entity.DetailId,
                 AreaAllocated = entity.AreaAllocated ?? 0,
-                CoffeeTypeId = entity.CommitmentDetail.PlanDetail.CoffeeTypeId,
-                TypeName = entity.CommitmentDetail.PlanDetail.CoffeeType?.TypeName ?? string.Empty,
+                CoffeeTypeId = planDetail?.CoffeeTypeId ?? Guid.Empty,
+                TypeName = coffeeType?.TypeName ?? "Không rõ",
+                CommitmentDetailId = entity.CommitmentDetailId,
+                CommitmentDetailCode = entity.CommitmentDetail?.CommitmentDetailCode ?? "",
                 ExpectedHarvestStart = entity.ExpectedHarvestStart,
                 ExpectedHarvestEnd = entity.ExpectedHarvestEnd,
                 EstimatedYield = entity.EstimatedYield,
@@ -49,12 +54,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
+
+
         public static void MapToExistingEntity(this CropSeasonDetailUpdateDto dto, CropSeasonDetail entity)
         {
             //entity.CoffeeTypeId = dto.CoffeeTypeId;
             entity.ExpectedHarvestStart = dto.ExpectedHarvestStart;
             entity.ExpectedHarvestEnd = dto.ExpectedHarvestEnd;
-            entity.EstimatedYield = dto.EstimatedYield ?? 0;
+            //entity.EstimatedYield = dto.EstimatedYield ?? 0;
             entity.AreaAllocated = dto.AreaAllocated ?? 0;
             entity.PlannedQuality = dto.PlannedQuality;
 
