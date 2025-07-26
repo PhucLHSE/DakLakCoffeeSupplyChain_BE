@@ -91,48 +91,47 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 var season = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
-                    predicate: s => s.CropSeasonId == dto.CropSeasonId && !s.IsDeleted,
+                    s => s.CropSeasonId == dto.CropSeasonId && !s.IsDeleted,
                     asNoTracking: true
                 );
-
                 if (season == null)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không tìm thấy mùa vụ tương ứng."
-                    );
-                }
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mùa vụ tương ứng.");
+
+                var commitmentDetail = await _unitOfWork.FarmingCommitmentsDetailRepository.GetByIdAsync(
+                    cd => cd.CommitmentDetailId == dto.CommitmentDetailId && !cd.IsDeleted,
+                    include: q => q.Include(cd => cd.PlanDetail).ThenInclude(p => p.CoffeeType),
+                    asNoTracking: true
+                );
+                if (commitmentDetail == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dòng cam kết tương ứng.");
+
 
                 var entity = dto.MapToNewCropSeasonDetail();
                 await _unitOfWork.CropSeasonDetailRepository.CreateAsync(entity);
-                var result = await _unitOfWork.SaveChangesAsync();
 
+                var result = await _unitOfWork.SaveChangesAsync();
                 if (result > 0)
                 {
                     var created = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
-                        predicate: d => d.DetailId == entity.DetailId,
-                        include: query => query.Include(d => d.CommitmentDetail).ThenInclude(d => d.PlanDetail),
+                        d => d.DetailId == entity.DetailId,
+                        include: q => q
+                            .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(p => p.CoffeeType)
+                            .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User),
                         asNoTracking: true
                     );
 
-                    var view = created.MapToCropSeasonDetailViewDto();
+                    var view = created?.MapToCropSeasonDetailViewDto();
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, view);
                 }
 
-
-                return new ServiceResult(
-                    Const.FAIL_CREATE_CODE,
-                    "Tạo mới dòng mùa vụ thất bại."
-                );
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo vùng trồng thất bại.");
             }
             catch (Exception ex)
             {
-                return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    ex.ToString()
-                );
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+
 
         public async Task<IServiceResult> Update(CropSeasonDetailUpdateDto dto)
         {
@@ -140,7 +139,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 var existing = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
                     predicate: d => d.DetailId == dto.DetailId && !d.IsDeleted,
-                    asNoTracking: false 
+                    include: query => query
+                        .Include(d => d.CommitmentDetail)
+                            .ThenInclude(cd => cd.PlanDetail), // Để lấy CoffeeTypeId
+                    asNoTracking: false
                 );
 
                 if (existing == null)
@@ -148,8 +150,47 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dòng mùa vụ.");
                 }
 
-                dto.MapToExistingEntity(existing); 
+                // 🔍 1. Lấy các vùng trồng khác trong cùng mùa vụ (trừ chính nó)
+                var otherDetails = await _unitOfWork.CropSeasonDetailRepository.GetAllAsync(
+                    predicate: d => d.CropSeasonId == existing.CropSeasonId
+                                 && d.DetailId != dto.DetailId
+                                 && !d.IsDeleted == false,
+                    asNoTracking: true
+                );
 
+                double otherAllocated = otherDetails.Sum(d => d.AreaAllocated ?? 0);
+                double newTotalAllocated = otherAllocated + (dto.AreaAllocated ?? 0);
+
+                // 📦 2. Lấy mùa vụ để biết diện tích tối đa
+                var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
+                    predicate: cs => cs.CropSeasonId == existing.CropSeasonId && !cs.IsDeleted,
+                    asNoTracking: true
+                );
+
+                double maxArea = cropSeason?.Area ?? 0;
+
+                // ❗ 3. Kiểm tra vượt tổng diện tích
+                if (newTotalAllocated > maxArea)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Tổng diện tích phân bổ ({newTotalAllocated} ha) vượt quá diện tích đăng ký ({maxArea} ha). Vui lòng giảm diện tích."
+                    );
+                }
+
+                // ✅ 4. Mapping dữ liệu mới vào entity hiện tại
+                dto.MapToExistingEntity(existing);
+
+                // 📈 5. Tính EstimatedYield = AreaAllocated * DefaultYieldPerHectare
+                var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
+                    predicate: ct => ct.CoffeeTypeId == existing.CommitmentDetail.PlanDetail.CoffeeTypeId && !ct.IsDeleted,
+                    asNoTracking: true
+                );
+
+                double defaultYieldPerHa = coffeeType?.DefaultYieldPerHectare ?? 0;
+                existing.EstimatedYield = (existing.AreaAllocated ?? 0) * defaultYieldPerHa;
+
+                // 💾 6. Lưu DB
                 await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(existing);
                 var result = await _unitOfWork.SaveChangesAsync();
 

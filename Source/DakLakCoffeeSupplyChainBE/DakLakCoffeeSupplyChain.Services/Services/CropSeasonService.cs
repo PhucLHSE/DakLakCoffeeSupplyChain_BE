@@ -52,7 +52,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(cs => cs.Farmer).ThenInclude(f => f.User)
                     .Include(cs => cs.CropSeasonDetails)
                         .ThenInclude(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
-                    .Include(cs => cs.Commitment),
+                    .Include(cs => cs.Commitment)
+                        .Include(cs => cs.Commitment).ThenInclude(c => c.Registration), 
                 asNoTracking: true
             );
 
@@ -61,8 +62,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập mùa vụ này.");
+            var registration = cropSeason.Commitment?.Registration;
 
-            var dto = cropSeason.MapToCropSeasonViewDetailsDto();
+            var dto = cropSeason.MapToCropSeasonViewDetailsDto(registration);
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
 
@@ -111,8 +113,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             Guid cropSeasonId = Guid.NewGuid(); // ✅ Sinh CropSeasonId 1 lần duy nhất tại đây
 
             // 7. Map entity mùa vụ (sửa mapper để nhận cropSeasonId)
+            var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+            predicate: r => r.RegistrationId == commitment.RegistrationId && !r.IsDeleted,
+            asNoTracking: true
+);
+
+            if (registration == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy đơn đăng ký canh tác.");
+
             var cropSeason = dto.MapToCropSeasonCreateDto(code, farmer.FarmerId, cropSeasonId);
-            cropSeason.Area = dto.Area ?? 0;
+            cropSeason.Area = registration.RegisteredArea ?? 0;
             cropSeason.CommitmentId = commitment.CommitmentId;
 
             await _unitOfWork.CropSeasonRepository.CreateAsync(cropSeason);
@@ -128,7 +138,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không có chi tiết cam kết để tạo vùng trồng.");
 
             // 9. Tạo vùng trồng – cho phép dùng lại CommitmentDetail
-            double areaPerDetail = (cropSeason.Area ?? 0) / commitmentDetails.Count;
 
             foreach (var detail in commitmentDetails)
             {
@@ -139,8 +148,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     CommitmentDetailId = detail.CommitmentDetailId,
                     ExpectedHarvestStart = detail.EstimatedDeliveryStart ?? dto.StartDate,
                     ExpectedHarvestEnd = detail.EstimatedDeliveryEnd ?? dto.EndDate,
-                    EstimatedYield = detail.CommittedQuantity ?? 0,
-                    AreaAllocated = areaPerDetail,
+                    AreaAllocated = 0,            
+                    EstimatedYield = 0,
                     PlannedQuality = null,
                     QualityGrade = null,
                     Status = CropDetailStatus.Planned.ToString(),
@@ -160,7 +169,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (fullEntity == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo mùa vụ thành công nhưng không lấy được dữ liệu.");
 
-                var responseDto = fullEntity.MapToCropSeasonViewDetailsDto();
+                var responseDto = fullEntity.MapToCropSeasonViewDetailsDto(registration);
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, responseDto);
             }
 
