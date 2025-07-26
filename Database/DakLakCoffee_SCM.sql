@@ -3142,6 +3142,73 @@ WHERE InventoryID = @InventoryID;
 
 GO
 
+-- Các ID cần dùng
+DECLARE @ShipmentID UNIQUEIDENTIFIER = NEWID();
+DECLARE @ShipmentCode VARCHAR(20) = 'SHIP-2025-0001';
+DECLARE @ComplaintID UNIQUEIDENTIFIER = NEWID();
+DECLARE @ComplaintCode VARCHAR(20) = 'CMP-2025-0001';
+
+DECLARE @OrderID UNIQUEIDENTIFIER = (
+	SELECT TOP 1 OrderID FROM Orders WHERE OrderCode = 'ORD-2025-0001'
+);
+
+DECLARE @OrderItemID UNIQUEIDENTIFIER = (
+	SELECT TOP 1 OrderItemID FROM OrderItems WHERE OrderID = @OrderID
+);
+
+DECLARE @DeliveryStaffID UNIQUEIDENTIFIER = (
+	SELECT TOP 1 UserID FROM UserAccounts WHERE UserCode = 'USR-2025-0005'
+);
+
+DECLARE @CreatedBy UNIQUEIDENTIFIER = (
+	SELECT TOP 1 UserID FROM UserAccounts WHERE UserCode = 'USR-2025-0002'
+);
+
+DECLARE @ResolvedBy UNIQUEIDENTIFIER = (
+	SELECT TOP 1 ManagerID FROM BusinessManagers WHERE ManagerCode = 'BM-2025-0001'
+);
+
+DECLARE @BuyerID UNIQUEIDENTIFIER = 'ED49B648-F170-48AC-8535-823C80381179';
+
+-- Insert vào bảng Shipments
+INSERT INTO Shipments (
+  ShipmentID, ShipmentCode, OrderID, DeliveryStaffID,
+  ShippedQuantity, ShippedAt, DeliveryStatus, ReceivedAt,
+  CreatedBy, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  @ShipmentID, @ShipmentCode, @OrderID, @DeliveryStaffID,
+  500, GETDATE(), 'Delivered', GETDATE(),
+  @CreatedBy, GETDATE(), GETDATE(), 0
+);
+
+-- Insert vào bảng ShipmentDetails
+INSERT INTO ShipmentDetails (
+  ShipmentDetailID, ShipmentID, OrderItemID, Quantity,
+  Unit, Note, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+  NEWID(), @ShipmentID, @OrderItemID,
+  500, 'Kg', N'Hàng giao nguyên kiện', GETDATE(), GETDATE(), 0
+);
+
+-- Insert vào bảng OrderComplaints
+INSERT INTO OrderComplaints (
+  ComplaintID, ComplaintCode, OrderItemID, RaisedBy,
+  ComplaintType, Description, EvidenceURL, Status,
+  ResolutionNote, ResolvedBy, CreatedBy, CreatedAt, UpdatedAt,
+  ResolvedAt, IsDeleted
+)
+VALUES (
+  @ComplaintID, @ComplaintCode, @OrderItemID, @BuyerID,
+  N'Sai chất lượng', N'Sản phẩm không đạt như cam kết. Độ ẩm cao.',
+  N'https://drive.google.com/evidence1.jpg', 'Resolved',
+  N'Đã hoàn tiền 10%. Kiểm tra lại lô hàng còn lại.',
+  @ResolvedBy, @CreatedBy, GETDATE(), GETDATE(), GETDATE(), 0
+);
+
+GO
+
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
 INSERT INTO SystemConfiguration 
