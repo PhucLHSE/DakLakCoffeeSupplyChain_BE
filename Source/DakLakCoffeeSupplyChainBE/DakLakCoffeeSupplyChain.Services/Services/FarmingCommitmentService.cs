@@ -131,7 +131,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
-                    ThenInclude(fm => fm.User),
+                    ThenInclude(fm => fm.User).
+                Include(p => p.FarmingCommitmentsDetails),
                 asNoTracking: true
             );
 
@@ -204,20 +205,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Map dto to model
                 var newCommitment = commitmentCreateDto.MapToFarmingCommitment(commitmentCode);
 
-                //Lấy registration detail
-                var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                //Lấy registration, chỉ lấy cái nào đã được duyệt và chưa có cam kết
+                var selectedRegistration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
                     predicate: r => r.RegistrationId == newCommitment.RegistrationId,
-                    include: r => r.Include( r => r.Registration),
+                    include: r => r.Include( r => r.Plan),
                     asNoTracking: true);
-                if(registrationDetail == null)
+                if(selectedRegistration == null)
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         "Không tìm được chi tiết phiếu đăng ký"
                     );
 
                 //Tự động map planId và farmerId từ Registration
-                //newCommitment.PlanDetailId = registrationDetail.PlanDetailId;
-                newCommitment.FarmerId = registrationDetail.Registration.FarmerId;
+                newCommitment.PlanId = selectedRegistration.PlanId;
+                newCommitment.FarmerId = selectedRegistration.FarmerId;
 
                 //Tự động map giá cả và sản lượng, thời gian từ Registration
                 //newCommitment.ConfirmedPrice = registrationDetail.WantedPrice;
@@ -240,7 +241,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             Include(f => f.Farmer).
                                 ThenInclude(f => f.User).
                             Include(p => p.Plan).
-                                ThenInclude(c => c.CreatedByNavigation),
+                                ThenInclude(c => c.CreatedByNavigation).
+                            Include(p => p.FarmingCommitmentsDetails),
                             asNoTracking: true
                         );
                     if (commitment == null)

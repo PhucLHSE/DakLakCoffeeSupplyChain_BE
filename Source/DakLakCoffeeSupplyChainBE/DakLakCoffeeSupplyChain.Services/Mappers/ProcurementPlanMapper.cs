@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
+using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.CoffeeTypeDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -11,66 +13,79 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ProcurementPlanMapper
     {
         // Mapper ProcurementPlanViewAllDto
-        public static ProcurementPlanViewAllDto MapToProcurementPlanViewAllDto(this ProcurementPlan entity)
+        public static ProcurementPlanViewAllDto MapToProcurementPlanViewAllDto(this ProcurementPlan plan)
         {
             // Parse Status string to enum
-            ProcurementPlanStatus status = Enum.TryParse<ProcurementPlanStatus>(entity.Status, true, out var parsedStatus)
+            ProcurementPlanStatus status = Enum.TryParse<ProcurementPlanStatus>(plan.Status, true, out var parsedStatus)
                 ? parsedStatus
                 : ProcurementPlanStatus.Draft;
 
             return new ProcurementPlanViewAllDto
             {
-                PlanId = entity.PlanId,
-                PlanCode = entity.PlanCode ?? string.Empty,
-                Title = entity.Title ?? string.Empty,
-                Description = entity.Description ?? string.Empty,
-                TotalQuantity = entity.TotalQuantity,
-                CreatedBy = entity.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
+                PlanId = plan.PlanId,
+                PlanCode = plan.PlanCode ?? string.Empty,
+                Title = plan.Title ?? string.Empty,
+                Description = plan.Description ?? string.Empty,
+                TotalQuantity = plan.TotalQuantity,
+                CreatedBy = plan.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
                 {
-                    ManagerId = entity.CreatedByNavigation.ManagerId,
-                    UserId = entity.CreatedByNavigation.UserId,
-                    ManagerCode = entity.CreatedByNavigation.ManagerCode,
-                    CompanyName = entity.CreatedByNavigation.CompanyName,
-                    CompanyAddress = entity.CreatedByNavigation.CompanyAddress,
-                    Website = entity.CreatedByNavigation.Website,
-                    ContactEmail = entity.CreatedByNavigation.ContactEmail
+                    ManagerId = plan.CreatedByNavigation.ManagerId,
+                    UserId = plan.CreatedByNavigation.UserId,
+                    ManagerCode = plan.CreatedByNavigation.ManagerCode,
+                    CompanyName = plan.CreatedByNavigation.CompanyName,
+                    CompanyAddress = plan.CreatedByNavigation.CompanyAddress,
+                    Website = plan.CreatedByNavigation.Website,
+                    ContactEmail = plan.CreatedByNavigation.ContactEmail
                 },
-                StartDate = entity.StartDate,
-                EndDate = entity.EndDate,
+                StartDate = plan.StartDate,
+                EndDate = plan.EndDate,
                 Status = status,
-                ProgressPercentage = entity.ProgressPercentage,
-                CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                ProgressPercentage = plan.ProgressPercentage,
+                Commitments = plan.FarmingCommitments?.Select(
+                    p => new FarmingCommitmentViewAllDto
+                    {
+                        CommitmentId = p.CommitmentId,
+                        CommitmentCode = p.CommitmentCode,
+                        CommitmentName = p.CommitmentName,
+                        FarmerName = p.Farmer.User.Name,
+                        PlanTitle = p.Plan.Title,
+                        TotalPrice = p.TotalPrice,
+                        CommitmentDate = p.CommitmentDate,
+                        Status = EnumHelper.ParseEnumFromString(p.Status, FarmingCommitmentStatus.Unknown)
+                    }
+                    ).ToList() ?? [],
+                CreatedAt = plan.CreatedAt,
+                UpdatedAt = plan.UpdatedAt
             };
         }
         // Mapper ProcurementPlanViewDetailsDto
-        public static ProcurementPlanViewDetailsSumaryDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan entity)
+        public static ProcurementPlanViewDetailsSumaryDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan plan)
         {
             return new ProcurementPlanViewDetailsSumaryDto
             {
-                PlanId = entity.PlanId,
-                PlanCode = entity.PlanCode ?? string.Empty,
-                Title = entity.Title ?? string.Empty,
-                Description = entity.Description ?? string.Empty,
-                TotalQuantity = entity.TotalQuantity,
-                CreatedById = entity.CreatedBy,
-                CreatedBy = entity.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
+                PlanId = plan.PlanId,
+                PlanCode = plan.PlanCode ?? string.Empty,
+                Title = plan.Title ?? string.Empty,
+                Description = plan.Description ?? string.Empty,
+                TotalQuantity = plan.TotalQuantity,
+                CreatedById = plan.CreatedBy,
+                CreatedBy = plan.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
                 {
-                    ManagerId = entity.CreatedByNavigation.ManagerId,
-                    UserId = entity.CreatedByNavigation.UserId,
-                    ManagerCode = entity.CreatedByNavigation.ManagerCode,
-                    CompanyName = entity.CreatedByNavigation.CompanyName,
-                    CompanyAddress = entity.CreatedByNavigation.CompanyAddress,
-                    Website = entity.CreatedByNavigation.Website,
-                    ContactEmail = entity.CreatedByNavigation.ContactEmail
+                    ManagerId = plan.CreatedByNavigation.ManagerId,
+                    UserId = plan.CreatedByNavigation.UserId,
+                    ManagerCode = plan.CreatedByNavigation.ManagerCode,
+                    CompanyName = plan.CreatedByNavigation.CompanyName,
+                    CompanyAddress = plan.CreatedByNavigation.CompanyAddress,
+                    Website = plan.CreatedByNavigation.Website,
+                    ContactEmail = plan.CreatedByNavigation.ContactEmail
                 },
-                StartDate = entity.StartDate,
-                EndDate = entity.EndDate,
-                Status = EnumHelper.ParseEnumFromString(entity.Status, ProcurementPlanStatus.Draft),
-                ProgressPercentage = entity.ProgressPercentage,
-                CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt,
-                ProcurementPlansDetails = entity.ProcurementPlansDetails?
+                StartDate = plan.StartDate,
+                EndDate = plan.EndDate,
+                Status = EnumHelper.ParseEnumFromString(plan.Status, ProcurementPlanStatus.Draft),
+                ProgressPercentage = plan.ProgressPercentage,
+                CreatedAt = plan.CreatedAt,
+                UpdatedAt = plan.UpdatedAt,
+                ProcurementPlansDetails = plan.ProcurementPlansDetails?
                 .OrderBy(p => p.PlanDetailCode)
                 .Select(p => new ProcurementPlanDetailsDto
                 {
