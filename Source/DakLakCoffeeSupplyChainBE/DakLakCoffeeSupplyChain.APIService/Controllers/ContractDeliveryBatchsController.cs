@@ -117,6 +117,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<ContractDeliveryBatchsController>/{deliveryBatchId}
         [HttpPut("{deliveryBatchId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
         public async Task<IActionResult> UpdateContractDeliveryBatchAsync(
             Guid deliveryBatchId,
             [FromBody] ContractDeliveryBatchUpdateDto contractDeliveryBatchDto)

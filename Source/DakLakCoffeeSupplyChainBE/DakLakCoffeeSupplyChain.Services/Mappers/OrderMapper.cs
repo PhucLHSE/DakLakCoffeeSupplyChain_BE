@@ -113,5 +113,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
             return order;
         }
+
+        // Mapper OrderUpdateDto -> Order
+        public static void MapToUpdatedOrder(this OrderUpdateDto dto, Order order)
+        {
+            order.DeliveryBatchId = dto.DeliveryBatchId;
+            order.DeliveryRound = dto.DeliveryRound;
+            order.OrderDate = dto.OrderDate ?? order.OrderDate; // giữ nguyên nếu null
+            order.ActualDeliveryDate = dto.ActualDeliveryDate;
+            order.Note = dto.Note;
+            order.Status = dto.Status.ToString(); // enum -> string
+            order.CancelReason = dto.CancelReason;
+            order.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }
