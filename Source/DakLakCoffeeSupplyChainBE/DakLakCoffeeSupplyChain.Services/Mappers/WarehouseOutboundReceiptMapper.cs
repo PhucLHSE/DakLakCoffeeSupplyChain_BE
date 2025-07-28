@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundReceiptDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.InventoryLogEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -59,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 LogId = Guid.NewGuid(),
                 InventoryId = inventoryId,
-                ActionType = "decrease",
+                ActionType = InventoryLogActionType.decrease.ToString(),
                 QuantityChanged = -confirmedQuantity,
                 Note = $"Xuất kho từ phiếu {receipt.OutboundReceiptCode}",
                 TriggeredBySystem = true,

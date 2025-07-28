@@ -33,5 +33,20 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = w.UpdatedAt
             };
         }
+        public static Warehouse ToEntityFromCreateDto(this WarehouseCreateDto dto, Guid managerId, string warehouseCode)
+        {
+            return new Warehouse
+            {
+                WarehouseId = Guid.NewGuid(),
+                WarehouseCode = warehouseCode,
+                Name = dto.Name,
+                Location = dto.Location,
+                Capacity = dto.Capacity,
+                ManagerId = managerId,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
     }
 }
