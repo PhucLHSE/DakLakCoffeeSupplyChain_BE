@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommitmentsDetailsDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
 {
@@ -13,5 +14,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public double? TotalPrice { get; set; } = 0.0;
         public DateTime CommitmentDate { get; set; }
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;
+        public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentsDetailsDTOs { get; set; } = [];
     }
 }

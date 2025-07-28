@@ -20,7 +20,24 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 PlanTitle = fm.Plan.Title,
                 TotalPrice = fm.TotalPrice,
                 CommitmentDate = fm.CommitmentDate,
-                Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown)
+                Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown),
+                FarmingCommitmentsDetailsDTOs = fm.FarmingCommitmentsDetails
+                    ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
+                    {
+                        CommitmentDetailId = detail.CommitmentDetailId,
+                        CommitmentDetailCode = detail.CommitmentDetailCode,
+                        CommitmentId = detail.CommitmentId,
+                        RegistrationDetailId = detail.RegistrationDetailId,
+                        PlanDetailId = detail.PlanDetailId,
+                        ConfirmedPrice = detail.ConfirmedPrice,
+                        CommittedQuantity = detail.CommittedQuantity,
+                        EstimatedDeliveryStart = detail.EstimatedDeliveryStart,
+                        EstimatedDeliveryEnd = detail.EstimatedDeliveryEnd,
+                        Note = detail.Note,
+                        ContractDeliveryItemId = detail.ContractDeliveryItemId,
+                        CreatedAt = detail.CreatedAt,
+                        UpdatedAt = detail.UpdatedAt
+                    }).ToList() ?? [],
             };
         }
 
