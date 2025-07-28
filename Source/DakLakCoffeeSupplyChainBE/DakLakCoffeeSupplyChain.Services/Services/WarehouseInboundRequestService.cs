@@ -72,6 +72,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu nhập kho cho lô chế biến này.");
 
+            // ✅ Kiểm tra ngày giao không được nhỏ hơn ngày hiện tại
+            if (dto.PreferredDeliveryDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày giao dự kiến không được nằm trong quá khứ.");
+            }
+
             var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
 
             var newRequest = dto.ToEntityFromCreateDto(farmer.FarmerId, inboundCode);
@@ -83,6 +89,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
+
 
 
 
