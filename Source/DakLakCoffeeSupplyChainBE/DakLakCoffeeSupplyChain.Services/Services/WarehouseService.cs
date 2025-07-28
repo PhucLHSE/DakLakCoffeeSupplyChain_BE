@@ -39,24 +39,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var warehouseCode = await _codeGenerator.GenerateWarehouseCodeAsync();
 
-            var warehouse = new Warehouse
-            {
-                WarehouseId = Guid.NewGuid(),
-                WarehouseCode = warehouseCode,
-                Name = dto.Name,
-                Location = dto.Location,
-                ManagerId = manager.ManagerId,
-                Capacity = dto.Capacity,
-                IsDeleted = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            var warehouse = dto.ToEntityFromCreateDto(manager.ManagerId, warehouseCode);
 
             await _unitOfWork.Warehouses.CreateAsync(warehouse);
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo kho thành công", warehouse.WarehouseId);
         }
+
 
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {

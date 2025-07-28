@@ -15,5 +15,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
         public string? PlannedQuality { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropDetailStatus Status { get; set; }
+        public Guid? CoffeeTypeId { get; set; }
+
     }
 }

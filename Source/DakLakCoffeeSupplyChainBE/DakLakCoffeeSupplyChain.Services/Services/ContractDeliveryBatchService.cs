@@ -300,6 +300,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Truy xuất lại dữ liệu để trả về
                     var createdContractDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                         predicate: b => b.DeliveryBatchId == newDeliveryBatch.DeliveryBatchId,
                         include: query => query

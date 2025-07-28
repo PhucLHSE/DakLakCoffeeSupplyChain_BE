@@ -26,7 +26,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static CropSeasonViewDetailsDto MapToCropSeasonViewDetailsDto(this CropSeason entity)
+        public static CropSeasonViewDetailsDto MapToCropSeasonViewDetailsDto(this CropSeason entity, CultivationRegistration? registration)
         {
             var status = Enum.TryParse<CropSeasonStatus>(entity.Status, true, out var parsedStatus)
                 ? parsedStatus : CropSeasonStatus.Active;
@@ -43,8 +43,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
                 CommitmentId = entity.CommitmentId,
                 CommitmentName = entity.Commitment?.CommitmentName ?? string.Empty,
-                //RegistrationId = entity.RegistrationId,
-                //RegistrationCode = entity.Registration?.RegistrationCode ?? string.Empty,
+
+                RegistrationId = registration?.RegistrationId ?? Guid.Empty,
+                RegistrationCode = registration?.RegistrationCode ?? string.Empty,
+
                 Status = status,
 
                 Details = entity.CropSeasonDetails?
@@ -52,8 +54,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     .Select(d => new CropSeasonDetailViewDto
                     {
                         DetailId = d.DetailId,
-                        //CoffeeTypeId = d.CoffeeTypeId,
-                        //TypeName = d.CoffeeType?.TypeName ?? string.Empty,
                         AreaAllocated = d.AreaAllocated ?? 0,
                         ExpectedHarvestStart = d.ExpectedHarvestStart,
                         ExpectedHarvestEnd = d.ExpectedHarvestEnd,
@@ -61,24 +61,31 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         FarmerId = entity.FarmerId,
                         FarmerName = entity.Farmer?.User?.Name ?? "Không rõ",
                         PlannedQuality = d.PlannedQuality ?? string.Empty,
-                        Status = Enum.TryParse<CropDetailStatus>(d.Status, out var detailStatus) ? detailStatus : CropDetailStatus.Planned
+                        Status = Enum.TryParse<CropDetailStatus>(d.Status, out var detailStatus) ? detailStatus : CropDetailStatus.Planned,
+
+                        CommitmentDetailId = d.CommitmentDetailId,
+                        CommitmentDetailCode = d.CommitmentDetail?.CommitmentDetailCode ?? string.Empty,
+                        CoffeeTypeId = d.CommitmentDetail?.PlanDetail?.CoffeeTypeId ?? Guid.Empty,
+                        TypeName = d.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? string.Empty,
+                        ConfirmedPrice = d.CommitmentDetail?.ConfirmedPrice ?? 0,
+                        CommittedQuantity = d.CommitmentDetail?.CommittedQuantity ?? 0
                     }).ToList() ?? new List<CropSeasonDetailViewDto>()
             };
         }
 
+
         public static CropSeason MapToCropSeasonCreateDto(
-          this CropSeasonCreateDto dto,
-          string code,
-          Guid farmerId
-          //Guid registrationId // 👈 thêm vào đây
-      )
+            this CropSeasonCreateDto dto,
+            string code,
+            Guid farmerId,
+            Guid cropSeasonId
+        )
         {
             return new CropSeason
             {
-                CropSeasonId = Guid.NewGuid(),
+                CropSeasonId = cropSeasonId, // ✅ không tự sinh trong mapper nữa
                 CropSeasonCode = code,
                 FarmerId = farmerId,
-                //RegistrationId = registrationId, // 👈 sử dụng tham số này
                 CommitmentId = dto.CommitmentId,
                 SeasonName = dto.SeasonName,
                 StartDate = dto.StartDate,
@@ -87,7 +94,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = dto.Status.ToString(),
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-            };
+            }; 
         }
 
 
@@ -95,14 +102,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             entity.SeasonName = dto.SeasonName;
             entity.CommitmentId = dto.CommitmentId;
-            entity.Area = dto.Area;
             entity.StartDate = dto.StartDate;
             entity.EndDate = dto.EndDate;
             entity.Note = dto.Note;
             entity.Status = dto.Status.ToString();
             entity.UpdatedAt = DateTime.Now;
         }
-
-    
     }
 }

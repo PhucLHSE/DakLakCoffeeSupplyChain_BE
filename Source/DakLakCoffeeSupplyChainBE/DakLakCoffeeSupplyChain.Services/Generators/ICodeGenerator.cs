@@ -42,6 +42,8 @@
 
         Task<string> GenerateProductCodeAsync(Guid managerId);
 
+        Task<string> GenerateOrderCodeAsync();
+
         Task<string> GenerateOutboundRequestCodeAsync();
 
         Task<string> GenerateProcessingSystemBatchCodeAsync(int year);

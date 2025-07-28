@@ -1,7 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Generators; // 👈 THÊM dòng này nếu cần
+using DakLakCoffeeSupplyChain.Services.Generators; 
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -11,12 +11,12 @@ public class NotificationService : INotificationService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
-    private readonly ICodeGenerator _codeGenerator; // 👈 THÊM dòng này
+    private readonly ICodeGenerator _codeGenerator; 
 
     public NotificationService(
         IUnitOfWork unitOfWork,
         IEmailService emailService,
-        ICodeGenerator codeGenerator // 👈 THÊM dòng này
+        ICodeGenerator codeGenerator 
     )
     {
         _unitOfWork = unitOfWork;

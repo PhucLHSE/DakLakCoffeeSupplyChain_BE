@@ -58,12 +58,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         //}
         public async Task<IServiceResult> CreateRequestAsync(Guid userId, WarehouseInboundRequestCreateDto dto)
         {
-            // 1. Xác định Farmer từ user đang đăng nhập
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng với User.");
 
-            // 2. Kiểm tra Batch có tồn tại và có thuộc về Farmer hay không
             if (dto.BatchId == null || dto.BatchId == Guid.Empty)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Thiếu thông tin lô chế biến.");
 
@@ -74,22 +72,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu nhập kho cho lô chế biến này.");
 
-            // 3. Sinh mã và tạo yêu cầu nhập kho
+            // ✅ Kiểm tra ngày giao không được nhỏ hơn ngày hiện tại
+            if (dto.PreferredDeliveryDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày giao dự kiến không được nằm trong quá khứ.");
+            }
+
             var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
 
-            var newRequest = new WarehouseInboundRequest
-            {
-                InboundRequestId = Guid.NewGuid(),
-                InboundRequestCode = inboundCode,
-                FarmerId = farmer.FarmerId,
-                BatchId = dto.BatchId.Value,
-                RequestedQuantity = dto.RequestedQuantity,
-                PreferredDeliveryDate = dto.PreferredDeliveryDate,
-                Status = InboundRequestStatus.Pending.ToString(),
-                Note = dto.Note,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            var newRequest = dto.ToEntityFromCreateDto(farmer.FarmerId, inboundCode);
 
             await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
             await _unitOfWork.SaveChangesAsync();
@@ -98,6 +89,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
+
+
 
 
         public async Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId)
@@ -169,7 +162,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không có quyền huỷ yêu cầu này.");
             }
 
-            request.Status = InboundRequestStatus.Rejected.ToString();
+            request.Status = InboundRequestStatus.Cancelled.ToString();
+
             request.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.WarehouseInboundRequests.Update(request);
@@ -201,5 +195,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã từ chối yêu cầu thành công.");
         }
+        public async Task<IServiceResult> GetAllByFarmerAsync(Guid userId)
+        {
+            var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+            if (farmer == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nông dân.");
+
+            var requests = await _unitOfWork.WarehouseInboundRequests.GetAllByFarmerIdAsync(farmer.FarmerId);
+            var result = requests.Select(r => r.ToViewDto()).ToList();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách thành công", result);
+        }
+        public async Task<IServiceResult> GetByIdForFarmerAsync(Guid requestId, Guid userId)
+        {
+            var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+            if (farmer == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer.");
+
+            var request = await _unitOfWork.WarehouseInboundRequests.GetDetailByIdAsync(requestId);
+            if (request == null || request.FarmerId != farmer.FarmerId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập yêu cầu này.");
+
+            var dto = request.ToDetailDto();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
+        }
+
     }
 }

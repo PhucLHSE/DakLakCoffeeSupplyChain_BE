@@ -2,14 +2,18 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class FarmingCommitmentsDetail
 {
+    [Key]
     public Guid CommitmentDetailId { get; set; }
 
     public string CommitmentDetailCode { get; set; }
+
+    public Guid CommitmentId { get; set; }
 
     public Guid RegistrationDetailId { get; set; }
 
@@ -33,9 +37,11 @@ public partial class FarmingCommitmentsDetail
 
     public bool IsDeleted { get; set; }
 
+    public virtual FarmingCommitment Commitment { get; set; }
+
     public virtual ContractDeliveryItem ContractDeliveryItem { get; set; }
 
-    public virtual CropSeasonDetail CropSeasonDetail { get; set; }
+    public virtual ICollection<CropSeasonDetail> CropSeasonDetails { get; set; } = new List<CropSeasonDetail>();
 
     public virtual ProcurementPlansDetail PlanDetail { get; set; }
 

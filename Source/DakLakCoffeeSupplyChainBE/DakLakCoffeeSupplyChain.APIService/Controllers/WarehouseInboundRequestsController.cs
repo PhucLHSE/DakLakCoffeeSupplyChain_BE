@@ -145,6 +145,38 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result); // fallback
         }
 
+        [HttpGet("farmer")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetAllByFarmer()
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _service.GetAllByFarmerAsync(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result);
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            return StatusCode(500, result); // fallback
+        }
+        [HttpGet("farmer/{id}")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetDetailByFarmer(Guid id)
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _service.GetByIdForFarmerAsync(id, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result);
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result);
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result);
+
+            return StatusCode(500, result); // fallback
+        }
 
 
 

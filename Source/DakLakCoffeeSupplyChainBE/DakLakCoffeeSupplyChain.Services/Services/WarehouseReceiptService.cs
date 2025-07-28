@@ -8,6 +8,7 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Services.Mappers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -59,20 +60,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var receiptCode = await _codeGenerator.GenerateWarehouseReceiptCodeAsync();
 
-            var receipt = new WarehouseReceipt
-            {
-                ReceiptId = Guid.NewGuid(),
-                ReceiptCode = receiptCode,
-                InboundRequestId = request.InboundRequestId,
-                WarehouseId = dto.WarehouseId,
-                BatchId = request.BatchId,
-                ReceivedBy = staff.StaffId,
-                ReceivedQuantity = dto.ReceivedQuantity,
-                ReceivedAt = DateTime.UtcNow,
-                Note = dto.Note,
-                QrcodeUrl = "",
-                IsDeleted = false
-            };
+            var receiptId = Guid.NewGuid();
+            var receipt = dto.ToEntityFromCreateDto(
+                receiptId,
+                receiptCode,
+                staff.StaffId,
+                request.BatchId
+            );
 
             await _unitOfWork.WarehouseReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
@@ -101,21 +95,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá số lượng đã tạo phiếu ({receipt.ReceivedQuantity}kg).");
 
-            // Ghi chú vào phiếu nhập
-            var noteParts = new List<string>();
+            var confirmNote = WarehouseReceiptMapper.BuildConfirmationNote(
+            receipt.ReceivedQuantity ?? 0, // fallback nếu null
+            dto.ConfirmedQuantity,
+            dto.Note
+);
 
-            if (dto.ConfirmedQuantity != receipt.ReceivedQuantity)
-                noteParts.Add($"[Chênh lệch: tạo {receipt.ReceivedQuantity}kg, xác nhận {dto.ConfirmedQuantity}kg]");
-
-            if (!string.IsNullOrWhiteSpace(dto.Note))
-                noteParts.Add($"[Lý do: {dto.Note}]");
-
-            noteParts.Add($"[Confirmed at {DateTime.UtcNow:yyyy-MM-dd HH:mm}]");
-
-            if (!string.IsNullOrWhiteSpace(receipt.Note))
-                receipt.Note += " " + string.Join(" ", noteParts);
-            else
-                receipt.Note = string.Join(" ", noteParts);
+            receipt.Note = string.IsNullOrWhiteSpace(receipt.Note)
+                ? confirmNote
+                : receipt.Note + " " + confirmNote;
 
             receipt.ReceivedQuantity = dto.ConfirmedQuantity;
             receipt.ReceivedAt ??= DateTime.UtcNow;
@@ -145,40 +133,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
-                inventory = new Inventory
-                {
-                    InventoryId = Guid.NewGuid(),
-                    InventoryCode = inventoryCode,
-                    WarehouseId = receipt.WarehouseId,
-                    BatchId = receipt.BatchId,
-                    Quantity = dto.ConfirmedQuantity,
-                    Unit = "kg",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                };
+                inventory = WarehouseReceiptMapper.ToNewInventory(
+                    receipt.WarehouseId,
+                    receipt.BatchId,
+                    dto.ConfirmedQuantity,
+                    inventoryCode
+                );
                 await _unitOfWork.Inventories.CreateAsync(inventory);
             }
 
-            // ✅ Ghi chú log chi tiết
-            var logNote = $"Nhập kho từ phiếu {receipt.ReceiptCode}";
-            if (dto.ConfirmedQuantity != receipt.ReceivedQuantity)
-                logNote += $" | Chênh lệch: tạo {receipt.ReceivedQuantity}kg, xác nhận {dto.ConfirmedQuantity}kg";
-
-            if (!string.IsNullOrWhiteSpace(dto.Note))
-                logNote += $" | Lý do: {dto.Note}";
-
-            var log = new InventoryLog
-            {
-                LogId = Guid.NewGuid(),
-                InventoryId = inventory.InventoryId,
-                ActionType = "ConfirmInbound",
-                QuantityChanged = dto.ConfirmedQuantity,
-                TriggeredBySystem = true,
-                Note = logNote,
-                LoggedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+            var log = receipt.ToInventoryLogFromInbound(
+                inventory.InventoryId,
+                dto.ConfirmedQuantity,
+                confirmNote
+            );
             await _unitOfWork.InventoryLogs.CreateAsync(log);
 
             request.Status = InboundRequestStatus.Completed.ToString();
@@ -191,6 +159,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu nhập thành công", receipt.ReceiptId);
         }
+
 
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommitmentsDetailsDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -16,11 +17,27 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
                 FarmerName = fm.Farmer.User.Name,
-                //ConfirmedPrice = fm.ConfirmedPrice,
-                //CommittedQuantity = fm.CommittedQuantity,
-                //EstimatedDeliveryStart = fm.EstimatedDeliveryStart,
-                //EstimatedDeliveryEnd = fm.EstimatedDeliveryEnd,
-                Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown)
+                PlanTitle = fm.Plan.Title,
+                TotalPrice = fm.TotalPrice,
+                CommitmentDate = fm.CommitmentDate,
+                Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown),
+                FarmingCommitmentsDetailsDTOs = fm.FarmingCommitmentsDetails
+                    ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
+                    {
+                        CommitmentDetailId = detail.CommitmentDetailId,
+                        CommitmentDetailCode = detail.CommitmentDetailCode,
+                        CommitmentId = detail.CommitmentId,
+                        RegistrationDetailId = detail.RegistrationDetailId,
+                        PlanDetailId = detail.PlanDetailId,
+                        ConfirmedPrice = detail.ConfirmedPrice,
+                        CommittedQuantity = detail.CommittedQuantity,
+                        EstimatedDeliveryStart = detail.EstimatedDeliveryStart,
+                        EstimatedDeliveryEnd = detail.EstimatedDeliveryEnd,
+                        Note = detail.Note,
+                        ContractDeliveryItemId = detail.ContractDeliveryItemId,
+                        CreatedAt = detail.CreatedAt,
+                        UpdatedAt = detail.UpdatedAt
+                    }).ToList() ?? [],
             };
         }
 
@@ -36,10 +53,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 PlanId = entity.PlanId,
                 FarmerId = entity.FarmerId,
                 FarmerName = entity.Farmer.User.Name,
-                //ConfirmedPrice = entity.ConfirmedPrice,
-                //CommittedQuantity = entity.CommittedQuantity,
-                //EstimatedDeliveryStart = entity.EstimatedDeliveryStart,
-                //EstimatedDeliveryEnd = entity.EstimatedDeliveryEnd,
+                PlanTitle = entity.Plan.Title,
+                TotalPrice = entity.TotalPrice,
                 CommitmentDate = entity.CommitmentDate,
                 ApprovedById = entity.ApprovedBy,
                 ApprovedBy = entity.ApprovedByNavigation?.User?.Name ?? string.Empty,
@@ -48,9 +63,25 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = EnumHelper.ParseEnumFromString(entity.Status, FarmingCommitmentStatus.Unknown),
                 RejectionReason = entity.RejectionReason,
                 Note = entity.Note,
-                //ContractDeliveryItemId = entity.ContractDeliveryItemId,
                 CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                UpdatedAt = entity.UpdatedAt,
+                FarmingCommitmentsDetailsDTOs = entity.FarmingCommitmentsDetails
+                    ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
+                    {
+                        CommitmentDetailId = detail.CommitmentDetailId,
+                        CommitmentDetailCode = detail.CommitmentDetailCode,
+                        CommitmentId = detail.CommitmentId,
+                        RegistrationDetailId = detail.RegistrationDetailId,
+                        PlanDetailId = detail.PlanDetailId,
+                        ConfirmedPrice = detail.ConfirmedPrice,
+                        CommittedQuantity = detail.CommittedQuantity,
+                        EstimatedDeliveryStart = detail.EstimatedDeliveryStart,
+                        EstimatedDeliveryEnd = detail.EstimatedDeliveryEnd,
+                        Note = detail.Note,
+                        ContractDeliveryItemId = detail.ContractDeliveryItemId,
+                        CreatedAt = detail.CreatedAt,
+                        UpdatedAt = detail.UpdatedAt
+                    }).ToList() ?? [],
             };
         }
 
@@ -62,16 +93,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentId = Guid.NewGuid(),
                 CommitmentCode = commitmentCode,
                 CommitmentName = dto.CommitmentName,
-                //RegistrationDetailId = dto.RegistrationDetailId,
-                //PlanDetailId = dto.PlanDetailId,
-                //FarmerId = dto.FarmerId,
-                //ConfirmedPrice = dto.ConfirmedPrice,
-                //CommittedQuantity = dto.CommittedQuantity,
-                //EstimatedDeliveryStart = dto.EstimatedDeliveryStart,
-                //EstimatedDeliveryEnd = dto.EstimatedDeliveryEnd,
                 Status = FarmingCommitmentStatus.Pending_farmer.ToString(),
                 Note = dto.Note,
-                //ContractDeliveryItemId = dto.ContractDeliveryItemId
             };
         }
     }

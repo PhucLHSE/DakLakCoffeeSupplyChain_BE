@@ -11,7 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class OrderItemMapper
     {
-        // View Mapper: OrderItem → OrderItemViewDto
+        // View Mapper: OrderItem -> OrderItemViewDto
         public static OrderItemViewDto MapToOrderItemViewDto(this OrderItem orderItem)
         {
             return new OrderItemViewDto
@@ -27,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Create Mapper: OrderItemCreateDto → OrderItem
+        // Create Mapper: OrderItemCreateDto -> OrderItem
         public static OrderItem MapToNewOrderItem(
             this OrderItemCreateDto dto, 
             double unitPrice, 
@@ -53,7 +53,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Update Mapper: OrderItemUpdateDto → OrderItem (cập nhật thực thể có sẵn)
+        // Update Mapper: OrderItemUpdateDto -> OrderItem (cập nhật thực thể có sẵn)
         public static void MapToUpdateOrderItem(
             this OrderItemUpdateDto dto,
             OrderItem orderItem, 

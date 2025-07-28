@@ -27,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractItemCreateDto → ContractItem
+        // Mapper ContractItemCreateDto -> ContractItem
         public static ContractItem MapToNewContractItem(this ContractItemCreateDto dto, string contractItemCode)
         {
             return new ContractItem

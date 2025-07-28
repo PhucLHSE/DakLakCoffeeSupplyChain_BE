@@ -21,5 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId);
 
         Task<IServiceResult> RejectRequestAsync(Guid requestId, Guid staffUserId);
+        Task<IServiceResult> GetAllByFarmerAsync(Guid userId);
+        Task<IServiceResult> GetByIdForFarmerAsync(Guid requestId, Guid userId);
     }
 }

@@ -12,7 +12,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ContractDeliveryItemMapper
     {
         // Mapper ContractDeliveryItemViewDto
-        public static ContractDeliveryItemViewDto MapToContractDeliveryItemViewDto(this ContractDeliveryItem contractDeliveryItem)
+        public static ContractDeliveryItemViewDto MapToContractDeliveryItemViewDto(
+            this ContractDeliveryItem contractDeliveryItem)
         {
             return new ContractDeliveryItemViewDto
             {
@@ -26,8 +27,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractDeliveryItemCreateDto → ContractDeliveryItem
-        public static ContractDeliveryItem MapToNewContractDeliveryItem(this ContractDeliveryItemCreateDto dto, string deliveryItemCode)
+        // Mapper ContractDeliveryItemCreateDto -> ContractDeliveryItem
+        public static ContractDeliveryItem MapToNewContractDeliveryItem(
+            this ContractDeliveryItemCreateDto dto, 
+            string deliveryItemCode)
         {
             return new ContractDeliveryItem
             {
@@ -44,8 +47,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractDeliveryItemUpdateDto → ContractDeliveryItem (cập nhật thông tin)
-        public static void MapToUpdateContractDeliveryItem(this ContractDeliveryItemUpdateDto dto, ContractDeliveryItem contractDeliveryItem)
+        // Mapper ContractDeliveryItemUpdateDto -> ContractDeliveryItem (cập nhật thông tin)
+        public static void MapToUpdateContractDeliveryItem(
+            this ContractDeliveryItemUpdateDto dto, 
+            ContractDeliveryItem contractDeliveryItem)
         {
             contractDeliveryItem.ContractItemId = dto.ContractItemId;
             contractDeliveryItem.PlannedQuantity = dto.PlannedQuantity ?? contractDeliveryItem.PlannedQuantity;
