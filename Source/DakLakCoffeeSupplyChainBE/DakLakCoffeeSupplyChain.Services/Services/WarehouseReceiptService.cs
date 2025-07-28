@@ -172,7 +172,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 LogId = Guid.NewGuid(),
                 InventoryId = inventory.InventoryId,
-                ActionType = "ConfirmInbound",
+                ActionType = "increase",
                 QuantityChanged = dto.ConfirmedQuantity,
                 TriggeredBySystem = true,
                 Note = logNote,

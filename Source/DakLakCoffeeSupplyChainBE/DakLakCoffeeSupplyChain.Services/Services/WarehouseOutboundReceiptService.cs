@@ -193,7 +193,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(receipt.ExportedBy);
             if (staff == null || staff.SupervisorId != warehouse.ManagerId)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xác nhận phiếu này.");
+            // ✅ Kiểm tra OrderItem nếu có
+            if (request.OrderItemId.HasValue)
+            {
+                var orderItemId = request.OrderItemId.Value;
+                var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(orderItemId);
+                if (orderItem == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy dòng đơn hàng tương ứng.");
 
+                var relatedReceipts = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItemId);
+                var totalConfirmed = relatedReceipts
+        .Where(r => !string.IsNullOrWhiteSpace(r.Note) && r.Note.StartsWith("Xác nhận"))
+        .Sum(r => r.Quantity);
+                var afterThis = totalConfirmed + dto.ConfirmedQuantity;
+
+                if (afterThis > orderItem.Quantity)
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                        $"Tổng lượng xuất sau khi xác nhận ({afterThis:n0}kg) vượt quá số lượng đơn hàng ({orderItem.Quantity:n0}kg).");
+                }
+            }
             if (dto.ConfirmedQuantity > request.RequestedQuantity)
             {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
