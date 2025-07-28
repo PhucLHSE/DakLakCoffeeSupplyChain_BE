@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IOrderRepository : IGenericRepository<Order>
     {
+        // Đếm số đơn hàng được tạo trong năm chỉ định, chưa bị xoá.
+        Task<int> CountOrdersInYearAsync(int year);
     }
 }

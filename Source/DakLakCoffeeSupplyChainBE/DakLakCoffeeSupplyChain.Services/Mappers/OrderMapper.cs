@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.OrderEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -70,6 +71,47 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     })
                     .ToList() ?? new List<OrderItemViewDto>()
             };
+        }
+
+        // Mapper OrderCreateDto -> Order
+        public static Order MapToNewOrder(this OrderCreateDto dto, string orderCode)
+        {
+            var orderId = Guid.NewGuid();
+
+            var order = new Order
+            {
+                OrderId = orderId,
+                OrderCode = orderCode,
+                DeliveryBatchId = dto.DeliveryBatchId,
+                DeliveryRound = dto.DeliveryRound,
+                OrderDate = dto.OrderDate ?? DateHelper.NowVietnamTime(),
+                ActualDeliveryDate = dto.ActualDeliveryDate,
+                Note = dto.Note,
+                Status = dto.Status.ToString(), // enum to string
+                CancelReason = dto.CancelReason,
+                CreatedBy = dto.CreatedBy,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false,
+
+                OrderItems = dto.OrderItems.Select((item, index) => new OrderItem
+                {
+                    OrderItemId = Guid.NewGuid(),
+                    OrderId = orderId,
+                    ProductId = item.ProductId,
+                    ContractDeliveryItemId = item.ContractDeliveryItemId,
+                    Quantity = item.Quantity ?? 0,
+                    UnitPrice = item.UnitPrice ?? 0,
+                    DiscountAmount = item.DiscountAmount ?? 0,
+                    TotalPrice = (item.Quantity ?? 0) * (item.UnitPrice ?? 0) - (item.DiscountAmount ?? 0),
+                    Note = item.Note,
+                    CreatedAt = DateHelper.NowVietnamTime(),
+                    UpdatedAt = DateHelper.NowVietnamTime(),
+                    IsDeleted = false
+                }).ToList()
+            };
+
+            return order;
         }
     }
 }
