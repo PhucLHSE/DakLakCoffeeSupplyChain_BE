@@ -59,7 +59,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 LogId = Guid.NewGuid(),
                 InventoryId = inventoryId,
-                ActionType = "ConfirmOutbound",
+                ActionType = "decrease",
                 QuantityChanged = -confirmedQuantity,
                 Note = $"Xuất kho từ phiếu {receipt.OutboundReceiptCode}",
                 TriggeredBySystem = true,

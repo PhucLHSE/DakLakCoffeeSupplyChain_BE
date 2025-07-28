@@ -20,5 +20,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         void Update(WarehouseInboundRequest entity);
         void Delete(WarehouseInboundRequest entity);
         Task<int> CountInboundRequestsInYearAsync(int year);
+        Task<List<WarehouseInboundRequest>> GetAllByFarmerIdAsync(Guid farmerId);
     }
 }

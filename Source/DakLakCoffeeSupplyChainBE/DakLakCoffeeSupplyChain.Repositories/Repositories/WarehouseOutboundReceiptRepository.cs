@@ -52,6 +52,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseOutboundReceipts
                 .FirstOrDefaultAsync(r => r.OutboundReceiptId == id && !r.IsDeleted);
         }
+        public async Task<List<WarehouseOutboundReceipt>> GetByOrderItemIdAsync(Guid orderItemId)
+        {
+            return await _context.WarehouseOutboundReceipts
+                .Include(r => r.OutboundRequest)
+                .Where(r => r.OutboundRequest != null
+                            && r.OutboundRequest.OrderItemId == orderItemId
+                            && !r.IsDeleted)
+                .ToListAsync();
+        }
 
     }
 }

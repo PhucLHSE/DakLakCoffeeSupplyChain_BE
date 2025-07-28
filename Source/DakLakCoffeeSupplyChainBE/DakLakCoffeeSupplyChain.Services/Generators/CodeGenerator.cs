@@ -179,7 +179,7 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             var count = await _unitOfWork.BusinessStaffRepository.CountStaffCreatedInYearAsync(CurrentYear);
 
-            return $"STF-{CurrentYear}-{(count + 1):D4}";
+            return $"STAFF-{CurrentYear}-{(count + 1):D4}"; 
         }
 
         public async Task<string> GenerateInboundRequestCodeAsync()

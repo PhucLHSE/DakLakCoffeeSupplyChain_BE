@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.WarehouseInboundRequestEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,26 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
             };
         }
+        public static WarehouseInboundRequest ToEntityFromCreateDto(
+    this WarehouseInboundRequestCreateDto dto,
+    Guid farmerId,
+    string inboundCode)
+        {
+            return new WarehouseInboundRequest
+            {
+                InboundRequestId = Guid.NewGuid(),
+                InboundRequestCode = inboundCode,
+                FarmerId = farmerId,
+                BatchId = dto.BatchId ?? Guid.Empty,
+                RequestedQuantity = dto.RequestedQuantity,
+                PreferredDeliveryDate = dto.PreferredDeliveryDate,
+                Status = InboundRequestStatus.Pending.ToString(),
+                Note = dto.Note,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
+
 
 
     }
