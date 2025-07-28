@@ -41,7 +41,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = entity.CreatedAt ?? DateTime.MinValue
             };
         }
-        public static ProcessingBatchDetailsDto MapToDetailsDto(this ProcessingBatch batch)
+        public static ProcessingBatchDetailsDto MapToDetailsDto(this ProcessingBatch batch, string farmerName)
         {
             return new ProcessingBatchDetailsDto
             {
@@ -57,11 +57,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InputQuantity = batch.InputQuantity,
                 InputUnit = batch.InputUnit,
                 Status = Enum.TryParse<ProcessingStatus>(batch.Status, out var statusEnum)
-            ? statusEnum
-            : ProcessingStatus.NotStarted,
+                    ? statusEnum
+                    : ProcessingStatus.NotStarted,
                 CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
                 UpdatedAt = batch.UpdatedAt,
-
                 Products = batch.Products?
                     .Where(p => !p.IsDeleted)
                     .Select(p => new ProductViewDetailsDto
@@ -74,8 +73,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         QuantityAvailable = p.QuantityAvailable,
                         UnitPrice = p.UnitPrice
                     }).ToList() ?? new(),
-
                 Progresses = batch.ProcessingBatchProgresses?
+                    .Where(p => !p.IsDeleted)
                     .OrderBy(p => p.StepIndex)
                     .Select(p => new ProcessingBatchProgressDetailDto
                     {
@@ -87,6 +86,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         StageName = p.Stage?.StageName ?? "",
                         StageDescription = p.Stage?.Description ?? "",
                         ProgressDate = p.ProgressDate,
+                        OutputQuantity = p.OutputQuantity,
+                        OutputUnit = p.OutputUnit,
+                        PhotoUrl = p.PhotoUrl,
+                        VideoUrl = p.VideoUrl,
+                        UpdatedAt = p.UpdatedAt,
+                        UpdatedByName = farmerName,
                         Parameters = p.ProcessingParameters?.Select(param => new ProcessingParameterViewAllDto
                         {
                             ParameterId = param.ParameterId,
@@ -99,5 +104,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     }).ToList() ?? new()
             };
         }
+
+
     }
 }

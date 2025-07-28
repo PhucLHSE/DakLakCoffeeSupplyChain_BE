@@ -6,7 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CloudinaryDotNet" Version="1.27.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+	</ItemGroup>
+	
+  <ItemGroup>	 
     <ProjectReference Include="..\DakLakCoffeeSupplyChain.Common\DakLakCoffeeSupplyChain.Common.csproj" />
     <ProjectReference Include="..\DakLakCoffeeSupplyChain.Repositories\DakLakCoffeeSupplyChain.Repositories.csproj" />
   </ItemGroup>
