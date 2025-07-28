@@ -23,7 +23,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
                 predicate: p => p.Status == "open",
-                include: p => p.Include(p => p.CreatedByNavigation),
+                include: p => p.
+                Include(p => p.CreatedByNavigation).
+                Include(p => p.FarmingCommitments).
+                    ThenInclude(p => p.Farmer).
+                        ThenInclude(p => p.User),
                 orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);
 
@@ -66,7 +70,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
                 predicate: p => p.IsDeleted != true && p.CreatedBy == manager.ManagerId,
-                include: p => p.Include(p => p.CreatedByNavigation),
+                include: p => p.
+                Include(p => p.CreatedByNavigation).
+                Include(p => p.FarmingCommitments).
+                    ThenInclude(p => p.Farmer).
+                        ThenInclude(p => p.User),
                 orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);
 
