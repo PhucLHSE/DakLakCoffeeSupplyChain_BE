@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class FarmingCommitment
 {
+    [Key]
     public Guid CommitmentId { get; set; }
 
     public string CommitmentCode { get; set; }

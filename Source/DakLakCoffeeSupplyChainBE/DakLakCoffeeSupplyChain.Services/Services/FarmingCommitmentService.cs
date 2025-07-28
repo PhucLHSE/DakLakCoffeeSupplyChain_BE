@@ -90,7 +90,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
-                    ThenInclude(fm => fm.User),
+                    ThenInclude(fm => fm.User).
+                Include(fm => fm.FarmingCommitmentsDetails),
                 orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
                 asNoTracking: true
                 );

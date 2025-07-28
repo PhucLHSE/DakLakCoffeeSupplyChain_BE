@@ -112,6 +112,8 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<CropSeason>("CropSeason");
     odataBuilder.EntitySet<CropSeasonDetail>("CropSeasonDetail");
     odataBuilder.EntitySet<CropProgress>("CropProgress");
+    odataBuilder.EntitySet<FarmingCommitment>("FarmingCommitment");
+    odataBuilder.EntitySet<FarmingCommitmentsDetail>("FarmingCommitmentsDetail");
     odataBuilder.EntitySet<ProcessingMethod>("ProcessingMethod");
     odataBuilder.EntitySet<ProcessingStage>("ProcessingStage");
     odataBuilder.EntitySet<ProcessingBatch>("ProcessingBatch");
