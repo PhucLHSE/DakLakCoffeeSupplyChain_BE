@@ -1,27 +1,32 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DakLakCoffeeSupplyChain.Services.Mappers;
-using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
-using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class OrderService : IOrderService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public OrderService(IUnitOfWork unitOfWork)
+        public OrderService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -182,6 +187,106 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
                     orderDto
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Create(OrderCreateDto orderCreateDto)
+        {
+            try
+            {
+                // Kiểm tra DeliveryBatch có tồn tại và chưa bị xoá
+                var deliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: b =>
+                        b.DeliveryBatchId == orderCreateDto.DeliveryBatchId &&
+                        !b.IsDeleted,
+                    include: query => query
+                        .Include(b => b.Contract),
+                    asNoTracking: true
+                );
+
+                if (deliveryBatch == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy lô giao hàng hoặc lô đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra số lượng đơn hàng đã tồn tại cho lô này chưa (optional)
+                var isOrderExists = await _unitOfWork.OrderRepository.AnyAsync(
+                    predicate: o =>
+                        o.DeliveryBatchId == orderCreateDto.DeliveryBatchId &&
+                        o.IsDeleted == false
+                );
+
+                if (isOrderExists)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Lô giao hàng này đã có đơn hàng được tạo trước đó."
+                    );
+                }
+
+                // Sinh mã đơn hàng
+                string orderCode = await _codeGenerator.GenerateOrderCodeAsync();
+
+                // Ánh xạ dữ liệu từ DTO vào entity
+                var newOrder = orderCreateDto.MapToNewOrder(orderCode);
+
+                // Tính tổng tiền và gán lại
+                newOrder.TotalAmount = newOrder.OrderItems
+                    .Where(i => !i.IsDeleted)
+                    .Sum(i => i.TotalPrice);
+
+                // Lưu vào DB
+                await _unitOfWork.OrderRepository.CreateAsync(newOrder);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu để trả về
+                    var createdOrder = await _unitOfWork.OrderRepository.GetByIdAsync(
+                        predicate: o => o.OrderId == newOrder.OrderId,
+                        include: query => query
+                           .Include(o => o.DeliveryBatch)
+                              .ThenInclude(b => b.Contract)
+                           .Include(o => o.OrderItems)
+                              .ThenInclude(i => i.Product),
+                        asNoTracking: true
+                    );
+
+                    if (createdOrder != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = createdOrder.MapToOrderViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu để trả về."
+                    );
+                }
+
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE,
+                    Const.FAIL_CREATE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
                 );
             }
         }

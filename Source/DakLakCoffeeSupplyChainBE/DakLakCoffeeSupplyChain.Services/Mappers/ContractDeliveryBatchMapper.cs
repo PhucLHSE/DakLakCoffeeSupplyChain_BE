@@ -76,7 +76,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractDeliveryBatchCreateDto → ContractDeliveryBatch
+        // Mapper ContractDeliveryBatchCreateDto -> ContractDeliveryBatch
         public static ContractDeliveryBatch MapToNewContractDeliveryBatch(
             this ContractDeliveryBatchCreateDto dto,
             string deliveryBatchCode)
@@ -113,7 +113,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             return deliveryBatch;
         }
 
-        // Mapper ContractDeliveryBatchUpdateDto → ContractDeliveryBatch
+        // Mapper ContractDeliveryBatchUpdateDto -> ContractDeliveryBatch
         public static void MapToUpdatedContractDeliveryBatch(
             this ContractDeliveryBatchUpdateDto dto,
             ContractDeliveryBatch contractDeliveryBatch)
