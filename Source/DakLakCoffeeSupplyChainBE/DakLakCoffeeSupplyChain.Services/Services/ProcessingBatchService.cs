@@ -275,7 +275,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(x => x.Method)
                     .Include(x => x.Farmer).ThenInclude(f => f.User)
                     .Include(x => x.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
-                    .ThenInclude(p => p.Stage),
+                        .ThenInclude(p => p.Stage)
+                    .Include(x => x.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
+                        .ThenInclude(p => p.ProcessingParameters),
                 asNoTracking: true
             );
 
@@ -285,8 +287,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
 
-            var dto = batch.MapToDetailsDto();
+            // Lấy tên nông dân từ bảng Farmer → User
+            var farmer = await _unitOfWork.FarmerRepository
+                .GetAllQueryable()
+                .Include(f => f.User)
+                .FirstOrDefaultAsync(f => f.FarmerId == batch.FarmerId);
+
+            var farmerName = farmer?.User?.Name ?? "N/A";
+
+            var dto = batch.MapToDetailsDto(farmerName);
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
+
+
     }
 }

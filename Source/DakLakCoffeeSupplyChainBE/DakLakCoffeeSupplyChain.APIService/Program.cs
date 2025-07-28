@@ -1,17 +1,19 @@
-using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using CloudinaryDotNet;
+    using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
-using Microsoft.OpenApi.Models;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
-using DakLakCoffeeSupplyChain.Repositories.Models;
-using Microsoft.AspNetCore.OData;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using System.Text.Json.Serialization;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +29,21 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Service gửi mail
 builder.Services.AddScoped<IEmailService, EmailService>();
+// Cấu hình Cloudinary
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings"));
+
+var cloudinarySettings = builder.Configuration
+    .GetSection("CloudinarySettings").Get<CloudinarySettings>();
+
+var account = new Account(
+    cloudinarySettings.CloudName,
+    cloudinarySettings.ApiKey,
+    cloudinarySettings.ApiSecret
+);
+
+var cloudinary = new Cloudinary(account);
+builder.Services.AddSingleton(cloudinary);
 
 // Đăng ký các service nghiệp vụ
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -69,6 +86,7 @@ builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IProcessingWasteService, ProcessingWasteService>();
 builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDisposalService>();
+builder.Services.AddScoped<IUploadService, UploadService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
