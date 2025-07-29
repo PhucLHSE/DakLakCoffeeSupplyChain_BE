@@ -24,7 +24,5 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
 
         public int? StepIndex { get; set; }
 
-        [Required]
-        public Guid UpdatedBy { get; set; }
     }
 }

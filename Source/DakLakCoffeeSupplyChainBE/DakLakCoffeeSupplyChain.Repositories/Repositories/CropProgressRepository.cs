@@ -24,19 +24,44 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(p => p.Stage)
                 .Include(p => p.UpdatedByNavigation)
                     .ThenInclude(f => f.User)
+                .Include(p => p.CropSeasonDetail)
+                    .ThenInclude(d => d.CropSeason)
+                        .ThenInclude(cs => cs.Farmer)
+                            .ThenInclude(f => f.User)
                 .OrderByDescending(p => p.ProgressDate)
                 .ToListAsync();
         }
 
-        public async Task<CropProgress?> GetByIdWithIncludesAsync(Guid progressId)
+
+
+        public async Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId)
         {
             return await _context.CropProgresses
                 .AsNoTracking()
+                .Where(p => p.CropSeasonDetailId == cropSeasonDetailId && !p.IsDeleted)
                 .Include(p => p.Stage)
-                .Include(p => p.UpdatedByNavigation)
-                    .ThenInclude(f => f.User)
+                .Include(p => p.UpdatedByNavigation).ThenInclude(f => f.User)
+                .OrderByDescending(p => p.ProgressDate)
+                .ToListAsync();
+        }
+        public async Task<CropProgress?> GetByIdWithDetailAsync(Guid progressId)
+        {
+            return await _context.CropProgresses
+                .Include(p => p.CropSeasonDetail)
+                    .ThenInclude(d => d.CropSeason)
+                        .ThenInclude(cs => cs.Farmer)
+                            .ThenInclude(f => f.User)
                 .FirstOrDefaultAsync(p => p.ProgressId == progressId && !p.IsDeleted);
         }
+        public async Task<CropProgress?> GetByIdWithIncludesAsync(Guid progressId)
+        {
+            return await _context.CropProgresses
+                .Include(p => p.Stage)
+                .Include(p => p.UpdatedByNavigation).ThenInclude(f => f.User)
+                .FirstOrDefaultAsync(p => p.ProgressId == progressId && !p.IsDeleted);
+        }
+
+
 
     }
 }

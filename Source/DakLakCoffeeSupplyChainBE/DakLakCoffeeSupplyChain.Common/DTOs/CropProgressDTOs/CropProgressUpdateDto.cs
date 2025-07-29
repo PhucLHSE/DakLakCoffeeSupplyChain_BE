@@ -12,9 +12,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         [Required(ErrorMessage = "CropSeasonDetailId là bắt buộc.")]
         public Guid CropSeasonDetailId { get; set; }
 
-        [Required(ErrorMessage = "UpdatedBy là bắt buộc.")]
-        public Guid UpdatedBy { get; set; }
-
         [Required(ErrorMessage = "StageId là bắt buộc.")]
         public int StageId { get; set; }
 
