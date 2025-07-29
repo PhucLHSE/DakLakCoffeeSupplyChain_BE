@@ -14,7 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> GetById(Guid orderId, Guid userId);
 
-        Task<IServiceResult> Create(OrderCreateDto orderCreateDto);
+        Task<IServiceResult> Create(OrderCreateDto orderCreateDto, Guid userId);
 
         Task<IServiceResult> Update(OrderUpdateDto orderUpdateDto);
 

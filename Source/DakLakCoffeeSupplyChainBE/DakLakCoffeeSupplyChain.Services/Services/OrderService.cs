@@ -192,10 +192,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Create(OrderCreateDto orderCreateDto)
+        public async Task<IServiceResult> Create(OrderCreateDto orderCreateDto, Guid userId)
         {
             try
             {
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s =>
+                           s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy Manager hoặc Staff tương ứng với tài khoản."
+                    );
+                }
+
                 // Kiểm tra DeliveryBatch có tồn tại và chưa bị xoá
                 var deliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: b =>
@@ -211,6 +249,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
                         "Không tìm thấy lô giao hàng hoặc lô đã bị xoá."
+                    );
+                }
+
+                if (deliveryBatch.Contract.SellerId != managerId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Bạn không có quyền tạo đơn hàng cho lô giao hàng này."
                     );
                 }
 
