@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+﻿using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Generators
@@ -322,7 +323,21 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         {
             var count = await _unitOfWork.FarmingCommitmentRepository.CountFarmingCommitmentsInYearAsync(CurrentYear);
 
-            return $"COMMIT-{CurrentYear}-{(count + 1):D4}";
+            return $"FC-{CurrentYear}-{(count + 1):D4}";
+        }
+
+        public async Task<string> GenerateFarmingCommitmenstDetailCodeAsync()
+        {
+            string prefix = $"FCD-{CurrentYear}-";
+            var latestCode = await _unitOfWork.FarmingCommitmentsDetailRepository.GetByPredicateAsync(
+                predicate: x => x.CommitmentDetailCode.StartsWith(prefix),
+                selector: x => x.CommitmentDetailCode,
+                orderBy: x => x.OrderByDescending(x => x.CommitmentDetailCode),
+                asNoTracking: true
+                ) ?? throw new InvalidOperationException("Không tìm thấy mã CommitmentDetailCode nào phù hợp với prefix.");
+            var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(latestCode);
+
+            return $"FCD-{CurrentYear}-{(count + 1):D4}";
         }
     }
 }

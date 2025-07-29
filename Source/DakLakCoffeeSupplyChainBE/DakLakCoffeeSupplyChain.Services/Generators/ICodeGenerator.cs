@@ -53,5 +53,6 @@
         Task<string> GenerateProcessingWasteCodeAsync();
 
         Task<string> GenerateFarmingCommitmentCodeAsync();
+        Task<string> GenerateFarmingCommitmenstDetailCodeAsync();
     }
 }

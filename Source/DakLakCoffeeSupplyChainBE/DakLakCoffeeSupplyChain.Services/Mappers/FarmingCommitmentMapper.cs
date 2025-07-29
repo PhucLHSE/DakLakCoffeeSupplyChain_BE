@@ -93,8 +93,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentId = Guid.NewGuid(),
                 CommitmentCode = commitmentCode,
                 CommitmentName = dto.CommitmentName,
+                RegistrationId = dto.RegistrationId,
+                TotalPrice = 0,
                 Status = FarmingCommitmentStatus.Pending_farmer.ToString(),
                 Note = dto.Note,
+                FarmingCommitmentsDetails = [.. dto.FarmingCommitmentsDetailsCreateDtos
+                .Select(detail => new FarmingCommitmentsDetail {
+                    CommitmentDetailId = Guid.NewGuid(),
+                    //CommitmentId
+                    RegistrationDetailId = detail.RegistrationDetailId,
+                    ConfirmedPrice = detail?.ConfirmedPrice,
+                    CommittedQuantity = detail?.CommittedQuantity,
+                    EstimatedDeliveryStart = detail?.EstimatedDeliveryStart,
+                    EstimatedDeliveryEnd = detail?.EstimatedDeliveryEnd,
+                    Note = detail.Note,
+                    ContractDeliveryItemId = detail?.ContractDeliveryItemId,
+                })]
             };
         }
     }

@@ -67,5 +67,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
             Expression<Func<T, bool>> predicate,
             bool asNoTracking = true
         );
+
+        Task<TResult?> GetByPredicateAsync<TResult>(
+            Expression<Func<T, bool>> predicate,
+            Expression<Func<T, TResult>> selector,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            bool asNoTracking = true
+        );
     }
 }

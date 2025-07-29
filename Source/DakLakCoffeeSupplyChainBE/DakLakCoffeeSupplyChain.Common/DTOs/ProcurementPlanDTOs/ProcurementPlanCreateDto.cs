@@ -1,7 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
-using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
 {
