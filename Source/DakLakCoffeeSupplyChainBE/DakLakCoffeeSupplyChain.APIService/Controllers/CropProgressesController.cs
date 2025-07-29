@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
     public class CropProgressesController : ControllerBase
     {
         private readonly ICropProgressService _cropProgressService;
@@ -19,10 +21,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet]
-        [EnableQuery]
         public async Task<IActionResult> GetAllCropProgressesAsync()
         {
-            var result = await _cropProgressService.GetAll();
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -33,10 +38,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        [HttpGet("{progressId}")]
-        public async Task<IActionResult> GetById(Guid progressId)
+        [HttpGet("by-detail/{cropSeasonDetailId}")]
+        public async Task<IActionResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId)
         {
-            var result = await _cropProgressService.GetById(progressId);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.GetByCropSeasonDetailId(cropSeasonDetailId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -48,13 +57,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
-
         public async Task<IActionResult> Create([FromBody] CropProgressCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _cropProgressService.Create(dto);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.Create(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Created(string.Empty, result.Data);
@@ -66,7 +78,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{progressId}")]
-
         public async Task<IActionResult> Update(Guid progressId, [FromBody] CropProgressUpdateDto dto)
         {
             if (progressId != dto.ProgressId)
@@ -75,7 +86,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _cropProgressService.Update(dto);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.Update(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -87,27 +102,34 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPatch("soft-delete/{progressId}")]
-
         public async Task<IActionResult> SoftDeleteById(Guid progressId)
         {
-            var result = await _cropProgressService.SoftDeleteById(progressId);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.SoftDeleteById(progressId, userId);
+
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
             return NotFound(result.Message);
         }
-
 
         [HttpDelete("hard/{progressId}")]
         public async Task<IActionResult> HardDelete(Guid progressId)
         {
-            var result = await _cropProgressService.DeleteById(progressId);
+            Guid userId;
+            try { userId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được userId từ token."); }
+
+            var result = await _cropProgressService.DeleteById(progressId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
             return NotFound(result.Message);
         }
-
     }
+
 }

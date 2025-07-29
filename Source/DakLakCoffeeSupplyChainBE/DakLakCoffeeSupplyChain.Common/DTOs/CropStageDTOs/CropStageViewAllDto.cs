@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.CropStageDto
+namespace DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs
 {
     public class CropStageViewAllDto
     {

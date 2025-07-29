@@ -6,6 +6,7 @@
 
         public Guid CropSeasonDetailId { get; set; }
 
+        public Guid? UpdatedBy { get; set; } 
         public int StageId { get; set; }
 
         public string StageName { get; set; } = string.Empty;
