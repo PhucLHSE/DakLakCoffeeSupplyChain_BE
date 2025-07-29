@@ -22,7 +22,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;
         public string RejectionReason { get; set; } = string.Empty;
         public string Note { get; set; } = string.Empty;
-        public Guid? ContractDeliveryItemId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentsDetailsDTOs { get; set; } = [];

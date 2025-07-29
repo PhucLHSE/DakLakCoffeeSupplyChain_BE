@@ -199,34 +199,73 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Tạm thời chưa có validation
-                
+
                 //Generate code
                 string commitmentCode = await _codeGenerator.GenerateFarmingCommitmentCodeAsync();
+                string commitmentDetailCode = await _codeGenerator.GenerateFarmingCommitmenstDetailCodeAsync();
+                var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(commitmentCode);
 
                 //Map dto to model
                 var newCommitment = commitmentCreateDto.MapToFarmingCommitment(commitmentCode);
 
-                //Lấy registration, chỉ lấy cái nào đã được duyệt và chưa có cam kết
-                var selectedRegistration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
-                    predicate: r => r.RegistrationId == newCommitment.RegistrationId,
-                    include: r => r.Include( r => r.Plan),
-                    asNoTracking: true);
-                if(selectedRegistration == null)
+                // Kiểm tra Không cho người dùng chọn trùng chi tiết đăng ký 
+                var registrationDetailIds = newCommitment.FarmingCommitmentsDetails.Select(d => d.RegistrationDetailId).ToList();
+                if (registrationDetailIds.Count != registrationDetailIds.Distinct().Count())
+                {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
-                        "Không tìm được chi tiết phiếu đăng ký"
+                        "Không được phép chọn trùng chi tiết đơn đăng ký trong danh sách cam kết."
+                    );
+                }
+
+                //Lấy registration, chỉ lấy cái nào đã được duyệt và chưa có cam kết
+                var selectedRegistration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+                    predicate: r => r.RegistrationId == newCommitment.RegistrationId && r.FarmingCommitment == null,
+                    include: r => r.
+                        Include(r => r.Plan).
+                        Include(r => r.FarmingCommitment).
+                        Include(r => r.CultivationRegistrationsDetails),
+                    asNoTracking: true);
+                if (selectedRegistration == null)
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm được phiếu đăng ký hoặc phiếu đăng ký này đã có cam kết rồi."
                     );
 
                 //Tự động map planId và farmerId từ Registration
                 newCommitment.PlanId = selectedRegistration.PlanId;
                 newCommitment.FarmerId = selectedRegistration.FarmerId;
 
-                //Tự động map giá cả và sản lượng, thời gian từ Registration
-                //newCommitment.ConfirmedPrice = registrationDetail.WantedPrice;
-                //newCommitment.CommittedQuantity = registrationDetail.EstimatedYield;
-                //newCommitment.EstimatedDeliveryStart = registrationDetail.ExpectedHarvestStart;
-                //newCommitment.EstimatedDeliveryEnd = registrationDetail.ExpectedHarvestEnd;
-                
+                // Tạo Commitment Detail
+                foreach (var detail in newCommitment.FarmingCommitmentsDetails)
+                {
+                    //Kiểm tra đồng bộ dữ liệu, không cho phép lấy registration detail mà không thuộc registration chính
+                    var RegistrationDetailsIds = selectedRegistration.CultivationRegistrationsDetails.Select(i => i.CultivationRegistrationDetailId).ToHashSet();
+                    if (!RegistrationDetailsIds.Contains(detail.RegistrationDetailId))
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Chi tiết đăng ký được chọn không thuộc phiếu đăng ký đang chọn."
+                        );
+
+                    // Lấy planDetailId từ registration detail đã chọn để tự động map vào commitment detail
+                    var selectedPlanDetailId = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByPredicateAsync(
+                        predicate: f => f.CultivationRegistrationDetailId == detail.RegistrationDetailId,
+                        selector: f => f.PlanDetailId,
+                        asNoTracking: true
+                        );
+                    if (selectedPlanDetailId == Guid.Empty)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "PlanDetailId được chọn bị rỗng"
+                        );
+
+                    detail.CommitmentDetailCode = $"FCD-{DateHelper.NowVietnamTime().Year}-{(count):D4}";
+                    count++;
+                    detail.PlanDetailId = selectedPlanDetailId;
+                    newCommitment.TotalPrice += detail.ConfirmedPrice;
+                    await _unitOfWork.FarmingCommitmentsDetailRepository.CreateAsync(detail);
+                }
+
                 // Save data to database
                 await _unitOfWork.FarmingCommitmentRepository.CreateAsync(newCommitment);
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -237,7 +276,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .GetByIdAsync(
                             predicate: p => p.CommitmentId == newCommitment.CommitmentId,
                             include: c => c.
-                            Include( p => p.Plan).
+                            Include(p => p.Plan).
                                 ThenInclude(fm => fm.CreatedByNavigation).
                             Include(f => f.Farmer).
                                 ThenInclude(f => f.User).
@@ -252,7 +291,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             Const.WARNING_NO_DATA_MSG,
                             new FarmingCommitmentViewDetailsDto() //Trả về DTO rỗng
                         );
-                    var responseDto = commitment.MapToFarmingCommitmentViewDetailsDto();                    
+                    var responseDto = commitment.MapToFarmingCommitmentViewDetailsDto();
 
                     return new ServiceResult(
                         Const.SUCCESS_CREATE_CODE,

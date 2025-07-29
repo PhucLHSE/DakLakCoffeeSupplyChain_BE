@@ -255,5 +255,32 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
 
             return await query.AnyAsync(predicate);
         }
+
+        // Hàm này giúp ta lấy bất kỳ trường gì của bảng thay vì lấy cả entity và nó còn có khả năng sắp xếp theo thứ tự
+        // VD cách sử dụng của hàm này là lấy generatedCode mới nhất của bảng FarmingCommitmentDetail, xem ở file codeGenerator để biết cách xài.
+        public async Task<TResult?> GetByPredicateAsync<TResult>(
+            Expression<Func<T, bool>> predicate,
+            Expression<Func<T, TResult>> selector,
+            Func<IQueryable<T>, IQueryable<T>>? include = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            bool asNoTracking = true
+        )
+        {
+            IQueryable<T> query = _context.Set<T>();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (include != null)
+                query = include(query);
+
+            if (predicate != null)
+                query = query.Where(predicate);
+
+            if (orderBy != null)
+                query = orderBy(query);
+
+            return await query.Select(selector).FirstOrDefaultAsync();
+        }
     }
 }
