@@ -319,9 +319,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Ánh xạ dữ liệu từ DTO vào entity
                 orderUpdateDto.MapToUpdatedOrder(order);
 
-                // Tạo danh sách keys từ DTO (ContractDeliveryItemId + ProductId)
+                // Tập hợp các ID gửi từ client
                 var dtoItemIds = orderUpdateDto.OrderItems
-                    .Select(i => (i.ContractDeliveryItemId, i.ProductId))
+                    .Where(i => i.OrderItemId != Guid.Empty)
+                    .Select(i => i.OrderItemId)
                     .ToHashSet();
 
                 var now = DateHelper.NowVietnamTime();
@@ -329,12 +330,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Xoá mềm những item cũ không còn trong DTO
                 foreach (var oldItem in order.OrderItems.Where(i => !i.IsDeleted))
                 {
-                    var key = (oldItem.ContractDeliveryItemId, oldItem.ProductId);
-
-                    if (!dtoItemIds.Contains(key))
+                    if (!dtoItemIds.Contains(oldItem.OrderItemId))
                     {
                         oldItem.IsDeleted = true;
                         oldItem.UpdatedAt = now;
+
                         await _unitOfWork.OrderItemRepository.UpdateAsync(oldItem);
                     }
                 }
@@ -397,9 +397,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Cập nhật lại tổng tiền đơn hàng
-                order.TotalAmount = order.OrderItems
-                    .Where(i => !i.IsDeleted)
-                    .Sum(i => i.TotalPrice);
+                order.TotalAmount = orderUpdateDto.OrderItems
+                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
 
                 order.UpdatedAt = now;
 
