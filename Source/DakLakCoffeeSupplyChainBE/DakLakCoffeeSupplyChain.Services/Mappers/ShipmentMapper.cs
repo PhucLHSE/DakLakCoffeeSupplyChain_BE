@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ShipmentEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -33,6 +34,45 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 DeliveryStatus = status,
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt
+            };
+        }
+
+        // Mapper ShipmentViewDetailsDto
+        public static ShipmentViewDetailsDto MapToShipmentViewDetailsDto(this Shipment shipment)
+        {
+            // Parse DeliveryStatus string to enum
+            ShipmentDeliveryStatus status = Enum.TryParse<ShipmentDeliveryStatus>(
+                shipment.DeliveryStatus?.Replace(" ", ""), ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : ShipmentDeliveryStatus.Pending;
+
+            return new ShipmentViewDetailsDto
+            {
+                ShipmentId = shipment.ShipmentId,
+                ShipmentCode = shipment.ShipmentCode ?? string.Empty,
+                OrderId = shipment.OrderId,
+                OrderCode = shipment.Order?.OrderCode ?? string.Empty,
+                DeliveryStaffId = shipment.DeliveryStaffId,
+                DeliveryStaffName = shipment.DeliveryStaff?.Name ?? string.Empty,
+                ShippedQuantity = shipment.ShippedQuantity,
+                ShippedAt = shipment.ShippedAt,
+                DeliveryStatus = status,
+                ReceivedAt = shipment.ReceivedAt,
+                CreatedAt = shipment.CreatedAt,
+                CreatedByName = shipment.CreatedByNavigation?.Name ?? string.Empty,
+                ShipmentDetails = shipment.ShipmentDetails?
+                    .Where(detail => !detail.IsDeleted)
+                    .Select(detail => new ShipmentDetailViewDto
+                    {
+                        ShipmentDetailId = detail.ShipmentDetailId,
+                        OrderItemId = detail.OrderItemId,
+                        ProductName = detail.OrderItem?.Product?.ProductName ?? string.Empty,
+                        Quantity = detail.Quantity,
+                        Unit = detail.Unit ?? string.Empty,
+                        Note = detail.Note ?? string.Empty,
+                        CreatedAt = detail.CreatedAt
+                    })
+                    .ToList() ?? new()
             };
         }
     }

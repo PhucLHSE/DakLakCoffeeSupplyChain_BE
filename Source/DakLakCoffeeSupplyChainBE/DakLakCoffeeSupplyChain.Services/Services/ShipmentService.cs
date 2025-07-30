@@ -63,5 +63,52 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> GetById(Guid shipmentId)
+        {
+            // Truy vấn Shipment theo ID, kèm các navigation cần thiết
+            var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                predicate: s =>
+                    s.ShipmentId == shipmentId &&
+                    !s.IsDeleted &&
+                    s.Order != null &&
+                    s.Order.DeliveryBatch != null &&
+                    s.Order.DeliveryBatch.Contract != null,
+                include: query => query
+                    .Include(s => s.Order)
+                    .Include(s => s.DeliveryStaff)
+                    .Include(s => s.CreatedByNavigation)
+                    .Include(s => s.ShipmentDetails.Where(d => !d.IsDeleted))
+                        .ThenInclude(sd => sd.OrderItem)
+                            .ThenInclude(oi => oi.Product),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy Shipment
+            if (shipment == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new ShipmentViewDetailsDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Sắp xếp danh sách ShipmentDetails theo CreatedAt tăng dần
+                shipment.ShipmentDetails = shipment.ShipmentDetails
+                    .OrderBy(sd => sd.CreatedAt)
+                    .ToList();
+
+                // Map sang DTO chi tiết để trả về
+                var shipmentDto = shipment.MapToShipmentViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    shipmentDto
+                );
+            }
+        }
     }
 }
