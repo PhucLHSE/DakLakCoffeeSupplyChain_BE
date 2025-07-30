@@ -1437,8 +1437,8 @@ INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
 )
 VALUES (
-   'USR-2025-0007', 'deliverystaff@gmail.com', '0901234568', N'Trần Văn Giao', 'Male', 
-   '1992-06-18', N'Gia Lai', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 6, 1, 1
+   'USR-2025-0006', 'deliverystaff@gmail.com', '0901234568', N'Trần Văn Giang', 'Male', 
+   '1994-06-19', N'Gia Lai', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 6, 1, 1
 );
 
 GO
@@ -1771,7 +1771,9 @@ INSERT INTO ContractItems (
     N'Cà phê Robusta xuất khẩu', GETDATE(), GETDATE()
 );
 
-INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
+INSERT INTO ContractItems (
+   ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt
+)
 VALUES 
 ('CTI-003-CTR-2025-0001', @ContractID, @HoneyID,   10000, 57000, 0, N'Robusta xử lý mật ong (Honey)',        GETDATE(), GETDATE()),
 ('CTI-004-CTR-2025-0001', @ContractID, @WashedID,  8000,  56000, 0, N'Robusta sơ chế ướt (Washed)',          GETDATE(), GETDATE()),
@@ -1979,11 +1981,13 @@ DECLARE @Carbonic INT = (
 -- Chi tiết: Arabica 5,000 Kg
 INSERT INTO ProcurementPlansDetails (
   PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID, TargetQuantity, TargetRegion,
-  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ContractItemID, ProgressPercentage, ExpectedYieldPerHectare
+  MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, 
+  ContractItemID, ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
   'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, @Washed, 5000, N'Krông Bông',
-  100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', @CTI_Arabica, 0, 1100
+  100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', 
+  @CTI_Arabica, 0, 1100
 );
 
 -- Chi tiết: Robusta 12,500 Kg
@@ -2565,7 +2569,9 @@ VALUES (
 );
 
 -- Insert vào bảng ProcessingParameters
-INSERT INTO ProcessingParameters (ParameterID, ProgressID, ParameterName, ParameterValue, Unit, RecordedAt)
+INSERT INTO ProcessingParameters (
+   ParameterID, ProgressID, ParameterName, ParameterValue, Unit, RecordedAt
+)
 VALUES 
 (NEWID(), @ProgressID1, N'Humidity', '13.5', N'%', GETDATE()),
 (NEWID(), @ProgressID2, N'Humidity', '12.8', N'%', GETDATE()),
@@ -2808,8 +2814,8 @@ INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID
 )
 VALUES (
-   'USR-2025-0006', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Kho B', 
-   'Male', '1992-04-20', N'Buôn Hồ', 'BusinessStaff@12345', 3
+   'USR-2025-0007', 'warehouse2@gmail.com', '0901234567', N'Nguyễn Văn Khang', 
+   'Male', '1992-04-20', N'Buôn Hồ', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3
 );
 
 -- Lấy UserID của nhân viên 2
@@ -3170,7 +3176,7 @@ DECLARE @OrderItemID UNIQUEIDENTIFIER = (
 );
 
 DECLARE @DeliveryStaffID UNIQUEIDENTIFIER = (
-	SELECT TOP 1 UserID FROM UserAccounts WHERE UserCode = 'USR-2025-0005'
+	SELECT TOP 1 UserID FROM UserAccounts WHERE UserCode = 'USR-2025-0006'
 );
 
 DECLARE @CreatedBy UNIQUEIDENTIFIER = (
