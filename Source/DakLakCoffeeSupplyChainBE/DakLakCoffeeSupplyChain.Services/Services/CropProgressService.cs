@@ -37,20 +37,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId, Guid userId)
         {
-            var progresses = await _unitOfWork.CropProgressRepository.GetAllWithIncludesAsync();
+            var progresses = await _unitOfWork.CropProgressRepository
+                .GetByCropSeasonDetailIdWithIncludesAsync(cropSeasonDetailId, userId);
 
-            var filtered = progresses
-                .Where(p => !p.IsDeleted &&
-                            p.CropSeasonDetailId == cropSeasonDetailId &&
-                            p.CropSeasonDetail?.CropSeason?.Farmer?.UserId == userId)
-                .Select(p => p.ToViewAllDto())
-                .ToList();
+            var result = new CropProgressViewByDetailDto
+            {
+                CropSeasonDetailId = cropSeasonDetailId,
+                Progresses = progresses.Select(p => p.ToViewAllDto()).ToList()
+            };
 
-            if (!filtered.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tiến độ nào cho vùng trồng này hoặc bạn không có quyền.");
-
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, filtered);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }
+
+
 
         public async Task<IServiceResult> Create(CropProgressCreateDto dto, Guid userId)
         {

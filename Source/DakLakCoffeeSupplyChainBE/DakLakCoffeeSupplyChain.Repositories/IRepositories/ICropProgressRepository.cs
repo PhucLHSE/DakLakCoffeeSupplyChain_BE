@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface ICropProgressRepository : IGenericRepository<CropProgress>
     {
         Task<List<CropProgress>> GetAllWithIncludesAsync();
-        Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId);
+        Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId, Guid userId);
         Task<CropProgress?> GetByIdWithDetailAsync(Guid progressId);
         Task<CropProgress?> GetByIdWithIncludesAsync(Guid progressId);
 
