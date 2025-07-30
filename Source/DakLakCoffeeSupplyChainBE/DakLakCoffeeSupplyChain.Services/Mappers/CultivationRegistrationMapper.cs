@@ -56,14 +56,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper CultivationRegistrationCreateDto
-        public static CultivationRegistration MapToCultivationRegistrationCreateDto(this CultivationRegistrationCreateViewDto dto, string registrationCode)
+        public static CultivationRegistration MapToCultivationRegistrationCreateDto(this CultivationRegistrationCreateViewDto dto, string registrationCode, Guid farmerId)
         {
             return new CultivationRegistration
             {
                 RegistrationId = Guid.NewGuid(),
                 RegistrationCode = registrationCode,
                 PlanId = dto.PlanId,
-                FarmerId = dto.FarmerId,
+                FarmerId = farmerId,
                 RegisteredArea = dto.RegisteredArea,
                 TotalWantedPrice = 0, // Vì sql không có khai báo mặc định nên buộc phải khai báo ở đây
                 Status = CultivationRegistrationStatus.Pending.ToString(), // Mặc định gán vào luôn, farmer không có lựa chọn

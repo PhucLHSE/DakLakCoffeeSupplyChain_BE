@@ -188,16 +188,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto)
+        public async Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto, Guid userId)
         {
             //Check trường hợp plan detail bắt buộc phải thuộc cái plan đang được chọn, ko được chọn plan detail không thuộc plan chính
             try
             {
+                var farmerId = await _unitOfWork.FarmerRepository.GetByPredicateAsync(
+                    predicate: f => f.UserId == userId,
+                    selector: f => f.FarmerId,
+                    asNoTracking: true
+                );
+                // Kiểm tra xem farmer có tồn tại không
+                if (farmerId == Guid.Empty)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy nông dân tương ứng với tài khoản."
+                    );
+
+                var planDetailsIds = registrationDto.CultivationRegistrationDetailsCreateViewDto
+                    .Select(d => d.PlanDetailId)
+                    .ToList();
+                if (planDetailsIds.Count != planDetailsIds.Distinct().Count())
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không được phép chọn trùng chi tiết kế hoạch trong danh sách cam kết."
+                    );
+                }
+
                 // Generate cultivation registration code
                 string registrationCode = await _codeGenerator.GenerateCultivationRegistrationCodeAsync(); // ví dụ: "USR-YYYY-####" hoặc Guid, tuỳ bạn
 
                 // Map DTO to Entity
-                var newCultivationRegistration = registrationDto.MapToCultivationRegistrationCreateDto(registrationCode);
+                var newCultivationRegistration = registrationDto.MapToCultivationRegistrationCreateDto(registrationCode, farmerId);
 
                 var selectedProcurementPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                     predicate: p => p.PlanId == newCultivationRegistration.PlanId,
@@ -218,14 +241,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var planDetailIds = selectedProcurementPlan.ProcurementPlansDetails.Select(d => d.PlanDetailsId);
 
                 //Kiểm tra xem farmer này đã đăng ký kế hoạch thu mua này chưa, nếu đăng ký rồi thì không được phép đăng ký thêm
-                foreach (var application in selectedProcurementPlan.CultivationRegistrations)
-                {
-                    if (application.FarmerId == newCultivationRegistration.FarmerId)
-                        return new ServiceResult(
-                            Const.FAIL_CREATE_CODE,
-                            "Bạn đã đăng ký kế hoạch thu mua này rồi, bạn không thể tạo đơn đăng ký mới nữa, nhưng bạn có thể cập nhật đơn đăng ký đang tồn tại với sản lượng mới hoặc loại cà phê mới."
-                        );
-                }
+                //foreach (var application in selectedProcurementPlan.CultivationRegistrations)
+                //{
+                //    if (application.FarmerId == newCultivationRegistration.FarmerId)
+                //        return new ServiceResult(
+                //            Const.FAIL_CREATE_CODE,
+                //            "Bạn đã đăng ký kế hoạch thu mua này rồi, bạn không thể tạo đơn đăng ký mới nữa, nhưng bạn có thể cập nhật đơn đăng ký đang tồn tại với sản lượng mới hoặc loại cà phê mới."
+                //        );
+                //}
 
                 foreach (var detail in newCultivationRegistration.CultivationRegistrationsDetails)
                 {

@@ -9,6 +9,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid registrationId);
         Task<IServiceResult> SoftDeleteById(Guid registrationId);
         Task<IServiceResult> DeleteById(Guid registrationId);
-        Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto);
+        Task<IServiceResult> Create(CultivationRegistrationCreateViewDto registrationDto, Guid userId);
     }
 }
