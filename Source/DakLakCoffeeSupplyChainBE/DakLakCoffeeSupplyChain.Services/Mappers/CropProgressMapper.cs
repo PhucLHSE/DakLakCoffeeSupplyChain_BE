@@ -11,7 +11,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             return new CropProgressViewAllDto
             {
                 ProgressId = entity.ProgressId,
-                CropSeasonDetailId = entity.CropSeasonDetailId, 
+                CropSeasonDetailId = entity.CropSeasonDetailId,
+                StageId = entity.StageId,
+                StepIndex = entity.StepIndex,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,

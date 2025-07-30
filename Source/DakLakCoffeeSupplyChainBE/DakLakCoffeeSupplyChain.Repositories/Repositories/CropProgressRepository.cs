@@ -28,22 +28,33 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(d => d.CropSeason)
                         .ThenInclude(cs => cs.Farmer)
                             .ThenInclude(f => f.User)
+
                 .OrderByDescending(p => p.ProgressDate)
                 .ToListAsync();
         }
 
 
 
-        public async Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId)
+        public async Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId, Guid userId)
         {
             return await _context.CropProgresses
                 .AsNoTracking()
-                .Where(p => p.CropSeasonDetailId == cropSeasonDetailId && !p.IsDeleted)
+                .Where(p => !p.IsDeleted &&
+                            p.CropSeasonDetailId == cropSeasonDetailId &&
+                            p.CropSeasonDetail.CropSeason.Farmer.UserId == userId)
                 .Include(p => p.Stage)
                 .Include(p => p.UpdatedByNavigation).ThenInclude(f => f.User)
-                .OrderByDescending(p => p.ProgressDate)
+                .Include(p => p.CropSeasonDetail)
+                    .ThenInclude(d => d.CropSeason)
+                        .ThenInclude(cs => cs.Farmer)
+                            .ThenInclude(f => f.User)
+                .OrderBy(p => p.StageId)
+                .ThenBy(p => p.StepIndex ?? 0)
+                .ThenBy(p => p.ProgressDate)
                 .ToListAsync();
         }
+
+
         public async Task<CropProgress?> GetByIdWithDetailAsync(Guid progressId)
         {
             return await _context.CropProgresses

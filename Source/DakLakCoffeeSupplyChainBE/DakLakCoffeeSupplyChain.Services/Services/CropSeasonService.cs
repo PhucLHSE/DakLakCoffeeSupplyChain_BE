@@ -110,7 +110,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // 6. Tạo mã mùa vụ và ID
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
-            Guid cropSeasonId = Guid.NewGuid(); // ✅ Sinh CropSeasonId 1 lần duy nhất tại đây
+            Guid cropSeasonId = Guid.NewGuid(); 
 
             // 7. Map entity mùa vụ (sửa mapper để nhận cropSeasonId)
             var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
