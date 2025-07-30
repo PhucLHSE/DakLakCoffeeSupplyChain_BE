@@ -72,6 +72,46 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow
             };
         }
+        public static WarehouseInboundRequestFarmerViewDto ToFarmerViewDto(this WarehouseInboundRequest r)
+        {
+            return new WarehouseInboundRequestFarmerViewDto
+            {
+                InboundRequestId = r.InboundRequestId,
+                RequestCode = r.InboundRequestCode,
+                Status = r.Status,
+                CreatedAt = r.CreatedAt,
+                PreferredDeliveryDate = r.PreferredDeliveryDate ?? default,
+                RequestedQuantity = r.RequestedQuantity ?? 0,
+                Note = r.Note,
+
+                BatchId = r.BatchId,
+                BatchCode = r.Batch?.BatchCode ?? "N/A",
+                CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
+                SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+            };
+        }
+        public static WarehouseInboundRequestFarmerDetailDto ToFarmerDetailDto(this WarehouseInboundRequest r)
+        {
+            return new WarehouseInboundRequestFarmerDetailDto
+            {
+                InboundRequestId = r.InboundRequestId,
+                RequestCode = r.InboundRequestCode,
+                Status = r.Status,
+                CreatedAt = r.CreatedAt,
+                PreferredDeliveryDate = r.PreferredDeliveryDate ?? default,
+                ActualDeliveryDate = r.ActualDeliveryDate,
+
+                RequestedQuantity = r.RequestedQuantity ?? 0,
+                Note = r.Note,
+
+                BatchId = r.BatchId,
+                BatchCode = r.Batch?.BatchCode ?? "N/A",
+                CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
+                SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+            };
+        }
+
+
 
 
 

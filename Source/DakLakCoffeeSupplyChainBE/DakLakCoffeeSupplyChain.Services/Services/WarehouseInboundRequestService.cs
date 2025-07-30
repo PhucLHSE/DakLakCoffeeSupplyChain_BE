@@ -202,7 +202,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nông dân.");
 
             var requests = await _unitOfWork.WarehouseInboundRequests.GetAllByFarmerIdAsync(farmer.FarmerId);
-            var result = requests.Select(r => r.ToViewDto()).ToList();
+            var result = requests.Select(r => r.ToFarmerViewDto()).ToList();
+
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách thành công", result);
         }
         public async Task<IServiceResult> GetByIdForFarmerAsync(Guid requestId, Guid userId)
@@ -215,7 +216,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null || request.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập yêu cầu này.");
 
-            var dto = request.ToDetailDto();
+            var dto = request.ToFarmerDetailDto(); // ✅ dùng DTO mới
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
         }
 
