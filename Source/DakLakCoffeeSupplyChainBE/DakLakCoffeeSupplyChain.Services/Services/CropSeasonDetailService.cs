@@ -223,18 +223,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (existing == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dòng mùa vụ.");
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy vùng trồng.");
                 }
 
+                // ✅ Lấy toàn bộ tiến độ liên quan
+                var progresses = await _unitOfWork.CropProgressRepository.FindAsync(
+                    p => p.CropSeasonDetailId == detailId
+                );
+
+                // ✅ Xoá cứng tất cả tiến độ
+                foreach (var progress in progresses)
+                {
+                    await _unitOfWork.CropProgressRepository.RemoveAsync(progress);
+                }
+
+                // ✅ Xoá cứng vùng trồng
                 await _unitOfWork.CropSeasonDetailRepository.RemoveAsync(existing);
+
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG);
-                }
-
-                return new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá vùng trồng và toàn bộ tiến độ thành công.")
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá thất bại.");
             }
             catch (Exception ex)
             {
@@ -253,26 +263,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (existing == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dòng mùa vụ.");
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy vùng trồng.");
                 }
 
+                // Kiểm tra có tiến độ nào chưa bị xoá mềm không
+                var hasActiveProgress = await _unitOfWork.CropProgressRepository.AnyAsync(
+                    p => p.CropSeasonDetailId == detailId && !p.IsDeleted
+                );
+
+                if (hasActiveProgress)
+                {
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Không thể xoá mềm vì vẫn còn tiến độ chưa xoá.");
+                }
+
+                // Đánh dấu xoá mềm vùng trồng
                 existing.IsDeleted = true;
                 existing.UpdatedAt = DateHelper.NowVietnamTime();
 
                 await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(existing);
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                if (result > 0)
-                {
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm thành công.");
-                }
-
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
             }
             catch (Exception ex)
             {
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Repositories
@@ -51,6 +52,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderBy(p => p.StageId)
                 .ThenBy(p => p.StepIndex ?? 0)
                 .ThenBy(p => p.ProgressDate)
+                .ToListAsync();
+        }
+        public async Task<List<CropProgress>> FindAsync(Expression<Func<CropProgress, bool>> predicate)
+        {
+            return await _context.CropProgresses
+                .Where(predicate)
                 .ToListAsync();
         }
 
