@@ -214,15 +214,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
-            if (cropSeason.Status != "Cancelled")
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
-
+            // ✅ Xoá toàn bộ tiến độ và vùng trồng
             if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không thể xoá mùa vụ đã có vùng trồng.");
+            {
+                foreach (var detail in cropSeason.CropSeasonDetails)
+                {
+                    var progresses = await _unitOfWork.CropProgressRepository.FindAsync(
+                        p => p.CropSeasonDetailId == detail.DetailId
+                    );
 
-            await _unitOfWork.CropSeasonRepository.DeleteCropSeasonDetailsBySeasonIdAsync(cropSeasonId);
+                    foreach (var progress in progresses)
+                        await _unitOfWork.CropProgressRepository.RemoveAsync(progress);
+
+                    await _unitOfWork.CropSeasonDetailRepository.RemoveAsync(detail);
+                }
+            }
+
             _unitOfWork.CropSeasonRepository.PrepareRemove(cropSeason);
-
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
@@ -230,33 +238,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
         }
 
+
         public async Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId, Guid userId, bool isAdmin)
         {
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(cropSeasonId);
+            var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
             if (cropSeason == null || cropSeason.IsDeleted)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
-            if (cropSeason.Status != "Cancelled")
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
+            // ✅ Xoá mềm vùng trồng và tiến độ liên quan
+            if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
+            {
+                foreach (var detail in cropSeason.CropSeasonDetails)
+                {
+                    var progresses = await _unitOfWork.CropProgressRepository.FindAsync(
+                        p => p.CropSeasonDetailId == detail.DetailId && !p.IsDeleted
+                    );
 
-            var hasDetails = await _unitOfWork.CropSeasonDetailRepository
-                .ExistsAsync(d => d.CropSeasonId == cropSeasonId && !d.IsDeleted);
+                    foreach (var progress in progresses)
+                    {
+                        progress.IsDeleted = true;
+                        progress.UpdatedAt = DateHelper.NowVietnamTime();
+                        await _unitOfWork.CropProgressRepository.UpdateAsync(progress);
+                    }
 
-            if (hasDetails)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không thể xoá mùa vụ đã có vùng trồng.");
+                    detail.IsDeleted = true;
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                }
+            }
 
             cropSeason.IsDeleted = true;
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
-
             await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
+
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
-                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ thành công.")
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ và các vùng trồng, tiến độ thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
+
     }
 }
