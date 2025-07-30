@@ -39,6 +39,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         // Mapper OrderViewDetailsDto
         public static OrderViewDetailsDto MapToOrderViewDetailsDto(this Order order)
         {
+            // Parse Status string to enum
             OrderStatus status = Enum.TryParse<OrderStatus>(order.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : OrderStatus.Pending;

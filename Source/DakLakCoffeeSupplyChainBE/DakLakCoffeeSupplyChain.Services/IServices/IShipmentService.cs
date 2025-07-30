@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IShipmentService
     {
         Task<IServiceResult> GetAll();
+
+        Task<IServiceResult> GetById(Guid shipmentId);
     }
 }
