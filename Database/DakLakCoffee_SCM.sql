@@ -1432,6 +1432,15 @@ VALUES (
    '1999-09-12', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1
 );
 
+-- Delivery Staff
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0007', 'deliverystaff@gmail.com', '0901234568', N'Trần Văn Giao', 'Male', 
+   '1992-06-18', N'Gia Lai', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 6, 1, 1
+);
+
 GO
 
 -- Insert vào bảng PaymentConfigurations
@@ -1883,12 +1892,16 @@ INSERT INTO ProcessingMethods (MethodCode, Name, Description)
 VALUES 
 -- Phơi tự nhiên (natural/dry)
 ('natural', N'Sơ chế khô (Natural)', N'Cà phê được phơi nguyên trái dưới ánh nắng mặt trời. Giữ được độ ngọt và hương trái cây.'),
+
 -- Sơ chế ướt (washed)
 ('washed', N'Sơ chế ướt (Washed)', N'Loại bỏ lớp thịt quả trước khi lên men và rửa sạch. Cho vị sạch, hậu vị trong trẻo.'),
+
 -- Sơ chế mật ong (honey)
 ('honey', N'Sơ chế mật ong (Honey)', N'Giữ lại một phần lớp nhớt trên hạt trong quá trình phơi. Tạo vị ngọt và hương đặc trưng.'),
+
 -- Semi-washed (bán ướt)
 ('semi-washed', N'Semi-washed (Bán ướt)', N'Kết hợp giữa sơ chế khô và ướt. Giảm chi phí nhưng vẫn giữ chất lượng.'),
+
 -- Carbonic maceration (hiếm)
 ('carbonic', N'Lên men yếm khí (Carbonic Maceration)', N'Kỹ thuật lên men nguyên trái trong môi trường CO2, cho hương độc đáo và hậu vị phức tạp.');
 
@@ -2554,11 +2567,11 @@ VALUES (
 -- Insert vào bảng ProcessingParameters
 INSERT INTO ProcessingParameters (ParameterID, ProgressID, ParameterName, ParameterValue, Unit, RecordedAt)
 VALUES 
-(NEWID(), @ProgressID1, N'humidity', '13.5', N'%', GETDATE()),
-(NEWID(), @ProgressID2, N'humidity', '12.8', N'%', GETDATE()),
-(NEWID(), @ProgressID3, N'humidity', '12.1', N'%', GETDATE()),
-(NEWID(), @ProgressID4, N'humidity', '11.4', N'%', GETDATE()),
-(NEWID(), @ProgressID2, N'temperature', '36.5', N'°C', GETDATE()),
+(NEWID(), @ProgressID1, N'Humidity', '13.5', N'%', GETDATE()),
+(NEWID(), @ProgressID2, N'Humidity', '12.8', N'%', GETDATE()),
+(NEWID(), @ProgressID3, N'Humidity', '12.1', N'%', GETDATE()),
+(NEWID(), @ProgressID4, N'Humidity', '11.4', N'%', GETDATE()),
+(NEWID(), @ProgressID2, N'Temperature', '36.5', N'°C', GETDATE()),
 (NEWID(), @ProgressID3, N'pH', '5.2', N'', GETDATE());
 
 GO
