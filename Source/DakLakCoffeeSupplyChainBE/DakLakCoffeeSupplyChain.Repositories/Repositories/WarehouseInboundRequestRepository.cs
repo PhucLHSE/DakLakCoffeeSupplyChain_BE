@@ -82,7 +82,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<List<WarehouseInboundRequest>> GetAllByFarmerIdAsync(Guid farmerId)
         {
             return await _context.WarehouseInboundRequests
-                .Where(r => r.FarmerId == farmerId)
+                .Where(r => r.FarmerId == farmerId && !r.IsDeleted)
+                .Include(r => r.Batch)
+                    .ThenInclude(b => b.CoffeeType)
+                .Include(r => r.Batch)
+                    .ThenInclude(b => b.CropSeason)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
