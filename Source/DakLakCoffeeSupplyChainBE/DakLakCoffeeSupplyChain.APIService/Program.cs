@@ -1,5 +1,5 @@
 using CloudinaryDotNet;
-    using DakLakCoffeeSupplyChain.Common.Helpers.Security;
+using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -86,6 +86,7 @@ builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IProcessingWasteService, ProcessingWasteService>();
 builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDisposalService>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 
 //Add MemoryCache
@@ -145,6 +146,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Product>("Product");
     odataBuilder.EntitySet<Order>("Order");
+    odataBuilder.EntitySet<Shipment>("Shipment");
 
     return odataBuilder.GetEdmModel();
 }
