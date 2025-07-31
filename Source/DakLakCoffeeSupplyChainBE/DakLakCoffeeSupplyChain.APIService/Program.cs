@@ -87,6 +87,7 @@ builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IProcessingWasteService, ProcessingWasteService>();
 builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDisposalService>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
+builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 
 //Add MemoryCache
