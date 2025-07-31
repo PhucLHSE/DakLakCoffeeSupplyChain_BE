@@ -133,8 +133,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid shipmentId)
+        public async Task<IServiceResult> GetById(Guid shipmentId, Guid userId)
         {
+            Guid? managerId = null;
+            bool isDeliveryStaff = false;
+
+            // Kiểm tra BusinessManager
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => 
+                   m.UserId == userId && 
+                   !m.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (manager != null)
+            {
+                managerId = manager.ManagerId;
+            }
+            else
+            {
+                // Nếu không phải Manager thì kiểm tra Staff
+                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                    predicate: s => 
+                       s.UserId == userId && 
+                       !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (staff != null)
+                {
+                    managerId = staff.SupervisorId;
+                }
+                else
+                {
+                    isDeliveryStaff = true;
+                }
+            }
+
             // Truy vấn Shipment theo ID, kèm các navigation cần thiết
             var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
                 predicate: s =>
@@ -145,6 +180,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     s.Order.DeliveryBatch.Contract != null,
                 include: query => query
                     .Include(s => s.Order)
+                       .ThenInclude(o => o.DeliveryBatch)
+                          .ThenInclude(db => db.Contract)
                     .Include(s => s.DeliveryStaff)
                     .Include(s => s.CreatedByNavigation)
                     .Include(s => s.ShipmentDetails.Where(d => !d.IsDeleted))
@@ -164,6 +201,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else
             {
+                // Kiểm duyệt quyền truy cập
+                if (isDeliveryStaff)
+                {
+                    if (shipment.DeliveryStaffId != userId)
+                    {
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Bạn không có quyền truy cập Shipment này.",
+                            new ShipmentViewDetailsDto()
+                        );
+                    }
+                }
+                else if (managerId != null)
+                {
+                    var sellerId = shipment.Order?.DeliveryBatch?.Contract?.SellerId;
+
+                    if (sellerId != managerId)
+                    {
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Bạn không có quyền truy cập Shipment này.",
+                            new ShipmentViewDetailsDto()
+                        );
+                    }
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được vai trò hợp lệ.",
+                        new ShipmentViewDetailsDto()
+                    );
+                }
+
                 // Sắp xếp danh sách ShipmentDetails theo CreatedAt tăng dần
                 shipment.ShipmentDetails = shipment.ShipmentDetails
                     .OrderBy(sd => sd.CreatedAt)
