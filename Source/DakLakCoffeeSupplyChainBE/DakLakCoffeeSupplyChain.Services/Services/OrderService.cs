@@ -34,7 +34,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             Guid? managerId = null;
 
-            // Ưu tiên kiểm tra BusinessManager
+            // Kiểm tra BusinessManager
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                 predicate: m => 
                    m.UserId == userId && 

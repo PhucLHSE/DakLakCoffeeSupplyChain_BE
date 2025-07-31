@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -24,21 +25,88 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<IServiceResult> GetAll()
+        public async Task<IServiceResult> GetAll(Guid userId)
         {
-            // Truy vấn các Shipment có Order liên quan đến hợp đồng của Manager hiện tại
-            var shipments = await _unitOfWork.ShipmentRepository.GetAllAsync(
-                predicate: s =>
-                    !s.IsDeleted &&
-                    s.Order != null &&
-                    s.Order.DeliveryBatch != null &&
-                    s.Order.DeliveryBatch.Contract != null,
-                include: query => query
-                    .Include(s => s.Order)
-                    .Include(s => s.DeliveryStaff),
-                orderBy: query => query.OrderByDescending(s => s.CreatedAt),
+            Guid? managerId = null;
+            bool isDeliveryStaff = false;
+
+            // Kiểm tra BusinessManager
+            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                predicate: m => 
+                   m.UserId == userId && 
+                   !m.IsDeleted,
                 asNoTracking: true
             );
+
+            if (manager != null)
+            {
+                managerId = manager.ManagerId;
+            }
+            else
+            {
+                // Nếu không phải Manager thì kiểm tra Staff
+                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                    predicate: s => 
+                       s.UserId == userId && 
+                       !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (staff != null)
+                {
+                    managerId = staff.SupervisorId;
+                }
+                else
+                {
+                    // Nếu không phải Manager hay Staff => DeliveryStaff
+                    isDeliveryStaff = true;
+                }
+            }
+
+            List<Shipment> shipments;
+
+            if (isDeliveryStaff)
+            {
+                // Truy vấn shipment do user đảm nhận (DeliveryStaff)
+                shipments = await _unitOfWork.ShipmentRepository.GetAllAsync(
+                    predicate: s => 
+                       !s.IsDeleted && 
+                       s.DeliveryStaffId == userId,
+                    include: query => query
+                        .Include(s => s.Order)
+                            .ThenInclude(o => o.DeliveryBatch)
+                                .ThenInclude(db => db.Contract)
+                        .Include(s => s.DeliveryStaff),
+                    orderBy: query => query.OrderByDescending(s => s.CreatedAt),
+                    asNoTracking: true
+                );
+            }
+            else if (managerId != null)
+            {
+                // Truy vấn shipment thuộc hợp đồng Manager phụ trách
+                shipments = await _unitOfWork.ShipmentRepository.GetAllAsync(
+                    predicate: s =>
+                        !s.IsDeleted &&
+                        s.Order != null &&
+                        s.Order.DeliveryBatch != null &&
+                        s.Order.DeliveryBatch.Contract != null &&
+                        s.Order.DeliveryBatch.Contract.SellerId == managerId,
+                    include: query => query
+                        .Include(s => s.Order)
+                            .ThenInclude(o => o.DeliveryBatch)
+                                .ThenInclude(db => db.Contract)
+                        .Include(s => s.DeliveryStaff),
+                    orderBy: query => query.OrderByDescending(s => s.CreatedAt),
+                    asNoTracking: true
+                );
+            }
+            else
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không xác định được vai trò hợp lệ của tài khoản."
+                );
+            }
 
             // Kiểm tra nếu không có dữ liệu
             if (shipments == null ||
