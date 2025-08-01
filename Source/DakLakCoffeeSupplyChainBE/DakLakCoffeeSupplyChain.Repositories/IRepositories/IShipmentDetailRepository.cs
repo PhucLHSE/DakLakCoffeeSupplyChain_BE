@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IShipmentDetailRepository : IGenericRepository<ShipmentDetail>
     {
+        // Tính tổng số lượng đã giao (Quantity) của một OrderItem qua tất cả các dòng shipment chưa xoá
+        Task<double> SumQuantityByOrderItemAsync(Guid orderItemId);
     }
 }

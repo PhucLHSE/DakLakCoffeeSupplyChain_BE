@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Repositories.DBContext;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +17,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
         public ShipmentDetailRepository(DakLakCoffee_SCMContext context)
             => _context = context;
+
+        // Tính tổng số lượng đã giao (Quantity) của một OrderItem qua tất cả các dòng shipment chưa xoá
+        public async Task<double> SumQuantityByOrderItemAsync(Guid orderItemId)
+        {
+            return await _context.ShipmentDetails
+                .Where(sd =>
+                    sd.OrderItemId == orderItemId &&
+                    !sd.IsDeleted &&
+                    sd.Quantity.HasValue
+                )
+                .SumAsync(sd => (double?)sd.Quantity) ?? 0.0;
+        }
     }
 }
