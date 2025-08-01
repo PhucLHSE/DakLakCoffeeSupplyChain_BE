@@ -288,6 +288,16 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             return $"ORD-{CurrentYear}-{(count + 1):D4}";
         }
 
+        public async Task<string> GenerateShipmentCodeAsync()
+        {
+            // Đếm số shipment đã được tạo trong năm hiện tại
+            var count = await _unitOfWork.ShipmentRepository
+                .CountShipmentsInYearAsync(CurrentYear);
+
+            // Trả về mã có dạng: SHIP-2025-0001
+            return $"SHIP-{CurrentYear}-{(count + 1):D4}";
+        }
+
         public async Task<string> GenerateOutboundRequestCodeAsync()
         {
             var count = await _unitOfWork.WarehouseOutboundRequests.CountOutboundRequestsInYearAsync(CurrentYear);

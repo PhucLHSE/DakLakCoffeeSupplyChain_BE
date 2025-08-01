@@ -8,9 +8,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface IShipmentRepository : IGenericRepository<Shipment>
+    public interface IWalletRepository : IGenericRepository<Wallet>
     {
-        // Đếm số shipment được tạo trong năm chỉ định, chưa bị xoá.
-        Task<int> CountShipmentsInYearAsync(int year);
     }
 }

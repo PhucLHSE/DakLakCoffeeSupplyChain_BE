@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
@@ -9,9 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     {
         public static CropSeasonViewAllDto MapToCropSeasonViewAllDto(this CropSeason entity)
         {
-            var status = Enum.TryParse<CropSeasonStatus>(entity.Status, true, out var parsedStatus)
-                ? parsedStatus
-                : CropSeasonStatus.Active;
+            Enum.TryParse(entity.Status, true, out CropSeasonStatus status);
 
             return new CropSeasonViewAllDto
             {
@@ -28,8 +27,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
         public static CropSeasonViewDetailsDto MapToCropSeasonViewDetailsDto(this CropSeason entity, CultivationRegistration? registration)
         {
-            var status = Enum.TryParse<CropSeasonStatus>(entity.Status, true, out var parsedStatus)
-                ? parsedStatus : CropSeasonStatus.Active;
+            Enum.TryParse(entity.Status, true, out CropSeasonStatus status);
 
             return new CropSeasonViewDetailsDto
             {
@@ -43,36 +41,39 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = entity.Farmer?.User?.Name ?? string.Empty,
                 CommitmentId = entity.CommitmentId,
                 CommitmentName = entity.Commitment?.CommitmentName ?? string.Empty,
-
                 RegistrationId = registration?.RegistrationId ?? Guid.Empty,
                 RegistrationCode = registration?.RegistrationCode ?? string.Empty,
-
                 Status = status,
-
                 Details = entity.CropSeasonDetails?
                     .Where(d => !d.IsDeleted)
-                    .Select(d => new CropSeasonDetailViewDto
-                    {
-                        DetailId = d.DetailId,
-                        AreaAllocated = d.AreaAllocated ?? 0,
-                        ExpectedHarvestStart = d.ExpectedHarvestStart,
-                        ExpectedHarvestEnd = d.ExpectedHarvestEnd,
-                        EstimatedYield = d.EstimatedYield,
-                        FarmerId = entity.FarmerId,
-                        FarmerName = entity.Farmer?.User?.Name ?? "Không rõ",
-                        PlannedQuality = d.PlannedQuality ?? string.Empty,
-                        Status = Enum.TryParse<CropDetailStatus>(d.Status, out var detailStatus) ? detailStatus : CropDetailStatus.Planned,
-
-                        CommitmentDetailId = d.CommitmentDetailId,
-                        CommitmentDetailCode = d.CommitmentDetail?.CommitmentDetailCode ?? string.Empty,
-                        CoffeeTypeId = d.CommitmentDetail?.PlanDetail?.CoffeeTypeId ?? Guid.Empty,
-                        TypeName = d.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? string.Empty,
-                        ConfirmedPrice = d.CommitmentDetail?.ConfirmedPrice ?? 0,
-                        CommittedQuantity = d.CommitmentDetail?.CommittedQuantity ?? 0
-                    }).ToList() ?? new List<CropSeasonDetailViewDto>()
+                    .Select(d => d.MapToCropSeasonDetailViewDto(entity))
+                    .ToList() ?? new List<CropSeasonDetailViewDto>()
             };
         }
 
+        public static CropSeasonDetailViewDto MapToCropSeasonDetailViewDto(this CropSeasonDetail detail, CropSeason parent)
+        {
+            Enum.TryParse(detail.Status, true, out CropDetailStatus status);
+
+            return new CropSeasonDetailViewDto
+            {
+                DetailId = detail.DetailId,
+                AreaAllocated = detail.AreaAllocated ?? 0,
+                ExpectedHarvestStart = detail.ExpectedHarvestStart,
+                ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
+                EstimatedYield = detail.EstimatedYield,
+                FarmerId = parent.FarmerId,
+                FarmerName = parent.Farmer?.User?.Name ?? "Không rõ",
+                PlannedQuality = detail.PlannedQuality ?? string.Empty,
+                Status = status,
+                CommitmentDetailId = detail.CommitmentDetailId,
+                CommitmentDetailCode = detail.CommitmentDetail?.CommitmentDetailCode ?? string.Empty,
+                CoffeeTypeId = detail.CommitmentDetail?.PlanDetail?.CoffeeTypeId ?? Guid.Empty,
+                TypeName = detail.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? string.Empty,
+                ConfirmedPrice = detail.CommitmentDetail?.ConfirmedPrice ?? 0,
+                CommittedQuantity = detail.CommitmentDetail?.CommittedQuantity ?? 0
+            };
+        }
 
         public static CropSeason MapToCropSeasonCreateDto(
             this CropSeasonCreateDto dto,
@@ -83,7 +84,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             return new CropSeason
             {
-                CropSeasonId = cropSeasonId, // ✅ không tự sinh trong mapper nữa
+                CropSeasonId = cropSeasonId,
                 CropSeasonCode = code,
                 FarmerId = farmerId,
                 CommitmentId = dto.CommitmentId,
@@ -92,21 +93,19 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EndDate = dto.EndDate,
                 Note = dto.Note,
                 Status = dto.Status.ToString(),
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now,
-            }; 
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+            };
         }
-
 
         public static void MapToExistingEntity(this CropSeasonUpdateDto dto, CropSeason entity)
         {
             entity.SeasonName = dto.SeasonName;
-            entity.CommitmentId = dto.CommitmentId;
             entity.StartDate = dto.StartDate;
             entity.EndDate = dto.EndDate;
             entity.Note = dto.Note;
             entity.Status = dto.Status.ToString();
-            entity.UpdatedAt = DateTime.Now;
+            entity.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

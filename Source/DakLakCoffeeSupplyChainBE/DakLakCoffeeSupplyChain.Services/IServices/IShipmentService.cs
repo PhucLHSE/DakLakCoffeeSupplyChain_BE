@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Services.Base;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
+using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,10 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> GetById(Guid shipmentId, Guid userId);
 
-        Task<IServiceResult> DeleteShipmentById(Guid shipmentId);
+        Task<IServiceResult> Create(ShipmentCreateDto shipmentCreateDto);
 
-        Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId);
+        Task<IServiceResult> DeleteShipmentById(Guid shipmentId, Guid userId);
+
+        Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId, Guid userId);
     }
 }

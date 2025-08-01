@@ -11,7 +11,8 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums
         Pending,      
         Accepted,       
         Completed,      
-        Cancelled      
+        Cancelled,
+        Rejected
     }
 
 }

@@ -110,6 +110,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Kiểm tra quyền sở hữu hợp đồng (qua contractItem -> contract -> sellerId)
+                var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                    predicate: c =>
+                        c.ContractId == contractItem.ContractId &&
+                        !c.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (contract == null || 
+                    contract.SellerId != managerId)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Bạn không có quyền tạo mục đơn hàng cho hợp đồng này."
+                    );
+                }
+
                 // Kiểm tra Product có tồn tại không
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p =>
@@ -344,6 +361,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không xác định được dòng hợp đồng.");
                 }
 
+                // Kiểm tra quyền sở hữu
+                var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                    predicate: 
+                       c => c.ContractId == contractItem.ContractId && 
+                       !c.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (contract == null || 
+                    contract.SellerId != managerId)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Bạn không có quyền cập nhật mục đơn hàng này."
+                    );
+                }
+
                 // Kiểm tra Product có tồn tại không
                 var product = await _unitOfWork.ProductRepository.GetByIdAsync(
                     predicate: p =>
@@ -424,7 +458,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 // Cập nhật OrderItem ở repository
-                await _unitOfWork.OrderItemRepository.UpdateAsync(orderItem);
+                await _unitOfWork.OrderItemRepository
+                    .UpdateAsync(orderItem);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -433,7 +468,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại dữ liệu mới để trả về
                     var updatedItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
-                        predicate: oi => oi.OrderItemId == orderItem.OrderItemId,
+                        predicate: oi => 
+                           oi.OrderItemId == orderItem.OrderItemId &&
+                           !oi.IsDeleted,
                         include: query => query
                            .Include(oi => oi.Product),
                         asNoTracking: true
@@ -494,12 +531,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Tìm orderItem theo ID
+                var managerId = manager.ManagerId;
+
+                // Tìm orderItem và xác minh quyền sở hữu
                 var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
-                    predicate: oi => oi.OrderItemId == orderItemId,
+                    predicate: oi =>
+                       oi.OrderItemId == orderItemId &&
+                       oi.Order != null &&
+                       oi.Order.DeliveryBatch != null &&
+                       oi.Order.DeliveryBatch.Contract != null &&
+                       oi.Order.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
-                           .Include(oi => oi.ContractDeliveryItem)
-                           .Include(oi => oi.Order),
+                       .Include(oi => oi.Order)
+                          .ThenInclude(o => o.DeliveryBatch)
+                             .ThenInclude(db => db.Contract)
+                       .Include(oi => oi.ContractDeliveryItem),
                     asNoTracking: false
                 );
 
@@ -508,13 +554,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
-                        Const.WARNING_NO_DATA_MSG
+                        "Không tìm thấy OrderItem hoặc bạn không có quyền truy cập."
                     );
                 }
                 else
                 {
                     // Xóa orderItem khỏi repository
-                    await _unitOfWork.OrderItemRepository.RemoveAsync(orderItem);
+                    await _unitOfWork.OrderItemRepository
+                        .RemoveAsync(orderItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -566,11 +613,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Tìm OrderItem theo ID
+                var managerId = manager.ManagerId;
+
+                // Tìm OrderItem + xác thực quyền sở hữu qua SellerId
                 var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
                     predicate: oi => 
                        oi.OrderItemId == orderItemId && 
-                       !oi.IsDeleted,
+                       !oi.IsDeleted &&
+                       oi.Order != null &&
+                       oi.Order.DeliveryBatch != null &&
+                       oi.Order.DeliveryBatch.Contract != null &&
+                       oi.Order.DeliveryBatch.Contract.SellerId == managerId,
+                    include: query => query
+                       .Include(oi => oi.Order)
+                          .ThenInclude(o => o.DeliveryBatch)
+                             .ThenInclude(db => db.Contract),
                     asNoTracking: false
                 );
 
@@ -579,7 +636,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
-                        Const.WARNING_NO_DATA_MSG
+                        "Không tìm thấy OrderItem hoặc bạn không có quyền truy cập."
                     );
                 }
                 else
@@ -589,7 +646,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     orderItem.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm orderItem ở repository
-                    await _unitOfWork.OrderItemRepository.UpdateAsync(orderItem);
+                    await _unitOfWork.OrderItemRepository
+                        .UpdateAsync(orderItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

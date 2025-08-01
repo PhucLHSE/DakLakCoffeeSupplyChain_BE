@@ -4,6 +4,7 @@ using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +19,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class ShipmentService : IShipmentService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
 
-        public ShipmentService(IUnitOfWork unitOfWork)
+        public ShipmentService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -251,10 +256,158 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId)
+        public async Task<IServiceResult> Create(ShipmentCreateDto shipmentCreateDto)
         {
             try
             {
+                // Kiểm tra Order có tồn tại không
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                    predicate: o =>
+                        o.OrderId == shipmentCreateDto.OrderId &&
+                        !o.IsDeleted,
+                    include: query => query
+                        .Include(o => o.OrderItems)
+                           .ThenInclude(oi => oi.Product)
+                        .Include(o => o.DeliveryBatch),
+                    asNoTracking: true
+                );
+
+                if (order == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy đơn hàng hoặc đơn hàng đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra OrderItemId trong shipment có thuộc Order không
+                var validOrderItemIds = order.OrderItems.Select(i => i.OrderItemId).ToHashSet();
+
+                var invalidItems = shipmentCreateDto.ShipmentDetails
+                    .Where(d => !validOrderItemIds.Contains(d.OrderItemId))
+                    .Select(d => d.OrderItemId)
+                    .ToList();
+
+                if (invalidItems.Any())
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Một số sản phẩm không thuộc đơn hàng: {string.Join(", ", invalidItems)}"
+                    );
+                }
+
+                // Tính tổng số lượng shipment từ chi tiết (nếu không được nhập)
+                double calculatedTotalQuantity = shipmentCreateDto.ShipmentDetails
+                    .Sum(d => d.Quantity ?? 0);
+
+                if (!shipmentCreateDto.ShippedQuantity.HasValue)
+                {
+                    shipmentCreateDto.ShippedQuantity = calculatedTotalQuantity;
+                }
+
+                // Kiểm tra quá số lượng có thể giao
+                var orderItemDeliveryMap = new Dictionary<Guid, double>();
+
+                foreach (var item in shipmentCreateDto.ShipmentDetails)
+                {
+                    var orderItem = order.OrderItems
+                        .First(i => i.OrderItemId == item.OrderItemId);
+
+                    var deliveredQty = await _unitOfWork.ShipmentDetailRepository
+                        .GetDeliveredQuantityByOrderItemId(item.OrderItemId);
+
+                    var remainingQty = orderItem.Quantity - deliveredQty;
+
+                    var productName = orderItem.Product?.ProductName ?? "Không rõ tên sản phẩm";
+
+                    if ((item.Quantity ?? 0) > remainingQty)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            $"Số lượng giao vượt quá số lượng còn lại của sản phẩm: {productName} (ID: {orderItem.OrderItemId})"
+                        );
+                    }
+                }
+
+                // Sinh mã ShipmentCode
+                string shipmentCode = await _codeGenerator.GenerateShipmentCodeAsync();
+
+                // Ánh xạ dữ liệu từ DTO vào entity
+                var newShipment = shipmentCreateDto.MapToNewShipment(shipmentCode);
+
+                // Lưu vào DB
+                await _unitOfWork.ShipmentRepository.CreateAsync(newShipment);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu để trả về
+                    var createdShipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                        predicate: s => s.ShipmentId == newShipment.ShipmentId,
+                        include: query => query
+                           .Include(s => s.Order)
+                              .ThenInclude(o => o.DeliveryBatch)
+                           .Include(s => s.ShipmentDetails)
+                              .ThenInclude(sd => sd.OrderItem),
+                        asNoTracking: true
+                    );
+
+                    if (createdShipment != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = createdShipment.MapToShipmentViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu để trả về."
+                    );
+                }
+
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE,
+                    Const.FAIL_CREATE_MSG
+                );
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.Message
+                );
+            }
+        }
+
+        public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId, Guid userId)
+        {
+            try
+            {
+                // Kiểm tra BusinessManager từ userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không phải BusinessManager nên không có quyền xóa mềm shipment."
+                    );
+                }
+
+                var managerId = manager.ManagerId;
 
                 // Tìm Shipment theo ID
                 var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
@@ -263,7 +416,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         !s.IsDeleted &&
                         s.Order != null &&
                         s.Order.DeliveryBatch != null &&
-                        s.Order.DeliveryBatch.Contract != null,
+                        s.Order.DeliveryBatch.Contract != null &&
+                        s.Order.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
                         .Include(s => s.ShipmentDetails),
                     asNoTracking: false
@@ -325,10 +479,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId)
+        public async Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId, Guid userId)
         {
             try
             {
+                // Kiểm tra BusinessManager từ userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không phải BusinessManager nên không có quyền xóa mềm shipment."
+                    );
+                }
+
+                var managerId = manager.ManagerId;
+
                 // Tìm shipment theo ID
                 var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
                     predicate: s =>
@@ -336,7 +508,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         !s.IsDeleted &&
                         s.Order != null &&
                         s.Order.DeliveryBatch != null &&
-                        s.Order.DeliveryBatch.Contract != null,
+                        s.Order.DeliveryBatch.Contract != null &&
+                        s.Order.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
                         .Include(s => s.ShipmentDetails),
                     asNoTracking: false

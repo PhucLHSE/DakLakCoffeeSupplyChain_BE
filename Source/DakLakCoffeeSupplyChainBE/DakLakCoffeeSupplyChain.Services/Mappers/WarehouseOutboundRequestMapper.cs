@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -48,5 +49,31 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = entity.UpdatedAt
             };
         }
+        public static WarehouseOutboundRequest ToEntityCreate(
+    this WarehouseOutboundRequestCreateDto dto,
+    Guid generatedId,
+    string generatedCode,
+    Guid managerId
+)
+        {
+            return new WarehouseOutboundRequest
+            {
+                OutboundRequestId = generatedId,
+                OutboundRequestCode = generatedCode,
+                WarehouseId = dto.WarehouseId,
+                InventoryId = dto.InventoryId,
+                RequestedQuantity = dto.RequestedQuantity,
+                Unit = dto.Unit,
+                Purpose = dto.Purpose,
+                Reason = dto.Reason,
+                OrderItemId = dto.OrderItemId,
+                RequestedBy = managerId,
+                Status = WarehouseOutboundRequestStatus.Pending.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+        }
+
     }
 }

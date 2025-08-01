@@ -78,22 +78,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-
-        // DELETE (Soft): api/Inventories/soft/{id}
-        [HttpDelete("soft/{id}")]
+        // PATCH: api/Inventories/soft-delete/{id}
+        [HttpPatch("soft-delete/{id}")]
         [Authorize(Roles = "BusinessStaff,Admin,BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var result = await _inventoryService.SoftDeleteAsync(id);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok(result.Message);
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy bản ghi tồn kho.");
 
             if (result.Status == Const.FAIL_DELETE_CODE)
-                return NotFound(result.Message);
+                return Conflict("Xóa mềm thất bại.");
 
             return StatusCode(500, result.Message);
         }
+
 
         // DELETE (Hard): api/Inventories/hard/{id}
         [HttpDelete("hard/{id}")]

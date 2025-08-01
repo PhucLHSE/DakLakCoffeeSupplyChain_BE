@@ -44,6 +44,8 @@
 
         Task<string> GenerateOrderCodeAsync();
 
+        Task<string> GenerateShipmentCodeAsync();
+
         Task<string> GenerateOutboundRequestCodeAsync();
 
         Task<string> GenerateProcessingSystemBatchCodeAsync(int year);
@@ -53,6 +55,7 @@
         Task<string> GenerateProcessingWasteCodeAsync();
 
         Task<string> GenerateFarmingCommitmentCodeAsync();
+
         Task<string> GenerateFarmingCommitmenstDetailCodeAsync();
         Task<string> GenerateProcessingWasteDisposalCodeAsync();
     }

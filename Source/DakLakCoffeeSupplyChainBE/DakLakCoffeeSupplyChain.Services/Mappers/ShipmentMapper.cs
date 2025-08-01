@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ShipmentEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -83,6 +84,43 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     })
                     .ToList() ?? new()
             };
+        }
+
+        // Mapper ShipmentCreateDto -> Shipment
+        public static Shipment MapToNewShipment(this ShipmentCreateDto dto, string shipmentCode)
+        {
+            var shipmentId = Guid.NewGuid();
+
+            var shipment = new Shipment
+            {
+                ShipmentId = shipmentId,
+                ShipmentCode = shipmentCode,
+                OrderId = dto.OrderId,
+                DeliveryStaffId = dto.DeliveryStaffId,
+                ShippedQuantity = dto.ShippedQuantity,
+                ShippedAt = dto.ShippedAt,
+                DeliveryStatus = dto.DeliveryStatus.ToString(), // enum to string
+                ReceivedAt = dto.ReceivedAt,
+                CreatedBy = dto.CreatedBy,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false,
+
+                ShipmentDetails = dto.ShipmentDetails.Select(detail => new ShipmentDetail
+                {
+                    ShipmentDetailId = Guid.NewGuid(),
+                    ShipmentId = shipmentId,
+                    OrderItemId = detail.OrderItemId,
+                    Quantity = detail.Quantity ?? 0,
+                    Unit = detail.Unit.ToString(), // enum to string
+                    Note = detail.Note,
+                    CreatedAt = DateHelper.NowVietnamTime(),
+                    UpdatedAt = DateHelper.NowVietnamTime(),
+                    IsDeleted = false
+                }).ToList()
+            };
+
+            return shipment;
         }
     }
 }
