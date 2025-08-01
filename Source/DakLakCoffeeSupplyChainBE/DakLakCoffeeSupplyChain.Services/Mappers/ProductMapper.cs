@@ -20,6 +20,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                    ? parsedStatus
                    : ProductStatus.Pending;
 
+            // Parse Unit string to enum
+            ProductUnit unit = Enum.TryParse<ProductUnit>(product.Unit, ignoreCase: true, out var parsedUnit)
+                ? parsedUnit
+                : ProductUnit.Kg;
+
             return new ProductViewAllDto
             {
                 ProductId = product.ProductId,
@@ -27,7 +32,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProductName = product.ProductName,
                 UnitPrice = product.UnitPrice,
                 QuantityAvailable = product.QuantityAvailable,
-                Unit = product.Unit,
+                Unit = unit,
                 OriginRegion = product.OriginRegion,
                 EvaluatedQuality = product.EvaluatedQuality,
                 EvaluationScore = product.EvaluationScore,
@@ -42,9 +47,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         // Mapper ProductViewDetailsDto
         public static ProductViewDetailsDto MapToProductViewDetailsDto(this Product product)
         {
+            // Parse Status string to enum
             ProductStatus status = Enum.TryParse<ProductStatus>(product.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ProductStatus.Pending;
+
+            // Parse Unit string to enum
+            ProductUnit unit = Enum.TryParse<ProductUnit>(product.Unit, ignoreCase: true, out var parsedUnit)
+                ? parsedUnit
+                : ProductUnit.Kg;
 
             return new ProductViewDetailsDto
             {
@@ -54,7 +65,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Description = product.Description,
                 UnitPrice = product.UnitPrice,
                 QuantityAvailable = product.QuantityAvailable,
-                Unit = product.Unit,
+                Unit = unit,
                 OriginRegion = product.OriginRegion,
                 OriginFarmLocation = product.OriginFarmLocation,
                 GeographicalIndicationCode = product.GeographicalIndicationCode,

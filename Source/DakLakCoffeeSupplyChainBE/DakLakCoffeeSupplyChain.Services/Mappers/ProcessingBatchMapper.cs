@@ -4,6 +4,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -49,11 +50,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchCode = batch.BatchCode,
                 SystemBatchCode = batch.SystemBatchCode,
                 CropSeasonId = batch.CropSeasonId,
-                CropSeasonName = batch.CropSeason?.SeasonName,
+                CropSeasonName = batch.CropSeason?.SeasonName ?? "Unknown",
                 FarmerId = batch.FarmerId,
-                FarmerName = batch.Farmer?.User?.Name,
+                FarmerName = batch.Farmer?.User?.Name ?? "Unknown",
                 MethodId = batch.MethodId,
-                MethodName = batch.Method?.Name,
+                MethodName = batch.Method?.Name ?? "Unknown",
                 InputQuantity = batch.InputQuantity,
                 InputUnit = batch.InputUnit,
                 Status = Enum.TryParse<ProcessingStatus>(batch.Status, out var statusEnum)
@@ -63,15 +64,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = batch.UpdatedAt,
                 Products = batch.Products?
                     .Where(p => !p.IsDeleted)
-                    .Select(p => new ProductViewDetailsDto
+                    .Select(p =>
                     {
-                        ProductId = p.ProductId,
-                        ProductCode = p.ProductCode,
-                        ProductName = p.ProductName ?? "",
-                        CoffeeTypeName = p.CoffeeType?.TypeName ?? "",
-                        Unit = p.Unit ?? "",
-                        QuantityAvailable = p.QuantityAvailable,
-                        UnitPrice = p.UnitPrice
+                        var unitEnum = Enum.TryParse<ProductUnit>(p.Unit, ignoreCase: true, out var parsedUnit)
+                            ? parsedUnit
+                            : ProductUnit.Kg;
+
+                        return new ProductViewDetailsDto
+                        {
+                            ProductId = p.ProductId,
+                            ProductCode = p.ProductCode,
+                            ProductName = p.ProductName ?? "",
+                            CoffeeTypeName = p.CoffeeType?.TypeName ?? "",
+                            Unit = unitEnum, // enum thay vì string
+                            QuantityAvailable = p.QuantityAvailable,
+                            UnitPrice = p.UnitPrice
+                        };
                     }).ToList() ?? new(),
                 Progresses = batch.ProcessingBatchProgresses?
                     .Where(p => !p.IsDeleted)
@@ -104,7 +112,5 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     }).ToList() ?? new()
             };
         }
-
-
     }
 }

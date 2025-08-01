@@ -22,7 +22,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
 
         public double? QuantityAvailable { get; set; }
 
-        public string Unit { get; set; } = string.Empty;
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ProductUnit Unit { get; set; }
 
         public string OriginRegion { get; set; } = string.Empty;
 
