@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -75,6 +76,38 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // DELETE api/<ShipmentsController>/{shipmentId}
+        [HttpDelete("{shipmentId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> DeleteShipmentByIdAsync(Guid shipmentId)
+        {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _shipmentService
+                .DeleteShipmentById(shipmentId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn giao hàng cần xóa.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
         }
 
         // PATCH: api/<ShipmentsController>/soft-delete/{shipmentId}
