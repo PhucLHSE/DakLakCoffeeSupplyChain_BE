@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ShipmentEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -62,15 +63,23 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedByName = shipment.CreatedByNavigation?.Name ?? string.Empty,
                 ShipmentDetails = shipment.ShipmentDetails?
                     .Where(detail => !detail.IsDeleted)
-                    .Select(detail => new ShipmentDetailViewDto
+                    .Select(detail =>
                     {
-                        ShipmentDetailId = detail.ShipmentDetailId,
-                        OrderItemId = detail.OrderItemId,
-                        ProductName = detail.OrderItem?.Product?.ProductName ?? string.Empty,
-                        Quantity = detail.Quantity,
-                        Unit = detail.Unit ?? string.Empty,
-                        Note = detail.Note ?? string.Empty,
-                        CreatedAt = detail.CreatedAt
+                        // Parse Unit string to enum
+                        ProductUnit unit = Enum.TryParse<ProductUnit>(detail.Unit, ignoreCase: true, out var parsedUnit)
+                            ? parsedUnit
+                            : ProductUnit.Kg;
+
+                        return new ShipmentDetailViewDto
+                        {
+                            ShipmentDetailId = detail.ShipmentDetailId,
+                            OrderItemId = detail.OrderItemId,
+                            ProductName = detail.OrderItem?.Product?.ProductName ?? string.Empty,
+                            Quantity = detail.Quantity,
+                            Unit = unit,
+                            Note = detail.Note ?? string.Empty,
+                            CreatedAt = detail.CreatedAt
+                        };
                     })
                     .ToList() ?? new()
             };
