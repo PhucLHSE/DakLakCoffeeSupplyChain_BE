@@ -15,6 +15,7 @@
         Open = 0,               // Trạng thái mở, cho phép đăng ký, trạng thái này chỉ được chuyển sang khi đang ở Draft
         Closed = 1,             // Trạng thái đóng, không cho phép đăng ký nữa, trạng thái này chỉ được chuyển sang khi đang ở Open
         Cancelled = 2,          // Trạng thái hủy bỏ, không còn hiệu lực, trạng thái này chỉ được chuyển sang khi đang ở Open và plan đó chưa có cam kết nào
+        Unknown = 3,  // Trạng thái không xác định, mặc định khi hệ thống bị lỗi
         //Deleted = 3,            // Trạng thái xóa, không còn hiển thị, trạng thái này chỉ được chuyển sang khi đang ở Draft
     }
 }

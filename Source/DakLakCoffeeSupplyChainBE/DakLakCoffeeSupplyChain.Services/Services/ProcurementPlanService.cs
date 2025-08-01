@@ -22,12 +22,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
-                predicate: p => p.Status == "open",
+                predicate: p => p.Status == "Open",
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
-                Include(p => p.FarmingCommitments).
-                    ThenInclude(p => p.Farmer).
-                        ThenInclude(p => p.User),
+                Include(p => p.ProcurementPlansDetails).
+                    ThenInclude(d => d.CoffeeType).
+                Include(p => p.ProcurementPlansDetails).
+                    ThenInclude(p => p.ProcessMethod),
                 orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);
 
@@ -42,7 +43,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var procurementPlansDtos = procurementPlans
-                    .Select(procurementPlans => procurementPlans.MapToProcurementPlanViewAllDto())
+                    .Select(procurementPlans => procurementPlans.MapToProcurementPlanViewAllAvailableDto())
                     .ToList();
 
                 return new ServiceResult(
@@ -106,9 +107,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
                 Include(p => p.ProcurementPlansDetails).    //Order ProcurementPlansDetails bên mapper
-                ThenInclude(d => d.CoffeeType).
+                    ThenInclude(d => d.CoffeeType).
                 Include(p => p.ProcurementPlansDetails).
-                ThenInclude(p => p.ProcessMethod), 
+                    ThenInclude(p => p.ProcessMethod), 
                 asNoTracking: true
                 );
 
