@@ -99,6 +99,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+        public async Task<IServiceResult> GetAllAvailable(Guid planId)
+        {
+            // Lấy những đơn đăng ký thuộc kế hoạch đang chọn
+            var cultivationRegistrations = await _unitOfWork.CultivationRegistrationRepository.GetAllAsync(
+                predicate: c => !c.IsDeleted && c.PlanId == planId,
+                include: c => c.
+                    Include(c => c.Farmer).
+                        ThenInclude(c => c.User).
+                    Include(c => c.CultivationRegistrationsDetails).
+                        ThenInclude(c => c.PlanDetail).
+                            ThenInclude(c => c.CoffeeType),
+                orderBy: c => c.OrderBy(c => c.RegistrationCode),
+                asNoTracking: true);
+
+            if (cultivationRegistrations == null || cultivationRegistrations.Count == 0)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new List<CultivationRegistrationViewAllAvailableDto>()
+                );
+            }
+            else
+            {
+                var cultivationRegistrationViewAllDto = cultivationRegistrations
+                    .Select(c => c.MapToCultivationRegistrationViewAllAvailableDto())
+                    .ToList();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    cultivationRegistrationViewAllDto
+                );
+            }
+        }
 
         public async Task<IServiceResult> GetById(Guid registrationId)
         {
@@ -106,8 +141,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: c => c.RegistrationId == registrationId,
                 include: c => c.
                 Include(c => c.CultivationRegistrationsDetails).
+                    ThenInclude(c => c.PlanDetail).
+                        ThenInclude( c => c.CoffeeType).
                 Include(c => c.Farmer).
-                ThenInclude(c => c.User),
+                    ThenInclude(c => c.User),
                 asNoTracking: true
                 );
 
@@ -280,6 +317,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         predicate: c => c.RegistrationId == newCultivationRegistration.RegistrationId,
                         include: c => c.
                         Include(c => c.CultivationRegistrationsDetails).
+                            ThenInclude(c => c.PlanDetail).
+                                ThenInclude(c => c.CoffeeType).
                         Include(c => c.Farmer).
                         ThenInclude(c => c.User),
                         asNoTracking: true

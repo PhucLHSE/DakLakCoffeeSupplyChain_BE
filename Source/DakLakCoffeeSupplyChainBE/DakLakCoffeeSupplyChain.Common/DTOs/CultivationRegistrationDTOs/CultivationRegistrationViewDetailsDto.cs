@@ -9,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         public Guid RegistrationId { get; set; }
 
         public Guid PlanDetailId { get; set; }
+        public string CoffeeType { get; set; } = string.Empty;
 
         public double? EstimatedYield { get; set; }
         public double? WantedPrice { get; set; }
