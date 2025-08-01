@@ -214,18 +214,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
-            // ✅ Xoá toàn bộ tiến độ và vùng trồng
+            if (cropSeason.Status != CropSeasonStatus.Cancelled.ToString())
+                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
+
+            // ✅ Xoá toàn bộ CropSeasonDetail liên quan (hard delete)
             if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
             {
                 foreach (var detail in cropSeason.CropSeasonDetails)
                 {
-                    var progresses = await _unitOfWork.CropProgressRepository.FindAsync(
-                        p => p.CropSeasonDetailId == detail.DetailId
-                    );
-
-                    foreach (var progress in progresses)
-                        await _unitOfWork.CropProgressRepository.RemoveAsync(progress);
-
                     await _unitOfWork.CropSeasonDetailRepository.RemoveAsync(detail);
                 }
             }
@@ -234,8 +230,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
-                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
-                : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mùa vụ và toàn bộ vùng trồng liên quan thành công.")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mùa vụ thất bại.");
         }
 
 
@@ -248,28 +244,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
-            // ✅ Xoá mềm vùng trồng và tiến độ liên quan
+            // ✅ Đánh dấu IsDeleted cho vùng trồng
             if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
             {
                 foreach (var detail in cropSeason.CropSeasonDetails)
                 {
-                    var progresses = await _unitOfWork.CropProgressRepository.FindAsync(
-                        p => p.CropSeasonDetailId == detail.DetailId && !p.IsDeleted
-                    );
-
-                    foreach (var progress in progresses)
-                    {
-                        progress.IsDeleted = true;
-                        progress.UpdatedAt = DateHelper.NowVietnamTime();
-                        await _unitOfWork.CropProgressRepository.UpdateAsync(progress);
-                    }
-
                     detail.IsDeleted = true;
                     detail.UpdatedAt = DateHelper.NowVietnamTime();
                     await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
                 }
             }
 
+            // ✅ Đánh dấu IsDeleted cho mùa vụ
             cropSeason.IsDeleted = true;
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
             await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
@@ -277,9 +263,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
-                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ và các vùng trồng, tiến độ thành công.")
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ và toàn bộ vùng trồng thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
+
 
     }
 }
