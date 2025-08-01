@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessManagerDTOs.ProcurementPlanViews;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using System.Text.Json.Serialization;
 
@@ -21,5 +22,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
         public ICollection<FarmingCommitmentViewAllDto>? Commitments { get; set; } = [];
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public ICollection<ProcurementPlanDetailsDto> ProcurementPlansDetails { get; set; } = [];
     }
 }

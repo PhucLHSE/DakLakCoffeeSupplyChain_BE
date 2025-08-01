@@ -27,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Title = plan.Title ?? string.Empty,
                 Description = plan.Description ?? string.Empty,
                 TotalQuantity = plan.TotalQuantity,
-                CreatedBy = plan.CreatedByNavigation == null ? null : new BusinessManagerSummaryDto
+                CreatedBy = new BusinessManagerSummaryDto
                 {
                     ManagerId = plan.CreatedByNavigation.ManagerId,
                     UserId = plan.CreatedByNavigation.UserId,
@@ -58,6 +58,63 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = plan.UpdatedAt
             };
         }
+
+        // Map to available dto api
+        public static ProcurementPlanViewAllDto MapToProcurementPlanViewAllAvailableDto(this ProcurementPlan plan)
+        {
+            return new ProcurementPlanViewAllDto
+            {
+                PlanId = plan.PlanId,
+                PlanCode = plan.PlanCode ?? string.Empty,
+                Title = plan.Title ?? string.Empty,
+                Description = plan.Description ?? string.Empty,
+                TotalQuantity = plan.TotalQuantity,
+                CreatedBy = new BusinessManagerSummaryDto
+                {
+                    ManagerId = plan.CreatedByNavigation.ManagerId,
+                    UserId = plan.CreatedByNavigation.UserId,
+                    ManagerCode = plan.CreatedByNavigation.ManagerCode,
+                    CompanyName = plan.CreatedByNavigation.CompanyName,
+                    CompanyAddress = plan.CreatedByNavigation.CompanyAddress,
+                    Website = plan.CreatedByNavigation.Website,
+                    ContactEmail = plan.CreatedByNavigation.ContactEmail
+                },
+                StartDate = plan.StartDate,
+                EndDate = plan.EndDate,
+                Status = EnumHelper.ParseEnumFromString(plan.Status, ProcurementPlanStatus.Unknown),
+                ProgressPercentage = plan.ProgressPercentage,
+                CreatedAt = plan.CreatedAt,
+                UpdatedAt = plan.UpdatedAt,
+                ProcurementPlansDetails = plan.ProcurementPlansDetails.Select(p => new ProcurementPlanDetailsDto
+                {
+                    PlanDetailsId = p.PlanDetailsId,
+                    PlanDetailCode = p.PlanDetailCode,
+                    PlanId = p.PlanId,
+                    CoffeeType = new CoffeeTypePlanDetailsViewDto
+                    {
+                        CoffeeTypeId = p.CoffeeTypeId,
+                        TypeCode = p.CoffeeType.TypeCode,
+                        TypeName = p.CoffeeType.TypeName,
+                        BotanicalName = p.CoffeeType.BotanicalName,
+                        Description = p.CoffeeType.Description,
+                        TypicalRegion = p.CoffeeType.TypicalRegion,
+                        SpecialtyLevel = p.CoffeeType.SpecialtyLevel
+                    },
+                    ProcessingMethodName = p.ProcessMethod.Name,
+                    TargetQuantity = p.TargetQuantity,
+                    TargetRegion = p.TargetRegion,
+                    MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
+                    MinPriceRange = p.MinPriceRange,
+                    MaxPriceRange = p.MaxPriceRange,
+                    Note = p.Note,
+                    ProgressPercentage = p.ProgressPercentage,
+                    Status = EnumHelper.ParseEnumFromString(p.Status, ProcurementPlanDetailsStatus.Disable),
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt
+                }).ToList() ?? []
+            };
+        }
+
         // Mapper ProcurementPlanViewDetailsDto
         public static ProcurementPlanViewDetailsSumaryDto MapToProcurementPlanViewDetailsDto(this ProcurementPlan plan)
         {
