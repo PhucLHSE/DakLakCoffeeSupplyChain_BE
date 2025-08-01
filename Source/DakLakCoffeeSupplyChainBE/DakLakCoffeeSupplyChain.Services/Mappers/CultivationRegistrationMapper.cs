@@ -22,6 +22,36 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 TotalWantedPrice = cultivation.TotalWantedPrice,
             };
         }
+        public static CultivationRegistrationViewAllAvailableDto MapToCultivationRegistrationViewAllAvailableDto(this CultivationRegistration cultivation)
+        {
+            return new CultivationRegistrationViewAllAvailableDto
+            {
+                RegistrationId = cultivation.RegistrationId,
+                RegistrationCode = cultivation.RegistrationCode,
+                PlanId = cultivation.PlanId,
+                FarmerId = cultivation.FarmerId,
+                FarmerName = cultivation.Farmer.User.Name,
+                FarmerAvatarURL = cultivation.Farmer.User.ProfilePictureUrl,
+                FarmerLicencesURL = cultivation.Farmer.CertificationUrl,
+                FarmerLocation = cultivation.Farmer.FarmLocation,
+                RegisteredArea = cultivation.RegisteredArea,
+                RegisteredAt = cultivation.RegisteredAt,
+                TotalWantedPrice = cultivation.TotalWantedPrice,
+                CultivationRegistrationViewDetailsDtos = [.. cultivation.CultivationRegistrationsDetails.Select(detail => new CultivationRegistrationViewDetailsDto
+                {
+                    CultivationRegistrationDetailId = detail.CultivationRegistrationDetailId,
+                    RegistrationId = detail.RegistrationId,
+                    PlanDetailId = detail.PlanDetailId,
+                    CoffeeType = detail.PlanDetail.CoffeeType.TypeName,
+                    EstimatedYield = detail.EstimatedYield,
+                    WantedPrice = detail.WantedPrice,
+                    ExpectedHarvestStart = detail.ExpectedHarvestStart,
+                    ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
+                    Status = EnumHelper.ParseEnumFromString(detail.Status, CultivationRegistrationStatus.Unknown),
+                    Note = detail.Note
+                })]
+            };
+        }
 
         // Mapper CultivationRegistrationViewSumaryDto
         public static CultivationRegistrationViewSumaryDto MapToCultivationRegistrationViewSumaryDto(this CultivationRegistration entity)
@@ -45,6 +75,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     CultivationRegistrationDetailId = c.CultivationRegistrationDetailId,
                     RegistrationId = c.RegistrationId,
                     PlanDetailId = c.PlanDetailId,
+                    CoffeeType = c.PlanDetail.CoffeeType.TypeName,
                     EstimatedYield = c.EstimatedYield,
                     WantedPrice = c.WantedPrice,
                     ExpectedHarvestStart = c.ExpectedHarvestStart,

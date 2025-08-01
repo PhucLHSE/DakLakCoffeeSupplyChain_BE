@@ -138,9 +138,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                 predicate: p => p.PlanId == planId,
                 include: p => p.
-                Include(p => p.CreatedByNavigation).
-                Include(p => p.ProcurementPlansDetails.Where(p => p.Status != "Disable")).    //Order ProcurementPlansDetails bên mapper
-                ThenInclude(d => d.CoffeeType),
+                    Include(p => p.CreatedByNavigation).
+                    Include(p => p.ProcurementPlansDetails.Where(p => p.Status != "Disable")).    //Order ProcurementPlansDetails bên mapper
+                        ThenInclude(d => d.CoffeeType).
+                    Include(p => p.ProcurementPlansDetails.Where(p => p.Status != "Disable")).
+                        ThenInclude(d => d.ProcessMethod),
                 asNoTracking: true
                 );
 

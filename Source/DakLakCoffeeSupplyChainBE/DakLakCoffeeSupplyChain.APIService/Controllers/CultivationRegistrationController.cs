@@ -31,6 +31,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
 
+        // GET: api/<CultivationRegistration/Available>
+        [HttpGet("Available/{planId}")]
+        [EnableQuery]
+        public async Task<IActionResult> GetAllCultivationRegistrationnAvailableAsync(Guid planId)
+        {
+            var result = await _service.GetAllAvailable(planId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả đúng dữ liệu
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 + message
+
+            return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
         // GET api/<CultivationRegistration>/{registrationId}
         [HttpGet("{registrationId}")]
         [EnableQuery]

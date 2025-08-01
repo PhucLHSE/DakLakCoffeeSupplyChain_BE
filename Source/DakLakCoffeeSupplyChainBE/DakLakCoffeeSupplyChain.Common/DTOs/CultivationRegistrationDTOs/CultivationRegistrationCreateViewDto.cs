@@ -8,7 +8,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         public Guid PlanId { get; set; }
         [Required(ErrorMessage = "Khu vực đăng ký không được để trống")]
         public double? RegisteredArea { get; set; }
-        [Required(ErrorMessage = "Mức giá mong muốn không được để trống.")]
+        //[Required(ErrorMessage = "Mức giá mong muốn không được để trống.")]
 
         //public CultivationRegistrationStatus Status { get; set; } = CultivationRegistrationStatus.Pending;
 
