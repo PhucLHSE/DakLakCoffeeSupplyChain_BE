@@ -1405,6 +1405,14 @@ VALUES (
    '1985-05-10', N'Hồ Chí Minh', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 2, 1, 1
 );
 
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0008', 'manager2@gmail.com', '0901000001', N'Nguyễn Thị Thanh Trúc', 'Female', 
+   '1982-11-20', N'Lâm Đồng', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 2, 1, 1
+);
+
 -- Farmer
 INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
@@ -1414,6 +1422,15 @@ VALUES (
    '1988-03-15', N'Buôn Ma Thuột', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1
 );
 
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES 
+('USR-2025-0009', 'farmer2@gmail.com', '0901503702', N'Hồ Văn Tiến', 'Male', '1980-02-10', N'Đắk Song', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1),
+('USR-2025-0010', 'farmer3@gmail.com', '0902893043', N'Y Moal Êban', 'Male', '1975-12-01', N'Buôn Đôn', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1),
+('USR-2025-0011', 'farmer4@gmail.com', '0905354882', N'H Nguyễn H Lan', 'Female', '1990-07-18', N'Krông Pắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1),
+('USR-2025-0012', 'farmer5@gmail.com', '0903765951', N'Y Thảo Niê', 'Female', '1986-06-30', N'Cư M’gar', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 4, 1, 1);
+
 -- Expert
 INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
@@ -1421,6 +1438,14 @@ INSERT INTO UserAccounts (
 VALUES (
    'USR-2025-0004', 'expert@gmail.com', '0975616076', N'Lê Hoàng Thiên Vũ', 'Male', 
    '1978-08-22', N'Hà Nội', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 5, 1, 1
+);
+
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0013', 'expert2@gmail.com', '0906478253', N'Phan Minh Thông', 'Male', 
+   '1972-03-03', N'Cần Thơ', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 5, 1, 1
 );
 
 -- Business Staff
@@ -1432,6 +1457,14 @@ VALUES (
    '1999-09-12', N'Đắk Lắk', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1
 );
 
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES 
+('USR-2025-0014', 'staff3@gmail.com', '0901046707', N'Nguyễn Khắc Minh', 'Male', '1992-01-01', N'Đà Nẵng', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1),
+('USR-2025-0015', 'staff4@gmail.com', '0901874688', N'Trần Nhật Linh', 'Female', '1995-05-05', N'Huế', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1),
+('USR-2025-0016', 'staff5@gmail.com', '0902546569', N'Lý Văn Hùng', 'Male', '1998-08-08', N'Quảng Ngãi', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 3, 1, 1);
+
 -- Delivery Staff
 INSERT INTO UserAccounts (
    UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
@@ -1440,6 +1473,14 @@ VALUES (
    'USR-2025-0006', 'deliverystaff@gmail.com', '0901234568', N'Trần Văn Giang', 'Male', 
    '1994-06-19', N'Gia Lai', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 6, 1, 1
 );
+
+INSERT INTO UserAccounts (
+   UserCode, Email, PhoneNumber, Name, Gender, DateOfBirth, Address, PasswordHash, RoleID, isVerified, emailVerified
+)
+VALUES (
+   'USR-2025-0017', 'deliverystaff2@gmail.com', '0901010010', N'Ngô Văn Quý', 'Male', 
+   '1991-04-14', N'Kon Tum', '$2a$11$mHeU1UxLZyZrwtWtikdAJeM3BteW4QrgBJOd8rWMz2sR9ZZyWayRS', 6, 1, 1
+)
 
 GO
 
@@ -1559,6 +1600,19 @@ VALUES (
    N'15 Lê Duẩn, BMT, Đắk Lắk', '6001234567', 'https://daklakcoffee.vn', 'lehoangphuc14122003@gmail.com'
 );
 
+DECLARE @BM2UserID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'manager2@gmail.com'
+);
+
+INSERT INTO BusinessManagers (
+   UserID, ManagerCode, CompanyName, Position, Department, 
+   CompanyAddress, TaxID, Website, ContactEmail
+)
+VALUES (
+   @BM2UserID, 'BM-2025-0002', N'Công ty TNHH Cà Phê Trúc Phúc', N'Tổng Giám đốc', N'Phòng Kinh doanh',
+   N'56 Lê Thánh Tông, Bảo Lộc, Lâm Đồng', '5800987654', 'https://trucphuccoffee.vn', 'manager2@gmail.com'
+);
+
 GO
 
 -- Insert vào bảng Farmers
@@ -1569,6 +1623,28 @@ DECLARE @FarmerUserID UNIQUEIDENTIFIER = (
 
 INSERT INTO Farmers (UserID, FarmerCode, FarmLocation, FarmSize, CertificationStatus)
 VALUES (@FarmerUserID, 'FRM-2025-0001', N'Xã Ea Tu, TP. Buôn Ma Thuột', 2.5, N'VietGAP');
+
+DECLARE @Farmer2ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'farmer2@gmail.com'
+);
+
+DECLARE @Farmer3ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'farmer3@gmail.com'
+);
+
+DECLARE @Farmer4ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'farmer4@gmail.com'
+);
+
+DECLARE @Farmer5ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'farmer5@gmail.com'
+);
+
+INSERT INTO Farmers (UserID, FarmerCode, FarmLocation, FarmSize, CertificationStatus) VALUES
+(@Farmer2ID, 'FRM-2025-0002', N'Đắk Song, Đắk Nông', 3.2, N'VietGAP'),
+(@Farmer3ID, 'FRM-2025-0003', N'Buôn Đôn, Đắk Lắk', 4.1, N'GlobalGAP'),
+(@Farmer4ID, 'FRM-2025-0004', N'Krông Pắk, Đắk Lắk', 2.8, N'OCOP 3*'),
+(@Farmer5ID, 'FRM-2025-0005', N'Cư M’gar, Đắk Lắk', 3.5, N'VietGAP');
 
 GO
 
@@ -1585,6 +1661,20 @@ INSERT INTO AgriculturalExperts (
 VALUES (
    @ExpertUserID, 'EXP-2025-0001', N'Bệnh cây cà phê', N'Tiến sĩ Nông nghiệp', 12, 
    N'Viện Khoa học Kỹ thuật Nông Lâm nghiệp Tây Nguyên', N'Chuyên gia hàng đầu về sâu bệnh và canh tác bền vững.', 4.8
+);
+
+DECLARE @Expert2ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'expert2@gmail.com'
+);
+
+INSERT INTO AgriculturalExperts (
+   UserID, ExpertCode, ExpertiseArea, Qualifications, 
+   YearsOfExperience, AffiliatedOrganization, Bio, Rating
+)
+VALUES (
+   @Expert2ID, 'EXP-2025-0002', N'Phân tích đất – dinh dưỡng cây trồng', N'Thạc sĩ Nông học', 10,
+   N'Trung tâm Kiểm nghiệm & Ứng dụng Nông nghiệp miền Nam',
+   N'Chuyên gia giàu kinh nghiệm về dinh dưỡng cây cà phê và quy trình canh tác sinh thái.', 4.6
 );
 
 GO
@@ -2795,6 +2885,42 @@ VALUES (
    Phường An Bình, TX. Buôn Hồ', 35000, GETDATE(), GETDATE(), 0
 );
 
+-- Lấy ManagerID từ BusinessManager thứ 2
+DECLARE @BM2_ManagerID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'manager2@gmail.com')
+);
+
+-- Thêm Kho 3: Kho Ea Kar
+INSERT INTO Warehouses (
+   WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+   'WH-2025-DL003',
+   @BM2_ManagerID,
+   N'Kho Ea Kar',
+   N'Thị trấn Ea Kar, Huyện Ea Kar, Đắk Lắk',
+   40000,
+   GETDATE(),
+   GETDATE(),
+   0
+);
+
+-- Thêm Kho 4: Kho Krông Năng
+INSERT INTO Warehouses (
+   WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES (
+   'WH-2025-DL004',
+   @BM2_ManagerID,
+   N'Kho Krông Năng',
+   N'Thị trấn Krông Năng, Huyện Krông Năng, Đắk Lắk',
+   30000,
+   GETDATE(),
+   GETDATE(),
+   0
+);
+
 GO
 
 -- Insert vào bảng BusinessStaffs
@@ -2867,6 +2993,40 @@ VALUES (
   GETDATE(),
   0
 );
+
+DECLARE @BM2ID UNIQUEIDENTIFIER = (
+  SELECT ManagerID FROM BusinessManagers WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'manager2@gmail.com')
+);
+
+DECLARE @Staff3ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'staff3@gmail.com'
+);
+
+DECLARE @Staff4ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'staff4@gmail.com'
+);
+
+DECLARE @Staff5ID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'staff5@gmail.com'
+);
+
+-- Giả định bạn có sẵn 2 kho để liên kết:
+DECLARE @Warehouse3ID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-LD003'
+);
+
+DECLARE @Warehouse4ID UNIQUEIDENTIFIER = (
+  SELECT WarehouseID FROM Warehouses WHERE WarehouseCode = 'WH-2025-LD004'
+);
+
+INSERT INTO BusinessStaffs (
+  StaffCode, UserID, SupervisorID, Position, Department, AssignedWarehouseID,
+  IsActive, CreatedAt, UpdatedAt, IsDeleted
+)
+VALUES 
+('STAFF-2025-0009', @Staff3ID, @BM2ID, N'Thủ kho Lâm Hà', N'Kho Lâm Đồng', @Warehouse3ID, 1, GETDATE(), GETDATE(), 0),
+('STAFF-2025-0010', @Staff4ID, @BM2ID, N'Trưởng nhóm đóng gói', N'Phòng Hậu cần', NULL, 1, GETDATE(), GETDATE(), 0),
+('STAFF-2025-0011', @Staff5ID, @BM2ID, N'Kỹ thuật viên phân loại', N'Phòng Sơ chế', @Warehouse4ID, 1, GETDATE(), GETDATE(), 0);
 
 GO
 
