@@ -168,6 +168,62 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteShipmentDetailById(Guid shipmentDetailId)
+        {
+            try
+            {
+                // Tìm ShipmentDetail theo ID
+                var shipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
+                    predicate: sd => sd.ShipmentDetailId == shipmentDetailId,
+                    include: query => query
+                           .Include(sd => sd.Shipment)
+                           .Include(sd => sd.OrderItem),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (shipmentDetail == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa shipmentDetail khỏi repository
+                    await _unitOfWork.ShipmentDetailRepository.RemoveAsync(shipmentDetail);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteShipmentDetailById(Guid shipmentDetailId)
         {
             try
