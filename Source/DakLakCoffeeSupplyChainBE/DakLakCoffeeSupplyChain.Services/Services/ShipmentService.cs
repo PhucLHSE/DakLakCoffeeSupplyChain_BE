@@ -251,6 +251,80 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId)
+        {
+            try
+            {
+
+                // Tìm Shipment theo ID
+                var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                    predicate: s =>
+                        s.ShipmentId == shipmentId &&
+                        !s.IsDeleted &&
+                        s.Order != null &&
+                        s.Order.DeliveryBatch != null &&
+                        s.Order.DeliveryBatch.Contract != null,
+                    include: query => query
+                        .Include(s => s.ShipmentDetails),
+                    asNoTracking: false
+                );
+
+                // Kiểm tra nếu không tồn tại
+                if (shipment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa từng ShipmentDetails trước (nếu có)
+                    if (shipment.ShipmentDetails != null &&
+                        shipment.ShipmentDetails.Any())
+                    {
+                        foreach (var item in shipment.ShipmentDetails)
+                        {
+                            // Xóa ShipmentDetails khỏi repository
+                            await _unitOfWork.ShipmentDetailRepository
+                                .RemoveAsync(item);
+                        }
+                    }
+
+                    // Xóa Shipment khỏi repository
+                    await _unitOfWork.ShipmentRepository
+                        .RemoveAsync(shipment);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId)
         {
             try
