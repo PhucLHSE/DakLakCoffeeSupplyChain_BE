@@ -262,7 +262,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<bool> HasPermissionToDeleteAsync(Guid disposalId, Guid userId)
         {
             var disposal = await _unitOfWork.ProcessingWasteDisposalRepository.GetByIdAsync(
-                predicate: d => d.DisposalId == disposalId && !d.IsDeleted,
+                predicate: d => d.DisposalId == disposalId,
                 asNoTracking: true
             );
             if (disposal == null) return false;
@@ -280,7 +280,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return false;
 
             if (roleName == "Farmer")
-                return disposal.HandledBy == userId;
+            {
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    f => f.UserId == userId && !f.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (farmer == null) return false;
+
+                return disposal.HandledBy == farmer.FarmerId;
+            }
 
             if (roleName == "BusinessManager")
             {
@@ -327,8 +336,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 var disposal = await _unitOfWork.ProcessingWasteDisposalRepository.GetByIdAsync(
-                    predicate: d => d.DisposalId == disposalId && !d.IsDeleted
-                );
+    predicate: d => d.DisposalId == disposalId
+);
 
                 if (disposal == null)
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin xử lý chất thải.");
