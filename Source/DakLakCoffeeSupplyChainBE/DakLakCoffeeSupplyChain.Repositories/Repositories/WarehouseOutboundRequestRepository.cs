@@ -54,5 +54,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseOutboundRequests
                 .CountAsync(r => r.CreatedAt.Year == year && !r.IsDeleted);
         }
+        public async Task<double> SumRequestedQuantityByOrderItemId(Guid orderItemId)
+        {
+            return await _context.WarehouseOutboundRequests
+                .Where(r => r.OrderItemId == orderItemId && !r.IsDeleted)
+                .SumAsync(r => (double?)r.RequestedQuantity) ?? 0.0;
+        }
     }
 }

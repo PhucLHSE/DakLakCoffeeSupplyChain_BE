@@ -115,5 +115,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result);
         }
+        [HttpPut("{id}/reject")]
+        [Authorize(Roles = "BusinessStaff")]
+        public async Task<IActionResult> Reject(Guid id, [FromBody] RejectWarehouseRequestDto input)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid staffUserId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _requestService.RejectRequestAsync(id, staffUserId, input.RejectReason);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result);
+
+            return StatusCode(500, result);
+        }
+
     }
 }

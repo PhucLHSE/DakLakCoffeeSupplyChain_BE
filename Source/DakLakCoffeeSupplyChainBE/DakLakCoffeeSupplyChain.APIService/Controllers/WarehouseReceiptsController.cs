@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -101,24 +102,44 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-        [HttpDelete("{id}/soft")]
+        // PATCH: api/WarehouseReceipts/soft-delete/{id}
+        [HttpPatch("soft-delete/{id}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> SoftDelete(Guid id)
+        public async Task<IActionResult> SoftDeleteAsync(Guid id)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                return Unauthorized("Cannot determine user from token.");
+            Guid currentUserId;
+            string currentUserRole;
 
-            var result = await _receiptService.SoftDeleteAsync(id, userId);
+            try
+            {
+                // Lấy userId và userRole từ token qua ClaimsHelper
+                currentUserId = User.GetUserId();
+                currentUserRole = User.GetRole();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId hoặc role từ token.");
+            }
+
+            // (Optional) Kiểm tra quyền nếu cần: 
+            // var canAccess = await _receiptService.CanAccess(currentUserId, currentUserRole, id);
+            // if (!canAccess)
+            //     return StatusCode(403, "Bạn không có quyền xóa phiếu này.");
+
+            var result = await _receiptService.SoftDeleteAsync(id, currentUserId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok(new { message = result.Message });
+                return Ok("Xóa mềm thành công.");
 
-            if (result.Status == Const.FAIL_READ_CODE)
-                return NotFound(result.Message);
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy phiếu.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
 
             return StatusCode(500, result.Message);
         }
+
 
         // DELETE: api/WarehouseReceipts/{id}/hard
         [HttpDelete("{id}/hard")]

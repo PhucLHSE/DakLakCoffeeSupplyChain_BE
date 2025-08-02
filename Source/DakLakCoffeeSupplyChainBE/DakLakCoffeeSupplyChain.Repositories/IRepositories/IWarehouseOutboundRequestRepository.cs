@@ -16,6 +16,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<WarehouseOutboundRequest>> GetAllAsync();
         void Update(WarehouseOutboundRequest entity);
         Task<int> CountOutboundRequestsInYearAsync(int year);
+        Task<double> SumRequestedQuantityByOrderItemId(Guid orderItemId);
     }
 }
 
