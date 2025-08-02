@@ -63,6 +63,17 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
     }
 
+    // method dùng riêng cho Update, KHÔNG include CoffeeType
+    public async Task<CropSeason?> GetWithDetailsByIdForUpdateAsync(Guid cropSeasonId)
+    {
+        return await _context.CropSeasons
+            .Include(cs => cs.CropSeasonDetails) // chỉ cần lấy vùng trồng
+            .Include(cs => cs.Farmer)
+                .ThenInclude(f => f.User)
+            .Include(cs => cs.Commitment)
+            .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
+    }
+
     public async Task<CropSeason?> GetByIdAsync(Guid cropSeasonId)
     {
         return await _context.CropSeasons

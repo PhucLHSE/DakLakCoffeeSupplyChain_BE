@@ -111,22 +111,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
 
 
-        // ✅ Chỉ người sở hữu hoặc Admin/BM được update
         [HttpPut("{cropSeasonId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
         {
-            if (cropSeasonId != dto.CropSeasonId) return BadRequest("Id không khớp.");
+            if (cropSeasonId != dto.CropSeasonId)
+                return BadRequest(new { message = "Id không khớp." });
 
             Guid userId;
             try { userId = User.GetUserId(); }
-            catch { return Unauthorized("Không xác định được userId từ token."); }
+            catch { return Unauthorized(new { message = "Không xác định được userId từ token." }); }
 
             var result = await _cropSeasonService.Update(dto, userId);
-            if (result.Status == Const.SUCCESS_UPDATE_CODE) return Ok(result.Message);
-            if (result.Status == Const.FAIL_UPDATE_CODE) return Conflict(result.Message);
-            return NotFound(result.Message);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(new { message = result.Message });
+
+            return BadRequest(new { message = result.Message });
         }
+
 
 
         // ✅ Chỉ Admin hoặc người tạo được xoá
