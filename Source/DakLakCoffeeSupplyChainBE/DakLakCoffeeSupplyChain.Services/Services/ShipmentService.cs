@@ -251,10 +251,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId)
+        public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId, Guid userId)
         {
             try
             {
+                // Kiểm tra BusinessManager từ userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                        m.UserId == userId &&
+                        !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_DELETE_CODE,
+                        "Bạn không phải BusinessManager nên không có quyền xóa mềm shipment."
+                    );
+                }
+
+                var managerId = manager.ManagerId;
 
                 // Tìm Shipment theo ID
                 var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
@@ -263,7 +280,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         !s.IsDeleted &&
                         s.Order != null &&
                         s.Order.DeliveryBatch != null &&
-                        s.Order.DeliveryBatch.Contract != null,
+                        s.Order.DeliveryBatch.Contract != null &&
+                        s.Order.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
                         .Include(s => s.ShipmentDetails),
                     asNoTracking: false
@@ -344,6 +362,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Bạn không phải BusinessManager nên không có quyền xóa mềm shipment."
                     );
                 }
+
                 var managerId = manager.ManagerId;
 
                 // Tìm shipment theo ID
