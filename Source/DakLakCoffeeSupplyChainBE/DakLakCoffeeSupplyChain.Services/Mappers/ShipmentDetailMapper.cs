@@ -60,5 +60,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
+        // Update Mapper: ShipmentDetailUpdateDto -> ShipmentDetail
+        public static void MapToUpdateShipmentDetail(
+            this ShipmentDetailUpdateDto dto,
+            ShipmentDetail shipmentDetail)
+        {
+            shipmentDetail.ShipmentId = dto.ShipmentId;
+            shipmentDetail.OrderItemId = dto.OrderItemId;
+            shipmentDetail.Quantity = dto.Quantity ?? 0;
+            shipmentDetail.Unit = dto.Unit.ToString();
+            shipmentDetail.Note = dto.Note ?? string.Empty;
+            shipmentDetail.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }
