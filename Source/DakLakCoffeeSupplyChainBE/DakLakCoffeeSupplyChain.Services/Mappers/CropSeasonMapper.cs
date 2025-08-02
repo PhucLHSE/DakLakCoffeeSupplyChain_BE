@@ -62,6 +62,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ExpectedHarvestStart = detail.ExpectedHarvestStart,
                 ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
                 EstimatedYield = detail.EstimatedYield,
+                ActualYield = detail.ActualYield ?? 0, 
                 FarmerId = parent.FarmerId,
                 FarmerName = parent.Farmer?.User?.Name ?? "Không rõ",
                 PlannedQuality = detail.PlannedQuality ?? string.Empty,

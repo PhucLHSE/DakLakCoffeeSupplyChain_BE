@@ -10,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
         public Guid CommitmentDetailId { get; set; }
         public DateOnly? ExpectedHarvestStart { get; set; }
         public DateOnly? ExpectedHarvestEnd { get; set; }
+
         public double? EstimatedYield { get; set; }
         public double? AreaAllocated { get; set; }
         public string? PlannedQuality { get; set; }

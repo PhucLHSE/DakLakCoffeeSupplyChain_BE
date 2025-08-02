@@ -152,11 +152,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // 🔍 1. Lấy các vùng trồng khác trong cùng mùa vụ (trừ chính nó)
                 var otherDetails = await _unitOfWork.CropSeasonDetailRepository.GetAllAsync(
-                    predicate: d => d.CropSeasonId == existing.CropSeasonId
-                                 && d.DetailId != dto.DetailId
-                                 && !d.IsDeleted == false,
-                    asNoTracking: true
-                );
+         predicate: d => d.CropSeasonId == existing.CropSeasonId
+                      && d.DetailId != dto.DetailId
+                      && !d.IsDeleted,
+         asNoTracking: true
+     );
+
 
                 double otherAllocated = otherDetails.Sum(d => d.AreaAllocated ?? 0);
                 double newTotalAllocated = otherAllocated + (dto.AreaAllocated ?? 0);

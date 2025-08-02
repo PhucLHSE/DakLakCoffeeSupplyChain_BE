@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonDetailId = entity.CropSeasonDetailId,
                 StageId = entity.StageId,
                 StepIndex = entity.StepIndex,
+                StageCode = entity.Stage?.StageCode ?? string.Empty, 
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
@@ -21,7 +22,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 VideoUrl = entity.VideoUrl ?? string.Empty
             };
         }
-
 
         public static CropProgressViewDetailsDto MapToCropProgressViewDetailsDto(this CropProgress entity)
         {
@@ -31,6 +31,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonDetailId = entity.CropSeasonDetailId,
                 StageId = entity.StageId,
                 StageName = entity.Stage?.StageName ?? string.Empty,
+                StageCode = entity.Stage?.StageCode ?? string.Empty,
                 StageDescription = entity.StageDescription ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
@@ -40,30 +41,36 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedBy = entity.UpdatedBy,
                 StepIndex = entity.StepIndex,
                 CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                UpdatedAt = entity.UpdatedAt,
+                ActualYield = entity.CropSeasonDetail?.ActualYield
             };
         }
 
 
         public static CropProgress MapToCropProgressCreateDto(this CropProgressCreateDto dto)
         {
+            var now = DateHelper.NowVietnamTime();
+
             return new CropProgress
             {
                 ProgressId = Guid.NewGuid(),
                 CropSeasonDetailId = dto.CropSeasonDetailId,
-
                 StageId = dto.StageId,
                 StageDescription = dto.StageDescription ?? string.Empty,
-                ProgressDate = dto.ProgressDate,
+                ProgressDate = dto.ProgressDate.HasValue
+                    ? DateOnly.FromDateTime(dto.ProgressDate.Value)
+                    : null,
                 PhotoUrl = dto.PhotoUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
                 Note = dto.Note ?? string.Empty,
                 StepIndex = dto.StepIndex,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = now,
+                UpdatedAt = now,
                 IsDeleted = false
             };
         }
+
+
         public static void MapToUpdateCropProgress(this CropProgressUpdateDto dto, CropProgress entity, Guid farmerId)
         {
             entity.CropSeasonDetailId = dto.CropSeasonDetailId;
