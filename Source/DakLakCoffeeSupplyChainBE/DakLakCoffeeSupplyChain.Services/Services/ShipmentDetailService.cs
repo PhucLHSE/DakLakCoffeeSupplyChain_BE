@@ -168,6 +168,149 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(ShipmentDetailUpdateDto shipmentDetailUpdateDto)
+        {
+            try
+            {
+                // Tìm ShipmentDetail theo ID
+                var shipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
+                    predicate: sd =>
+                       sd.ShipmentDetailId == shipmentDetailUpdateDto.ShipmentDetailId &&
+                       !sd.IsDeleted,
+                    include: query => query
+                           .Include(sd => sd.OrderItem)
+                              .ThenInclude(oi => oi.Product)
+                              .Include(sd => sd.Shipment),
+                    asNoTracking: false
+                );
+
+                // Nếu không tìm thấy
+                if (shipmentDetail == null ||
+                    shipmentDetail.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy thông tin chi tiết lô hàng cần cập nhật."
+                    );
+                }
+
+                // Kiểm tra OrderItem có tồn tại không
+                var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
+                    predicate: oi =>
+                       oi.OrderItemId == shipmentDetailUpdateDto.OrderItemId &&
+                       !oi.IsDeleted,
+                    include: query => query
+                       .Include(oi => oi.Product),
+                    asNoTracking: true
+                );
+
+                if (orderItem == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy mục đơn hàng tương ứng."
+                    );
+                }
+
+                // Kiểm tra Shipment có tồn tại không
+                var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                    predicate: s =>
+                        s.ShipmentId == shipmentDetailUpdateDto.ShipmentId &&
+                        !s.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (shipment == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy thông tin lô hàng tương ứng."
+                    );
+                }
+
+                // Kiểm tra trùng ShipmentDetail (OrderItem trong cùng Shipment, khác ID hiện tại)
+                bool isDuplicate = await _unitOfWork.ShipmentDetailRepository.AnyAsync(
+                    predicate: sd =>
+                        sd.ShipmentId == shipmentDetailUpdateDto.ShipmentId &&
+                        sd.OrderItemId == shipmentDetailUpdateDto.OrderItemId &&
+                        sd.ShipmentDetailId != shipmentDetail.ShipmentDetailId &&
+                        !sd.IsDeleted
+                );
+
+                if (isDuplicate)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Mục đơn hàng đã tồn tại trong lô hàng này."
+                    );
+                }
+
+                // Kiểm tra quantity hợp lệ (có thể bỏ nếu không giới hạn)
+                double newQuantity = shipmentDetailUpdateDto.Quantity ?? 0;
+
+                if (newQuantity <= 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Số lượng phải lớn hơn 0."
+                    );
+                }
+
+                // Cập nhật ShipmentDetail từ DTO
+                shipmentDetailUpdateDto.MapToUpdateShipmentDetail(shipmentDetail);
+
+                // Cập nhật ShipmentDetail ở repository
+                await _unitOfWork.ShipmentDetailRepository.UpdateAsync(shipmentDetail);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại dữ liệu vừa cập nhật
+                    var updatedShipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
+                        predicate: sd => sd.ShipmentDetailId == shipmentDetail.ShipmentDetailId,
+                        include: query => query
+                           .Include(sd => sd.OrderItem)
+                              .ThenInclude(oi => oi.Product),
+                        asNoTracking: true
+                    );
+
+                    if (updatedShipmentDetail != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = updatedShipmentDetail.MapToShipmentDetailViewDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu vừa cập nhật."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteShipmentDetailById(Guid shipmentDetailId)
         {
             try

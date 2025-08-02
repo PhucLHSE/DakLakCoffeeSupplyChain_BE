@@ -53,7 +53,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Update Mapper: OrderItemUpdateDto -> OrderItem (cập nhật thực thể có sẵn)
+        // Update Mapper: OrderItemUpdateDto -> OrderItem
         public static void MapToUpdateOrderItem(
             this OrderItemUpdateDto dto,
             OrderItem orderItem, 
