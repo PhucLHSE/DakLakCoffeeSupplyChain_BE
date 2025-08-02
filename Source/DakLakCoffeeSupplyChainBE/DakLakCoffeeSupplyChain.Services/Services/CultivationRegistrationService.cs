@@ -99,6 +99,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
         public async Task<IServiceResult> GetAllAvailable(Guid planId)
         {
             // Lấy những đơn đăng ký thuộc kế hoạch đang chọn
@@ -343,6 +344,101 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> UpdateStatus(CultivationRegistrationUpdateStatusDto dto, Guid userId, Guid registrationDetailId)
+        {
+            try
+            {
+                var registrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                predicate: c => !c.IsDeleted && c.CultivationRegistrationDetailId == registrationDetailId,
+                include: c => c.
+                    Include(c => c.Registration).
+                        ThenInclude(c => c.Farmer)
+                );
+                if (registrationDetail == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy đơn đăng ký."
+                    );
+                
+                // Kiểm tra người role, nếu là farmer thì chỉ được phép chọn hủy, không cho chọn option khác
+                // Farmer khác nếu truy cập được api này vẫn có thể update được nhưng phía UI không cho có support chuyện đó
+                // Cách này tối ưu vòng lặp nhưng dở ở logic một xíu
+                if (registrationDetail.Registration.Farmer.UserId == userId
+                        && !registrationDetail.Status.Equals("Cancelled"))
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền hạn này."
+                    );
+                var businessManagerId = await _unitOfWork.BusinessManagerRepository.GetByPredicateAsync(
+                    predicate: u => u.UserId == userId,
+                    selector: u => u.ManagerId,
+                    asNoTracking: true
+                );
+
+                // Kiểm tra người role, nếu là business manager thì chỉ được phép chọn duyệt hoặc từ chối
+                if (businessManagerId == Guid.Empty)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền hạn này."
+                    );
+                }
+
+                registrationDetail.Status = dto.Status.ToString();
+                registrationDetail.UpdatedAt = DateHelper.NowVietnamTime();
+                registrationDetail.ApprovedAt = DateHelper.NowVietnamTime();
+                registrationDetail.ApprovedBy = businessManagerId;
+
+                await _unitOfWork.CultivationRegistrationsDetailRepository.UpdateAsync(registrationDetail);
+                var result = await _unitOfWork.SaveChangesAsync();
+                if (result > 0)
+                {
+                    var cultivation = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+                    predicate: c => c.RegistrationId == registrationDetail.RegistrationId,
+                    include: c => c.
+                        Include(c => c.CultivationRegistrationsDetails).
+                            ThenInclude(c => c.PlanDetail).
+                                ThenInclude(c => c.CoffeeType).
+                        Include(c => c.Farmer).
+                            ThenInclude(c => c.User),
+                    asNoTracking: true
+                    );
+                    if (cultivation == null)
+                    {
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            Const.WARNING_NO_DATA_MSG,
+                            new CultivationRegistrationViewSumaryDto()
+                        );
+                    }
+                    else
+                    {
+                        var cultivationDto = cultivation.MapToCultivationRegistrationViewSumaryDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            cultivationDto
+                        );
+                    }
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }

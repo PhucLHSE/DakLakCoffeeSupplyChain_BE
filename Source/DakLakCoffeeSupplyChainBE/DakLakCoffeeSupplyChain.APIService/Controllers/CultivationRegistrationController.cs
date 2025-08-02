@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -130,6 +132,42 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH api/<CultivationRegistration>/UpdateStatus/{registrationDetailId}
+        [HttpPatch("Detail/UpdateStatus/{registrationDetailId}")]
+        [Authorize(Roles = "BusinessManager, Farmer")]
+        public async Task<IActionResult> UpdateStatusAsync(Guid registrationDetailId,
+            [FromBody] CultivationRegistrationUpdateStatusDto updateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _service
+                .UpdateStatus(updateDto, userId, registrationDetailId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn đăng ký.");
 
             return StatusCode(500, result.Message);
         }
