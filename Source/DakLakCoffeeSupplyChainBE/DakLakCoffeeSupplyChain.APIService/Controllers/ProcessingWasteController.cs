@@ -116,7 +116,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);  // Lỗi khi cập nhật (ví dụ: dữ liệu không hợp lệ)
         }
-        [HttpDelete("{id}")]
+        [HttpPatch("{id}/soft-delete")]
         [Authorize(Roles = "Farmer,Admin")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {

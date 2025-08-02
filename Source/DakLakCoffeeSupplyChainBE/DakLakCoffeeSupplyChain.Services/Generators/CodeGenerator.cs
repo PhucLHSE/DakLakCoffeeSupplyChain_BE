@@ -349,5 +349,29 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"FCD-{CurrentYear}-{(count + 1):D4}";
         }
+        public async Task<string> GenerateProcessingWasteDisposalCodeAsync()
+        {
+            var prefix = $"DISP-{CurrentYear}-";
+
+            var latestCode = await _unitOfWork.ProcessingWasteDisposalRepository
+                .GetAllQueryable()
+                .Where(x => x.DisposalCode.StartsWith(prefix)) 
+                .OrderByDescending(x => x.DisposalCode)
+                .Select(x => x.DisposalCode)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (!string.IsNullOrEmpty(latestCode))
+            {
+                var suffix = latestCode.Substring(prefix.Length);
+                if (int.TryParse(suffix, out int currentNumber))
+                {
+                    nextNumber = currentNumber + 1;
+                }
+            }
+
+            return $"{prefix}{nextNumber:D4}";
+        }
+
     }
 }

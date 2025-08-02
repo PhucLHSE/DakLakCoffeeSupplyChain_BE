@@ -25,7 +25,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var methods = await _unitOfWork.ProcessingMethodRepository.GetAllAsync();
 
-            if (methods == null || !methods.Any())
+            var validMethods = methods?.Where(m => !m.IsDeleted).ToList();
+
+            if (validMethods == null || !validMethods.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -34,7 +36,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            var methodDtos = methods
+            var methodDtos = validMethods
                 .Select(m => m.MapToProcessingMethodViewAllDto())
                 .ToList();
 

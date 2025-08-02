@@ -13,7 +13,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         //public Guid FarmerId { get; set; }
         public string BatchCode { get; set; }       
         public int MethodId { get; set; }
-        public double InputQuantity { get; set; }
+        //public double InputQuantity { get; set; }
         public string InputUnit { get; set; }
     }
 }

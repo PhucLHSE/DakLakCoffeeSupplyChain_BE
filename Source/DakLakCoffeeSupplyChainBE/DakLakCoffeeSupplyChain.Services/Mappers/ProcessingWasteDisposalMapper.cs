@@ -10,9 +10,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class ProcessingWasteDisposalMapper
     {
-        public static ProcessingWasteDisposalDto MapToDto(this ProcessingWasteDisposal entity, string handledByName)
+        public static ProcessingWasteDisposalViewAllDto MapToDto(this ProcessingWasteDisposal entity, string handledByName)
         {
-            return new ProcessingWasteDisposalDto
+            return new ProcessingWasteDisposalViewAllDto
             {
                 DisposalId = entity.DisposalId,
                 DisposalCode = entity.DisposalCode,

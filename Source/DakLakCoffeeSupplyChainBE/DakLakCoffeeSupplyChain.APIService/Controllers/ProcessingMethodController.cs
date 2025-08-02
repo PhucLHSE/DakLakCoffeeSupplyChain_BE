@@ -80,8 +80,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-        [HttpDelete("soft/{methodId}")]
-         [Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
+        [HttpPatch("{methodId}/soft-delete")]
+        [Authorize(Roles = "Admin,BusinessManager,BusinessStaff,Farmer")]
         public async Task<IActionResult> SoftDelete(int methodId)
         {
             var result = await _procesingMethodService.SoftDeleteAsync(methodId);

@@ -133,26 +133,44 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
         {
-            // ❌ Cấm BusinessManager tạo batch
+            
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
             if (manager != null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Business Manager không được tạo lô sơ chế.");
 
+            
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo lô sơ chế.");
 
+            
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
             if (cropSeason == null || cropSeason.IsDeleted)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Mùa vụ không hợp lệ.");
 
+            
             var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(dto.MethodId);
             if (method == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Phương pháp sơ chế không hợp lệ.");
 
+            var cropSeasonDetails = await _unitOfWork.CropSeasonDetailRepository
+     .GetAllAsync(d => d.CropSeasonId == dto.CropSeasonId && !d.IsDeleted);
+
+            if (cropSeasonDetails == null || !cropSeasonDetails.Any())
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy chi tiết mùa vụ để tính khối lượng.");
+
+            var totalActualYield = cropSeasonDetails
+                .Where(d => d.ActualYield.HasValue)
+                .Sum(d => d.ActualYield.Value);
+
+            if (totalActualYield <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng đầu ra của mùa vụ chưa được cập nhật hoặc bằng 0.");
+
+         
             int year = cropSeason.StartDate?.Year ?? DateTime.Now.Year;
             string systemBatchCode = await _codeGenerator.GenerateProcessingSystemBatchCodeAsync(year);
 
+           
             var batch = new ProcessingBatch
             {
                 BatchId = Guid.NewGuid(),
@@ -161,8 +179,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 CropSeasonId = dto.CropSeasonId,
                 CoffeeTypeId = dto.CoffeeTypeId,
                 MethodId = dto.MethodId,
-                InputQuantity = dto.InputQuantity,
-                InputUnit = dto.InputUnit?.Trim(),
+                InputQuantity = totalActualYield,
+                InputUnit = dto.InputUnit?.Trim() ?? "kg",
                 FarmerId = farmer.FarmerId,
                 Status = ProcessingStatus.NotStarted.ToString(),
                 CreatedAt = DateTime.UtcNow,
@@ -170,12 +188,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 IsDeleted = false
             };
 
+           
             await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
             var saveResult = await _unitOfWork.SaveChangesAsync();
 
             if (saveResult <= 0)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo lô sơ chế thất bại.");
 
+            
             var created = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
                 x => x.BatchId == batch.BatchId,
                 include: q => q
@@ -188,6 +208,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var dtoResult = created?.MapToProcessingBatchViewDto();
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, dtoResult);
         }
+
 
         public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin, bool isManager)
         {

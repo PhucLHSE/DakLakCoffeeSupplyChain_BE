@@ -81,7 +81,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message); // 500 Internal Server Error nếu exception
         }
 
-        [HttpDelete("soft/{parameterId}")]
+        [HttpPatch("{id}/soft-delete")]
         // [Authorize(Roles = "BusinessStaff,Farmer")]
         public async Task<IActionResult> SoftDelete(Guid parameterId)
         {
