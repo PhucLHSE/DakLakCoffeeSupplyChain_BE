@@ -89,6 +89,7 @@ builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDispo
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
 builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
