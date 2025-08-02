@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -76,6 +78,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // POST api/<ShipmentsController>
+        [HttpPost]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> CreateShipmentAsync(
+            [FromBody] ShipmentCreateDto shipmentCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _shipmentService.Create(shipmentCreateDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { shipmentId = ((ShipmentViewDetailsDto)result.Data).ShipmentId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
         // DELETE api/<ShipmentsController>/{shipmentId}

@@ -10,5 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IShipmentRepository : IGenericRepository<Shipment>
     {
+        // Đếm số shipment được tạo trong năm chỉ định, chưa bị xoá.
+        Task<int> CountShipmentsInYearAsync(int year);
     }
 }

@@ -29,5 +29,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 )
                 .SumAsync(sd => (double?)sd.Quantity) ?? 0.0;
         }
+
+        // Tổng số lượng đã giao (giản lược, không kiểm tra HasValue)
+        public async Task<double> GetDeliveredQuantityByOrderItemId(Guid orderItemId)
+        {
+            return await _context.ShipmentDetails
+                .Where(sd => 
+                   sd.OrderItemId == orderItemId && 
+                   !sd.IsDeleted
+                )
+                .SumAsync(d => (double?)d.Quantity) ?? 0.0;
+        }
     }
 }

@@ -12,5 +12,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         // Tính tổng số lượng đã giao (Quantity) của một OrderItem qua tất cả các dòng shipment chưa xoá
         Task<double> SumQuantityByOrderItemAsync(Guid orderItemId);
+
+        // Tổng số lượng đã giao (giản lược, không kiểm tra HasValue)
+        Task<double> GetDeliveredQuantityByOrderItemId(Guid orderItemId);
     }
 }
