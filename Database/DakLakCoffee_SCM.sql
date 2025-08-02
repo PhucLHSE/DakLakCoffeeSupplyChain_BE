@@ -1697,6 +1697,13 @@ VALUES (
     '2025-06-15 11:37:11', '2025-06-15 11:37:11'
 );
 
+INSERT INTO BusinessBuyers (BuyerID, BuyerCode, CreatedBy, CompanyName, ContactPerson, Position, CompanyAddress, TaxID, Email, Phone, CreatedAt, UpdatedAt)
+VALUES 
+(NEWID(), 'BM-2025-0001-BUY-2025-002', @BMID, N'Công ty TNHH CoffeeLand',       N'Lê Minh Tâm',     N'Giám đốc thu mua', N'52 Phan Chu Trinh, TP. Buôn Ma Thuột',      '6001123456', 'coffeeland@gmail.com',      '0262384783', GETDATE(), GETDATE()),
+(NEWID(), 'BM-2025-0001-BUY-2025-003', @BMID, N'CTCP Cà Phê Bảo An',            N'Trịnh Thanh Hà',  N'Quản lý cung ứng',  N'121 Lê Thánh Tông, TP. Buôn Ma Thuột',     '6001567890', 'baoan@coffee.vn',          '0262397349', GETDATE(), GETDATE()),
+(NEWID(), 'BM-2025-0001-BUY-2025-004', @BMID, N'VietnamCoffee Export Co.',      N'Hoàng Đức Tài',   N'Trưởng phòng thu mua', N'234 Nguyễn Tất Thành, Đắk Lắk',         '6001789012', 'vncoffee@export.vn',       '0262377121', GETDATE(), GETDATE()),
+(NEWID(), 'BM-2025-0001-BUY-2025-005', @BMID, N'Công ty TNHH Cà Phê Tây Nguyên', N'Ngô Thị Huyền',   N'Giám sát chất lượng', N'03 Hùng Vương, Cư M’gar, Đắk Lắk',       '6001678901', 'taynguyen.coffee@gmail.com','0262371556', GETDATE(), GETDATE());
+
 GO
 
 -- Insert CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
@@ -1786,6 +1793,18 @@ DECLARE @BuyerID UNIQUEIDENTIFIER = (
    SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-001'
 );
 
+DECLARE @Buyer2 UNIQUEIDENTIFIER = (
+   SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-002'
+);
+
+DECLARE @Buyer3 UNIQUEIDENTIFIER = (
+   SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-003'
+);
+
+DECLARE @Buyer4 UNIQUEIDENTIFIER = (
+   SELECT BuyerID FROM BusinessBuyers WHERE BuyerCode = 'BM-2025-0001-BUY-2025-004'
+);
+
 -- Tạo hợp đồng
 DECLARE @ContractID UNIQUEIDENTIFIER = NEWID();
 
@@ -1801,13 +1820,33 @@ INSERT INTO Contracts (
     GETDATE(), GETDATE()
 );
 
+INSERT INTO Contracts (ContractID, ContractCode, SellerID, BuyerID, ContractNumber, ContractTitle, DeliveryRounds, TotalQuantity, TotalValue, StartDate, EndDate, SignedAt, Status, CreatedAt, UpdatedAt)
+VALUES 
+(NEWID(), 'CTR-2025-0002', @SellerID, @Buyer2, N'HĐ-2025-002-COFFEELAND', N'Cung cấp 50 tấn Robusta Washed', 2, 50000, 280000000, '2025-07-01', '2026-07-01', '2025-06-20', N'PreparingDelivery', GETDATE(), GETDATE()),
+(NEWID(), 'CTR-2025-0003', @SellerID, @Buyer3, N'HĐ-2025-003-BAOAN',      N'Cung cấp 30 tấn Arabica & Culi', 3, 30000, 200000000, '2025-07-10', '2026-01-10', '2025-06-25', N'PreparingDelivery', GETDATE(), GETDATE()),
+(NEWID(), 'CTR-2025-0004', @SellerID, @Buyer4, N'HĐ-2025-004-VNCOFFEE',   N'Cung cấp cà phê đặc sản phối trộn', 1, 20000, 160000000, '2025-07-15', '2025-12-31', '2025-07-01', N'PreparingDelivery', GETDATE(), GETDATE());
+
 GO
 
 -- Insert bảng ContractItems
+-- Lấy ContractIDs
 DECLARE @ContractID UNIQUEIDENTIFIER = (
     SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0001'
 );
 
+DECLARE @CID2 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0002'
+);
+
+DECLARE @CID3 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0003'
+);
+
+DECLARE @CID4 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0004'
+);
+
+-- Lấy CoffeeTypeIDs
 -- Arabica
 DECLARE @ArabicaID UNIQUEIDENTIFIER = (
     SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Arabica'
@@ -1843,6 +1882,11 @@ DECLARE @TypicaID UNIQUEIDENTIFIER = (
     SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Typica'
 );
 
+-- Robusta TR9
+DECLARE @TR9ID UNIQUEIDENTIFIER = (
+   SELECT CoffeeTypeID FROM CoffeeTypes WHERE TypeName = N'Robusta TR9'
+);
+
 -- Thêm dòng hợp đồng: Arabica 20.000 Kg
 INSERT INTO ContractItems (
     ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice,
@@ -1861,6 +1905,7 @@ INSERT INTO ContractItems (
     N'Cà phê Robusta xuất khẩu', GETDATE(), GETDATE()
 );
 
+-- Contract 1
 INSERT INTO ContractItems (
    ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt
 )
@@ -1870,6 +1915,25 @@ VALUES
 ('CTI-005-CTR-2025-0001', @ContractID, @CuliID,    5000,  60000, 0, N'Cà phê Culi đậm vị, đột biến tự nhiên', GETDATE(), GETDATE()),
 ('CTI-006-CTR-2025-0001', @ContractID, @NaturalID, 5000,  53000, 0, N'Robusta sơ chế tự nhiên (Natural)',     GETDATE(), GETDATE()),
 ('CTI-007-CTR-2025-0001', @ContractID, @TypicaID,  2000,  68000, 0, N'Giống Arabica Typica quý hiếm',         GETDATE(), GETDATE());
+
+-- Contract 2
+INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
+VALUES 
+('CTI-001-CTR-2025-0002', @CID2, @WashedID, 30000, 56000, 0, N'Lô 1 Robusta Washed', GETDATE(), GETDATE()),
+('CTI-002-CTR-2025-0002', @CID2, @RobustaID, 20000, 50000, 0, N'Lô 2 Robusta thường', GETDATE(), GETDATE());
+
+-- Contract 3: Arabica & Culi
+INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
+VALUES 
+('CTI-001-CTR-2025-0003', @CID3, @ArabicaID, 15000, 65000, 0, N'Arabica nguyên chất', GETDATE(), GETDATE()),
+('CTI-002-CTR-2025-0003', @CID3, @CuliID,    15000, 60000, 0, N'Culi đậm vị',         GETDATE(), GETDATE());
+
+-- Contract 4: Phối trộn
+INSERT INTO ContractItems (ContractItemCode, ContractID, CoffeeTypeID, Quantity, UnitPrice, DiscountAmount, Note, CreatedAt, UpdatedAt)
+VALUES 
+('CTI-001-CTR-2025-0004', @CID4, @TypicaID,  5000,  68000, 0, N'Typica quý hiếm',        GETDATE(), GETDATE()),
+('CTI-002-CTR-2025-0004', @CID4, @TR9ID,     7000,  52000, 0, N'Robusta TR9 năng suất cao', GETDATE(), GETDATE()),
+('CTI-003-CTR-2025-0004', @CID4, @HoneyID,   8000,  57000, 0, N'Robusta sơ chế mật ong',  GETDATE(), GETDATE());
 
 GO
 
