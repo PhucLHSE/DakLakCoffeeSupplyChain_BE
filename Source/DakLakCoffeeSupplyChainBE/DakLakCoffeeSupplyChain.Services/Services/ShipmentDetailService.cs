@@ -311,13 +311,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> DeleteShipmentDetailById(Guid shipmentDetailId)
+        public async Task<IServiceResult> DeleteShipmentDetailById(Guid shipmentDetailId, Guid userId)
         {
             try
             {
-                // Tìm ShipmentDetail theo ID
+                // Tìm BusinessManager hiện tại từ userId
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy BusinessManager tương ứng với tài khoản."
+                    );
+                }
+
+                // Tìm ShipmentDetail theo ID và kiểm duyệt quyền
                 var shipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
-                    predicate: sd => sd.ShipmentDetailId == shipmentDetailId,
+                    predicate: sd => 
+                       sd.ShipmentDetailId == shipmentDetailId &&
+                       sd.Shipment.Order.DeliveryBatch.Contract.SellerId == manager.ManagerId,
                     include: query => query
                            .Include(sd => sd.Shipment)
                            .Include(sd => sd.OrderItem),
