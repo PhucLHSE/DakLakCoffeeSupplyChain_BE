@@ -346,7 +346,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Ưu tiên kiểm tra BusinessManager
                 var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                    predicate: m => m.UserId == userId && !m.IsDeleted,
+                    predicate: m => 
+                       m.UserId == userId && 
+                       !m.IsDeleted,
                     asNoTracking: true
                 );
 
@@ -358,7 +360,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Nếu không phải Manager, kiểm tra BusinessStaff
                     var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
-                        predicate: s => s.UserId == userId && !s.IsDeleted,
+                        predicate: s => 
+                           s.UserId == userId && 
+                           !s.IsDeleted,
                         asNoTracking: true
                     );
 
