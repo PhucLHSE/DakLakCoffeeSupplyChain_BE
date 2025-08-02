@@ -14,6 +14,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<int> CountByYearAsync(int year);
 
         Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId);
+
+        Task<CropSeason?> GetWithDetailsByIdForUpdateAsync(Guid cropSeasonId);
         Task<CropSeason?> GetByIdAsync(Guid cropSeasonId);
 
         Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId);
