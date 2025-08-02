@@ -96,7 +96,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             var result = await _shipmentService
-                .DeleteShipmentById(shipmentId);
+                .DeleteShipmentById(shipmentId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
