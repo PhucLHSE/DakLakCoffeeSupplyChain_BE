@@ -40,23 +40,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static GeneralFarmerReport MapToNewGeneralFarmerReportAsync(this GeneralFarmerReportCreateDto dto, string reportCode)
+        public static GeneralFarmerReport MapToNewGeneralFarmerReportAsync(
+        this GeneralFarmerReportCreateDto dto,
+        string reportCode,
+        Guid reportedBy)
         {
-            var severityLevel = Enum.TryParse<SeverityLevel>(dto.SeverityLevel.ToString(), out var parsed)
-            ? parsed
-    :        SeverityLevel.Low;
-
             return new GeneralFarmerReport
             {
                 ReportId = Guid.NewGuid(),
                 ReportCode = reportCode,
-                ReportType = dto.ReportType,
+                ReportType = dto.ReportType.ToString(), 
                 CropProgressId = dto.CropProgressId,
                 ProcessingProgressId = dto.ProcessingProgressId,
-                ReportedBy = dto.ReportedBy,
+                ReportedBy = reportedBy, // ✅ KHÔNG lấy từ dto
                 Title = dto.Title,
                 Description = dto.Description,
-                SeverityLevel = (int)severityLevel,
+                SeverityLevel = (int)dto.SeverityLevel, // ✅ Enum → int
                 ImageUrl = dto.ImageUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
                 IsResolved = false,
@@ -65,5 +64,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
     }
 }

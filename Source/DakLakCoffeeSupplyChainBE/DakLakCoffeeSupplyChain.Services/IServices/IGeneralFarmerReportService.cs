@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> GetAll();
         Task<IServiceResult> GetById(Guid reportId);
-        Task<IServiceResult> CreateGeneralFarmerReports(GeneralFarmerReportCreateDto dto);
+        Task<IServiceResult> CreateGeneralFarmerReports(GeneralFarmerReportCreateDto dto, Guid userId);
 
     }
 }
