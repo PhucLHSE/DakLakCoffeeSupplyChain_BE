@@ -9,6 +9,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<GeneralFarmerReport?> GetByIdWithIncludesAsync(Guid reportId);
 
         Task<int> CountReportsInYearAsync(int year);
-
+        Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId);
     }
 }

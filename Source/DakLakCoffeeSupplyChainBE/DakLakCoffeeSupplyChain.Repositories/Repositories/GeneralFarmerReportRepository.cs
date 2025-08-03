@@ -36,6 +36,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(r => !r.IsDeleted && r.ReportedAt.Year == year)
                 .CountAsync();
         }
+        public async Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId)
+        {
+            return await _context.GeneralFarmerReports
+                .IgnoreQueryFilters() // nếu dùng Global Filter
+                .FirstOrDefaultAsync(r => r.ReportId == reportId);
+        }
 
     }
 }
