@@ -161,8 +161,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (businessManager == null 
-                    || businessManager.User == null)
+                if (businessManager == null ||
+                    businessManager.User == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
@@ -244,13 +244,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã định danh cho Contract
-                string contractCode = await _codeGenerator.GenerateContractCodeAsync();
+                string contractCode = await _codeGenerator
+                    .GenerateContractCodeAsync();
 
                 // Ánh xạ dữ liệu từ DTO vào entity
-                var newContract = contractDto.MapToNewContract(sellerId, contractCode);
+                var newContract = contractDto
+                    .MapToNewContract(sellerId, contractCode);
 
                 // Tạo Contract ở repository
-                await _unitOfWork.ContractRepository.CreateAsync(newContract);
+                await _unitOfWork.ContractRepository
+                    .CreateAsync(newContract);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -272,7 +275,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (createdContract != null)
                     {
                         // Ánh xạ thực thể đã lưu sang DTO phản hồi
-                        var responseDto = createdContract.MapToContractViewDetailDto();
+                        var responseDto = createdContract
+                            .MapToContractViewDetailDto();
 
                         return new ServiceResult(
                             Const.SUCCESS_CREATE_CODE,
@@ -382,7 +386,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Đồng bộ lại ContractItems
                 var now = DateHelper.NowVietnamTime();
-                var dtoItemIds = contractDto.ContractItems.Select(i => i.ContractItemId).ToHashSet();
+
+                var dtoItemIds = contractDto.ContractItems
+                    .Select(i => i.ContractItemId).ToHashSet();
 
                 // Xoá mềm những cái không còn
                 foreach (var oldItem in contract.ContractItems)
@@ -391,7 +397,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         oldItem.IsDeleted = true;
                         oldItem.UpdatedAt = now;
-                        await _unitOfWork.ContractItemRepository.UpdateAsync(oldItem);
+
+                        await _unitOfWork.ContractItemRepository
+                            .UpdateAsync(oldItem);
                     }
                 }
 
@@ -413,7 +421,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             existingItem.UpdatedAt = now;
                             existingItem.IsDeleted = false;
 
-                            await _unitOfWork.ContractItemRepository.UpdateAsync(existingItem);
+                            await _unitOfWork.ContractItemRepository
+                                .UpdateAsync(existingItem);
                         }
                     }
                     else
@@ -438,7 +447,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Cập nhật contract ở repository
-                await _unitOfWork.ContractRepository.UpdateAsync(contract);
+                await _unitOfWork.ContractRepository
+                    .UpdateAsync(contract);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -447,7 +457,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại contract sau update để trả DTO
                     var updatedContract = await _unitOfWork.ContractRepository.GetByIdAsync(
-                        predicate: c => c.ContractId == contractDto.ContractId,
+                        predicate: c => 
+                           c.ContractId == contractDto.ContractId &&
+                           !c.IsDeleted,
                         include: query => query
                             .Include(c => c.Buyer)
                             .Include(c => c.Seller)
@@ -522,12 +534,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         foreach (var item in contract.ContractItems.Where(i => !i.IsDeleted))
                         {
-                            await _unitOfWork.ContractItemRepository.RemoveAsync(item);
+                            await _unitOfWork.ContractItemRepository
+                                .RemoveAsync(item);
                         }
                     }
 
                     // Xóa contract khỏi repository
-                    await _unitOfWork.ContractRepository.RemoveAsync(contract);
+                    await _unitOfWork.ContractRepository
+                        .RemoveAsync(contract);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -565,7 +579,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Tìm contract theo ID
                 var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
-                    predicate: c => c.ContractId == contractId,
+                    predicate: c => 
+                       c.ContractId == contractId &&
+                       !c.IsDeleted,
                     include: query => query
                        .Include(c => c.ContractItems),
                     asNoTracking: false
@@ -592,11 +608,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         item.UpdatedAt = DateHelper.NowVietnamTime();
 
                         // Đảm bảo EF theo dõi thay đổi của item
-                        await _unitOfWork.ContractItemRepository.UpdateAsync(item);
+                        await _unitOfWork.ContractItemRepository
+                            .UpdateAsync(item);
                     }
 
                     // Cập nhật xoá mềm contract ở repository
-                    await _unitOfWork.ContractRepository.UpdateAsync(contract);
+                    await _unitOfWork.ContractRepository
+                        .UpdateAsync(contract);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

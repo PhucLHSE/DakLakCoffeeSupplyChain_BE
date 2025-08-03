@@ -25,6 +25,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 ContractId = contract.ContractId,
                 ContractCode = contract.ContractCode,
+                ContractNumber = contract.ContractNumber,
                 ContractTitle = contract.ContractTitle,
                 SellerName = contract.Seller?.User?.Name ?? "N/A",
                 BuyerName = contract.Buyer?.CompanyName ?? "N/A",
