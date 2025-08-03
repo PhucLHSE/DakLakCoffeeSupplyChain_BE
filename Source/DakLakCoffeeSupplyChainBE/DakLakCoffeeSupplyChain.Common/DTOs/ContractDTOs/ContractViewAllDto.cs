@@ -14,6 +14,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public string ContractCode { get; set; } = string.Empty;
 
+        public string ContractNumber { get; set; } = string.Empty;
+
         public string ContractTitle { get; set; } = string.Empty;
 
         public string SellerName { get; set; } = string.Empty;
