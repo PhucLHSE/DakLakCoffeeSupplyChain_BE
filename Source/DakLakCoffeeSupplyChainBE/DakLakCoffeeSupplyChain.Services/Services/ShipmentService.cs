@@ -387,19 +387,63 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(ShipmentUpdateDto shipmentUpdateDto)
+        public async Task<IServiceResult> Update(ShipmentUpdateDto shipmentUpdateDto, Guid userId)
         {
             try
             {
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s =>
+                           s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy Manager hoặc Staff tương ứng với tài khoản."
+                    );
+                }
+
                 // Truy vấn shipment cần cập nhật
                 var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
                     predicate: s => 
                        s.ShipmentId == shipmentUpdateDto.ShipmentId && 
-                       !s.IsDeleted,
+                       !s.IsDeleted &&
+                       s.Order != null &&
+                       s.Order.DeliveryBatch != null &&
+                       s.Order.DeliveryBatch.Contract != null &&
+                       s.Order.DeliveryBatch.Contract.SellerId == managerId,
                     include: query => query
                        .Include(s => s.ShipmentDetails)
                        .Include(s => s.Order)
-                          .ThenInclude(o => o.OrderItems),
+                          .ThenInclude(o => o.OrderItems)
+                       .Include(s => s.Order.DeliveryBatch)
+                          .ThenInclude(db => db.Contract),
                     asNoTracking: false
                 );
 
