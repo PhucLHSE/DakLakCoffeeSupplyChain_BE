@@ -2043,6 +2043,143 @@ INSERT INTO ContractDeliveryItems (
 
 GO
 
+-- Insert ContractDeliveryBatches và ContractDeliveryItems
+DECLARE @CID2 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0002'
+);
+
+DECLARE @CID3 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0003'
+);
+
+DECLARE @CID4 UNIQUEIDENTIFIER = (
+   SELECT ContractID FROM Contracts WHERE ContractCode = 'CTR-2025-0004'
+);
+
+-- Contract 2: CTR-2025-0002
+-- Đợt 1 - Giao 25.000 Kg (Robusta Washed)
+DECLARE @Batch_C2_D1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status,
+    CreatedAt, UpdatedAt, IsDeleted
+) VALUES (
+    @Batch_C2_D1, 'DELB-2025-0005', @CID2, 1,
+    '2025-07-15', 25000, 'Planned',
+    GETDATE(), GETDATE(), 0
+);
+
+DECLARE @CTI_C2_Washed UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0002'
+);
+
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note,
+    CreatedAt, UpdatedAt, IsDeleted
+) VALUES (
+    NEWID(), 'DLI-2025-0012', @Batch_C2_D1, @CTI_C2_Washed,
+    25000, 0, N'Robusta Washed đợt 1',
+    GETDATE(), GETDATE(), 0
+);
+
+-- Đợt 2 - Giao 25.000 Kg (Robusta thường)
+DECLARE @Batch_C2_D2 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches (
+    DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
+    ExpectedDeliveryDate, TotalPlannedQuantity, Status,
+    CreatedAt, UpdatedAt, IsDeleted
+) VALUES (
+    @Batch_C2_D2, 'DELB-2025-0006', @CID2, 2,
+    '2026-03-01', 25000, 'Planned',
+    GETDATE(), GETDATE(), 0
+);
+
+DECLARE @CTI_C2_Robusta UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0002'
+);
+
+INSERT INTO ContractDeliveryItems (
+    DeliveryItemID, DeliveryItemCode, DeliveryBatchID, ContractItemID,
+    PlannedQuantity, FulfilledQuantity, Note,
+    CreatedAt, UpdatedAt, IsDeleted
+) VALUES (
+    NEWID(), 'DLI-2025-0013', @Batch_C2_D2, @CTI_C2_Robusta,
+    25000, 0, N'Robusta thường đợt 2',
+    GETDATE(), GETDATE(), 0
+);
+
+-- Contract 3: CTR-2025-0003
+-- Đợt 1 - Giao 10000 Kg (Arabica)
+DECLARE @Batch_C3_D1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches VALUES (
+    @Batch_C3_D1, 'DELB-2025-0007', @CID3, 1, '2025-08-01', 10000, 'Planned', GETDATE(), GETDATE(), 0
+);
+
+DECLARE @CTI_C3_Arabica UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0003'
+);
+
+INSERT INTO ContractDeliveryItems VALUES (
+    NEWID(), 'DLI-2025-0014', @Batch_C3_D1, @CTI_C3_Arabica, 10000, 0, N'Arabica đợt 1', GETDATE(), GETDATE(), 0
+);
+
+-- Đợt 2 - Giao 10000 Kg (Culi)
+DECLARE @Batch_C3_D2 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches VALUES (
+    @Batch_C3_D2, 'DELB-2025-0008', @CID3, 2, '2025-10-15', 10000, 'Planned', GETDATE(), GETDATE(), 0
+);
+
+DECLARE @CTI_C3_Culi UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0003'
+);
+
+INSERT INTO ContractDeliveryItems VALUES (
+    NEWID(), 'DLI-2025-0015', @Batch_C3_D2, @CTI_C3_Culi, 10000, 0, N'Culi đợt 2', GETDATE(), GETDATE(), 0
+);
+
+-- Đợt 3 - Giao 10000 Kg (Arabica + Culi phối trộn)
+DECLARE @Batch_C3_D3 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches VALUES (
+    @Batch_C3_D3, 'DELB-2025-0009', @CID3, 3, '2026-01-05', 10000, 'Planned', GETDATE(), GETDATE(), 0
+);
+
+INSERT INTO ContractDeliveryItems VALUES 
+(NEWID(), 'DLI-2025-0016', @Batch_C3_D3, @CTI_C3_Arabica, 5000, 0, N'Arabica đợt 3', GETDATE(), GETDATE(), 0),
+(NEWID(), 'DLI-2025-0017', @Batch_C3_D3, @CTI_C3_Culi,    5000, 0, N'Culi đợt 3', GETDATE(), GETDATE(), 0);
+
+-- Contract 4: CTR-2025-0004
+-- Đợt 1 - Giao toàn bộ 20000 Kg
+DECLARE @Batch_C4_D1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO ContractDeliveryBatches VALUES (
+    @Batch_C4_D1, 'DELB-2025-0010', @CID4, 1, '2025-08-20', 20000, 'Planned', GETDATE(), GETDATE(), 0
+);
+
+DECLARE @CTI_C4_Typica UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-001-CTR-2025-0004'
+);
+
+DECLARE @CTI_C4_TR9 UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-002-CTR-2025-0004'
+);
+
+DECLARE @CTI_C4_Honey UNIQUEIDENTIFIER = (
+    SELECT ContractItemID FROM ContractItems WHERE ContractItemCode = 'CTI-003-CTR-2025-0004'
+);
+
+INSERT INTO ContractDeliveryItems VALUES 
+(NEWID(), 'DLI-2025-0018', @Batch_C4_D1, @CTI_C4_Typica, 5000, 0, N'Typica đợt 1', GETDATE(), GETDATE(), 0),
+(NEWID(), 'DLI-2025-0019', @Batch_C4_D1, @CTI_C4_TR9,    7000, 0, N'Robusta TR9 đợt 1', GETDATE(), GETDATE(), 0),
+(NEWID(), 'DLI-2025-0020', @Batch_C4_D1, @CTI_C4_Honey,  8000, 0, N'Robusta Honey đợt 1', GETDATE(), GETDATE(), 0);
+
+GO
+
 -- Insert vào bảng ProcessingMethods
 INSERT INTO ProcessingMethods (MethodCode, Name, Description)
 VALUES 
