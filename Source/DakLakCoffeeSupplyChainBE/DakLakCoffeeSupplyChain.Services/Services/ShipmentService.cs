@@ -387,6 +387,202 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(ShipmentUpdateDto shipmentUpdateDto)
+        {
+            try
+            {
+                // Truy vấn shipment cần cập nhật
+                var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                    predicate: s => 
+                       s.ShipmentId == shipmentUpdateDto.ShipmentId && 
+                       !s.IsDeleted,
+                    include: query => query
+                       .Include(s => s.ShipmentDetails)
+                       .Include(s => s.Order)
+                          .ThenInclude(o => o.OrderItems),
+                    asNoTracking: false
+                );
+
+                if (shipment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy chuyến giao cần cập nhật."
+                    );
+                }
+
+                // Lấy danh sách OrderItem thuộc Order
+                var validOrderItemIds = shipment.Order?.OrderItems
+                    .Select(i => i.OrderItemId).ToHashSet() ?? new();
+
+                var invalidItems = shipmentUpdateDto.ShipmentDetails
+                    .Where(d => !validOrderItemIds.Contains(d.OrderItemId))
+                    .Select(d => d.OrderItemId)
+                    .ToList();
+
+                if (invalidItems.Any())
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Một số sản phẩm không thuộc đơn hàng: {string.Join(", ", invalidItems)}"
+                    );
+                }
+
+                // Validate số lượng từng item không vượt quá lượng còn lại
+                foreach (var itemDto in shipmentUpdateDto.ShipmentDetails)
+                {
+                    var orderItem = shipment.Order?.OrderItems
+                        .FirstOrDefault(i => i.OrderItemId == itemDto.OrderItemId);
+
+                    if (orderItem == null) 
+                        continue;
+
+                    var deliveredQty = await _unitOfWork.ShipmentDetailRepository.GetDeliveredQuantityByOrderItemId(
+                        itemDto.OrderItemId,
+                        excludeShipmentId: shipment.ShipmentId // trừ chuyến hiện tại ra
+                    );
+
+                    var remainingQty = orderItem.Quantity - deliveredQty;
+
+                    if ((itemDto.Quantity ?? 0) > remainingQty)
+                    {
+                        var productName = orderItem.Product?.ProductName 
+                            ?? "Không rõ tên sản phẩm";
+
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Số lượng giao vượt quá số lượng còn lại của sản phẩm: {productName} (ID: {orderItem.OrderItemId})"
+                        );
+                    }
+                }
+
+                // Tính tổng khối lượng giao nếu không được truyền
+                var calculatedTotalQty = shipmentUpdateDto.ShipmentDetails
+                    .Sum(d => d.Quantity ?? 0);
+
+                if (!shipmentUpdateDto.ShippedQuantity.HasValue)
+                    shipmentUpdateDto.ShippedQuantity = calculatedTotalQty;
+
+                // Ánh xạ các trường shipment chính
+                shipmentUpdateDto.MapToUpdatedShipment(shipment);
+
+                var now = DateHelper.NowVietnamTime();
+
+                // Tập hợp các ID từ DTO
+                var dtoDetailIds = shipmentUpdateDto.ShipmentDetails
+                    .Where(x => x.ShipmentDetailId != Guid.Empty)
+                    .Select(x => x.ShipmentDetailId)
+                    .ToHashSet();
+
+                // Xoá mềm các ShipmentDetail không còn
+                foreach (var oldDetail in shipment.ShipmentDetails.Where(sd => !sd.IsDeleted))
+                {
+                    if (!dtoDetailIds.Contains(oldDetail.ShipmentDetailId))
+                    {
+                        oldDetail.IsDeleted = true;
+                        oldDetail.UpdatedAt = now;
+
+                        await _unitOfWork.ShipmentDetailRepository
+                            .UpdateAsync(oldDetail);
+                    }
+                }
+
+                // Cập nhật hoặc thêm mới các ShipmentDetail
+                foreach (var detailDto in shipmentUpdateDto.ShipmentDetails)
+                {
+                    var existing = shipment.ShipmentDetails
+                        .FirstOrDefault(sd => sd.ShipmentDetailId == detailDto.ShipmentDetailId);
+
+                    if (existing != null)
+                    {
+                        // Cập nhật
+                        existing.OrderItemId = detailDto.OrderItemId;
+                        existing.Quantity = detailDto.Quantity ?? 0;
+                        existing.Unit = detailDto.Unit.ToString();
+                        existing.Note = detailDto.Note ?? string.Empty;
+                        existing.IsDeleted = false;
+                        existing.UpdatedAt = now;
+
+                        await _unitOfWork.ShipmentDetailRepository
+                            .UpdateAsync(existing);
+                    }
+                    else
+                    {
+                        var newDetail = new ShipmentDetail
+                        {
+                            ShipmentDetailId = Guid.NewGuid(),
+                            ShipmentId = shipment.ShipmentId,
+                            OrderItemId = detailDto.OrderItemId,
+                            Quantity = detailDto.Quantity ?? 0,
+                            Unit = detailDto.Unit.ToString(),
+                            Note = detailDto.Note ?? string.Empty,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                            IsDeleted = false
+                        };
+
+                        await _unitOfWork.ShipmentDetailRepository
+                            .CreateAsync(newDetail);
+
+                        shipment.ShipmentDetails.Add(newDetail);
+                    }
+                }
+
+                // Cập nhật Shipment ở repository
+                await _unitOfWork.ShipmentRepository
+                    .UpdateAsync(shipment);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Lấy lại shipment sau update để trả DTO
+                    var updatedShipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                        predicate: s => s.ShipmentId == shipment.ShipmentId && !s.IsDeleted,
+                        include: query => query
+                           .Include(s => s.Order)
+                              .ThenInclude(o => o.DeliveryBatch)
+                           .Include(s => s.ShipmentDetails.Where(sd => !sd.IsDeleted))
+                              .ThenInclude(sd => sd.OrderItem),
+                        asNoTracking: true
+                    );
+
+                    if (updatedShipment != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = updatedShipment.MapToShipmentViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không truy xuất được dữ liệu."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeleteShipmentById(Guid shipmentId, Guid userId)
         {
             try

@@ -448,7 +448,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (existingItem != null)
                     {
-                        // Update
+                        // Cập nhật
                         existingItem.Quantity = itemDto.Quantity ?? 0;
                         existingItem.UnitPrice = itemDto.UnitPrice ?? 0;
                         existingItem.DiscountAmount = itemDto.DiscountAmount ?? 0;
@@ -461,7 +461,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                     else
                     {
-                        // Create mới
+                        // Tạo mới
                         var newItem = new OrderItem
                         {
                             OrderItemId = Guid.NewGuid(),
@@ -499,7 +499,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại order sau update để trả DTO
                     var updatedOrder = await _unitOfWork.OrderRepository.GetByIdAsync(
-                        predicate: o => o.OrderId == orderUpdateDto.OrderId,
+                        predicate: o => 
+                           o.OrderId == orderUpdateDto.OrderId &&
+                           !o.IsDeleted,
                         include: query => query
                            .Include(o => o.DeliveryBatch)
                               .ThenInclude(b => b.Contract)

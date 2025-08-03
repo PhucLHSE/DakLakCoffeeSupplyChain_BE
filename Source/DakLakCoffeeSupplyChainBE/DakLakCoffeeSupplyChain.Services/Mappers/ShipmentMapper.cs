@@ -122,5 +122,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
             return shipment;
         }
+
+        // Mapper ShipmentUpdateDto -> Shipment
+        public static void MapToUpdatedShipment(this ShipmentUpdateDto dto, Shipment shipment)
+        {
+            shipment.OrderId = dto.OrderId;
+            shipment.DeliveryStaffId = dto.DeliveryStaffId;
+            shipment.ShippedQuantity = dto.ShippedQuantity;
+            shipment.ShippedAt = dto.ShippedAt;
+            shipment.DeliveryStatus = dto.DeliveryStatus.ToString(); // enum -> string
+            shipment.ReceivedAt = dto.ReceivedAt;
+            shipment.UpdatedAt = DateHelper.NowVietnamTime(); // cập nhật thời gian cuối
+        }
     }
 }
