@@ -64,6 +64,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+        public static void MapToUpdatedReport(this GeneralFarmerReportUpdateDto dto, GeneralFarmerReport entity)
+        {
+            entity.Title = dto.Title;
+            entity.Description = dto.Description;
+            entity.SeverityLevel = (int)dto.SeverityLevel;
+            entity.ImageUrl = dto.ImageUrl ?? string.Empty;
+            entity.VideoUrl = dto.VideoUrl ?? string.Empty;
+            entity.UpdatedAt = DateHelper.NowVietnamTime();
+
+        }
+
 
     }
 }

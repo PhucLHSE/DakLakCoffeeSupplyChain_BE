@@ -1,6 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
@@ -118,7 +121,76 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> UpdateGeneralFarmerReport(GeneralFarmerReportUpdateDto dto)
+        {
+            try
+            {
+                // 1. Tìm báo cáo theo ID
+                var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(dto.ReportId);
+                if (report == null || report.IsDeleted)
+                {
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy báo cáo cần cập nhật.");
+                }
 
+                // 2. Ánh xạ các trường cập nhật từ DTO → Entity
+                dto.MapToUpdatedReport(report);
+
+                // 3. Cập nhật vào repository (không cần sửa interface)
+                ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+
+                // 4. Lưu thay đổi
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var fullReport = await _unitOfWork.GeneralFarmerReportRepository
+     .GetByIdWithIncludesAsync(dto.ReportId);
+
+                    if (fullReport == null)
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật xong nhưng không truy xuất được dữ liệu.");
+
+                    var updatedDto = fullReport.MapToGeneralFarmerReportViewDetailsDto();
+                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, updatedDto);
+
+                }
+
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            }
+        }
+        public async Task<IServiceResult> SoftDeleteGeneralFarmerReport(Guid reportId)
+        {
+            var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
+            if (report == null || report.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo cần xóa.");
+
+            report.IsDeleted = true;
+            report.UpdatedAt = DateHelper.NowVietnamTime();
+
+            ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+
+            var result = await _unitOfWork.SaveChangesAsync();
+            if (result > 0)
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa mềm báo cáo thành công.");
+
+            return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+        }
+        public async Task<IServiceResult> HardDeleteGeneralFarmerReport(Guid reportId)
+        {
+            var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
+            if (report == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo.");
+
+            await _unitOfWork.GeneralFarmerReportRepository.RemoveAsync(report);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            if (result > 0)
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn báo cáo.");
+            return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa vĩnh viễn thất bại.");
+        }
 
     }
 }
