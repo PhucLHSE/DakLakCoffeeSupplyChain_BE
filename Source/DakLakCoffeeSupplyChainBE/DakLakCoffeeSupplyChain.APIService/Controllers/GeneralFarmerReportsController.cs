@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Farmer")]
+    [Authorize(Roles = "Farmer,AgriculturalExpert,Admin")]
     public class GeneralFarmerReportsController : ControllerBase
     {
         private readonly IGeneralFarmerReportService _reportService;
