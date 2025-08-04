@@ -124,17 +124,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Duyệt yêu cầu nhập kho thành công.");
         }
 
-        public async Task<IServiceResult> GetAllAsync()
+        public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
-            var requests = await _unitOfWork.WarehouseInboundRequests.GetAllWithIncludesAsync();
-            if (requests == null || !requests.Any())
+            // 🧩 Xác định ManagerId từ userId (có thể là Manager hoặc Staff)
+            Guid? managerId = null;
+
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
             {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu nhập kho nào.", new List<WarehouseInboundRequestViewDto>());
+                managerId = manager.ManagerId;
+                Console.WriteLine($"🔍 Xác định là BusinessManager: {managerId}");
+            }
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted && staff.SupervisorId != null)
+                {
+                    managerId = staff.SupervisorId;
+                    Console.WriteLine($"🔍 Xác định là BusinessStaff. SupervisorId = {managerId}");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Không xác định được manager từ userId: {userId}");
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được công ty của người dùng.");
+                }
             }
 
-            var result = requests.Select(r => r.ToViewDto()).ToList();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu nhập kho thành công", result);
+            // 🧩 Lấy toàn bộ request có navigation
+            var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllWithIncludesAsync();
+
+            // 🧠 Debug số lượng
+            Console.WriteLine($"📦 Tổng số yêu cầu: {allRequests.Count}");
+
+            // 🎯 Lọc theo managerId thông qua Plan.CreatedBy
+            var filtered = allRequests
+                .Where(r =>
+                    r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy == managerId &&
+                    !r.IsDeleted
+                )
+                .Select(r => r.ToViewDto())
+                .ToList();
+
+            Console.WriteLine($"✅ Số yêu cầu lọc được: {filtered.Count}");
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu theo công ty thành công", filtered);
         }
+
+
 
         public async Task<IServiceResult> GetByIdAsync(Guid requestId)
         {

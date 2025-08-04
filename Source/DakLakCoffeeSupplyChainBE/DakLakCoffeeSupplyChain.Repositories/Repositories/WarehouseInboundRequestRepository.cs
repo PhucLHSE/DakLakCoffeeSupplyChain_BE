@@ -50,10 +50,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Farmer).ThenInclude(f => f.User)
                 .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
                 .Include(r => r.Batch)
+                    .ThenInclude(b => b.CropSeason)
+                        .ThenInclude(cs => cs.Commitment)
+                            .ThenInclude(c => c.Plan) // ✅ THÊM DÒNG NÀY
                 .Where(r => !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
+
 
         public async Task<WarehouseInboundRequest?> GetDetailByIdAsync(Guid id)
         {

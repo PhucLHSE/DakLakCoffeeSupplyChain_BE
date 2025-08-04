@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,7 +68,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetAllAsync();
+            var userId = User.GetUserId();
+            var result = await _service.GetAllAsync(userId);
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
 
