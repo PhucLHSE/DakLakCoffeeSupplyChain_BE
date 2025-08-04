@@ -9,4 +9,5 @@ public interface ICropSeasonService
     Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false);
     Task<IServiceResult> DeleteById(Guid cropSeasonId, Guid userId, bool isAdmin);
     Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId, Guid userId, bool isAdmin);
+    Task AutoUpdateCropSeasonStatusAsync(Guid cropSeasonId);
 }
