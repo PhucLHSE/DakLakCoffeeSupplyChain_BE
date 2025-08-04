@@ -1,5 +1,4 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -89,7 +88,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _shipmentService.Create(shipmentCreateDto);
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _shipmentService
+                .Create(shipmentCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -98,6 +110,47 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PUT api/<ShipmentsController>/{shipmentId}
+        [HttpPut("{shipmentId}")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> UpdateShipmentAsync(
+            Guid shipmentId,
+            [FromBody] ShipmentUpdateDto shipmentUpdateDto)
+        {
+            // So sánh route id với dto id để đảm bảo tính nhất quán
+            if (shipmentId != shipmentUpdateDto.ShipmentId)
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _shipmentService
+                .Update(shipmentUpdateDto, userId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn giao hàng.");
 
             return StatusCode(500, result.Message);
         }

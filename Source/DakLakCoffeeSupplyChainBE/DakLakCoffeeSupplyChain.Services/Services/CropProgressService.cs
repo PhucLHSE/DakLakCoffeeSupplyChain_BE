@@ -55,45 +55,64 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                // 1. Lấy stage
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
                 if (stage == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Giai đoạn không tồn tại.");
 
+                // 2. Lấy chi tiết mùa vụ
                 var detail = await _unitOfWork.CultivationRegistrationRepository
                     .GetCropSeasonDetailByIdAsync(dto.CropSeasonDetailId);
                 if (detail == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Chi tiết mùa vụ không tồn tại.");
 
+                // 3. Kiểm tra quyền người dùng
                 if (detail.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền ghi nhận tiến độ cho vùng trồng này.");
 
-                if (dto.ProgressDate.HasValue &&
-                    dto.ProgressDate.Value.ToDateTime(new TimeOnly(0, 0)) > DateTime.UtcNow)
+                // 4. Kiểm tra ngày ghi nhận không được lớn hơn hôm nay
+                if (dto.ProgressDate.Value.Date > DateHelper.NowVietnamTime().Date)
                 {
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được lớn hơn hôm nay.");
                 }
 
+                // 5. Kiểm tra trùng lặp (Stage + Detail + Date)
                 var duplicate = await _unitOfWork.CropProgressRepository.GetAllAsync(p =>
-                    !p.IsDeleted &&
-                    p.CropSeasonDetailId == dto.CropSeasonDetailId &&
-                    p.StageId == dto.StageId &&
-                    p.ProgressDate == dto.ProgressDate
-                );
-                if (duplicate.Any())
-                {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tiến trình đã tồn tại với ngày và giai đoạn này.");
-                }
+             !p.IsDeleted &&
+             p.CropSeasonDetailId == dto.CropSeasonDetailId &&
+             p.StageId == dto.StageId &&
+             p.ProgressDate == DateOnly.FromDateTime(dto.ProgressDate.Value)
+         );
 
+                if (duplicate.Any())
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tiến trình đã tồn tại với ngày và giai đoạn này.");
+
+                // 6. Lấy thông tin nông dân từ userId
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin nông dân.");
 
+                // 7. Map DTO -> Entity
                 var entity = dto.MapToCropProgressCreateDto();
                 entity.UpdatedBy = farmer.FarmerId;
 
-                await _unitOfWork.CropProgressRepository.CreateAsync(entity);
-                var result = await _unitOfWork.SaveChangesAsync();
+                // 8. Cập nhật ActualYield nếu là giai đoạn HARVESTING
+                if (stage.StageCode == "HARVESTING")
+                {
+                    if (!dto.ActualYield.HasValue || dto.ActualYield.Value <= 0)
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, "Vui lòng nhập sản lượng thực tế hợp lệ (> 0).");
 
+                    detail.ActualYield = dto.ActualYield.Value;
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                }
+
+
+                // 9. Tạo tiến trình
+                await _unitOfWork.CropProgressRepository.CreateAsync(entity);
+
+                // 10. Lưu thay đổi
+                var result = await _unitOfWork.SaveChangesAsync();
                 if (result > 0)
                 {
                     var created = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(entity.ProgressId);
@@ -130,6 +149,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (stage == null)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Giai đoạn không tồn tại.");
 
+                // ✅ Cho phép cập nhật ActualYield nếu là HARVESTING
+                if (stage.StageCode == "HARVESTING" && dto.ActualYield.HasValue && dto.ActualYield.Value > 0)
+                {
+                    detail.ActualYield = dto.ActualYield.Value;
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                }
+
                 var linkedReports = await _unitOfWork.GeneralFarmerReportRepository.GetAllAsync(
                     r => r.ProcessingProgressId == dto.ProgressId
                 );
@@ -153,6 +180,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dto.MapToUpdateCropProgress(entity, farmer.FarmerId);
                 await _unitOfWork.CropProgressRepository.UpdateAsync(entity);
                 var saveResult = await _unitOfWork.SaveChangesAsync();
+
                 if (saveResult > 0)
                 {
                     var updated = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(entity.ProgressId);
@@ -167,6 +195,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
             }
         }
+
 
         public async Task<IServiceResult> DeleteById(Guid progressId, Guid userId)
         {

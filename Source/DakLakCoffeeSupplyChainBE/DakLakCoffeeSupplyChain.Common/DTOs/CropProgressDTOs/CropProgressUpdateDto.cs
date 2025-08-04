@@ -32,6 +32,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public string? Note { get; set; }
 
         public int? StepIndex { get; set; }
+        public double? ActualYield { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

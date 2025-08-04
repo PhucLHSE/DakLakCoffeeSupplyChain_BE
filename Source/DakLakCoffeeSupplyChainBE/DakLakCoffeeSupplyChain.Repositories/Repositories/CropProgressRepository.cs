@@ -76,6 +76,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.CropProgresses
                 .Include(p => p.Stage)
                 .Include(p => p.UpdatedByNavigation).ThenInclude(f => f.User)
+                .Include(p => p.CropSeasonDetail)
                 .FirstOrDefaultAsync(p => p.ProgressId == progressId && !p.IsDeleted);
         }
 

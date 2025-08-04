@@ -14,7 +14,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ContractMapper
     {
         // Mapper ContractViewAllDto
-        public static ContractViewAllDto MapToContractViewAllDto(this Contract contract)
+        public static ContractViewAllDto MapToContractViewAllDto(
+            this Contract contract)
         {
             // Parse Status string to enum
             ContractStatus status = Enum.TryParse<ContractStatus>(contract.Status, ignoreCase: true, out var parsedStatus)
@@ -25,6 +26,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 ContractId = contract.ContractId,
                 ContractCode = contract.ContractCode,
+                ContractNumber = contract.ContractNumber,
                 ContractTitle = contract.ContractTitle,
                 SellerName = contract.Seller?.User?.Name ?? "N/A",
                 BuyerName = contract.Buyer?.CompanyName ?? "N/A",
@@ -38,7 +40,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ContractViewDetailsDto
-        public static ContractViewDetailsDto MapToContractViewDetailDto(this Contract contract)
+        public static ContractViewDetailsDto MapToContractViewDetailDto(
+            this Contract contract)
         {
             // Parse Status string to enum
             ContractStatus status = Enum.TryParse<ContractStatus>(contract.Status, ignoreCase: true, out var parsedStatus)
@@ -82,7 +85,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ContractCreateDto
-        public static Contract MapToNewContract(this ContractCreateDto dto, Guid sellerId, string contractCode)
+        public static Contract MapToNewContract(
+            this ContractCreateDto dto, 
+            Guid sellerId,
+            string contractCode)
         {
             var contract = new Contract
             {
@@ -124,7 +130,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ContractUpdateDto
-        public static void MapToUpdateContract(this Contract contract, ContractUpdateDto dto)
+        public static void MapToUpdateContract(
+            this Contract contract,
+            ContractUpdateDto dto)
         {
             // Cập nhật thông tin contract chính
             contract.BuyerId = dto.BuyerId;

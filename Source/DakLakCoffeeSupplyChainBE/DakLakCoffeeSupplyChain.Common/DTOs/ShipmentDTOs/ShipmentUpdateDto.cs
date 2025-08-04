@@ -10,8 +10,12 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
 {
-    public class ShipmentCreateDto : IValidatableObject
+    public class ShipmentUpdateDto : IValidatableObject
     {
+        // Mã định danh chuyến giao cần cập nhật
+        [Required(ErrorMessage = "ShipmentId là bắt buộc.")]
+        public Guid ShipmentId { get; set; }
+
         // Gắn với đơn hàng
         [Required(ErrorMessage = "OrderId là bắt buộc.")]
         public Guid OrderId { get; set; }
@@ -23,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
         // Số lượng đã giao
         public double? ShippedQuantity { get; set; }
 
-        // Ngày bắt đầu giao
+        // Ngày bắt đầu giao hàng
         public DateTime? ShippedAt { get; set; }
 
         // Trạng thái giao hàng
@@ -31,11 +35,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
         [EnumDataType(typeof(ShipmentDeliveryStatus), ErrorMessage = "Trạng thái giao hàng không hợp lệ.")]
         public ShipmentDeliveryStatus DeliveryStatus { get; set; } = ShipmentDeliveryStatus.Pending;
 
-        // Ngày nhận hàng thành công (nếu có)
+        // Ngày nhận hàng thành công
         public DateTime? ReceivedAt { get; set; }
 
-        // Danh sách sản phẩm trong chuyến giao
-        public List<ShipmentDetailCreateDto> ShipmentDetails { get; set; } = new();
+        // Danh sách chi tiết sản phẩm trong chuyến giao
+        public List<ShipmentDetailUpdateDto> ShipmentDetails { get; set; } = new();
 
         // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -45,7 +49,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
                 !ShipmentDetails.Any())
             {
                 yield return new ValidationResult(
-                    "Chuyến giao hàng phải có ít nhất một sản phẩm.",
+                    "Cần ít nhất một sản phẩm trong chuyến giao.",
                     new[] { nameof(ShipmentDetails) }
                 );
             }
@@ -65,7 +69,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
                 );
             }
 
-            // Validate ShippedAt và ReceivedAt
+            // Validate thời gian giao hàng không vượt quá hiện tại
             if (ShippedAt.HasValue && 
                 ShippedAt > DateTime.UtcNow.AddDays(1))
             {
@@ -94,6 +98,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
                 );
             }
 
+            // Validate số lượng giao
             if (ShippedQuantity.HasValue && 
                 ShippedQuantity <= 0)
             {

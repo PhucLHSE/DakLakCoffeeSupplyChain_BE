@@ -9,15 +9,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
     public class GeneralFarmerReportCreateDto : IValidatableObject
     {
         [Required(ErrorMessage = "Loại báo cáo là bắt buộc.")]
-        [MaxLength(100, ErrorMessage = "Loại báo cáo không được vượt quá 100 ký tự.")]
-        public string ReportType { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ReportTypeEnum ReportType { get; set; }
 
         public Guid? CropProgressId { get; set; }
 
         public Guid? ProcessingProgressId { get; set; }
-
-        [Required(ErrorMessage = "Người báo cáo là bắt buộc.")]
-        public Guid ReportedBy { get; set; }
 
         [Required(ErrorMessage = "Tiêu đề là bắt buộc.")]
         [MaxLength(200, ErrorMessage = "Tiêu đề không được vượt quá 200 ký tự.")]
@@ -29,8 +26,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
 
         [Range(1, 5, ErrorMessage = "Mức độ nghiêm trọng phải từ 1 đến 5.")]
 
+        [Required(ErrorMessage = "Mức độ nghiêm trọng là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public SeverityLevel SeverityLevel { get; set; }
+
 
         [MaxLength(1000, ErrorMessage = "Đường dẫn hình ảnh không được vượt quá 1000 ký tự.")]
         public string? ImageUrl { get; set; }
@@ -40,6 +39,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            if (ReportType == ReportTypeEnum.Crop && CropProgressId == null)
+            {
+                yield return new ValidationResult(
+                    "CropProgressId là bắt buộc khi loại báo cáo là 'Crop'.",
+                    new[] { nameof(CropProgressId) }
+                );
+            }
+
+            if (ReportType == ReportTypeEnum.Processing && ProcessingProgressId == null)
+            {
+                yield return new ValidationResult(
+                    "ProcessingProgressId là bắt buộc khi loại báo cáo là 'Processing'.",
+                    new[] { nameof(ProcessingProgressId) }
+                );
+            }
             if (!string.IsNullOrEmpty(ImageUrl) && !Uri.IsWellFormedUriString(ImageUrl, UriKind.RelativeOrAbsolute))
             {
                 yield return new ValidationResult(

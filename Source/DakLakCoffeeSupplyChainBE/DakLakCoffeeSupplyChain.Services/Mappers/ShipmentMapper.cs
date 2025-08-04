@@ -15,7 +15,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ShipmentMapper
     {
         // Mapper ShipmentViewAllDto
-        public static ShipmentViewAllDto MapToShipmentViewAllDto(this Shipment shipment)
+        public static ShipmentViewAllDto MapToShipmentViewAllDto(
+            this Shipment shipment)
         {
             // Parse DeliveryStatus string to enum
             ShipmentDeliveryStatus status = Enum.TryParse<ShipmentDeliveryStatus>(
@@ -40,7 +41,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ShipmentViewDetailsDto
-        public static ShipmentViewDetailsDto MapToShipmentViewDetailsDto(this Shipment shipment)
+        public static ShipmentViewDetailsDto MapToShipmentViewDetailsDto(
+            this Shipment shipment)
         {
             // Parse DeliveryStatus string to enum
             ShipmentDeliveryStatus status = Enum.TryParse<ShipmentDeliveryStatus>(
@@ -87,7 +89,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ShipmentCreateDto -> Shipment
-        public static Shipment MapToNewShipment(this ShipmentCreateDto dto, string shipmentCode)
+        public static Shipment MapToNewShipment(
+            this ShipmentCreateDto dto, 
+            string shipmentCode, 
+            Guid userId)
         {
             var shipmentId = Guid.NewGuid();
 
@@ -101,7 +106,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ShippedAt = dto.ShippedAt,
                 DeliveryStatus = dto.DeliveryStatus.ToString(), // enum to string
                 ReceivedAt = dto.ReceivedAt,
-                CreatedBy = dto.CreatedBy,
+                CreatedBy = userId,
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false,
@@ -121,6 +126,20 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
 
             return shipment;
+        }
+
+        // Mapper ShipmentUpdateDto -> Shipment
+        public static void MapToUpdatedShipment(
+            this ShipmentUpdateDto dto, 
+            Shipment shipment)
+        {
+            shipment.OrderId = dto.OrderId;
+            shipment.DeliveryStaffId = dto.DeliveryStaffId;
+            shipment.ShippedQuantity = dto.ShippedQuantity;
+            shipment.ShippedAt = dto.ShippedAt;
+            shipment.DeliveryStatus = dto.DeliveryStatus.ToString(); // enum -> string
+            shipment.ReceivedAt = dto.ReceivedAt;
+            shipment.UpdatedAt = DateHelper.NowVietnamTime(); // cập nhật thời gian cuối
         }
     }
 }

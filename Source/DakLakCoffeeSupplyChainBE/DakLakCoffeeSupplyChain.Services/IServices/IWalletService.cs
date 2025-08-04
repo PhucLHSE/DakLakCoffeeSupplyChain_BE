@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWalletService
     {
         Task<IServiceResult> Create(WalletCreateDto walletCreateDto, Guid userId);
+
     }
 }

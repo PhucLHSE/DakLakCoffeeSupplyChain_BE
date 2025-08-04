@@ -10,9 +10,11 @@
         public int StageId { get; set; }
 
         public string StageName { get; set; } = string.Empty;
+        public string StageCode { get; set; } = string.Empty;
 
         public string StageDescription { get; set; } = string.Empty;
 
+        public double? ActualYield { get; set; }
         public DateOnly? ProgressDate { get; set; }
 
         public string Note { get; set; } = string.Empty;
