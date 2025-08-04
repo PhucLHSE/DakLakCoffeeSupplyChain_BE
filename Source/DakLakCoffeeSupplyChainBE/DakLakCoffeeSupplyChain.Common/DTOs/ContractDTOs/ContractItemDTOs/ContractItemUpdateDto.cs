@@ -55,7 +55,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
                 );
             }
 
-            if (Quantity != null && UnitPrice != null && DiscountAmount > Quantity * UnitPrice)
+            if (Quantity != null && 
+                UnitPrice != null && 
+                DiscountAmount > Quantity * UnitPrice)
             {
                 yield return new ValidationResult(
                     "Giảm giá không được vượt quá tổng thành tiền.",

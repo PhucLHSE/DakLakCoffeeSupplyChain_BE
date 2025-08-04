@@ -98,6 +98,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Truy xuất lại dữ liệu để trả về
                     var createdItem = await _unitOfWork.ContractItemRepository.GetByIdAsync(
                         predicate: ci => ci.ContractItemId == newContractItem.ContractItemId,
                         include: query => query
@@ -165,15 +166,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: ci => 
                        ci.ContractItemId == contractItemDto.ContractItemId &&
                        !ci.IsDeleted,
-                    include: query => query
-                           .Include(ci => ci.CoffeeType)
-                           .Include(ci => ci.Contract),
                     asNoTracking: false
                 );
 
                 // Nếu không tìm thấy
-                if (contractItem == null || 
-                    contractItem.IsDeleted)
+                if (contractItem == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
