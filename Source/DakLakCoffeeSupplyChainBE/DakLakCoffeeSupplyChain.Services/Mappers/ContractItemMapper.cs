@@ -12,7 +12,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class ContractItemMapper
     {
         // Mapper ContractItemViewDto
-        public static ContractItemViewDto MapToContractItemViewDto(this ContractItem contractItem)
+        public static ContractItemViewDto MapToContractItemViewDto(
+            this ContractItem contractItem)
         {
             return new ContractItemViewDto
             {
@@ -28,7 +29,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ContractItemCreateDto -> ContractItem
-        public static ContractItem MapToNewContractItem(this ContractItemCreateDto dto, string contractItemCode)
+        public static ContractItem MapToNewContractItem(
+            this ContractItemCreateDto dto, 
+            string contractItemCode)
         {
             return new ContractItem
             {
@@ -47,7 +50,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper ContractItemUpdateDto
-        public static void MapToUpdateContractItem(this ContractItemUpdateDto dto, ContractItem contractItem)
+        public static void MapToUpdateContractItem(
+            this ContractItemUpdateDto dto, 
+            ContractItem contractItem)
         {
             contractItem.ContractId = dto.ContractId;
             contractItem.CoffeeTypeId = dto.CoffeeTypeId;

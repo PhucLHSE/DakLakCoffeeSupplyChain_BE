@@ -82,13 +82,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã định danh cho ContractItem
-                string contractItemCode = await _codeGenerator.GenerateContractItemCodeAsync(contractItemDto.ContractId);
+                string contractItemCode = await _codeGenerator
+                    .GenerateContractItemCodeAsync(contractItemDto.ContractId);
 
                 // Map DTO to Entity
-                var newContractItem = contractItemDto.MapToNewContractItem(contractItemCode);
+                var newContractItem = contractItemDto
+                    .MapToNewContractItem(contractItemCode);
 
                 // Tạo ContractItem ở repository
-                await _unitOfWork.ContractItemRepository.CreateAsync(newContractItem);
+                await _unitOfWork.ContractItemRepository
+                    .CreateAsync(newContractItem);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -104,6 +107,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (createdItem != null)
                     {
+                        // Map sang DTO chi tiết để trả về
                         var responseDto = createdItem.MapToContractItemViewDto();
 
                         return new ServiceResult(
@@ -198,7 +202,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 contractItemDto.MapToUpdateContractItem(contractItem);
 
                 // Cập nhật contractItem ở repository
-                await _unitOfWork.ContractItemRepository.UpdateAsync(contractItem);
+                await _unitOfWork.ContractItemRepository
+                    .UpdateAsync(contractItem);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -217,6 +222,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (updatedItem != null)
                     {
+                        // Map sang DTO chi tiết để trả về
                         var responseDto = updatedItem.MapToContractItemViewDto();
 
                         return new ServiceResult(
@@ -291,7 +297,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else
                 {
                     // Xóa contractItem khỏi repository
-                    await _unitOfWork.ContractItemRepository.RemoveAsync(contractItem);
+                    await _unitOfWork.ContractItemRepository
+                        .RemoveAsync(contractItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -366,7 +373,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     contractItem.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm contractItem ở repository
-                    await _unitOfWork.ContractItemRepository.UpdateAsync(contractItem);
+                    await _unitOfWork.ContractItemRepository
+                        .UpdateAsync(contractItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
