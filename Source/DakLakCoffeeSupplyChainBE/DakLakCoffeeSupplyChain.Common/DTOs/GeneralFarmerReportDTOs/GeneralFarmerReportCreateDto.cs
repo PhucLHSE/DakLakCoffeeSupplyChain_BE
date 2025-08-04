@@ -24,10 +24,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
         [MaxLength(2000, ErrorMessage = "Mô tả không được vượt quá 2000 ký tự.")]
         public string Description { get; set; }
 
-        [Range(1, 5, ErrorMessage = "Mức độ nghiêm trọng phải từ 1 đến 5.")]
-
         [Required(ErrorMessage = "Mức độ nghiêm trọng là bắt buộc.")]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [Range(0, 2)]
         public SeverityLevel SeverityLevel { get; set; }
 
 

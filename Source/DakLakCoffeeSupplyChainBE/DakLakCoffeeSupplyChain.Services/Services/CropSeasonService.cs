@@ -304,6 +304,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
 
+        public async Task AutoUpdateCropSeasonStatusAsync(Guid cropSeasonId)
+        {
+            var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
+            if (cropSeason == null || cropSeason.IsDeleted) return;
+
+            var allDetails = cropSeason.CropSeasonDetails?.Where(d => !d.IsDeleted).ToList();
+            if (allDetails == null || !allDetails.Any()) return;
+
+            bool allCompleted = allDetails.All(d => d.Status == CropDetailStatus.Completed.ToString());
+            bool anyInProgress = allDetails.Any(d => d.Status == CropDetailStatus.InProgress.ToString());
+
+            var currentStatus = Enum.Parse<CropSeasonStatus>(cropSeason.Status);
+
+            CropSeasonStatus? newStatus = null;
+            if (allCompleted && currentStatus != CropSeasonStatus.Completed)
+                newStatus = CropSeasonStatus.Completed;
+            else if (anyInProgress && currentStatus != CropSeasonStatus.Active)
+                newStatus = CropSeasonStatus.Active;
+
+            if (newStatus != null)
+            {
+                cropSeason.Status = newStatus.ToString();
+                cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
+                await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
 
     }
 }
