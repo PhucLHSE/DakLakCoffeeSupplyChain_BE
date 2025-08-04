@@ -17,5 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetByIdAsync(Guid id, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> GetAvailableCoffeeTypesAsync(Guid userId, Guid cropSeasonId);
+
     }
 }

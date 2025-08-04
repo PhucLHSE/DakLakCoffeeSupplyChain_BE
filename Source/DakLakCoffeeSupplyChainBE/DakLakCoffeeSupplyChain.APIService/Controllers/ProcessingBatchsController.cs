@@ -165,6 +165,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpGet("available-coffee-types")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> GetAvailableCoffeeTypes([FromQuery] Guid cropSeasonId)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var result = await _processingbatchservice.GetAvailableCoffeeTypesAsync(userId, cropSeasonId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return BadRequest(result.Message);
+        }
 
     }
 }

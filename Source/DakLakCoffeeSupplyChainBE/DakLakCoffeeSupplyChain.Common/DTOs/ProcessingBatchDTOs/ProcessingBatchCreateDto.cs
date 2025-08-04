@@ -14,6 +14,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public string BatchCode { get; set; }       
         public int MethodId { get; set; }
         //public double InputQuantity { get; set; }
-        public string InputUnit { get; set; }
+        //public string InputUnit { get; set; }
     }
 }

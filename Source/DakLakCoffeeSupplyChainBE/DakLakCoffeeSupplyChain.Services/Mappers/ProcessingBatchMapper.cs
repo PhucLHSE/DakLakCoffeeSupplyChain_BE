@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
@@ -110,6 +111,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                             RecordedAt = param.RecordedAt
                         }).ToList() ?? new()
                     }).ToList() ?? new()
+            };
+        }
+        public static CoffeeTypeViewAllDto MapToCoffeeTypeDto(this CoffeeType entity)
+        {
+            return new CoffeeTypeViewAllDto
+            {
+                CoffeeTypeId = entity.CoffeeTypeId,
+                TypeName = entity.TypeName,
+                Description = entity.Description
             };
         }
     }
