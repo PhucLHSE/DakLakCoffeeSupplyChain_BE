@@ -34,10 +34,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
         // Ngày nhận hàng thành công (nếu có)
         public DateTime? ReceivedAt { get; set; }
 
-        // Người tạo chuyến giao
-        [Required(ErrorMessage = "Người tạo là bắt buộc.")]
-        public Guid CreatedBy { get; set; }
-
         // Danh sách sản phẩm trong chuyến giao
         public List<ShipmentDetailCreateDto> ShipmentDetails { get; set; } = new();
 
