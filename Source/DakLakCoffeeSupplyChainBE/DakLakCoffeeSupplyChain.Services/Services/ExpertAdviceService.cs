@@ -81,7 +81,20 @@ public class ExpertAdviceService : IExpertAdviceService
         };
 
         await _unitOfWork.ExpertAdviceRepository.AddAsync(advice);
+
+        // ✅ Cập nhật trạng thái Resolve cho báo cáo nông dân
+        var reportToUpdate = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(dto.ReportId);
+        if (reportToUpdate != null && reportToUpdate.IsResolved != true)
+        {
+            reportToUpdate.IsResolved = true;
+            reportToUpdate.ResolvedAt = DateTime.UtcNow;
+            reportToUpdate.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.GeneralFarmerReportRepository.Update(reportToUpdate);
+        }
+
         await _unitOfWork.SaveChangesAsync();
+
 
         // 4. Trả lại kết quả chi tiết
         var savedAdvice = await _unitOfWork.ExpertAdviceRepository.GetByIdAsync(

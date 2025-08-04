@@ -191,6 +191,38 @@
                     return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn báo cáo.");
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa vĩnh viễn thất bại.");
             }
+        public async Task<IServiceResult> ResolveGeneralFarmerReportAsync(Guid reportId, Guid expertId)
+        {
+            var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(reportId);
+            if (report == null || report.IsDeleted)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo.");
 
+            if (report.IsResolved == true)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Báo cáo đã được xử lý.");
+
+            var expert = await _unitOfWork.UserAccountRepository.GetByIdAsync(expertId);
+            if (expert.RoleId != 5)
+            {
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Người xử lý không hợp lệ.");
+            }
+
+
+            // Cập nhật trạng thái xử lý
+            report.IsResolved = true;
+            report.ResolvedAt = DateHelper.NowVietnamTime();
+            report.UpdatedAt = DateHelper.NowVietnamTime(); // cập nhật luôn thời điểm sửa đổi
+
+            ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            if (result > 0)
+            {
+                var updated = await _unitOfWork.GeneralFarmerReportRepository.GetByIdWithIncludesAsync(reportId);
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Báo cáo đã được xử lý.", updated?.MapToGeneralFarmerReportViewDetailsDto());
+            }
+
+            return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không thể cập nhật trạng thái báo cáo.");
         }
+
     }
+}

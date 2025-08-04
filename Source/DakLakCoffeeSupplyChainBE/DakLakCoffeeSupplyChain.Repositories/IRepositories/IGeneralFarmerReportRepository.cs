@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<int> CountReportsInYearAsync(int year);
         Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId);
         Task<string?> GetMaxReportCodeForYearAsync(int year);
+        void Update(GeneralFarmerReport entity);
+
     }
 }
