@@ -19,5 +19,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .CountAsync(e => e.IsVerified == true && !e.IsDeleted);
         }
+        public async Task<AgriculturalExpert?> GetByUserIdAsync(Guid userId)
+        {
+            return await _context.AgriculturalExperts
+                .Include(e => e.User)
+                .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
+        }
+
     }
 }
