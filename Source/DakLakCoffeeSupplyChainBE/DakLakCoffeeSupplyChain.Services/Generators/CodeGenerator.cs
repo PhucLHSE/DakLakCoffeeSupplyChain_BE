@@ -164,10 +164,38 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateGeneralFarmerReportCodeAsync()
         {
-            var count = await _unitOfWork.GeneralFarmerReportRepository.CountReportsInYearAsync(CurrentYear);
+            const int maxRetry = 5;
 
-            return $"RPT-{CurrentYear}-{(count + 1):D4}";
+            for (int attempt = 0; attempt < maxRetry; attempt++)
+            {
+                // Lấy mã lớn nhất hiện tại (ví dụ: "RPT-2025-0012")
+                var maxCode = await _unitOfWork.GeneralFarmerReportRepository
+                    .GetMaxReportCodeForYearAsync(CurrentYear);
+
+                int nextNumber = 1;
+
+                if (!string.IsNullOrWhiteSpace(maxCode))
+                {
+                    var parts = maxCode.Split('-');
+                    if (parts.Length == 3 && int.TryParse(parts[2], out int currentNumber))
+                    {
+                        nextNumber = currentNumber + 1;
+                    }
+                }
+
+                var newCode = $"RPT-{CurrentYear}-{nextNumber:D4}";
+
+                // Kiểm tra trùng (cẩn tắc vô ưu)
+                var exists = await _unitOfWork.GeneralFarmerReportRepository
+                    .AnyAsync(r => r.ReportCode == newCode);
+
+                if (!exists)
+                    return newCode;
+            }
+
+            throw new InvalidOperationException("Không thể tạo mã báo cáo duy nhất sau nhiều lần thử.");
         }
+
 
         public async Task<string> GenerateCultivationRegistrationCodeAsync()
         {

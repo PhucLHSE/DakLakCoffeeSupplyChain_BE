@@ -42,6 +42,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .IgnoreQueryFilters() // nếu dùng Global Filter
                 .FirstOrDefaultAsync(r => r.ReportId == reportId);
         }
+        public async Task<string?> GetMaxReportCodeForYearAsync(int year)
+        {
+            return await _context.GeneralFarmerReports
+                .Where(r => r.ReportCode.StartsWith($"RPT-{year}-"))
+                .OrderByDescending(r => r.ReportCode)
+                .Select(r => r.ReportCode)
+                .FirstOrDefaultAsync();
+        }
 
     }
 }
