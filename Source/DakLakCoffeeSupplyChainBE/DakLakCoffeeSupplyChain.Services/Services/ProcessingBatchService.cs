@@ -1,5 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -130,47 +132,73 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
-
         public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
         {
-            
+            // 1. Không cho BusinessManager tạo lô
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
             if (manager != null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Business Manager không được tạo lô sơ chế.");
 
-            
+            // 2. Kiểm tra vai trò Farmer
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo lô sơ chế.");
 
-            
+            // 3. Kiểm tra mùa vụ
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
             if (cropSeason == null || cropSeason.IsDeleted)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Mùa vụ không hợp lệ.");
 
-            
+            // 4. Kiểm tra phương pháp sơ chế
             var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(dto.MethodId);
             if (method == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Phương pháp sơ chế không hợp lệ.");
 
-            var cropSeasonDetails = await _unitOfWork.CropSeasonDetailRepository
-     .GetAllAsync(d => d.CropSeasonId == dto.CropSeasonId && !d.IsDeleted);
+            // 5. Truy xuất CropSeasonDetail khớp mùa vụ, loại cà phê và farmer, đã hoàn thành
+            var cropDetails = await _unitOfWork.CropSeasonDetailRepository
+            .GetAllAsync(cd =>
+                !cd.IsDeleted &&
+                cd.CropSeasonId == dto.CropSeasonId &&
+                cd.Status == "Completed" &&
+                cd.CommitmentDetail != null &&
+                cd.CommitmentDetail.Commitment != null &&
+                cd.CommitmentDetail.PlanDetail != null &&
+                cd.CommitmentDetail.PlanDetail.CoffeeTypeId == dto.CoffeeTypeId &&
+                cd.CommitmentDetail.Commitment.FarmerId == farmer.FarmerId,
+                include: q => q
+                    .Include(cd => cd.CommitmentDetail)
+                        .ThenInclude(d => d.PlanDetail)
+                    .Include(cd => cd.CommitmentDetail)
+                        .ThenInclude(d => d.Commitment)
+            );
 
-            if (cropSeasonDetails == null || !cropSeasonDetails.Any())
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy chi tiết mùa vụ để tính khối lượng.");
+            var cropDetail = cropDetails.FirstOrDefault(); 
 
-            var totalActualYield = cropSeasonDetails
-                .Where(d => d.ActualYield.HasValue)
-                .Sum(d => d.ActualYield.Value);
+            if (cropDetail == null)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Loại cà phê không thuộc kế hoạch nào đã hoàn thành.");
 
-            if (totalActualYield <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng đầu ra của mùa vụ chưa được cập nhật hoặc bằng 0.");
+            // 6. Kiểm tra khối lượng đầu ra kỳ vọng
+            var actualYield = cropDetail.ActualYield ?? 0;
+            if (actualYield <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Loại cà phê này chưa có khối lượng đầu ra.");
 
-         
+            // 7. Tính khối lượng còn lại chưa tạo lô
+            var existingBatches = await _unitOfWork.ProcessingBatchRepository
+                .GetAllAsync(pb => pb.CropSeasonId == dto.CropSeasonId
+                                && pb.CoffeeTypeId == dto.CoffeeTypeId
+                                && !pb.IsDeleted);
+
+            var usedQuantity = existingBatches.Sum(pb => pb.InputQuantity);
+            var remainingQuantity = actualYield - usedQuantity;
+
+            if (remainingQuantity <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng của loại cà phê này đã được sử dụng hết.");
+
+            // 8. Sinh mã hệ thống
             int year = cropSeason.StartDate?.Year ?? DateTime.Now.Year;
             string systemBatchCode = await _codeGenerator.GenerateProcessingSystemBatchCodeAsync(year);
 
-           
+            // 9. Tạo lô sơ chế
             var batch = new ProcessingBatch
             {
                 BatchId = Guid.NewGuid(),
@@ -179,8 +207,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 CropSeasonId = dto.CropSeasonId,
                 CoffeeTypeId = dto.CoffeeTypeId,
                 MethodId = dto.MethodId,
-                InputQuantity = totalActualYield,
-                InputUnit = dto.InputUnit?.Trim() ?? "kg",
+                InputQuantity = remainingQuantity,
+                InputUnit = "kg",
                 FarmerId = farmer.FarmerId,
                 Status = ProcessingStatus.NotStarted.ToString(),
                 CreatedAt = DateTime.UtcNow,
@@ -188,14 +216,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 IsDeleted = false
             };
 
-           
             await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
             var saveResult = await _unitOfWork.SaveChangesAsync();
 
             if (saveResult <= 0)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo lô sơ chế thất bại.");
 
-            
+            // 10. Trả về kết quả
             var created = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
                 x => x.BatchId == batch.BatchId,
                 include: q => q
@@ -207,6 +234,65 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var dtoResult = created?.MapToProcessingBatchViewDto();
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, dtoResult);
+        }
+
+
+        public async Task<IServiceResult> GetAvailableCoffeeTypesAsync(Guid userId, Guid cropSeasonId)
+        {
+            // Lấy thông tin nông hộ từ UserId
+            // B1: Lấy tất cả detail hợp lệ
+            var details = await _unitOfWork.CropSeasonDetailRepository.GetAllAsync(
+                d => !d.IsDeleted
+                    && d.CropSeasonId == cropSeasonId
+                    && d.Status == "Completed",
+                include: q => q
+                    .Include(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
+                    .Include(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.Commitment)
+            );
+
+            // B2: Lấy farmerId
+            var farmer = await _unitOfWork.FarmerRepository
+                .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+            if (farmer == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông hộ.");
+            var farmerId = farmer.FarmerId;
+
+            // B3: Lấy các batch đang InProgress của farmer trong crop season này
+            var inProgressBatchCoffeeTypeIds = (await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                b => !b.IsDeleted &&
+                     b.CropSeasonId == cropSeasonId &&
+                     b.FarmerId == farmerId &&
+                    b.Status == ProcessingStatus.InProgress.ToString()
+            )).Select(b => b.CoffeeTypeId).Distinct().ToHashSet();
+
+            // B4: Chỉ giữ detail nếu coffeeTypeId của nó chưa bị tạo batch InProgress
+            var filteredDetails = details
+                .Where(d =>
+                    d.CommitmentDetail?.Commitment?.FarmerId == farmerId &&
+                    d.CommitmentDetail?.PlanDetail?.CoffeeType != null &&
+                    !inProgressBatchCoffeeTypeIds.Contains(d.CommitmentDetail.PlanDetail.CoffeeTypeId)
+                )
+                .ToList();
+
+            // B5: Convert thành CoffeeTypeViewAllDto
+            var result = filteredDetails
+                .Select(d => d.CommitmentDetail.PlanDetail.CoffeeType)
+                .DistinctBy(ct => ct.CoffeeTypeId)
+                .Select(ct => new CoffeeTypeViewAllDto
+                {
+                    CoffeeTypeId = ct.CoffeeTypeId,
+                    TypeCode = ct.TypeCode,
+                    TypeName = ct.TypeName,
+                    BotanicalName = ct.BotanicalName,
+                    Description = ct.Description,
+                    TypicalRegion = ct.TypicalRegion,
+                    SpecialtyLevel = ct.SpecialtyLevel
+                }).ToList();
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy thành công", result);
         }
 
 
