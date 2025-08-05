@@ -93,7 +93,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Note = dto.Note,
-                Status = dto.Status.ToString(),
+                Status = CropSeasonStatus.Active.ToString(),
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
             };
@@ -105,7 +105,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.StartDate = dto.StartDate;
             entity.EndDate = dto.EndDate;
             entity.Note = dto.Note;
-            entity.Status = dto.Status.ToString();
             entity.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
