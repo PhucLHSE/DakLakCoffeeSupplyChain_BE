@@ -24,7 +24,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Quantity = entity.Quantity ?? 0,
                 Unit = entity.Unit ?? string.Empty,
                 Note = entity.Note ?? string.Empty,
-                RecordedAt = entity.RecordedAt,
+                RecordedAt = entity.RecordedAt.HasValue
+    ? DateOnly.FromDateTime(entity.RecordedAt.Value)
+    : (DateOnly?)null,
                 RecordedBy = recordedByName, 
                 IsDisposed = entity.IsDisposed ?? false,
                 DisposedAt = entity.DisposedAt,

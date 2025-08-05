@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string UpdatedByName { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<ProcessingParameterViewAllDto> Parameters { get; set; }
+        public List<MediaFileResponse> MediaFiles { get; set; } = new();
 
     }    
 }

@@ -90,6 +90,7 @@ builder.Services.AddScoped<IShipmentService, ShipmentService>();
 builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IMediaService, MediaService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();

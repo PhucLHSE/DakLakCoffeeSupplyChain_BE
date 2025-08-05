@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,5 +15,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string OutputUnit { get; set; }
         public string PhotoUrl { get; set; }
         public string VideoUrl { get; set; }
+        public List<IFormFile>? ImageFiles { get; set; }
+        public List<IFormFile>? VideoFiles { get; set; }
     }
 }

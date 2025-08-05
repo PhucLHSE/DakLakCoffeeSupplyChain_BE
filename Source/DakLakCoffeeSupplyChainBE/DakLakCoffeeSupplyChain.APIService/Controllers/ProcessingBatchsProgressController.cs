@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System;
 using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -17,11 +18,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
     {
         private readonly IProcessingBatchProgressService _processingBatchProgressService;
         private readonly IUploadService _uploadService;
+        private readonly IMediaService _mediaService;
 
-        public ProcessingBatchsProgressController(IProcessingBatchProgressService processingBatchProgressService, IUploadService uploadService)
+        public ProcessingBatchsProgressController(IProcessingBatchProgressService processingBatchProgressService, IUploadService uploadService, IMediaService mediaService)
         {
             _processingBatchProgressService = processingBatchProgressService;
             _uploadService = uploadService;
+            _mediaService = mediaService;
         }
 
         [HttpGet]
@@ -102,45 +105,53 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 var isAdmin = User.IsInRole("Admin");
                 var isManager = User.IsInRole("BusinessManager");
 
-                string? photoUrl = null;
-                string? videoUrl = null;
-
-                if (request.PhotoFile != null)
-                {
-                    var photoResult = await _uploadService.UploadImageAsync(request.PhotoFile);
-                    photoUrl = photoResult?.Url;
-                }
-
-                if (request.VideoFile != null)
-                {
-                    var videoResult = await _uploadService.UploadVideoAsync(request.VideoFile);
-                    videoUrl = videoResult?.Url;
-                }
-
                 var dto = new ProcessingBatchProgressCreateDto
                 {
                     ProgressDate = request.ProgressDate,
                     OutputQuantity = request.OutputQuantity,
-                    OutputUnit = request.OutputUnit,
-                    PhotoUrl = photoUrl,
-                    VideoUrl = videoUrl
+                    OutputUnit = request.OutputUnit
                 };
 
                 var result = await _processingBatchProgressService.CreateAsync(batchId, dto, userId, isAdmin, isManager);
 
-                if (result.Status == Const.SUCCESS_CREATE_CODE)
-                    return StatusCode(StatusCodes.Status201Created, new { message = result.Message });
-
-                if (result.Status == Const.FAIL_CREATE_CODE)
+                if (result.Status != Const.SUCCESS_CREATE_CODE)
                     return BadRequest(new { message = result.Message });
 
-                return StatusCode(500, new { message = result.Message });
+                if (result.Data is not Guid progressId)
+                    return StatusCode(500, new { message = "Không lấy được progressId sau khi tạo." });
+
+                string? photoUrl = null, videoUrl = null;
+
+                if (request.MediaFiles?.Any() == true)
+                {
+                    var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                        request.MediaFiles,
+                        relatedEntity: "ProcessingProgress",
+                        relatedId: progressId,
+                        uploadedBy: userId.ToString()
+                    );
+
+                    photoUrl = mediaList.FirstOrDefault(m => m.MediaType == "image")?.MediaUrl;
+                    videoUrl = mediaList.FirstOrDefault(m => m.MediaType == "video")?.MediaUrl;
+
+                    await _processingBatchProgressService.UpdateMediaUrlsAsync(progressId, photoUrl, videoUrl);
+                }
+
+                return StatusCode(StatusCodes.Status201Created, new
+                {
+                    message = result.Message,
+                    progressId,
+                    photoUrl,
+                    videoUrl
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Đã xảy ra lỗi hệ thống: " + ex.Message });
+                var fullMessage = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = "Đã xảy ra lỗi hệ thống: " + fullMessage });
             }
         }
+
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Farmer,Admin, BusinessManager")]
@@ -207,13 +218,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
                 if (request.PhotoFile != null)
                 {
-                    var uploadResult = await _uploadService.UploadImageAsync(request.PhotoFile);
+                    var uploadResult = await _uploadService.UploadAsync(request.PhotoFile);
                     photoUrl = uploadResult?.Url;
                 }
 
                 if (request.VideoFile != null)
                 {
-                    var uploadResult = await _uploadService.UploadVideoAsync(request.VideoFile);
+                    var uploadResult = await _uploadService.UploadAsync(request.VideoFile);
                     videoUrl = uploadResult?.Url;
                 }
 

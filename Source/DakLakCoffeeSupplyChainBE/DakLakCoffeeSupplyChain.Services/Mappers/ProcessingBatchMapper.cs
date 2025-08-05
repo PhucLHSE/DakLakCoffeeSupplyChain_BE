@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ProductEnums;
@@ -43,7 +44,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = entity.CreatedAt ?? DateTime.MinValue
             };
         }
-        public static ProcessingBatchDetailsDto MapToDetailsDto(this ProcessingBatch batch, string farmerName)
+        public static ProcessingBatchDetailsDto MapToDetailsDto(
+            this ProcessingBatch batch,
+            string farmerName,
+            Dictionary<Guid, List<ProcessingWasteViewAllDto>> wasteMap)
         {
             return new ProcessingBatchDetailsDto
             {
@@ -53,7 +57,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonId = batch.CropSeasonId,
                 CropSeasonName = batch.CropSeason?.SeasonName ?? "Unknown",
                 FarmerId = batch.FarmerId,
-                FarmerName = batch.Farmer?.User?.Name ?? "Unknown",
+                FarmerName = farmerName,
                 MethodId = batch.MethodId,
                 MethodName = batch.Method?.Name ?? "Unknown",
                 InputQuantity = batch.InputQuantity,
@@ -63,56 +67,28 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     : ProcessingStatus.NotStarted,
                 CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
                 UpdatedAt = batch.UpdatedAt,
-                Products = batch.Products?
-                    .Where(p => !p.IsDeleted)
-                    .Select(p =>
-                    {
-                        var unitEnum = Enum.TryParse<ProductUnit>(p.Unit, ignoreCase: true, out var parsedUnit)
-                            ? parsedUnit
-                            : ProductUnit.Kg;
 
-                        return new ProductViewDetailsDto
-                        {
-                            ProductId = p.ProductId,
-                            ProductCode = p.ProductCode,
-                            ProductName = p.ProductName ?? "",
-                            CoffeeTypeName = p.CoffeeType?.TypeName ?? "",
-                            Unit = unitEnum, // enum thay vì string
-                            QuantityAvailable = p.QuantityAvailable,
-                            UnitPrice = p.UnitPrice
-                        };
-                    }).ToList() ?? new(),
                 Progresses = batch.ProcessingBatchProgresses?
                     .Where(p => !p.IsDeleted)
                     .OrderBy(p => p.StepIndex)
-                    .Select(p => new ProcessingBatchProgressDetailDto
+                    .Select(p => new ProcessingBatchProgressWithWastesDto
                     {
-                        ProgressId = p.ProgressId,
-                        BatchId = p.BatchId,
-                        BatchCode = batch.BatchCode,
-                        StepIndex = p.StepIndex,
-                        StageId = p.StageId,
-                        StageName = p.Stage?.StageName ?? "",
-                        StageDescription = p.Stage?.Description ?? "",
-                        ProgressDate = p.ProgressDate,
-                        OutputQuantity = p.OutputQuantity,
+                        Id = p.ProgressId,
+                        ProgressDate = p.ProgressDate.HasValue
+                            ? p.ProgressDate.Value.ToDateTime(TimeOnly.MinValue)
+                            : DateTime.MinValue,
+                        OutputQuantity = p.OutputQuantity ?? 0,
                         OutputUnit = p.OutputUnit,
                         PhotoUrl = p.PhotoUrl,
                         VideoUrl = p.VideoUrl,
-                        UpdatedAt = p.UpdatedAt,
-                        UpdatedByName = farmerName,
-                        Parameters = p.ProcessingParameters?.Select(param => new ProcessingParameterViewAllDto
-                        {
-                            ParameterId = param.ParameterId,
-                            ProgressId = param.ProgressId,
-                            ParameterName = param.ParameterName ?? "",
-                            ParameterValue = param.ParameterValue ?? "",
-                            Unit = param.Unit ?? "",
-                            RecordedAt = param.RecordedAt
-                        }).ToList() ?? new()
+
+                        Wastes = wasteMap.ContainsKey(p.ProgressId)
+                            ? wasteMap[p.ProgressId]
+                            : new List<ProcessingWasteViewAllDto>()
                     }).ToList() ?? new()
             };
         }
+
         public static CoffeeTypeViewAllDto MapToCoffeeTypeDto(this CoffeeType entity)
         {
             return new CoffeeTypeViewAllDto

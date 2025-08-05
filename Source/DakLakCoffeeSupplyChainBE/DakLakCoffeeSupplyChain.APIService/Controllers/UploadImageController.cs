@@ -22,7 +22,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("File không hợp lệ");
 
-            var result = await _uploadService.UploadImageAsync(file);
+            var result = await _uploadService.UploadAsync(file);
             return Ok(result);
         }
     }

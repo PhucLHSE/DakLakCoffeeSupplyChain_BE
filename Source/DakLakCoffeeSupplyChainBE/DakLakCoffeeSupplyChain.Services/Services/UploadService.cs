@@ -1,13 +1,8 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using DakLakCoffeeSupplyChain.Common.DTOs.UploadImageResultDR;
+using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Http;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -20,48 +15,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _cloudinary = cloudinary;
         }
 
-        public async Task<UploadImageResult> UploadImageAsync(IFormFile file)
+        public async Task<UploadImageResult> UploadAsync(IFormFile file)
         {
-            if (_cloudinary == null)
-                throw new InvalidOperationException("Cloudinary chưa được cấu hình.");
+            var fileType = file.ContentType.StartsWith("video") ? "video" : "image";
 
-            if (file == null || file.Length == 0)
-                throw new ArgumentException("File không được để trống");
+            using var stream = file.OpenReadStream();
 
-            await using var stream = file.OpenReadStream();
-
-            var uploadParams = new ImageUploadParams
+            if (fileType == "image")
             {
-                File = new FileDescription(file.FileName, stream),
-                UseFilename = true,
-                UniqueFilename = false,
-                Overwrite = true,
-                Folder = "uploads"
-            };
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(file.FileName, stream),
+                    Folder = "daklak/images"
+                };
 
-            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
-            return new UploadImageResult
+                return new UploadImageResult
+                {
+                    Url = uploadResult.SecureUrl.ToString(),
+                    PublicId = uploadResult.PublicId,
+                    FileType = fileType,
+                    FileSize = file.Length
+                };
+            }
+            else
             {
-                Url = uploadResult.SecureUrl?.ToString(),
-                PublicId = uploadResult.PublicId
-            };
+                var uploadParams = new VideoUploadParams
+                {
+                    File = new FileDescription(file.FileName, stream),
+                    Folder = "daklak/videos"
+                };
+
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+                return new UploadImageResult
+                {
+                    Url = uploadResult.SecureUrl.ToString(),
+                    PublicId = uploadResult.PublicId,
+                    FileType = fileType,
+                    FileSize = file.Length
+                };
+            }
         }
-        public async Task<UploadImageResult> UploadVideoAsync(IFormFile file)
-        {
-            await using var stream = file.OpenReadStream();
-            var uploadParams = new VideoUploadParams
-            {
-                File = new FileDescription(file.FileName, stream),
-                Folder = "daklak/videos"
-            };
-            var result = await _cloudinary.UploadAsync(uploadParams);
-            return new UploadImageResult
-            {
-                Url = result.SecureUrl.ToString(),
-                PublicId = result.PublicId
-            };
-        }
-
     }
 }
