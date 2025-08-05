@@ -23,6 +23,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public string SellerName { get; set; } = string.Empty;
 
+        public Guid BuyerId { get; set; }
+
         public string BuyerName { get; set; } = string.Empty;
 
         public int? DeliveryRounds { get; set; }

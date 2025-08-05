@@ -6,15 +6,11 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs
 {
-    public class ExpertAdviceViewAllDto
+    public class ExpertAdviceUpdateDto
     {
-        public Guid ReportId { get; set; } 
-
-        public Guid AdviceId { get; set; }
-        public string ExpertName { get; set; }
         public string ResponseType { get; set; }
         public string AdviceSource { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string AdviceText { get; set; }
+        public string AttachedFileUrl { get; set; }
     }
-
 }

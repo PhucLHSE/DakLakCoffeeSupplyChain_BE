@@ -17,10 +17,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
         [MaxLength(2000)]
         public string Description { get; set; }
 
-        [Required]
-        [Range(0, 2)] 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public SeverityLevel SeverityLevel { get; set; }
+        [Range(0, 2)]
+        public int SeverityLevel { get; set; }
+
 
         [MaxLength(1000)]
         public string? ImageUrl { get; set; }

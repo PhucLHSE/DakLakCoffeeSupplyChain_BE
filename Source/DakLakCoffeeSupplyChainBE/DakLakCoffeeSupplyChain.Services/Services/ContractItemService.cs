@@ -83,7 +83,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Sinh mã định danh cho ContractItem
                 string contractItemCode = await _codeGenerator
-                    .GenerateContractItemCodeAsync(contractItemDto.ContractId);
+                    .GenerateContractItemCodeAsync(contractItemDto.ContractId ?? Guid.NewGuid());
 
                 // Map DTO to Entity
                 var newContractItem = contractItemDto

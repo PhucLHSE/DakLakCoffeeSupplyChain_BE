@@ -9,8 +9,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
 {
     public class ContractItemCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "ContractId là bắt buộc.")]
-        public Guid ContractId { get; set; }
+        //[Required(ErrorMessage = "ContractId là bắt buộc.")]
+        public Guid? ContractId { get; set; }
 
         [Required(ErrorMessage = "CoffeeTypeId là bắt buộc.")]
         public Guid CoffeeTypeId { get; set; }

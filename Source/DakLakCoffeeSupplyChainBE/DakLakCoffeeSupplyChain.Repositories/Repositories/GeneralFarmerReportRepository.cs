@@ -50,6 +50,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Select(r => r.ReportCode)
                 .FirstOrDefaultAsync();
         }
+        public void Update(GeneralFarmerReport entity)
+        {
+            _context.GeneralFarmerReports.Update(entity);
+        }
 
     }
 }

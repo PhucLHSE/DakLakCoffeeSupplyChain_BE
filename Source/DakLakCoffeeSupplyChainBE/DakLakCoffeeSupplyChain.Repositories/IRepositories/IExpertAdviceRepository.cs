@@ -5,6 +5,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IExpertAdviceRepository : IGenericRepository<ExpertAdvice>
     {
-        // Thêm method custom tại đây nếu cần
+        Task AddAsync(ExpertAdvice entity);
+        void Update(ExpertAdvice entity);
+        void Delete(ExpertAdvice entity);
+
     }
 }

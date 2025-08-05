@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -13,10 +14,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class CropProgressService : ICropProgressService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICropSeasonDetailService _cropSeasonDetailService;
 
-        public CropProgressService(IUnitOfWork unitOfWork)
+        public CropProgressService(IUnitOfWork unitOfWork, ICropSeasonDetailService cropSeasonDetailService)
         {
             _unitOfWork = unitOfWork;
+            _cropSeasonDetailService = cropSeasonDetailService;
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -55,48 +58,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // 1. Lấy stage
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
                 if (stage == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Giai đoạn không tồn tại.");
 
-                // 2. Lấy chi tiết mùa vụ
                 var detail = await _unitOfWork.CultivationRegistrationRepository
                     .GetCropSeasonDetailByIdAsync(dto.CropSeasonDetailId);
                 if (detail == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Chi tiết mùa vụ không tồn tại.");
 
-                // 3. Kiểm tra quyền người dùng
                 if (detail.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền ghi nhận tiến độ cho vùng trồng này.");
 
-                // 4. Kiểm tra ngày ghi nhận không được lớn hơn hôm nay
                 if (dto.ProgressDate.Value.Date > DateHelper.NowVietnamTime().Date)
-                {
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được lớn hơn hôm nay.");
-                }
 
-                // 5. Kiểm tra trùng lặp (Stage + Detail + Date)
                 var duplicate = await _unitOfWork.CropProgressRepository.GetAllAsync(p =>
-             !p.IsDeleted &&
-             p.CropSeasonDetailId == dto.CropSeasonDetailId &&
-             p.StageId == dto.StageId &&
-             p.ProgressDate == DateOnly.FromDateTime(dto.ProgressDate.Value)
-         );
-
+                    !p.IsDeleted &&
+                    p.CropSeasonDetailId == dto.CropSeasonDetailId &&
+                    p.StageId == dto.StageId &&
+                    p.ProgressDate == DateOnly.FromDateTime(dto.ProgressDate.Value)
+                );
                 if (duplicate.Any())
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tiến trình đã tồn tại với ngày và giai đoạn này.");
 
-                // 6. Lấy thông tin nông dân từ userId
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin nông dân.");
 
-                // 7. Map DTO -> Entity
                 var entity = dto.MapToCropProgressCreateDto();
                 entity.UpdatedBy = farmer.FarmerId;
 
-                // 8. Cập nhật ActualYield nếu là giai đoạn HARVESTING
                 if (stage.StageCode == "HARVESTING")
                 {
                     if (!dto.ActualYield.HasValue || dto.ActualYield.Value <= 0)
@@ -107,14 +99,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
                 }
 
-
-                // 9. Tạo tiến trình
                 await _unitOfWork.CropProgressRepository.CreateAsync(entity);
-
-                // 10. Lưu thay đổi
                 var result = await _unitOfWork.SaveChangesAsync();
+
                 if (result > 0)
                 {
+                    await _cropSeasonDetailService.UpdateStatusAsync(
+                        dto.CropSeasonDetailId,
+                        CropDetailStatus.InProgress,
+                        userId,
+                        false
+                    );
+
                     var created = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(entity.ProgressId);
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG,
                         created?.MapToCropProgressViewDetailsDto());

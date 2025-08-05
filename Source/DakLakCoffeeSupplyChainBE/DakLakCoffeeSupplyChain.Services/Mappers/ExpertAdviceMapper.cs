@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs;
+﻿using CloudinaryDotNet.Actions;
+using DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
 public static class ExpertAdviceMapper
@@ -8,6 +9,7 @@ public static class ExpertAdviceMapper
         return new ExpertAdviceViewAllDto
         {
             AdviceId = entity.AdviceId,
+            ReportId = entity.ReportId,
             ExpertName = entity.Expert?.User?.Name ?? "N/A",
             ResponseType = entity.ResponseType,
             AdviceSource = entity.AdviceSource,

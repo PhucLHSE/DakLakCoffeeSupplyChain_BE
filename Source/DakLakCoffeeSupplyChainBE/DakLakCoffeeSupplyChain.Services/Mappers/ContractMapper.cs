@@ -56,6 +56,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ContractTitle = contract.ContractTitle ?? string.Empty,
                 ContractFileUrl = contract.ContractFileUrl ?? string.Empty,
                 SellerName = contract.Seller?.User?.Name ?? "N/A",
+                BuyerId = contract.BuyerId,
                 BuyerName = contract.Buyer?.CompanyName ?? "N/A",
                 DeliveryRounds = contract.DeliveryRounds,
                 TotalQuantity = contract.TotalQuantity,

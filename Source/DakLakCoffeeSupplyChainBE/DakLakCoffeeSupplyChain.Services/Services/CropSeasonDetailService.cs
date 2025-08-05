@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -15,10 +16,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class CropSeasonDetailService : ICropSeasonDetailService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICropSeasonService _cropSeasonService; 
 
-        public CropSeasonDetailService(IUnitOfWork unitOfWork)
+        public CropSeasonDetailService(IUnitOfWork unitOfWork, ICropSeasonService cropSeasonService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _cropSeasonService = cropSeasonService ?? throw new ArgumentNullException(nameof(cropSeasonService));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false)
@@ -297,6 +300,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+        public async Task<IServiceResult> UpdateStatusAsync(Guid detailId, CropDetailStatus newStatus, Guid userId, bool isAdmin = false)
+        {
+            var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
+                predicate: d => d.DetailId == detailId && !d.IsDeleted,
+                include: q => q.Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer),
+                asNoTracking: false
+            );
 
+            if (detail == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy vùng trồng.");
+
+            if (!isAdmin && detail.CropSeason?.Farmer?.UserId != userId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật trạng thái vùng trồng này.");
+
+            if (!Enum.TryParse(detail.Status, out CropDetailStatus currentStatus))
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Trạng thái hiện tại không hợp lệ.");
+
+            if (!IsValidDetailStatusTransition(currentStatus, newStatus))
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Không thể chuyển trạng thái từ {currentStatus} sang {newStatus}.");
+
+            detail.Status = newStatus.ToString();
+            detail.UpdatedAt = DateHelper.NowVietnamTime();
+
+            await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            // ✅ Gọi cập nhật trạng thái mùa vụ cha nếu cần
+            await _cropSeasonService.AutoUpdateCropSeasonStatusAsync(detail.CropSeasonId);
+
+            return result > 0
+                ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, $"Cập nhật trạng thái vùng trồng thành công: {newStatus}")
+                : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật trạng thái vùng trồng thất bại.");
+        }
+
+        private bool IsValidDetailStatusTransition(CropDetailStatus current, CropDetailStatus next)
+        {
+            return (current, next) switch
+            {
+                (CropDetailStatus.Planned, CropDetailStatus.InProgress) => true,
+                (CropDetailStatus.InProgress, CropDetailStatus.Completed) => true,
+                (CropDetailStatus.Planned, CropDetailStatus.Cancelled) => true,
+                (CropDetailStatus.InProgress, CropDetailStatus.Cancelled) => true,
+                _ => false
+            };
+        }
     }
 }
