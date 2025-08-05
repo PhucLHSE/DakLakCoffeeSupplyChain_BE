@@ -105,5 +105,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IShipmentDetailRepository ShipmentDetailRepository { get; }
 
         IWalletRepository WalletRepository { get; }
+
+        IMediaFileRepository MediaFileRepository { get; }
     }
 }

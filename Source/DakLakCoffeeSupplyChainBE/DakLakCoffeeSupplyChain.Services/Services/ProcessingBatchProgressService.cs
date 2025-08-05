@@ -229,16 +229,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                return result > 0
-                    ? new ServiceResult(Const.SUCCESS_CREATE_CODE, "Đã tạo bước tiến trình thành công.")
-                    : new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước tiến trình.");
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Đã tạo bước tiến trình thành công.", progress.ProgressId);
+
             }
             catch (Exception ex)
             {
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+        public async Task UpdateMediaUrlsAsync(Guid progressId, string? photoUrl, string? videoUrl)
+        {
+            var progress = await _unitOfWork.ProcessingBatchProgressRepository.GetByIdAsync(progressId);
+            if (progress == null) return;
 
+            progress.PhotoUrl = photoUrl;
+            progress.VideoUrl = videoUrl;
+            progress.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.ProcessingBatchProgressRepository.UpdateAsync(progress);
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         public async Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto dto)
         {

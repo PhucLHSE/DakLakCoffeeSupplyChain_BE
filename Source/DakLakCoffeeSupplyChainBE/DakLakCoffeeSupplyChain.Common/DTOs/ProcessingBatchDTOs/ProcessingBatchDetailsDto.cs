@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
 {
+
     public class ProcessingBatchDetailsDto
     {
         public Guid BatchId { get; set; }
@@ -32,9 +33,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
-        // Các phần mở rộng chi tiết hơn
-        public List<ProcessingBatchProgressDetailDto> Progresses { get; set; }
-        public List<ProductViewDetailsDto> Products { get; set; }
-        //public List<EvaluationDto> Evaluations { get; set; }
+        
+        public List<ProcessingBatchProgressWithWastesDto> Progresses { get; set; }
     }
+
 }

@@ -142,29 +142,29 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
-        [HttpGet("{id}")]
-        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var userIdStr = User.FindFirst("userId")?.Value
-                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //[HttpGet("{id}")]
+        //[Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        //public async Task<IActionResult> GetById(Guid id)
+        //{
+        //    var userIdStr = User.FindFirst("userId")?.Value
+        //                 ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (!Guid.TryParse(userIdStr, out var userId))
-                return BadRequest("Không thể lấy userId từ token.");
+        //    if (!Guid.TryParse(userIdStr, out var userId))
+        //        return BadRequest("Không thể lấy userId từ token.");
 
-            var isAdmin = User.IsInRole("Admin");
-            var isManager = User.IsInRole("BusinessManager");
+        //    var isAdmin = User.IsInRole("Admin");
+        //    var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _processingbatchservice.GetByIdAsync(id, userId, isAdmin, isManager);
+        //    var result = await _processingbatchservice.GetByIdAsync(id, userId, isAdmin, isManager);
 
-            if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+        //    if (result.Status == Const.SUCCESS_READ_CODE)
+        //        return Ok(result.Data);
 
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+        //    if (result.Status == Const.WARNING_NO_DATA_CODE)
+        //        return NotFound(result.Message);
 
-            return StatusCode(500, result.Message);
-        }
+        //    return StatusCode(500, result.Message);
+        //}
         [HttpGet("available-coffee-types")]
         [Authorize(Roles = "Farmer,Admin, BusinessManager")]
         public async Task<IActionResult> GetAvailableCoffeeTypes([FromQuery] Guid cropSeasonId)
@@ -184,6 +184,29 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);
 
             return BadRequest(result.Message);
+        }
+        [HttpGet("{id}/full-details")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> GetFullDetails(Guid id)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingbatchservice.GetFullDetailsAsync(id, userId, isAdmin, isManager);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
     }

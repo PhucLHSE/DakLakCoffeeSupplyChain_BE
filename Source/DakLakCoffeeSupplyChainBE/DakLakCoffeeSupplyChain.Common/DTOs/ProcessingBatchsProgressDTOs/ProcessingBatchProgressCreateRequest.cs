@@ -1,15 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System;
 
-namespace DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReques
+namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
 {
     public class ProcessingBatchProgressCreateRequest
     {
+        public Guid ProcessingBatchId { get; set; }
         public DateOnly? ProgressDate { get; set; }
         public double? OutputQuantity { get; set; }
         public string OutputUnit { get; set; }
 
-        public IFormFile? PhotoFile { get; set; }
-        public IFormFile? VideoFile { get; set; } 
+        public List<IFormFile> MediaFiles { get; set; }
     }
 }

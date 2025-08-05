@@ -15,12 +15,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs
         public double Quantity { get; set; }
         public string Unit { get; set; } = string.Empty;
         public string Note { get; set; } = string.Empty;
-        public DateTime? RecordedAt { get; set; }
-
+        public DateOnly? RecordedAt { get; set; }
         public string RecordedBy { get; set; } = string.Empty;
         public bool IsDisposed { get; set; }
         public DateTime? DisposedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
     }
 }

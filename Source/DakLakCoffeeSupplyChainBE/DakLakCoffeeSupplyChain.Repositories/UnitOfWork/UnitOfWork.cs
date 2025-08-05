@@ -56,7 +56,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IShipmentRepository? shipmentRepository;
         private IShipmentDetailRepository? shipmentDetailRepository;
         private IWalletRepository? walletRepository;
-
+        private IMediaFileRepository? mediaFileRepository;
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
@@ -432,6 +432,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return walletRepository ??= new WalletRepository(context);
+            }
+        }
+        public IMediaFileRepository MediaFileRepository
+        {
+            get
+            {
+                return mediaFileRepository ??= new MediaFileRepository(context);
             }
         }
     }
