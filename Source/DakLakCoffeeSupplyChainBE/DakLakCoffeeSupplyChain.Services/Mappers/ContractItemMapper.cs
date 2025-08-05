@@ -37,7 +37,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 ContractItemId = Guid.NewGuid(),
                 ContractItemCode = contractItemCode,
-                ContractId = dto.ContractId,
+                ContractId = dto.ContractId ?? Guid.NewGuid(),
                 CoffeeTypeId = dto.CoffeeTypeId,
                 Quantity = dto.Quantity,
                 UnitPrice = dto.UnitPrice,
