@@ -33,7 +33,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
-                predicate: fm => fm.IsDeleted != true && fm.ApprovedByNavigation.User.UserId == userId,
+                predicate: fm => fm.IsDeleted != true,
                 include: fm => fm.
                 Include(fm => fm.Plan).
                 Include(fm => fm.Farmer).
@@ -203,7 +203,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Generate code
                 string commitmentCode = await _codeGenerator.GenerateFarmingCommitmentCodeAsync();
                 string commitmentDetailCode = await _codeGenerator.GenerateFarmingCommitmenstDetailCodeAsync();
-                var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(commitmentCode);
+                var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(commitmentDetailCode);
 
                 //Map dto to model
                 var newCommitment = commitmentCreateDto.MapToFarmingCommitment(commitmentCode);
