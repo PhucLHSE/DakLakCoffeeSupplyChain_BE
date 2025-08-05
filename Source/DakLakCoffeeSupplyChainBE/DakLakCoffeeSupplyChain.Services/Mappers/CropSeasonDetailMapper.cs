@@ -45,28 +45,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentDetailId = dto.CommitmentDetailId,
                 ExpectedHarvestStart = dto.ExpectedHarvestStart,
                 ExpectedHarvestEnd = dto.ExpectedHarvestEnd,
-                EstimatedYield = dto.EstimatedYield,
-                AreaAllocated = dto.AreaAllocated,
+                AreaAllocated = dto.AreaAllocated ?? 0,
+                EstimatedYield = 0, 
                 PlannedQuality = dto.PlannedQuality,
-                Status = dto.Status.ToString(),
+                Status = CropDetailStatus.Planned.ToString(),
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime()
             };
         }
 
 
-
         public static void MapToExistingEntity(this CropSeasonDetailUpdateDto dto, CropSeasonDetail entity)
         {
-            //entity.CoffeeTypeId = dto.CoffeeTypeId;
             entity.ExpectedHarvestStart = dto.ExpectedHarvestStart;
             entity.ExpectedHarvestEnd = dto.ExpectedHarvestEnd;
-            //entity.EstimatedYield = dto.EstimatedYield ?? 0;
             entity.AreaAllocated = dto.AreaAllocated ?? 0;
             entity.PlannedQuality = dto.PlannedQuality;
-
-            entity.Status = dto.Status.ToString(); 
-
             entity.UpdatedAt = DateHelper.NowVietnamTime(); 
         }
     }

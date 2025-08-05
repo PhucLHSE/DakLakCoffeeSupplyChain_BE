@@ -19,6 +19,5 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
 
         public string? Note { get; set; }
 
-        public CropSeasonStatus Status { get; set; } = CropSeasonStatus.Active;
     }
 }
