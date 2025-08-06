@@ -22,7 +22,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
-                predicate: p => p.Status == "Open",
+                predicate: p => p.Status == "Open" && !p.IsDeleted,
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
                 Include(p => p.ProcurementPlansDetails).
