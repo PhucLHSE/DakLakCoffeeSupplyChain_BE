@@ -10,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.ContractDeliveryBatchEnums
     {
         Planned = 0,       // Đã lên kế hoạch
         InProgress = 1,    // Đang giao hàng
-        Fulfilled = 2      // Đã hoàn thành
+        Fulfilled = 2,     // Đã hoàn thành
+        Cancelled = 3,     // Huỷ
     }
 }
