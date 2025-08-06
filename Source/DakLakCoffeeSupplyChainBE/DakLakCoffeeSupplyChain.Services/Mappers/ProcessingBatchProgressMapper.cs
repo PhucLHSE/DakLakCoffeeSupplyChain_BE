@@ -1,5 +1,7 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -66,6 +68,39 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     RecordedAt = p.RecordedAt
                 }).ToList()
             };
+        }
+
+
+
+    public static ProcessingProgressWithStageDto ToProgressWithStageDto(
+        this ProcessingBatchProgress progress,
+        string stageName,
+        string stageDescription,
+        string updatedByName,
+        List<ProcessingParameterViewAllDto> parameters,
+        List<ProcessingWasteViewAllDto> wastes,
+        List<MediaFileResponse> mediaFiles
+    )
+        {
+            return new ProcessingProgressWithStageDto
+            {
+                ProgressId = progress.ProgressId,
+                StepIndex = progress.StepIndex,
+                ProgressDate = progress.ProgressDate.HasValue
+    ? progress.ProgressDate.Value.ToDateTime(TimeOnly.MinValue)
+    : DateTime.MinValue,
+                OutputQuantity = progress.OutputQuantity,
+                UpdatedByName = updatedByName,
+
+                StageId = progress.StageId.ToString(),
+                StageName = stageName,
+                StageDescription = stageDescription,
+
+                Parameters = parameters ?? new(),
+                Wastes = wastes ?? new(),
+                MediaFiles = mediaFiles ?? new()
+            };
+
         }
     }
 }

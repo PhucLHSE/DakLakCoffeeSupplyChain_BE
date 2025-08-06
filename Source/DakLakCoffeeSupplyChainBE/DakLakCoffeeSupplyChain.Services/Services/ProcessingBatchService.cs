@@ -1,7 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
@@ -115,8 +117,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: x => !x.IsDeleted && x.FarmerId == farmer.FarmerId,
                     include: query => query
                         .Include(x => x.Method)
-                        .Include(x => x.CropSeason)  
-                        .Include(x => x.Farmer).ThenInclude(f => f.User),  
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User),
                     asNoTracking: true
                 );
 
@@ -169,7 +171,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .ThenInclude(d => d.Commitment)
             );
 
-            var cropDetail = cropDetails.FirstOrDefault(); 
+            var cropDetail = cropDetails.FirstOrDefault();
 
             if (cropDetail == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Loại cà phê không thuộc kế hoạch nào đã hoàn thành.");
@@ -392,103 +394,136 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         //    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         //}
-        public async Task<IServiceResult> GetFullDetailsAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
+        public async Task<IServiceResult> GetFullDetailsAsync(
+      Guid batchId,
+      Guid userId,
+      bool isAdmin,
+      bool isManager)
         {
-            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                x => x.BatchId == id && !x.IsDeleted,
-                include: q => q
-                    .Include(x => x.CropSeason)
-                    .Include(x => x.Method)
-                    .Include(x => x.Farmer).ThenInclude(f => f.User)
-                    .Include(x => x.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
+            try
+            {
+                // 1. Query cơ bản kèm các navigation cần thiết
+                var batchQuery = _unitOfWork.ProcessingBatchRepository
+                    .GetQueryable()
+                    .Include(b => b.Farmer).ThenInclude(f => f.User)
+                    .Include(b => b.CropSeason)
+                    .Include(b => b.Method)
+                    .Include(b => b.CoffeeType)
+                    .Include(b => b.ProcessingBatchProgresses)
                         .ThenInclude(p => p.Stage)
-                    .Include(x => x.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
-                        .ThenInclude(p => p.ProcessingParameters),
-                asNoTracking: true
-            );
+                    .Where(b => !b.IsDeleted && b.BatchId == batchId);
 
-            if (batch == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
+                // 2. Phân quyền
+                if (!isAdmin)
+                {
+                    if (isManager)
+                    {
+                        var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(b => b.UserId == userId && !b.IsDeleted);
+                        if (manager == null)
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager.");
 
-            if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+                        var managerId = manager.ManagerId;
+                        batchQuery = batchQuery.Where(b =>
+                            b.CropSeason != null &&
+                            b.CropSeason.Commitment != null &&
+                            b.CropSeason.Commitment.ApprovedBy == managerId
+                        );
+                    }
+                    else
+                    {
+                        batchQuery = batchQuery.Where(b => b.Farmer.UserId == userId);
+                    }
+                }
 
-            var farmerName = batch.Farmer?.User?.Name ?? "N/A";
+                var batch = await batchQuery.FirstOrDefaultAsync();
 
-            // Lấy ProgressId của các bước
-            var progressIds = batch.ProcessingBatchProgresses
-                .Where(p => !p.IsDeleted)
-                .Select(p => p.ProgressId)
-                .ToList();
+                if (batch == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Truy xuất phế phẩm theo progressIds
-            var wastes = await _unitOfWork.ProcessingWasteRepository.GetAllAsync(
-                w => !w.IsDeleted && progressIds.Contains(w.ProgressId)
-            );
+                var progresses = new List<ProcessingProgressWithStageDto>();
 
-            // Gom nhóm theo progressId
-            var wasteMap = wastes
-                .GroupBy(w => w.ProgressId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(w => new ProcessingWasteViewAllDto
+                // 3. Duyệt qua từng progress
+                foreach (var p in batch.ProcessingBatchProgresses
+                    .Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.StepIndex))
+                {
+                    // 3.1 Lấy MediaFiles theo RelatedId + RelatedEntity
+                    var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
+                        m => !m.IsDeleted &&
+                             m.RelatedEntity == "ProcessingProgress" &&
+                             m.RelatedId == p.ProgressId,
+                        orderBy: q => q.OrderByDescending(m => m.UploadedAt)
+                    );
+
+                    var mediaDtos = mediaFiles.Select(m => new MediaFileResponse
+                    {
+                        MediaId = m.MediaId,
+                        MediaUrl = m.MediaUrl,
+                        MediaType = m.MediaType,
+                        Caption = m.Caption,
+                        UploadedAt = m.UploadedAt
+                    }).ToList();
+
+                    // 3.2 Lấy Parameters theo ProgressId
+                    var parameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
+                        x => x.ProgressId == p.ProgressId && !x.IsDeleted
+                    );
+
+                    var parameterDtos = parameters.Select(param => new ProcessingParameterViewAllDto
+                    {
+                        ParameterId = param.ParameterId,
+                        ParameterName = param.ParameterName,
+                        ParameterValue = param.ParameterValue,
+                        Unit = param.Unit,
+                        RecordedAt = param.RecordedAt
+                    }).ToList();
+
+                    // 3.3 Lấy Wastes
+                    var wastes = p.ProcessingBatchWastes?.Select(w => new ProcessingWasteViewAllDto
                     {
                         WasteId = w.WasteId,
                         WasteCode = w.WasteCode,
                         WasteType = w.WasteType,
                         Quantity = w.Quantity ?? 0,
                         Unit = w.Unit,
-                        Note = w.Note,
-                        RecordedAt = w.RecordedAt.HasValue ? DateOnly.FromDateTime(w.RecordedAt.Value) : null,
+                        CreatedAt = w.CreatedAt
+                    }).ToList() ?? new();
 
-                        IsDisposed = w.IsDisposed ?? false
-                    }).ToList()
+                    // 3.4 Tạo progress DTO
+                    progresses.Add(new ProcessingProgressWithStageDto
+                    {
+                        ProgressId = p.ProgressId,
+                        StepIndex = p.StepIndex,
+                        ProgressDate = p.ProgressDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.MinValue,
+                        OutputQuantity = p.OutputQuantity ?? 0,
+                        UpdatedByName = p.UpdatedByNavigation?.User?.Name ?? "N/A",
+
+                        StageId = p.StageId.ToString(),
+                        StageName = p.Stage?.StageName ?? "N/A",
+                        StageDescription = p.StageDescription,
+
+                        Parameters = parameterDtos,
+                        Wastes = wastes,
+                        MediaFiles = mediaDtos
+                    });
+                }
+
+                // 4. Map tổng thể
+                var resultDto = batch.MapToFullDetailDto(
+                    batch.Farmer?.User?.Name ?? "N/A",
+                    batch.CoffeeType?.TypeName ?? "Unknown",
+                    batch.CropSeason?.SeasonName ?? "Unknown",
+                    batch.Method?.Name ?? "Unknown",
+                    progresses
                 );
 
-            // Tạo DTO kết quả
-            var dto = new ProcessingBatchDetailsDto
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", resultDto);
+            }
+            catch (Exception ex)
             {
-                BatchId = batch.BatchId,
-                BatchCode = batch.BatchCode,
-                SystemBatchCode = batch.SystemBatchCode,
-                CropSeasonId = batch.CropSeasonId,
-                CropSeasonName = batch.CropSeason?.SeasonName ?? "",
-                FarmerId = batch.FarmerId,
-                FarmerName = farmerName,
-                MethodId = batch.MethodId,
-                MethodName = batch.Method?.Name ?? "",
-                InputQuantity = batch.InputQuantity,
-                InputUnit = batch.InputUnit,
-                TotalOutputQuantity = batch.ProcessingBatchProgresses
-                    .Where(p => !p.IsDeleted)
-                    .Sum(p => p.OutputQuantity ?? 0),
-                Status = Enum.TryParse<ProcessingStatus>(batch.Status, out var statusEnum)
-                    ? statusEnum
-                    : ProcessingStatus.NotStarted,
-                CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
-                UpdatedAt = batch.UpdatedAt,
-                Progresses = batch.ProcessingBatchProgresses?
-                    .Where(p => !p.IsDeleted)
-                    .OrderBy(p => p.StepIndex)
-                    .Select(p => new ProcessingBatchProgressWithWastesDto
-                    {
-                        Id = p.ProgressId,
-                        ProgressDate = p.ProgressDate.HasValue
-                            ? p.ProgressDate.Value.ToDateTime(TimeOnly.MinValue)
-                            : DateTime.MinValue,
-                        OutputQuantity = p.OutputQuantity ?? 0,
-                        OutputUnit = p.OutputUnit,
-                        PhotoUrl = p.PhotoUrl,
-                        VideoUrl = p.VideoUrl,
-                        Wastes = wasteMap.TryGetValue(p.ProgressId, out var progressWastes)
-                            ? progressWastes
-                            : new List<ProcessingWasteViewAllDto>()
-                    }).ToList() ?? new()
-            };
-
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+            }
         }
-
 
     }
 }
