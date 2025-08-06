@@ -451,7 +451,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 contractDeliveryBatchDto.MapToUpdatedContractDeliveryBatch(deliveryBatch);
 
                 // Đồng bộ ContractDeliveryItems
-                var dtoItemIds = contractDeliveryBatchDto.ContractDeliveryItems.Select(i => i.DeliveryItemId).ToHashSet();
+                var dtoItemIds = contractDeliveryBatchDto.ContractDeliveryItems
+                    .Select(i => i.DeliveryItemId).ToHashSet();
                 var now = DateHelper.NowVietnamTime();
 
                 foreach (var oldItem in deliveryBatch.ContractDeliveryItems)
@@ -460,7 +461,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         oldItem.IsDeleted = true;
                         oldItem.UpdatedAt = now;
-                        await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(oldItem);
+
+                        await _unitOfWork.ContractDeliveryItemRepository
+                            .UpdateAsync(oldItem);
                     }
                 }
 
@@ -478,7 +481,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingItem.IsDeleted = false;
                         existingItem.UpdatedAt = now;
 
-                        await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(existingItem);
+                        await _unitOfWork.ContractDeliveryItemRepository
+                            .UpdateAsync(existingItem);
                     }
                     else
                     {
@@ -497,13 +501,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             IsDeleted = false
                         };
 
-                        await _unitOfWork.ContractDeliveryItemRepository.CreateAsync(newItem);
+                        await _unitOfWork.ContractDeliveryItemRepository
+                            .CreateAsync(newItem);
                         deliveryBatch.ContractDeliveryItems.Add(newItem);
                     }
                 }
 
                 // Cập nhật contractDeliveryBatch ở repository
-                await _unitOfWork.ContractDeliveryBatchRepository.UpdateAsync(deliveryBatch);
+                await _unitOfWork.ContractDeliveryBatchRepository
+                    .UpdateAsync(deliveryBatch);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -512,7 +518,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại contract sau update để trả DTO
                     var updatedBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
-                        predicate: b => b.DeliveryBatchId == deliveryBatch.DeliveryBatchId,
+                        predicate: b => 
+                           b.DeliveryBatchId == deliveryBatch.DeliveryBatchId &&
+                           !b.IsDeleted,
                         include: query => query
                            .Include(b => b.Contract)
                            .Include(b => b.ContractDeliveryItems.Where(i => !i.IsDeleted))
@@ -625,12 +633,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         foreach (var item in contractDeliveryBatch.ContractDeliveryItems)
                         {
                             // Xóa ContractDeliveryItem khỏi repository
-                            await _unitOfWork.ContractDeliveryItemRepository.RemoveAsync(item);
+                            await _unitOfWork.ContractDeliveryItemRepository
+                                .RemoveAsync(item);
                         }
                     }
 
                     // Xóa ContractDeliveryBatch khỏi repository
-                    await _unitOfWork.ContractDeliveryBatchRepository.RemoveAsync(contractDeliveryBatch);
+                    await _unitOfWork.ContractDeliveryBatchRepository
+                        .RemoveAsync(contractDeliveryBatch);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -736,11 +746,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         item.UpdatedAt = DateHelper.NowVietnamTime();
 
                         // Đảm bảo EF theo dõi thay đổi của item
-                        await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(item);
+                        await _unitOfWork.ContractDeliveryItemRepository
+                            .UpdateAsync(item);
                     }
 
                     // Cập nhật xoá mềm contractDeliveryBatch ở repository
-                    await _unitOfWork.ContractDeliveryBatchRepository.UpdateAsync(contractDeliveryBatch);
+                    await _unitOfWork.ContractDeliveryBatchRepository
+                        .UpdateAsync(contractDeliveryBatch);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

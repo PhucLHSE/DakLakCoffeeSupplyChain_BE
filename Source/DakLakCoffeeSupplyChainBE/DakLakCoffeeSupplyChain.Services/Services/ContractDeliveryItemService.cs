@@ -153,6 +153,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Truy xuất lại dữ liệu để trả về
                     var createdDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                         predicate: ci => ci.DeliveryItemId == newContractDeliveryItem.DeliveryItemId,
                         include: query => query
@@ -314,7 +315,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 contractDeliveryItemDto.MapToUpdateContractDeliveryItem(contractDeliveryItem);
 
                 // Cập nhật contractDeliveryItem ở repository
-                await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(contractDeliveryItem);
+                await _unitOfWork.ContractDeliveryItemRepository
+                    .UpdateAsync(contractDeliveryItem);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -431,7 +433,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else
                 {
                     // Xóa contractDeliveryItem khỏi repository
-                    await _unitOfWork.ContractDeliveryItemRepository.RemoveAsync(contractDeliveryItem);
+                    await _unitOfWork.ContractDeliveryItemRepository
+                        .RemoveAsync(contractDeliveryItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -528,7 +531,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     contractDeliveryItem.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm ContractDeliveryItem ở repository
-                    await _unitOfWork.ContractDeliveryItemRepository.UpdateAsync(contractDeliveryItem);
+                    await _unitOfWork.ContractDeliveryItemRepository
+                        .UpdateAsync(contractDeliveryItem);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
