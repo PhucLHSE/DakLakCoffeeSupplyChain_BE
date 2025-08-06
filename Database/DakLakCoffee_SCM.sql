@@ -378,7 +378,7 @@ CREATE TABLE ProcurementPlans (
     CreatedBy UNIQUEIDENTIFIER NOT NULL,                                               -- Người tạo kế hoạch (doanh nghiệp)
     StartDate DATE,                                                                    -- Ngày bắt đầu nhận đăng ký
     EndDate DATE,                                                                      -- Ngày kết thúc nhận đăng ký
-    Status NVARCHAR(50) DEFAULT 'draft',                                               -- Tình trạng: draft, open, Closed, cancelled
+    Status NVARCHAR(50) DEFAULT 'Draft',                                               -- Tình trạng: Draft, Open, Closed, Cancelled
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                             -- Ngày cập nhật
@@ -403,7 +403,7 @@ CREATE TABLE ProcurementPlansDetails (
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (Kg)
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
-	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (Kg/ha)
+	ExpectedYieldPerHectare FLOAT,                                                     -- Năng suất kỳ vọng (Kg/Ha)
     Note NVARCHAR(MAX),                                                                -- Ghi chú bổ sung
     ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành chi tiết
 	ContractItemID UNIQUEIDENTIFIER NULL,                                              -- Gắn tùy chọn với dòng hợp đồng B2B
@@ -434,7 +434,7 @@ CREATE TABLE CultivationRegistrations (
 	RegistrationCode VARCHAR(20) UNIQUE,                           -- REG-2025-0001
     PlanID UNIQUEIDENTIFIER NOT NULL,                              -- Kế hoạch thu mua
     FarmerID UNIQUEIDENTIFIER NOT NULL,                            -- Nông dân nộp đơn
-    RegisteredArea FLOAT,                                          -- Diện tích đăng ký (hecta)
+    RegisteredArea FLOAT,                                          -- Diện tích đăng ký (Hecta)
     RegisteredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,      -- Thời điểm nộp đơn
     TotalWantedPrice FLOAT,                                        -- Tổng mức giá mong muốn
     Status NVARCHAR(50) DEFAULT 'Pending',                         -- Trạng thái: Pending, Approved,...
@@ -1075,7 +1075,7 @@ CREATE TABLE Orders (
   ActualDeliveryDate DATE,                                        -- Ngày giao thực tế
   TotalAmount FLOAT,                                              -- Tổng tiền đơn hàng
   Note NVARCHAR(MAX),                                             -- Ghi chú giao hàng
-  Status NVARCHAR(50) DEFAULT 'Pending',                          -- Trạng thái đơn: preparing, shipped, delivered,...
+  Status NVARCHAR(50) DEFAULT 'Pending',                          -- Trạng thái đơn: Preparing, Shipped, Delivered,...
   CancelReason NVARCHAR(MAX),                                     -- Lý do hủy (nếu có)
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Ai tạo đơn hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
@@ -2431,6 +2431,135 @@ VALUES (
   300, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451',
   0, 3100
 );
+
+GO
+
+-- Insert ProcurementPlans & ProcurementPlansDetails (tự động từ hợp đồng)
+-- Lấy ManagerID (Seller) để làm CreatedBy
+DECLARE @BMID UNIQUEIDENTIFIER = (
+  SELECT ManagerID
+  FROM BusinessManagers
+  WHERE UserID = (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com')
+);
+
+-- Cursor duyệt các hợp đồng
+DECLARE contract_cursor CURSOR FOR
+SELECT ContractID, ContractCode, ContractTitle, TotalQuantity
+FROM Contracts
+WHERE IsDeleted = 0;
+
+DECLARE @ContractID UNIQUEIDENTIFIER;
+DECLARE @ContractCode VARCHAR(50);
+DECLARE @ContractTitle NVARCHAR(255);
+DECLARE @ContractTotalQty FLOAT;
+DECLARE @PlanID UNIQUEIDENTIFIER;
+DECLARE @PlanCode VARCHAR(20);
+DECLARE @PlanCounter INT = 1;
+
+OPEN contract_cursor;
+
+FETCH_NEXT:
+FETCH NEXT FROM contract_cursor 
+INTO @ContractID, @ContractCode, @ContractTitle, @ContractTotalQty;
+
+IF @@FETCH_STATUS = 0
+BEGIN
+    -- Sinh mã kế hoạch không trùng
+    WHILE 1 = 1
+    BEGIN
+        SET @PlanCode = 'PLAN-2025-' + RIGHT('000' + CAST(@PlanCounter AS VARCHAR), 4);
+
+        IF NOT EXISTS (
+            SELECT 1 FROM ProcurementPlans WHERE PlanCode = @PlanCode
+        )
+            BREAK;
+
+        SET @PlanCounter += 1;
+    END
+
+    SET @PlanID = NEWID();
+
+    INSERT INTO ProcurementPlans (
+        PlanID, PlanCode, Title, Description, TotalQuantity, CreatedBy, StartDate, EndDate, Status, ProgressPercentage
+    )
+    VALUES (
+        @PlanID, 
+        @PlanCode,
+        N'Kế hoạch thu mua: ' + @ContractTitle,
+		N'Dựa trên hợp đồng ' + @ContractCode + N' – ' + @ContractTitle,
+        @ContractTotalQty,
+        @BMID,
+        DATEADD(DAY, 1, GETDATE()),
+        DATEADD(DAY, 15, GETDATE()),
+        'open',
+        0
+    );
+
+    -- Duyệt ContractItems
+    DECLARE item_cursor CURSOR FOR
+    SELECT ContractItemID, CoffeeTypeID, Quantity, Note
+    FROM ContractItems
+    WHERE ContractID = @ContractID;
+
+    DECLARE @ItemID UNIQUEIDENTIFIER;
+    DECLARE @CoffeeID UNIQUEIDENTIFIER;
+    DECLARE @Quantity FLOAT;
+    DECLARE @Note NVARCHAR(MAX);
+    DECLARE @DetailCode VARCHAR(20);
+    DECLARE @DetailCounter INT = 1;
+
+    OPEN item_cursor;
+
+    FETCH NEXT FROM item_cursor INTO @ItemID, @CoffeeID, @Quantity, @Note;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @DetailCode = 'PLD-' + REPLACE(@ContractCode, 'CTR-', '') + '-' + FORMAT(@DetailCounter, '000');
+
+        DECLARE @MethodID INT = (
+            SELECT TOP 1 MethodID
+            FROM ProcessingMethods
+            WHERE MethodCode IN (
+                CASE 
+                    WHEN @Note LIKE N'%Honey%' THEN 'honey'
+                    WHEN @Note LIKE N'%Washed%' THEN 'washed'
+                    WHEN @Note LIKE N'%Natural%' THEN 'natural'
+                    ELSE 'natural'
+                END
+            )
+        );
+
+        DECLARE @Yield FLOAT = (
+            SELECT TOP 1 DefaultYieldPerHectare 
+            FROM CoffeeTypes 
+            WHERE CoffeeTypeID = @CoffeeID
+        );
+
+        INSERT INTO ProcurementPlansDetails (
+            PlanDetailCode, PlanID, CoffeeTypeID, ProcessMethodID,
+            TargetQuantity, TargetRegion, MinimumRegistrationQuantity,
+            MinPriceRange, MaxPriceRange, Note, ContractItemID, 
+            ProgressPercentage, ExpectedYieldPerHectare
+        )
+        VALUES (
+            @DetailCode, @PlanID, @CoffeeID, @MethodID,
+            @Quantity, N'Đắk Lắk', 100,
+            50, 70, @Note, @ItemID,
+            0, @Yield
+        );
+
+        SET @DetailCounter += 1;
+        FETCH NEXT FROM item_cursor INTO @ItemID, @CoffeeID, @Quantity, @Note;
+    END
+
+    CLOSE item_cursor;
+    DEALLOCATE item_cursor;
+
+    GOTO FETCH_NEXT
+END
+
+CLOSE contract_cursor;
+DEALLOCATE contract_cursor;
 
 GO
 
