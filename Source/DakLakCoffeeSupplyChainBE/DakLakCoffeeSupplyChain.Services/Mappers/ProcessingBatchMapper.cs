@@ -44,48 +44,33 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = entity.CreatedAt ?? DateTime.MinValue
             };
         }
-        public static ProcessingBatchDetailsDto MapToDetailsDto(
-            this ProcessingBatch batch,
-            string farmerName,
-            Dictionary<Guid, List<ProcessingWasteViewAllDto>> wasteMap)
+        public static ProcessingBatchDetailFullDto MapToFullDetailDto(
+    this ProcessingBatch batch,
+    string farmerName,
+    string coffeeTypeName,
+    string cropSeasonName,
+    string methodName,
+    List<ProcessingProgressWithStageDto> progresses
+)
         {
-            return new ProcessingBatchDetailsDto
+            return new ProcessingBatchDetailFullDto
             {
                 BatchId = batch.BatchId,
                 BatchCode = batch.BatchCode,
                 SystemBatchCode = batch.SystemBatchCode,
-                CropSeasonId = batch.CropSeasonId,
-                CropSeasonName = batch.CropSeason?.SeasonName ?? "Unknown",
+                Status = batch.Status,
+                CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
+
                 FarmerId = batch.FarmerId,
                 FarmerName = farmerName,
+                CropSeasonId = batch.CropSeasonId,
+                CoffeeTypeName = coffeeTypeName,
+                CropSeasonName = cropSeasonName,
                 MethodId = batch.MethodId,
-                MethodName = batch.Method?.Name ?? "Unknown",
-                InputQuantity = batch.InputQuantity,
-                InputUnit = batch.InputUnit,
-                Status = Enum.TryParse<ProcessingStatus>(batch.Status, out var statusEnum)
-                    ? statusEnum
-                    : ProcessingStatus.NotStarted,
-                CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
-                UpdatedAt = batch.UpdatedAt,
+                MethodName = methodName,
 
-                Progresses = batch.ProcessingBatchProgresses?
-                    .Where(p => !p.IsDeleted)
-                    .OrderBy(p => p.StepIndex)
-                    .Select(p => new ProcessingBatchProgressWithWastesDto
-                    {
-                        Id = p.ProgressId,
-                        ProgressDate = p.ProgressDate.HasValue
-                            ? p.ProgressDate.Value.ToDateTime(TimeOnly.MinValue)
-                            : DateTime.MinValue,
-                        OutputQuantity = p.OutputQuantity ?? 0,
-                        OutputUnit = p.OutputUnit,
-                        PhotoUrl = p.PhotoUrl,
-                        VideoUrl = p.VideoUrl,
-
-                        Wastes = wasteMap.ContainsKey(p.ProgressId)
-                            ? wasteMap[p.ProgressId]
-                            : new List<ProcessingWasteViewAllDto>()
-                    }).ToList() ?? new()
+                TotalInputQuantity = batch.InputQuantity,
+                Progresses = progresses
             };
         }
 
