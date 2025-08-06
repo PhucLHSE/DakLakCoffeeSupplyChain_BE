@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<IServiceResult> Create(ShipmentDetailCreateDto shipmentDetailCreateDto, Guid userId);
 
-        Task<IServiceResult> Update(ShipmentDetailUpdateDto shipmentDetailUpdateDto);
+        Task<IServiceResult> Update(ShipmentDetailUpdateDto shipmentDetailUpdateDto, Guid userId);
 
         Task<IServiceResult> DeleteShipmentDetailById(Guid shipmentDetailId, Guid userId);
 

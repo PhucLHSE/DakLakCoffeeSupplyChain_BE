@@ -222,25 +222,65 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(ShipmentDetailUpdateDto shipmentDetailUpdateDto)
+        public async Task<IServiceResult> Update(ShipmentDetailUpdateDto shipmentDetailUpdateDto, Guid userId)
         {
             try
             {
+                // Xác định managerId từ userId
+                Guid? managerId = null;
+
+                // Ưu tiên kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate:
+                           s => s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                        managerId = staff.SupervisorId;
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không xác định được Manager hoặc Supervisor từ userId."
+                    );
+                }
+
                 // Tìm ShipmentDetail theo ID
                 var shipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
                     predicate: sd =>
                        sd.ShipmentDetailId == shipmentDetailUpdateDto.ShipmentDetailId &&
                        !sd.IsDeleted,
                     include: query => query
-                           .Include(sd => sd.OrderItem)
-                              .ThenInclude(oi => oi.Product)
-                              .Include(sd => sd.Shipment),
+                       .Include(sd => sd.OrderItem)
+                          .ThenInclude(oi => oi.Product)
+                       .Include(sd => sd.OrderItem)
+                          .ThenInclude(oi => oi.ContractDeliveryItem)
+                             .ThenInclude(cdi => cdi.ContractItem)
+                                .ThenInclude(ci => ci.Contract)
+                       .Include(sd => sd.Shipment),
                     asNoTracking: false
                 );
 
                 // Nếu không tìm thấy
-                if (shipmentDetail == null ||
-                    shipmentDetail.IsDeleted)
+                if (shipmentDetail == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -248,21 +288,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Kiểm tra OrderItem có tồn tại không
-                var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
-                    predicate: oi =>
-                       oi.OrderItemId == shipmentDetailUpdateDto.OrderItemId &&
-                       !oi.IsDeleted,
-                    include: query => query
-                       .Include(oi => oi.Product),
-                    asNoTracking: true
-                );
+                // Dùng shipmentDetail.OrderItem để kiểm duyệt quyền
+                var contract = shipmentDetail.OrderItem?.ContractDeliveryItem?.ContractItem?.Contract;
 
-                if (orderItem == null)
+                if (contract == null || 
+                    contract.SellerId != managerId)
                 {
                     return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không tìm thấy mục đơn hàng tương ứng."
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền cập nhật thông tin của hợp đồng này."
+                    );
+                }
+
+                if (shipmentDetail.OrderItemId != shipmentDetailUpdateDto.OrderItemId)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không được phép thay đổi mục đơn hàng đã liên kết."
                     );
                 }
 
@@ -314,7 +356,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 shipmentDetailUpdateDto.MapToUpdateShipmentDetail(shipmentDetail);
 
                 // Cập nhật ShipmentDetail ở repository
-                await _unitOfWork.ShipmentDetailRepository.UpdateAsync(shipmentDetail);
+                await _unitOfWork.ShipmentDetailRepository
+                    .UpdateAsync(shipmentDetail);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -323,7 +366,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Lấy lại dữ liệu vừa cập nhật
                     var updatedShipmentDetail = await _unitOfWork.ShipmentDetailRepository.GetByIdAsync(
-                        predicate: sd => sd.ShipmentDetailId == shipmentDetail.ShipmentDetailId,
+                        predicate: sd => 
+                           sd.ShipmentDetailId == shipmentDetail.ShipmentDetailId &&
+                           !sd.IsDeleted,
                         include: query => query
                            .Include(sd => sd.OrderItem)
                               .ThenInclude(oi => oi.Product),
@@ -407,7 +452,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else
                 {
                     // Xóa shipmentDetail khỏi repository
-                    await _unitOfWork.ShipmentDetailRepository.RemoveAsync(shipmentDetail);
+                    await _unitOfWork.ShipmentDetailRepository
+                        .RemoveAsync(shipmentDetail);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -486,7 +532,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     shipmentDetail.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm shipmentDetail ở repository
-                    await _unitOfWork.ShipmentDetailRepository.UpdateAsync(shipmentDetail);
+                    await _unitOfWork.ShipmentDetailRepository
+                        .UpdateAsync(shipmentDetail);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
