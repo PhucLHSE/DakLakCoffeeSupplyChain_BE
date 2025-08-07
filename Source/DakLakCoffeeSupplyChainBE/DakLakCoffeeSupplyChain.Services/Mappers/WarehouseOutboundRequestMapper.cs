@@ -36,7 +36,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 WarehouseId = entity.WarehouseId,
                 WarehouseName = entity.Warehouse?.Name,
                 InventoryId = entity.InventoryId,
-                InventoryName = entity.Inventory?.Products?.FirstOrDefault()?.ProductName,
+                InventoryName = entity.Inventory?.Products?.FirstOrDefault() != null
+    ? entity.Inventory.Products.First().ProductName
+    : null,
                 RequestedQuantity = entity.RequestedQuantity,
                 Unit = entity.Unit,
                 Purpose = entity.Purpose,
