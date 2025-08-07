@@ -20,6 +20,6 @@
 
         public double? TotalWantedPrice { get; set; }
 
-        public ICollection<CultivationRegistrationViewDetailsDto> CultivationRegistrationViewDetailsDtos { get; set; } = [];
+        public ICollection<CultivationRegistrationViewDetailsDto> CultivationRegistrationDetails { get; set; } = [];
     }
 }

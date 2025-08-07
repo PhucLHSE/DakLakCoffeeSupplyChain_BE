@@ -36,10 +36,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: fm => fm.IsDeleted != true,
                 include: fm => fm.
                 Include(fm => fm.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
-                    ThenInclude(fm => fm.User),
+                    ThenInclude(fm => fm.User).
+                Include(fm => fm.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
                 asNoTracking: true
                 );
@@ -87,11 +91,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: fm => fm.IsDeleted != true && fm.Farmer.User.UserId == userId,
                 include: fm => fm.
                 Include(fm => fm.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
                     ThenInclude(fm => fm.User).
-                Include(fm => fm.FarmingCommitmentsDetails),
+                Include(fm => fm.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
                 asNoTracking: true
                 );
@@ -133,7 +140,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
                     ThenInclude(fm => fm.User).
-                Include(p => p.FarmingCommitmentsDetails),
+                Include(p => p.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 asNoTracking: true
             );
 
@@ -181,9 +190,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     c.Status == FarmingCommitmentStatus.Active.ToString() &&
                     !c.IsDeleted,
                 include: c => c
-                .Include(c => c.Plan)
+                .Include(c => c.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation)
                 .Include(c => c.Farmer)
-                    .ThenInclude(f => f.User),
+                    .ThenInclude(f => f.User)
+                .Include(c => c.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 asNoTracking: true
             );
 
@@ -282,7 +295,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                                 ThenInclude(f => f.User).
                             Include(p => p.Plan).
                                 ThenInclude(c => c.CreatedByNavigation).
-                            Include(p => p.FarmingCommitmentsDetails),
+                            Include(p => p.FarmingCommitmentsDetails).
+                                ThenInclude(fm => fm.PlanDetail).
+                                    ThenInclude(fm => fm.CoffeeType),
                             asNoTracking: true
                         );
                     if (commitment == null)

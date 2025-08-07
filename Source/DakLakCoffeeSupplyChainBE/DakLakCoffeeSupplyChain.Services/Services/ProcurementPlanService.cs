@@ -533,7 +533,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
                     );
 
-                // Nếu như plan đang ở trạng thái hủy mà được chuyển sang open thì phải set lại endDate về null để tránh trường hợp ngày kết thúc có khả năng trước ngày mở đơn
+                
                 plan.StartDate = dto.Status.ToString() == "Open" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.StartDate;
                 // Sau khi cập nhật StartDate, nếu như StartDate sau endDate thì nên set EndDate về null)
                 if (dto.Status.ToString() == "Open" && plan.StartDate > plan.EndDate)

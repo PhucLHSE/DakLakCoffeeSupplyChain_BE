@@ -7,6 +7,7 @@
         public Guid CommitmentId { get; set; }
         public Guid RegistrationDetailId { get; set; }
         public Guid PlanDetailId { get; set; }
+        public string CoffeeTypeName { get; set; } = string.Empty;
         public double? ConfirmedPrice { get; set; }
         public double? CommittedQuantity { get; set; }
         public DateOnly? EstimatedDeliveryStart { get; set; }

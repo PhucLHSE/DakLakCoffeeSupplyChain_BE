@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommitmentsDetailsDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
 {
@@ -10,10 +11,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public string CommitmentCode { get; set; } = string.Empty;
         public string CommitmentName { get; set; } = string.Empty;
         public string FarmerName { get; set; } = string.Empty;
+        public string BusinessName { get; set; } = string.Empty;
         public string PlanTitle { get; set; } = string.Empty;
         public double? TotalPrice { get; set; } = 0.0;
         public DateTime CommitmentDate { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;
-        public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentsDetailsDTOs { get; set; } = [];
+        public ICollection<FarmingCommitmentsDetailsViewAllDto> farmingCommitmentDetails { get; set; } = [];
     }
 }

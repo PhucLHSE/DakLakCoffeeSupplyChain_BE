@@ -37,7 +37,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RegisteredArea = cultivation.RegisteredArea,
                 RegisteredAt = cultivation.RegisteredAt,
                 TotalWantedPrice = cultivation.TotalWantedPrice,
-                CultivationRegistrationViewDetailsDtos = [.. cultivation.CultivationRegistrationsDetails.Select(detail => new CultivationRegistrationViewDetailsDto
+                CultivationRegistrationDetails = [.. cultivation.CultivationRegistrationsDetails.Select(detail => new CultivationRegistrationViewDetailsDto
                 {
                     CultivationRegistrationDetailId = detail.CultivationRegistrationDetailId,
                     RegistrationId = detail.RegistrationId,
