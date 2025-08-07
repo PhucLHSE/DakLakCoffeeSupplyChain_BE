@@ -17,11 +17,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
                 FarmerName = fm.Farmer.User.Name,
+                BusinessName = fm.Plan.CreatedByNavigation.CompanyName,
                 PlanTitle = fm.Plan.Title,
                 TotalPrice = fm.TotalPrice,
                 CommitmentDate = fm.CommitmentDate,
                 Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown),
-                FarmingCommitmentsDetailsDTOs = fm.FarmingCommitmentsDetails
+                farmingCommitmentDetails = fm.FarmingCommitmentsDetails
                     ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
                     {
                         CommitmentDetailId = detail.CommitmentDetailId,
@@ -29,6 +30,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         CommitmentId = detail.CommitmentId,
                         RegistrationDetailId = detail.RegistrationDetailId,
                         PlanDetailId = detail.PlanDetailId,
+                        CoffeeTypeName = detail.PlanDetail.CoffeeType.TypeName,
                         ConfirmedPrice = detail.ConfirmedPrice,
                         CommittedQuantity = detail.CommittedQuantity,
                         EstimatedDeliveryStart = detail.EstimatedDeliveryStart,
@@ -65,7 +67,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Note = entity.Note,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
-                FarmingCommitmentsDetailsDTOs = entity.FarmingCommitmentsDetails
+                farmingCommitmentDetails = entity.FarmingCommitmentsDetails
                     ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
                     {
                         CommitmentDetailId = detail.CommitmentDetailId,
@@ -73,6 +75,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         CommitmentId = detail.CommitmentId,
                         RegistrationDetailId = detail.RegistrationDetailId,
                         PlanDetailId = detail.PlanDetailId,
+                        CoffeeTypeName = detail.PlanDetail.CoffeeType.TypeName,
                         ConfirmedPrice = detail.ConfirmedPrice,
                         CommittedQuantity = detail.CommittedQuantity,
                         EstimatedDeliveryStart = detail.EstimatedDeliveryStart,
