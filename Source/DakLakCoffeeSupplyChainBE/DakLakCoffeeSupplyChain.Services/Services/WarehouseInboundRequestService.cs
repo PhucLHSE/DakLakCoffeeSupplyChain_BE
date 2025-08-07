@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -72,20 +73,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu nhập kho cho lô chế biến này.");
 
+            // ✅ Chỉ cho phép gửi yêu cầu nếu batch đã hoàn tất
+            if (batch.Status != ProcessingStatus.Completed.ToString())
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho lô đã hoàn tất sơ chế.");
+            }
+
             // ✅ Kiểm tra ngày giao không được nhỏ hơn ngày hiện tại
             if (dto.PreferredDeliveryDate < DateOnly.FromDateTime(DateTime.UtcNow))
             {
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày giao dự kiến không được nằm trong quá khứ.");
             }
 
-            var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
+            // ✅ Tính tổng outputQuantity của tất cả progress thuộc batch
+            var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                p => p.BatchId == batch.BatchId && !p.IsDeleted && p.OutputQuantity != null
+            );
+            double totalOutput = progresses.Sum(p => p.OutputQuantity ?? 0);
 
+            // ✅ Tính tổng requestedQuantity đã gửi trong các yêu cầu khác của batch
+            var existingRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
+            r => r.BatchId == batch.BatchId &&
+            !r.IsDeleted &&
+            r.Status == InboundRequestStatus.Approved.ToString()
+ );
+            double totalRequested = existingRequests.Sum(r => r.RequestedQuantity ?? 0);
+
+            double remaining = totalOutput - totalRequested;
+
+            // ✅ So sánh với lượng yêu cầu hiện tại
+            if (dto.RequestedQuantity > remaining)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE,
+                    $"Khối lượng yêu cầu vượt quá lượng còn lại của lô. Hiện còn {remaining} kg có thể yêu cầu nhập kho.");
+            }
+
+            // ✅ Sinh mã
+            var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
             var newRequest = dto.ToEntityFromCreateDto(farmer.FarmerId, inboundCode);
 
             await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
             await _unitOfWork.SaveChangesAsync();
 
-            await _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
+            _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
