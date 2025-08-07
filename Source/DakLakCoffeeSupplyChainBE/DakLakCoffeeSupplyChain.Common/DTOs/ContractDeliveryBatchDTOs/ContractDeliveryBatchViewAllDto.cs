@@ -16,6 +16,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs
 
         public Guid ContractId { get; set; }
 
+        public string ContractNumber { get; set; } = string.Empty;
+
         public int DeliveryRound { get; set; }
 
         public DateOnly? ExpectedDeliveryDate { get; set; }

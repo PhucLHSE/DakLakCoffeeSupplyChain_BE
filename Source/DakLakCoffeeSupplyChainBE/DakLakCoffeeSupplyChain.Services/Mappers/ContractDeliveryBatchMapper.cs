@@ -28,6 +28,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 DeliveryBatchId = contractDeliveryBatch.DeliveryBatchId,
                 DeliveryBatchCode = contractDeliveryBatch.DeliveryBatchCode ?? string.Empty,
                 ContractId = contractDeliveryBatch.ContractId,
+                ContractNumber = contractDeliveryBatch.Contract.ContractNumber ?? string.Empty,
                 DeliveryRound = contractDeliveryBatch.DeliveryRound,
                 ExpectedDeliveryDate = contractDeliveryBatch.ExpectedDeliveryDate,
                 TotalPlannedQuantity = contractDeliveryBatch.TotalPlannedQuantity,
