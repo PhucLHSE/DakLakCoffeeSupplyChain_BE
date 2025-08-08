@@ -57,6 +57,10 @@ public partial class UserAccount
 
     public virtual ICollection<Farmer> Farmers { get; set; } = new List<Farmer>();
 
+    public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetailBreachedByNavigations { get; set; } = new List<FarmingCommitmentsDetail>();
+
+    public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetailRejectionByNavigations { get; set; } = new List<FarmingCommitmentsDetail>();
+
     public virtual ICollection<GeneralFarmerReport> GeneralFarmerReports { get; set; } = new List<GeneralFarmerReport>();
 
     public virtual ICollection<OrderComplaint> OrderComplaints { get; set; } = new List<OrderComplaint>();

@@ -23,6 +23,10 @@ public partial class FarmingCommitment
 
     public double? TotalPrice { get; set; }
 
+    public double? TotalAdvancePayment { get; set; }
+
+    public double? TotalTaxPrice { get; set; }
+
     public DateTime CommitmentDate { get; set; }
 
     public Guid? ApprovedBy { get; set; }
@@ -31,9 +35,15 @@ public partial class FarmingCommitment
 
     public string Status { get; set; }
 
+    public double? ProgressPercentage { get; set; }
+
     public string RejectionReason { get; set; }
 
     public string Note { get; set; }
+
+    public double? TotalRatingByBusiness { get; set; }
+
+    public double? TotalRatingByFarmer { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
