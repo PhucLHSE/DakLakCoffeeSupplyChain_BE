@@ -18,8 +18,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             this ContractDeliveryBatch contractDeliveryBatch)
         {
             // Parse Status string từ entity sang enum
-            ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>(
-                contractDeliveryBatch.Status, ignoreCase: true, out var parsedStatus)
+            ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>
+                (contractDeliveryBatch.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ContractDeliveryBatchStatus.Planned;
 
@@ -43,8 +43,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             this ContractDeliveryBatch contractDeliveryBatch)
         {
             // Parse Status string từ entity sang enum
-            ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>(
-                contractDeliveryBatch.Status, ignoreCase: true, out var parsedStatus)
+            ContractDeliveryBatchStatus status = Enum.TryParse<ContractDeliveryBatchStatus>
+                (contractDeliveryBatch.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ContractDeliveryBatchStatus.Planned;
 
