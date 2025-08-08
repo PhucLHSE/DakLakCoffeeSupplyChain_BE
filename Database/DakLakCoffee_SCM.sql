@@ -372,7 +372,7 @@ GO
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
 	PlanCode VARCHAR(20) UNIQUE,                                                       -- PLAN-2025-0001
-    Title NVARCHAR(100) NOT NULL,                                                      -- Tên kế hoạch: "Thu mua cà phê Arabica 2025"
+    Title NVARCHAR(255) NOT NULL,                                                      -- Tên kế hoạch: "Thu mua cà phê Arabica 2025"
     Description NVARCHAR(MAX),                                                         -- Mô tả yêu cầu và thông tin bổ sung
     TotalQuantity FLOAT,                                                               -- Tổng sản lượng cần thu mua (Kg hoặc tấn)
     CreatedBy UNIQUEIDENTIFIER NOT NULL,                                               -- Người tạo kế hoạch (doanh nghiệp)
@@ -487,23 +487,27 @@ GO
 
 -- FarmingCommitments – Cam kết chính thức giữa Farmer và hệ thống
 CREATE TABLE FarmingCommitments (
-    CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
-	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0001
-	CommitmentName NVARCHAR(MAX),									   -- Tên của bảng cam kết
-    PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch chính
-    RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                   -- FK đến đơn đăng ký chính
-    FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
-    TotalPrice FLOAT DEFAULT 0,                                        -- Tổng giá tiền
-    CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
-    ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
-    ApprovedAt DATETIME,                                               -- Ngày duyệt
-    Status NVARCHAR(50) DEFAULT 'Active',                              -- Trạng thái cam kết
-    RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
-    Note NVARCHAR(MAX),                                                -- Ghi chú thêm
-	--ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
+    CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                                  -- ID cam kết
+	CommitmentCode VARCHAR(20) UNIQUE,                                                          -- FC-2025-0001
+	CommitmentName NVARCHAR(MAX),									                            -- Tên của bảng cam kết
+    PlanID UNIQUEIDENTIFIER NOT NULL,                                                           -- FK đến kế hoạch chính
+    RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                                            -- FK đến đơn đăng ký chính
+    FarmerID UNIQUEIDENTIFIER NOT NULL,                                                         -- Nông dân cam kết
+    TotalPrice FLOAT DEFAULT 0,                                                                 -- Tổng giá tiền
+    TotalAdvancePayment FLOAT DEFAULT 0,                                                        -- Tổng số tiền ứng trước (nếu có)
+    TotalTaxPrice FLOAT DEFAULT 0,                                                              -- Tổng giá trị thuế (nếu có)
+    CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                                 -- Ngày xác lập cam kết
+    ApprovedBy UNIQUEIDENTIFIER,                                                                -- Người duyệt
+    ApprovedAt DATETIME,                                                                        -- Ngày duyệt
+    Status NVARCHAR(50) DEFAULT 'Pending',                                                      -- Trạng thái cam kết
+    ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0,          -- % hoàn thành
+    RejectionReason NVARCHAR(MAX),                                                              -- Lý do từ chối (nếu có)
+    Note NVARCHAR(MAX),                                                                         -- Ghi chú thêm
+    TotalRatingByBusiness FLOAT CHECK (TotalRatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,     -- Tổng điểm đánh giá (nếu có)
+    TotalRatingByFarmer FLOAT CHECK (TotalRatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,         -- Tổng điểm đánh giá (nếu có)
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
+	IsDeleted BIT NOT NULL DEFAULT 0                                                            -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_FarmingCommitments_FarmerID 
@@ -523,16 +527,31 @@ GO
 
 -- FarmingCommitmentsDetails – Chi tiết từng dòng cam kết
 CREATE TABLE FarmingCommitmentsDetails (
-    CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID chi tiết cam kết
-    CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0001
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến cam kết chính
-    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
-    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
-    ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
-    CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
-    EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
-    EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
-    Note NVARCHAR(MAX),                                                -- Ghi chú thêm
+    CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                   -- ID chi tiết cam kết
+    CommitmentDetailCode VARCHAR(20) UNIQUE,                                           -- FCD-2025-0001
+    CommitmentID UNIQUEIDENTIFIER NOT NULL,                                            -- FK đến cam kết chính
+    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                                    -- FK đến chi tiết đơn đã duyệt
+    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                                            -- FK đến loại cây cụ thể
+    ConfirmedPrice FLOAT,                                                              -- Giá xác nhận mua
+    AdvancePayment FLOAT DEFAULT 0,                                                    -- Số tiền ứng trước (nếu có)
+    CommittedQuantity FLOAT,                                                           -- Khối lượng cam kết
+    EstimatedDeliveryStart DATE,                                                       -- Ngày giao hàng dự kiến bắt đầu
+    EstimatedDeliveryEnd DATE,                                                         -- Ngày giao hàng dự kiến kết thúc
+    Note NVARCHAR(MAX),                                                                -- Ghi chú thêm
+    Status NVARCHAR(50) DEFAULT 'Pending',                                             -- Trạng thái cam kết
+    DeliveriedQuantity FLOAT DEFAULT 0,                                                -- Số lượng đã giao
+    ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành
+    TaxPrice FLOAT DEFAULT 0,                                                          -- Giá trị thuế (nếu có)
+    RejectionReason NVARCHAR(MAX),                                                     -- Lý do từ chối (nếu có)
+    RejectionBy UNIQUEIDENTIFIER NULL,                                                 -- Người từ chối (nếu có)
+    RejectionAt DATETIME,                                                              -- Thời gian từ chối (nếu có)
+    BreachedReason NVARCHAR(MAX),                                                      -- Nguyên nhân cam kết bị vi phạm (nếu có)
+    BreachedBy UNIQUEIDENTIFIER NULL,                                                  -- Người khiến cam kết bị vi phạm (nếu có)
+    BreachedAt DATETIME,                                                               -- Thời gian cam kết bị vi phạm (nếu có)
+    RatingByBusiness FLOAT CHECK (RatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,                -- Đánh giá của doanh nghiệp về cam kết sau khi đã hoàn thành hợp đồng
+    RatingCommentByBusiness NVARCHAR(MAX) NULL,                                        -- Nhận xét đánh giá (nếu có)
+    RatingByFarmer FLOAT CHECK (RatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,                  -- Đánh giá của nông dân về cam kết sau khi đã hoàn thành hợp đồng
+    RatingCommentByFarmer NVARCHAR(MAX) NULL,                                          -- Nhận xét đánh giá (nếu có)
     ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -549,7 +568,13 @@ CREATE TABLE FarmingCommitmentsDetails (
         FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
 
     CONSTRAINT FK_FarmingCommitmentsDetails_CommitmentID               -- FK tới bảng FarmingCommitments
-        FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID)
+        FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_RejectionBy                -- FK tới bảng UserAccounts
+        FOREIGN KEY (RejectionBy) REFERENCES UserAccounts(UserID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_BreachedBy                 -- FK tới bảng UserAccounts
+        FOREIGN KEY (BreachedBy) REFERENCES UserAccounts(UserID)
 );
 
 GO
