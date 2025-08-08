@@ -18,7 +18,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             this Contract contract)
         {
             // Parse Status string to enum
-            ContractStatus status = Enum.TryParse<ContractStatus>(contract.Status, ignoreCase: true, out var parsedStatus)
+            ContractStatus status = Enum.TryParse<ContractStatus>
+                (contract.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ContractStatus.NotStarted;
 
@@ -44,7 +45,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             this Contract contract)
         {
             // Parse Status string to enum
-            ContractStatus status = Enum.TryParse<ContractStatus>(contract.Status, ignoreCase: true, out var parsedStatus)
+            ContractStatus status = Enum.TryParse<ContractStatus>
+                (contract.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : ContractStatus.NotStarted;
 
