@@ -18,7 +18,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllAsync()
         {
-            var result = await _service.GetAll();
+            var result = await _service
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -34,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(Guid farmerId)
         {
-            var result = await _service.GetById(farmerId);
+            var result = await _service
+                .GetById(farmerId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -50,7 +52,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteByIdAsync(Guid farmerId)
         {
-            var result = await _service.DeleteById(farmerId);
+            var result = await _service
+                .DeleteById(farmerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -69,7 +72,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SoftDeleteByIdAsync(Guid farmerId)
         {
-            var result = await _service.SoftDeleteById(farmerId);
+            var result = await _service
+                .SoftDeleteById(farmerId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");

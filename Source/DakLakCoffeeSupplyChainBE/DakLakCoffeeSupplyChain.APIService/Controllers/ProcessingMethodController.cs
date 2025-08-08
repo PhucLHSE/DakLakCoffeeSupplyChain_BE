@@ -25,7 +25,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,Farmer,BusinessManager")]
         public async Task<IActionResult> GetAllProcesingMethodsAsync()
         {
-            var result = await _procesingMethodService.GetAll();
+            var result = await _procesingMethodService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -38,9 +39,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin,Farmer,BusinessManager")]
-        public async Task<IActionResult> Create([FromBody] ProcessingMethodCreateDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] ProcessingMethodCreateDto dto)
         {
-            var result = await _procesingMethodService.CreateAsync(dto);
+            var result = await _procesingMethodService
+                .CreateAsync(dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Message);  // Trả 200 nếu thành công
@@ -56,7 +59,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,Farmer,BusinessManager")]
         public async Task<IActionResult> GetById(int methodId)
         {
-            var result = await _procesingMethodService.GetById(methodId);
+            var result = await _procesingMethodService
+                .GetById(methodId);
+
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
 
@@ -70,7 +75,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> DeleteById(int methodId)
         {
-            var result = await _procesingMethodService.DeleteById(methodId);
+            var result = await _procesingMethodService
+                .DeleteById(methodId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Data);
@@ -80,11 +86,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
         [HttpPatch("{methodId}/soft-delete")]
         [Authorize(Roles = "Admin,BusinessManager,BusinessStaff,Farmer")]
         public async Task<IActionResult> SoftDelete(int methodId)
         {
-            var result = await _procesingMethodService.SoftDeleteAsync(methodId);
+            var result = await _procesingMethodService
+                .SoftDeleteAsync(methodId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);

@@ -35,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _procurementPlanService.GetAll(userId);
+            var result = await _procurementPlanService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -51,7 +52,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("Available")]
         public async Task<IActionResult> GetAllProcurementPlansAvailableAsync()
         {
-            var result = await _procurementPlanService.GetAllProcurementPlansAvailable();
+            var result = await _procurementPlanService
+                .GetAllProcurementPlansAvailable();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -68,7 +70,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetById(Guid planId)
         {
-            var result = await _procurementPlanService.GetById(planId);
+            var result = await _procurementPlanService
+                .GetById(planId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -83,7 +86,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("Available/{planId}")]
         public async Task<IActionResult> GetByIdExceptDisablePlanDetails(Guid planId)
         {
-            var result = await _procurementPlanService.GetByIdExceptDisablePlanDetails(planId);
+            var result = await _procurementPlanService
+                .GetByIdExceptDisablePlanDetails(planId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -117,7 +121,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid planId)
         {
-            var result = await _procurementPlanService.SoftDeleteById(planId);
+            var result = await _procurementPlanService
+                .SoftDeleteById(planId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -134,7 +139,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<ProcurementPlan>
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> CreateProcurementPlanAsync([FromBody] ProcurementPlanCreateDto planDto)
+        public async Task<IActionResult> CreateProcurementPlanAsync(
+            [FromBody] ProcurementPlanCreateDto planDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -151,7 +157,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _procurementPlanService.Create(planDto, userId);
+            var result = await _procurementPlanService
+                .Create(planDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),

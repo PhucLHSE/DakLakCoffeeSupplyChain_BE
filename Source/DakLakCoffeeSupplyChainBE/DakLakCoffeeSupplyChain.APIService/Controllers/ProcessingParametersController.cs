@@ -25,7 +25,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         //[Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _processingParameterService.GetAll();
+            var result = await _processingParameterService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -40,7 +41,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff,AgriculturalExpert,Farmer")]
         public async Task<IActionResult> GetById(Guid parameterId)
         {
-            var result = await _processingParameterService.GetById(parameterId);
+            var result = await _processingParameterService
+                .GetById(parameterId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -53,9 +55,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPost]
         //[Authorize(Roles = "BusinessStaff,Farmer")]
-        public async Task<IActionResult> Create([FromBody] ProcessingParameterCreateDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] ProcessingParameterCreateDto dto)
         {
-            var result = await _processingParameterService.CreateAsync(dto);
+            var result = await _processingParameterService
+                .CreateAsync(dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data); // 200 OK
@@ -68,9 +72,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPut]
         //[Authorize(Roles = "BusinessStaff,Farmer")]
-        public async Task<IActionResult> Update([FromBody] ProcessingParameterUpdateDto dto)
+        public async Task<IActionResult> Update(
+            [FromBody] ProcessingParameterUpdateDto dto)
         {
-            var result = await _processingParameterService.UpdateAsync(dto);
+            var result = await _processingParameterService
+                .UpdateAsync(dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data); // 200 OK
@@ -85,7 +91,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // [Authorize(Roles = "BusinessStaff,Farmer")]
         public async Task<IActionResult> SoftDelete(Guid parameterId)
         {
-            var result = await _processingParameterService.SoftDeleteAsync(parameterId);
+            var result = await _processingParameterService
+                .SoftDeleteAsync(parameterId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -95,11 +102,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
         [HttpDelete("hard/{parameterId}")]
         // [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid parameterId)
         {
-            var result = await _processingParameterService.HardDeleteAsync(parameterId);
+            var result = await _processingParameterService
+                .HardDeleteAsync(parameterId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -109,6 +118,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-
     }
 }

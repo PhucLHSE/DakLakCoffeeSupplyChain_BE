@@ -32,7 +32,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được người đăng nhập từ token.");
             }
 
-            var result = await _service.GetAllBusinessManagerCommitment(userId);
+            var result = await _service
+                .GetAllBusinessManagerCommitment(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -61,7 +62,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được người đăng nhập từ token.");
             }
 
-            var result = await _service.GetAllFarmerCommitment(userId);
+            var result = await _service
+                .GetAllFarmerCommitment(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -78,7 +80,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin, BusinessManager")]
         public async Task<IActionResult> GetById(Guid commitmentId)
         {
-            var result = await _service.GetById(commitmentId);
+            var result = await _service
+                .GetById(commitmentId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -106,7 +109,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được người dùng.");
             }
 
-            var result = await _service.GetAvailableForCropSeason(userId);
+            var result = await _service
+                .GetAvailableForCropSeason(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -117,17 +121,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-
         // POST api/<FarmingCommitment>
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> Create([FromBody] FarmingCommitmentCreateDto commitment)
+        public async Task<IActionResult> Create(
+            [FromBody] FarmingCommitmentCreateDto commitment)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
             }
-            var result = await _service.Create(commitment);
+
+            var result = await _service
+                .Create(commitment);
+
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), new { 
                     commitmentId = ((FarmingCommitmentViewDetailsDto)result.Data).CommitmentId 
@@ -142,13 +149,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<FarmingCommitment>
         [HttpPost("BulkCreate")]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> BulkCreate([FromBody] FarmingCommitmentBulkCreateDto commitments)
+        public async Task<IActionResult> BulkCreate(
+            [FromBody] FarmingCommitmentBulkCreateDto commitments)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
             }
-            var result = await _service.BulkCreate(commitments);
+
+            var result = await _service
+                .BulkCreate(commitments);
+
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data);
 

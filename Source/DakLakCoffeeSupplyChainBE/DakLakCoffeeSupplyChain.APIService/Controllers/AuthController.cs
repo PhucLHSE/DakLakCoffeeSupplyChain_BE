@@ -26,9 +26,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _authService.LoginAsync(request);
 
             // Đăng nhập thành công, trả về token string
-            if (result.Status == Const.SUCCESS_LOGIN_CODE && result.Data is not null)
+            if (result.Status == Const.SUCCESS_LOGIN_CODE && 
+                result.Data is not null)
             {
                 var tokenProp = result.Data.GetType().GetProperty("token");
+
                 var tokenValue = tokenProp?.GetValue(result.Data)?.ToString();
 
                 if (!string.IsNullOrEmpty(tokenValue))
@@ -53,7 +55,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<SignUpRequest>
         [HttpPost("SignUpRequest")]
-        public async Task<IActionResult> CreateFarmerAccountAsync([FromBody] SignUpRequestDto SignUpRequestDto)
+        public async Task<IActionResult> CreateFarmerAccountAsync(
+            [FromBody] SignUpRequestDto SignUpRequestDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -71,12 +74,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/verify-email/userId={userId}&code={verificationCode}
         [HttpGet("verify-email/userId={userId}&code={verificationCode}")]
-        public async Task<IActionResult> VerifyEmailAsync(Guid userId, string verificationCode)
+        public async Task<IActionResult> VerifyEmailAsync(
+            Guid userId, string verificationCode)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _authService.VerifyEmail(userId, verificationCode);
+            var result = await _authService
+                .VerifyEmail(userId, verificationCode);
 
             if (result.Status == Const.SUCCESS_VERIFY_OTP_CODE)
                 return Ok(result.Message);
@@ -89,9 +94,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET api/resend-verification-email
         [HttpPost("resend-verification-email")]
-        public async Task<IActionResult> ResendVerificationEmail([FromBody] ResendEmailVerificationRequestDto emailDto)
+        public async Task<IActionResult> ResendVerificationEmail(
+            [FromBody] ResendEmailVerificationRequestDto emailDto)
         {
-            var result = await _authService.ResendVerificationEmail(emailDto);
+            var result = await _authService
+                .ResendVerificationEmail(emailDto);
+
             if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
                 return Ok(result.Message);
 
@@ -103,9 +111,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // Phương thức gửi mã OTP qua email
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+        public async Task<IActionResult> ForgotPassword(
+            [FromBody] ForgotPasswordRequestDto request)
         {
-            var result = await _authService.ForgotPasswordAsync(request);
+            var result = await _authService
+                .ForgotPasswordAsync(request);
 
             if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
                 return Ok(result.Message);
@@ -115,9 +125,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // Phương thức để reset mật khẩu sau khi nhập mã OTP
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromQuery] Guid userId, [FromQuery] string token, [FromBody] ResetPasswordRequestDto request)
+        public async Task<IActionResult> ResetPassword(
+            [FromQuery] Guid userId, 
+            [FromQuery] string token, 
+            [FromBody] ResetPasswordRequestDto request)
         {
-            var result = await _authService.ResetPasswordAsync(userId, token, request);
+            var result = await _authService
+                .ResetPasswordAsync(userId, token, request);
 
             if (result.Status == Const.SUCCESS_RESET_PASSWORD_CODE)
                 return Ok(result.Message);
@@ -127,10 +141,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // Phương thức xác minh mã OTP qua GET
         [HttpGet("reset-password/userId={userId}&token={token}")]
-        public IActionResult ResetPasswordPage(Guid userId, string token)
+        public IActionResult ResetPasswordPage(
+            Guid userId, string token)
         {
             // Kiểm tra mã reset có hợp lệ hay không
             var cacheKey = $"password-reset:{userId}";
+
             if (!_cache.TryGetValue(cacheKey, out string cachedToken) || cachedToken != token)
             {
                 return NotFound(new { message = "Mã reset không hợp lệ hoặc đã hết hạn." });

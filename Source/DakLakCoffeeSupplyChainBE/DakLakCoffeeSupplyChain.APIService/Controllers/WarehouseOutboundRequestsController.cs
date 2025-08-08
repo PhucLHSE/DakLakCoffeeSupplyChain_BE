@@ -22,13 +22,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST: api/WarehouseOutboundRequests
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> CreateRequest([FromBody] WarehouseOutboundRequestCreateDto dto)
+        public async Task<IActionResult> CreateRequest(
+            [FromBody] WarehouseOutboundRequestCreateDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
                 return Unauthorized("Cannot determine user from token.");
 
-            var result = await _requestService.CreateRequestAsync(managerUserId, dto);
+            var result = await _requestService
+                .CreateRequestAsync(managerUserId, dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetDetail), new { outboundRequestId = result.Data }, result);
@@ -46,10 +49,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
                 return Unauthorized("Cannot determine user from token.");
 
-            var result = await _requestService.GetAllAsync(managerUserId);
+            var result = await _requestService
+                .GetAllAsync(managerUserId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
@@ -65,7 +70,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessStaff, BusinessManager")]
         public async Task<IActionResult> GetDetail(Guid outboundRequestId)
         {
-            var result = await _requestService.GetDetailAsync(outboundRequestId);
+            var result = await _requestService
+                .GetDetailAsync(outboundRequestId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
@@ -82,10 +88,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> Accept(Guid id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid staffUserId))
                 return Unauthorized("Cannot determine user from token.");
 
-            var result = await _requestService.AcceptRequestAsync(id, staffUserId);
+            var result = await _requestService
+                .AcceptRequestAsync(id, staffUserId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
@@ -102,6 +110,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> Cancel(Guid id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid managerUserId))
                 return Unauthorized("Cannot determine user from token.");
 
@@ -115,15 +124,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result);
         }
+
         [HttpPut("{id}/reject")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> Reject(Guid id, [FromBody] RejectWarehouseRequestDto input)
+        public async Task<IActionResult> Reject(
+            Guid id, 
+            [FromBody] RejectWarehouseRequestDto input)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid staffUserId))
                 return Unauthorized("Cannot determine user from token.");
 
-            var result = await _requestService.RejectRequestAsync(id, staffUserId, input.RejectReason);
+            var result = await _requestService
+                .RejectRequestAsync(id, staffUserId, input.RejectReason);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
@@ -133,6 +147,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result);
         }
-
     }
 }

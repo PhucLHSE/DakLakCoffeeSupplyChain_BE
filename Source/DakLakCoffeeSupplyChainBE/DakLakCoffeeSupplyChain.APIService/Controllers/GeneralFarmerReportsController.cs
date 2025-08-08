@@ -24,27 +24,36 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _reportService.GetAll();
+            var result = await _reportService
+                .GetAll();
+
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
+
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
+
             return StatusCode(500, result.Message);
         }
 
         [HttpGet("{reportId}")]
         public async Task<IActionResult> GetById(Guid reportId)
         {
-            var result = await _reportService.GetById(reportId);
+            var result = await _reportService
+                .GetById(reportId);
+
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
+
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
+
             return StatusCode(500, result.Message);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAsync([FromBody] GeneralFarmerReportCreateDto dto)
+        public async Task<IActionResult> CreateAsync(
+            [FromBody] GeneralFarmerReportCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,11 +62,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _reportService.CreateGeneralFarmerReports(dto, userId);
+            var result = await _reportService
+                .CreateGeneralFarmerReports(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
             {
                 var data = (GeneralFarmerReportViewDetailsDto)result.Data!;
+
                 return CreatedAtAction(nameof(GetById), new { reportId = data.ReportId }, data);
             }
 
@@ -68,7 +79,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{reportId}")]
-        public async Task<IActionResult> UpdateAsync(Guid reportId, [FromBody] GeneralFarmerReportUpdateDto dto)
+        public async Task<IActionResult> UpdateAsync(
+            Guid reportId, 
+            [FromBody] GeneralFarmerReportUpdateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -76,7 +89,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (reportId != dto.ReportId)
                 return BadRequest("ID trong route không khớp với nội dung.");
 
-            var result = await _reportService.UpdateGeneralFarmerReport(dto);
+            var result = await _reportService
+                .UpdateGeneralFarmerReport(dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -93,7 +107,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPatch("soft-delete/{reportId}")]
         public async Task<IActionResult> SoftDeleteAsync(Guid reportId)
         {
-            var result = await _reportService.SoftDeleteGeneralFarmerReport(reportId);
+            var result = await _reportService
+                .SoftDeleteGeneralFarmerReport(reportId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -107,7 +122,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpDelete("{reportId}")]
         public async Task<IActionResult> HardDeleteAsync(Guid reportId)
         {
-            var result = await _reportService.HardDeleteGeneralFarmerReport(reportId);
+            var result = await _reportService
+                .HardDeleteGeneralFarmerReport(reportId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa cứng thành công.");

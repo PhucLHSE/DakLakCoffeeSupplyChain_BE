@@ -23,14 +23,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST: api/WarehouseReceipts/{id}/receipt
         [HttpPost("{id}/receipt")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> CreateReceipt(Guid id, [FromBody] WarehouseReceiptCreateDto dto)
+        public async Task<IActionResult> CreateReceipt(
+            Guid id, 
+            [FromBody] WarehouseReceiptCreateDto dto)
         {
             var staffUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (staffUserIdClaim == null || !Guid.TryParse(staffUserIdClaim.Value, out Guid staffUserId))
                 return Unauthorized("Cannot determine user from token.");
 
             dto.InboundRequestId = id;
-            var result = await _receiptService.CreateReceiptAsync(staffUserId, dto);
+
+            var result = await _receiptService
+                .CreateReceiptAsync(staffUserId, dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
@@ -47,9 +52,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT: api/WarehouseReceipts/{id}/confirm
         [HttpPut("{id}/confirm")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> ConfirmReceipt(Guid id, [FromBody] WarehouseReceiptConfirmDto dto)
+        public async Task<IActionResult> ConfirmReceipt(
+            Guid id, 
+            [FromBody] WarehouseReceiptConfirmDto dto)
         {
-            var result = await _receiptService.ConfirmReceiptAsync(id, dto);
+            var result = await _receiptService
+                .ConfirmReceiptAsync(id, dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(new { message = result.Message, receiptId = result.Data });
@@ -70,10 +78,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
                 return Unauthorized("Cannot determine user from token.");
 
-            var result = await _receiptService.GetAllAsync(userId);
+            var result = await _receiptService
+                .GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -92,7 +102,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessStaff,BusinessManager")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var result = await _receiptService.GetByIdAsync(id);
+            var result = await _receiptService
+                .GetByIdAsync(id);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -102,6 +113,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
         // PATCH: api/WarehouseReceipts/soft-delete/{id}
         [HttpPatch("soft-delete/{id}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
@@ -126,7 +138,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             // if (!canAccess)
             //     return StatusCode(403, "Bạn không có quyền xóa phiếu này.");
 
-            var result = await _receiptService.SoftDeleteAsync(id, currentUserId);
+            var result = await _receiptService
+                .SoftDeleteAsync(id, currentUserId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -140,13 +153,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-
         // DELETE: api/WarehouseReceipts/{id}/hard
         [HttpDelete("{id}/hard")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
-            var result = await _receiptService.HardDeleteAsync(id);
+            var result = await _receiptService
+                .HardDeleteAsync(id);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(new { message = result.Message });

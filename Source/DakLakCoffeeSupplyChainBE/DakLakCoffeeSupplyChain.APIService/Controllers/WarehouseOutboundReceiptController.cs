@@ -21,15 +21,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST: api/WarehouseOutboundReceipts/{id}/receipt
         [HttpPost("{id}/receipt")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> CreateReceipt(Guid id, [FromBody] WarehouseOutboundReceiptCreateDto dto)
+        public async Task<IActionResult> CreateReceipt(
+            Guid id, 
+            [FromBody] WarehouseOutboundReceiptCreateDto dto)
         {
             var staffUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (staffUserIdClaim == null || !Guid.TryParse(staffUserIdClaim.Value, out Guid staffUserId))
                 return Unauthorized("Cannot determine user from token.");
 
             dto.OutboundRequestId = id;
 
-            var result = await _receiptService.CreateAsync(staffUserId, dto);
+            var result = await _receiptService
+                .CreateAsync(staffUserId, dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
@@ -46,9 +50,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT: api/WarehouseOutboundReceipts/{receiptId}/confirm
         [HttpPut("{receiptId}/confirm")]
         [Authorize(Roles = "BusinessStaff")]
-        public async Task<IActionResult> ConfirmReceipt(Guid receiptId, [FromBody] WarehouseOutboundReceiptConfirmDto dto)
+        public async Task<IActionResult> ConfirmReceipt(
+            Guid receiptId, 
+            [FromBody] WarehouseOutboundReceiptConfirmDto dto)
         {
-            var result = await _receiptService.ConfirmReceiptAsync(receiptId, dto);
+            var result = await _receiptService
+                .ConfirmReceiptAsync(receiptId, dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(new { message = result.Message, receiptId = result.Data });
@@ -68,10 +75,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
                 return Unauthorized("Không thể xác định người dùng từ token.");
 
-            var result = await _receiptService.GetAllAsync(userId);
+            var result = await _receiptService
+                .GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -87,6 +96,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
                 return Unauthorized("Không thể xác định người dùng từ token.");
 

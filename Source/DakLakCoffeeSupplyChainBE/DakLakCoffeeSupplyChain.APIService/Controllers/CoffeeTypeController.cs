@@ -21,7 +21,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer,DeliveryStaff")]
         public async Task<IActionResult> GetAllCoffeeTypesAsync()
         {
-            var result = await _coffeeTypeService.GetAll();
+            var result = await _coffeeTypeService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -37,7 +38,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,BusinessStaff,Farmer,DeliveryStaff")]
         public async Task<IActionResult> GetById(Guid typeId)
         {
-            var result = await _coffeeTypeService.GetById(typeId);
+            var result = await _coffeeTypeService
+                .GetById(typeId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -53,7 +55,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteCoffeeTypeByIdAsync(Guid typeId)
         {
-            var result = await _coffeeTypeService.DeleteById(typeId);
+            var result = await _coffeeTypeService
+                .DeleteById(typeId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -72,7 +75,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SoftDeleteCoffeeTypeByIdAsync(Guid typeId)
         {
-            var result = await _coffeeTypeService.SoftDeleteById(typeId);
+            var result = await _coffeeTypeService
+                .SoftDeleteById(typeId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -89,12 +93,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<CoffeeType>
         [HttpPost]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> CreateCoffeeTypeAsync([FromBody] CoffeeTypeCreateDto typeDto)
+        public async Task<IActionResult> CreateCoffeeTypeAsync(
+            [FromBody] CoffeeTypeCreateDto typeDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _coffeeTypeService.Create(typeDto);
+            var result = await _coffeeTypeService
+                .Create(typeDto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),
@@ -110,7 +116,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<CoffeeType>/{typeId}
         [HttpPut("{typeId}")]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> UpdateCoffeeTypeAsync(Guid typeId, [FromBody] CoffeeTypeUpdateDto typeDto)
+        public async Task<IActionResult> UpdateCoffeeTypeAsync(
+            Guid typeId, 
+            [FromBody] CoffeeTypeUpdateDto typeDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (typeId != typeDto.CoffeeTypeId)
@@ -119,7 +127,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _coffeeTypeService.Update(typeDto);
+            var result = await _coffeeTypeService
+                .Update(typeDto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);

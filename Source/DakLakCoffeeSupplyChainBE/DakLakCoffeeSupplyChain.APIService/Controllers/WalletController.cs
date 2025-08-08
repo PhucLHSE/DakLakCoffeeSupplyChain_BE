@@ -25,7 +25,8 @@ namespace DakLakCoffeeSupplyChain.API.Controllers
         // POST: api/Wallets
         [HttpPost]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> CreateWalletAsync([FromBody] WalletCreateDto walletCreateDto)
+        public async Task<IActionResult> CreateWalletAsync(
+            [FromBody] WalletCreateDto walletCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -40,7 +41,8 @@ namespace DakLakCoffeeSupplyChain.API.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _walletService.Create(walletCreateDto, userId);
+            var result = await _walletService
+                .Create(walletCreateDto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Created("", result.Data);
