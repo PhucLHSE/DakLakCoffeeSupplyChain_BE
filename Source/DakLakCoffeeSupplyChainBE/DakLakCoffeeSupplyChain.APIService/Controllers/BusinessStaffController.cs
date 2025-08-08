@@ -1,8 +1,9 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.BusinessStaffDTOs;
-using DakLakCoffeeSupplyChain.Common;
+﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.BusinessStaffDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -21,16 +22,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST: api/BusinessStaffs
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> CreateBusinessStaffAsync([FromBody] BusinessStaffCreateDto dto)
+        public async Task<IActionResult> CreateBusinessStaffAsync(
+            [FromBody] BusinessStaffCreateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid supervisorId))
                 return Unauthorized("Không xác định được người dùng từ token.");
 
-            var result = await _businessStaffService.Create(dto, supervisorId);
+            var result = await _businessStaffService
+                .Create(dto, supervisorId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), new { staffId = result.Data }, result.Data);
@@ -46,14 +50,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/BusinessStaffs
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetAllBySupervisor()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
                 return Unauthorized("Không xác định được người dùng từ token.");
 
-            var result = await _businessStaffService.GetAllBySupervisorAsync(userId);
+            var result = await _businessStaffService
+                .GetAllBySupervisorAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data); // 200
@@ -72,7 +79,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> GetById(Guid staffId)
         {
-            var result = await _businessStaffService.GetByIdAsync(staffId);
+            var result = await _businessStaffService
+                .GetByIdAsync(staffId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data); // 200
@@ -85,9 +93,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message); // fallback
         }
+
         [HttpPut("{staffId}")]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> UpdateBusinessStaff(Guid staffId, [FromBody] BusinessStaffUpdateDto dto)
+        public async Task<IActionResult> UpdateBusinessStaff(
+            Guid staffId, [FromBody] BusinessStaffUpdateDto dto)
         {
             if (staffId != dto.StaffId)
                 return BadRequest("StaffId trong route không khớp với DTO.");
@@ -113,7 +123,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDeleteStaff(Guid staffId)
         {
-            var result = await _businessStaffService.SoftDeleteAsync(staffId);
+            var result = await _businessStaffService
+                .SoftDeleteAsync(staffId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(new { message = result.Message });
@@ -133,7 +144,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> HardDeleteStaff(Guid staffId)
         {
-            var result = await _businessStaffService.HardDeleteAsync(staffId);
+            var result = await _businessStaffService
+                .HardDeleteAsync(staffId);
+
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(new { message = result.Message });
 
@@ -142,7 +155,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-
-
     }
 }

@@ -29,9 +29,10 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Service gửi mail
 builder.Services.AddScoped<IEmailService, EmailService>();
+
 // Cấu hình Cloudinary
 builder.Services.Configure<CloudinarySettings>(
-    builder.Configuration.GetSection("CloudinarySettings"));
+builder.Configuration.GetSection("CloudinarySettings"));
 
 var cloudinarySettings = builder.Configuration
     .GetSection("CloudinarySettings").Get<CloudinarySettings>();
@@ -126,29 +127,40 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<Role>("Role");
     odataBuilder.EntitySet<UserAccount>("UserAccount");
     odataBuilder.EntitySet<BusinessManager>("BusinessManager");
+    odataBuilder.EntitySet<BusinessStaff>("BusinessStaff");
+    odataBuilder.EntitySet<Farmer>("Farmer");
+    odataBuilder.EntitySet<AgriculturalExpert>("AgriculturalExpert");
     odataBuilder.EntitySet<BusinessBuyer>("BusinessBuyer");
+    odataBuilder.EntitySet<CoffeeType>("CoffeeType");
     odataBuilder.EntitySet<Contract>("Contract");
     odataBuilder.EntitySet<ContractDeliveryBatch>("ContractDeliveryBatch");
     odataBuilder.EntitySet<ProcurementPlan>("ProcurementPlan");
+    odataBuilder.EntitySet<CultivationRegistration>("CultivationRegistration");
+    odataBuilder.EntitySet<CultivationRegistrationsDetail>("CultivationRegistrationsDetail");
+    odataBuilder.EntitySet<FarmingCommitment>("FarmingCommitment");
+    odataBuilder.EntitySet<FarmingCommitmentsDetail>("FarmingCommitmentsDetail");
     odataBuilder.EntitySet<CropStage>("CropStage");
     odataBuilder.EntitySet<CropSeason>("CropSeason");
     odataBuilder.EntitySet<CropSeasonDetail>("CropSeasonDetail");
     odataBuilder.EntitySet<CropProgress>("CropProgress");
-    odataBuilder.EntitySet<FarmingCommitment>("FarmingCommitment");
-    odataBuilder.EntitySet<FarmingCommitmentsDetail>("FarmingCommitmentsDetail");
     odataBuilder.EntitySet<ProcessingMethod>("ProcessingMethod");
     odataBuilder.EntitySet<ProcessingStage>("ProcessingStage");
     odataBuilder.EntitySet<ProcessingBatch>("ProcessingBatch");
     odataBuilder.EntitySet<ProcessingBatchProgress>("ProcessingBatchProgress");
     odataBuilder.EntitySet<ProcessingParameter>("ProcessingParameter");
-    odataBuilder.EntitySet<Inventory>("Inventory");
+    odataBuilder.EntitySet<ProcessingBatchWaste>("ProcessingBatchWaste");
+    odataBuilder.EntitySet<ProcessingWasteDisposal>("ProcessingWasteDisposal");
+    odataBuilder.EntitySet<GeneralFarmerReport>("GeneralFarmerReport");
+    odataBuilder.EntitySet<ExpertAdvice>("ExpertAdvice");
     odataBuilder.EntitySet<Warehouse>("Warehouse");
+    odataBuilder.EntitySet<Inventory>("Inventory");
+    odataBuilder.EntitySet<InventoryLog>("InventoryLog");
     odataBuilder.EntitySet<WarehouseInboundRequest>("WarehouseInboundRequest");
     odataBuilder.EntitySet<WarehouseReceipt>("WarehouseReceipt");
-    odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
-    odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Product>("Product");
     odataBuilder.EntitySet<Order>("Order");
+    odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
+    odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Shipment>("Shipment");
 
     return odataBuilder.GetEdmModel();

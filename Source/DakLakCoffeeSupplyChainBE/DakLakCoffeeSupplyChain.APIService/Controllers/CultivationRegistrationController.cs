@@ -22,7 +22,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager, Farmer")]
         public async Task<IActionResult> GetAllCultivationRegistrationnAsync()
         {
-            var result = await _service.GetAll();
+            var result = await _service
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -38,7 +39,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [EnableQuery]
         public async Task<IActionResult> GetAllCultivationRegistrationnAvailableAsync(Guid planId)
         {
-            var result = await _service.GetAllAvailable(planId);
+            var result = await _service
+                .GetAllAvailable(planId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả đúng dữ liệu
@@ -55,7 +57,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager, Farmer")]
         public async Task<IActionResult> GetById(Guid registrationId)
         {
-            var result = await _service.GetById(registrationId);
+            var result = await _service
+                .GetById(registrationId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);              // Trả object chi tiết
@@ -71,7 +74,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Farmer")]
         public async Task<IActionResult> DeleteByIdAsync(Guid registrationId)
         {
-            var result = await _service.DeleteById(registrationId);
+            var result = await _service
+                .DeleteById(registrationId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa thành công.");
@@ -90,7 +94,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Farmer")]
         public async Task<IActionResult> SoftDeleteByIdAsync(Guid registrationId)
         {
-            var result = await _service.SoftDeleteById(registrationId);
+            var result = await _service
+                .SoftDeleteById(registrationId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -107,10 +112,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST api/<CultivationRegistration>
         [HttpPost]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> CreateCultivationRegistrationAsync([FromBody] CultivationRegistrationCreateViewDto registrationId)
+        public async Task<IActionResult> CreateCultivationRegistrationAsync(
+            [FromBody] CultivationRegistrationCreateViewDto registrationId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
             Guid userId;
 
             try
@@ -123,7 +130,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            var result = await _service.Create(registrationId, userId);
+            var result = await _service
+                .Create(registrationId, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),

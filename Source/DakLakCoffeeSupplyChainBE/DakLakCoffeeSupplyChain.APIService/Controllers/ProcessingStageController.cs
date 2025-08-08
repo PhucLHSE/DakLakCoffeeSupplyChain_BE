@@ -20,13 +20,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _processingStageService = processingStageService;
         }
 
-   
         [HttpGet]
         [EnableQuery]
         //[Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _processingStageService.GetAll();
+            var result = await _processingStageService
+                .GetAll();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -42,7 +42,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetDetail(int stageId)
         {
-            var result = await _processingStageService.GetDetailByIdAsync(stageId);
+            var result = await _processingStageService
+                .GetDetailByIdAsync(stageId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -55,9 +56,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPost]
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> Create([FromBody] CreateProcessingStageDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] CreateProcessingStageDto dto)
         {
-            var result = await _processingStageService.CreateAsync(dto);
+            var result = await _processingStageService
+                .CreateAsync(dto);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data); // hoặc return Created(...) nếu cần RESTful hơn
@@ -72,7 +75,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         //[Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _processingStageService.DeleteAsync(id); 
+            var result = await _processingStageService
+                .DeleteAsync(id); 
+
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
@@ -84,12 +89,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPut("{id}")]
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> Update(int id, [FromBody] ProcessingStageUpdateDto dto)
+        public async Task<IActionResult> Update(
+            int id, 
+            [FromBody] ProcessingStageUpdateDto dto)
         {
             if (id != dto.StageId)
                 return BadRequest("ID trong URL không khớp với dữ liệu gửi lên.");
 
-            var result = await _processingStageService.UpdateAsync(dto);
+            var result = await _processingStageService
+                .UpdateAsync(dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Message);
@@ -100,6 +108,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
     }
-
 }
 

@@ -23,10 +23,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// <summary>Farmer gửi yêu cầu nhập kho</summary>
         [HttpPost]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> CreateInboundRequest([FromBody] WarehouseInboundRequestCreateDto dto)
+        public async Task<IActionResult> CreateInboundRequest(
+            [FromBody] WarehouseInboundRequestCreateDto dto)
         {
             var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.CreateRequestAsync(farmerId, dto);
+
+            var result = await _service
+                .CreateRequestAsync(farmerId, dto);
+
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result);
 
@@ -47,7 +51,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> ApproveRequest(Guid id)
         {
             var staffUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.ApproveRequestAsync(id, staffUserId);
+
+            var result = await _service
+                .ApproveRequestAsync(id, staffUserId);
+
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
@@ -69,7 +76,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             var userId = User.GetUserId();
-            var result = await _service.GetAllAsync(userId);
+
+            var result = await _service
+                .GetAllAsync(userId);
+
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
 
@@ -89,7 +99,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessStaff,Administrator,Farmer")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
-            var result = await _service.GetByIdAsync(id);
+            var result = await _service
+                .GetByIdAsync(id);
+
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
 
@@ -110,7 +122,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> CancelRequest(Guid id)
         {
             var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.CancelRequestAsync(id, farmerId);
+
+            var result = await _service
+                .CancelRequestAsync(id, farmerId);
+
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
@@ -131,7 +146,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> RejectRequest(Guid id)
         {
             var staffId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.RejectRequestAsync(id, staffId);
+
+            var result = await _service
+                .RejectRequestAsync(id, staffId);
+
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
@@ -152,7 +170,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAllByFarmer()
         {
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.GetAllByFarmerAsync(userId);
+
+            var result = await _service
+                .GetAllByFarmerAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
@@ -163,29 +183,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result); // fallback
         }
+
         [HttpGet("farmer/{id}")]
         [Authorize(Roles = "Farmer")]
         public async Task<IActionResult> GetDetailByFarmer(Guid id)
         {
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.GetByIdForFarmerAsync(id, userId);
+
+            var result = await _service
+                .GetByIdForFarmerAsync(id, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);
+
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result);
+
             if (result.Status == Const.FAIL_UPDATE_CODE)
                 return BadRequest(result);
 
             return StatusCode(500, result); // fallback
         }
-
-
-
-
-
-
-
-
     }
 }

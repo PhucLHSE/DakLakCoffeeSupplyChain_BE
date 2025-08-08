@@ -21,8 +21,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _cropSeasonService = cropSeasonService;
         }
 
-        // ✅ Ai cũng xem được mùa vụ liên quan (Admin, Manager, Farmer)
+        // Ai cũng xem được mùa vụ liên quan (Admin, Manager, Farmer)
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetAllCropSeasonsAsync()
         {
@@ -42,7 +43,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             bool isAdmin = role == "Admin";
             bool isManager = role == "BusinessManager";
 
-            var result = await _cropSeasonService.GetAllByUserId(userId, isAdmin, isManager);
+            var result = await _cropSeasonService
+                .GetAllByUserId(userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -52,7 +54,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // ✅ Ai cũng được quyền xem chi tiết mùa vụ của mình
+        // Ai cũng được quyền xem chi tiết mùa vụ của mình
         [HttpGet("{cropSeasonId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
         public async Task<IActionResult> GetById(Guid cropSeasonId)
@@ -61,22 +63,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropSeasonService.GetById(cropSeasonId, userId);
-            if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result.Data);
+            var result = await _cropSeasonService
+                .GetById(cropSeasonId, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE) 
+                return Ok(result.Data);
+
             if (result.Status == Const.WARNING_NO_DATA_CODE || result.Status == Const.FAIL_UPDATE_CODE)
                 return NotFound(result.Message);
+
             return StatusCode(500, result.Message);
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
-        public async Task<IActionResult> Create([FromBody] CropSeasonCreateDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] CropSeasonCreateDto dto)
         {
-            // ✅ Validate model binding
+            // Validate model binding
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // ✅ Lấy UserId từ token
+            // Lấy UserId từ token
             Guid userId;
             try
             {
@@ -87,10 +95,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Không xác định được userId từ token.");
             }
 
-            // ✅ Gọi service xử lý tạo mùa vụ
-            var result = await _cropSeasonService.Create(dto, userId);
+            // Gọi service xử lý tạo mùa vụ
+            var result = await _cropSeasonService
+                .Create(dto, userId);
 
-            // ✅ Nếu tạo thành công: trả về CreatedAtAction
+            // Nếu tạo thành công: trả về CreatedAtAction
             if (result.Status == Const.SUCCESS_CREATE_CODE)
             {
                 var response = (CropSeasonViewDetailsDto)result.Data;
@@ -101,19 +110,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 );
             }
 
-            // ❌ Nếu lỗi logic như cam kết trùng, chưa duyệt, v.v...
+            // Nếu lỗi logic như cam kết trùng, chưa duyệt, v.v...
             if (result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result.Message);
 
-            // ❗ Nếu lỗi không rõ (exception hoặc lỗi hệ thống)
+            // Nếu lỗi không rõ (exception hoặc lỗi hệ thống)
             return StatusCode(500, result.Message);
         }
 
-
-
         [HttpPut("{cropSeasonId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
-        public async Task<IActionResult> Update(Guid cropSeasonId, [FromBody] CropSeasonUpdateDto dto)
+        public async Task<IActionResult> Update(
+            Guid cropSeasonId, 
+            [FromBody] CropSeasonUpdateDto dto)
         {
             if (cropSeasonId != dto.CropSeasonId)
                 return BadRequest(new { message = "Id không khớp." });
@@ -122,7 +131,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized(new { message = "Không xác định được userId từ token." }); }
 
-            var result = await _cropSeasonService.Update(dto, userId);
+            var result = await _cropSeasonService
+                .Update(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(new { message = result.Message });
@@ -130,9 +140,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(new { message = result.Message });
         }
 
-
-
-        // ✅ Chỉ Admin hoặc người tạo được xoá
+        // Chỉ Admin hoặc người tạo được xoá
         [HttpDelete("{cropSeasonId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> DeleteCropSeason(Guid cropSeasonId)
@@ -144,14 +152,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
             bool isAdmin = role == "Admin";
 
-            var result = await _cropSeasonService.DeleteById(cropSeasonId, userId, isAdmin);
+            var result = await _cropSeasonService
+                .DeleteById(cropSeasonId, userId, isAdmin);
+
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
             return BadRequest(result.Message);
         }
 
-        // ✅ Soft delete - chỉ Admin và người tạo được phép
+        // Soft delete - chỉ Admin và người tạo được phép
         [HttpPatch("soft-delete/{cropSeasonId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")] 
         public async Task<IActionResult> SoftDeleteCropSeason(Guid cropSeasonId)
@@ -163,13 +173,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
             bool isAdmin = role == "Admin";
 
-            var result = await _cropSeasonService.SoftDeleteAsync(cropSeasonId, userId, isAdmin);
+            var result = await _cropSeasonService
+                .SoftDeleteAsync(cropSeasonId, userId, isAdmin);
+
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
 
             return BadRequest(result.Message);
         }
     }
-
 }
-
