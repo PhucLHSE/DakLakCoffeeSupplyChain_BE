@@ -548,9 +548,9 @@ CREATE TABLE FarmingCommitmentsDetails (
     BreachedReason NVARCHAR(MAX),                                                      -- Nguyên nhân cam kết bị vi phạm (nếu có)
     BreachedBy UNIQUEIDENTIFIER NULL,                                                  -- Người khiến cam kết bị vi phạm (nếu có)
     BreachedAt DATETIME,                                                               -- Thời gian cam kết bị vi phạm (nếu có)
-    RatingByBusiness FLOAT CHECK (RatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,                -- Đánh giá của doanh nghiệp về cam kết sau khi đã hoàn thành hợp đồng
+    RatingByBusiness FLOAT CHECK (RatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,      -- Đánh giá của doanh nghiệp về cam kết sau khi đã hoàn thành hợp đồng
     RatingCommentByBusiness NVARCHAR(MAX) NULL,                                        -- Nhận xét đánh giá (nếu có)
-    RatingByFarmer FLOAT CHECK (RatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,                  -- Đánh giá của nông dân về cam kết sau khi đã hoàn thành hợp đồng
+    RatingByFarmer FLOAT CHECK (RatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,          -- Đánh giá của nông dân về cam kết sau khi đã hoàn thành hợp đồng
     RatingCommentByFarmer NVARCHAR(MAX) NULL,                                          -- Nhận xét đánh giá (nếu có)
     ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -994,7 +994,7 @@ CREATE TABLE WarehouseInboundRequests (
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
-  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, Rejected, Completed
   Note NVARCHAR(MAX),                                               -- Ghi chú thêm từ Farmer
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật cuối
@@ -1157,7 +1157,7 @@ CREATE TABLE WarehouseOutboundRequests (
   Purpose NVARCHAR(100),                                              -- Mục đích xuất: Giao đơn hàng, Kiểm định, Nội bộ...
   OrderItemID UNIQUEIDENTIFIER,                                       -- (Nullable) Liên kết dòng đơn hàng nếu xuất cho B2B
   Reason NVARCHAR(MAX),                                               -- Ghi chú/giải thích chi tiết
-  Status NVARCHAR(50) DEFAULT 'Pending',                              -- Trạng thái: Pending, Approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                              -- Trạng thái: Pending, Approved, Rejected, Completed
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày cập nhật cuối
   IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -1732,7 +1732,7 @@ VALUES
 GO
 
 -- Insert CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
--- Định dạng TypeCode: CFT-2025-0001++
+-- Định dạng TypeCode: CFT-2025-0001
 
 -- Arabica (vùng cao Đắk Lắk như M'Đrắk, Krông Bông)
 INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
@@ -3679,6 +3679,7 @@ GO
 -- Các ID cần dùng
 DECLARE @ShipmentID UNIQUEIDENTIFIER = NEWID();
 DECLARE @ShipmentCode VARCHAR(20) = 'SHIP-2025-0001';
+
 DECLARE @ComplaintID UNIQUEIDENTIFIER = NEWID();
 DECLARE @ComplaintCode VARCHAR(20) = 'CMP-2025-0001';
 
@@ -3745,10 +3746,12 @@ GO
 
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
-INSERT INTO SystemConfiguration 
-    (Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom)
-VALUES 
-    ('MIN_AGE_FOR_REGISTRATION', N'Tuổi tối thiểu để đăng ký tài khoản', 18, NULL, 'years', 1, GETDATE());
+INSERT INTO SystemConfiguration (
+   Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom
+)
+VALUES (
+   'MIN_AGE_FOR_REGISTRATION', N'Tuổi tối thiểu để đăng ký tài khoản', 18, NULL, 'years', 1, GETDATE()
+);
 
 GO
 
@@ -3763,6 +3766,10 @@ DECLARE @AdminID UNIQUEIDENTIFIER = (
    SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
 );
 
-INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
-VALUES (@MinAgeConfigID, @AdminID, 'manage');
+INSERT INTO SystemConfigurationUsers (
+   SystemConfigurationID, UserID, PermissionLevel
+)
+VALUES (
+   @MinAgeConfigID, @AdminID, 'manage'
+);
 
