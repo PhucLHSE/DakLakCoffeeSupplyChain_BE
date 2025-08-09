@@ -14,7 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonDetailId = entity.CropSeasonDetailId,
                 StageId = entity.StageId,
                 StepIndex = entity.StepIndex,
-                StageCode = entity.Stage?.StageCode ?? string.Empty, 
+                StageCode = entity.Stage?.StageCode ?? string.Empty,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
@@ -42,6 +42,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StepIndex = entity.StepIndex,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
+                ActualYield = entity.CropSeasonDetail?.ActualYield
             };
         }
 
@@ -49,13 +50,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static CropProgress MapToCropProgressCreateDto(this CropProgressCreateDto dto)
         {
             var now = DateHelper.NowVietnamTime();
+
             return new CropProgress
             {
                 ProgressId = Guid.NewGuid(),
                 CropSeasonDetailId = dto.CropSeasonDetailId,
                 StageId = dto.StageId,
                 StageDescription = dto.StageDescription ?? string.Empty,
-                ProgressDate = dto.ProgressDate,
+                ProgressDate = dto.ProgressDate.HasValue
+                    ? DateOnly.FromDateTime(dto.ProgressDate.Value)
+                    : null,
                 PhotoUrl = dto.PhotoUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
                 Note = dto.Note ?? string.Empty,
@@ -80,5 +84,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.StepIndex = dto.StepIndex;
             entity.UpdatedAt = DateHelper.NowVietnamTime();
         }
+
+
+
     }
 }
