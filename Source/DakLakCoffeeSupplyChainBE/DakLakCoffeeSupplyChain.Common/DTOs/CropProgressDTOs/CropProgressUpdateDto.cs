@@ -20,7 +20,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public string StageDescription { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Ngày thực hiện là bắt buộc.")]
-        public DateOnly? ProgressDate { get; set; }
+        public DateOnly ProgressDate { get; set; }
 
         [MaxLength(1000, ErrorMessage = "Link hình ảnh không được vượt quá 1000 ký tự.")]
         public string? PhotoUrl { get; set; }
@@ -32,6 +32,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public string? Note { get; set; }
 
         public int? StepIndex { get; set; }
+        public double? ActualYield { get; set; }
+
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (StageId <= 0)
