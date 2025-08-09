@@ -1,11 +1,12 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWasteDisposalDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWasteDisposalDTOs;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -22,17 +23,20 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // Lấy toàn bộ theo user
         [HttpGet("view-all")]
+        [EnableQuery]
         [Authorize(Roles = "Farmer,Admin")]
         public async Task<IActionResult> GetAll()
         {
-            var userIdStr = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdStr = User.FindFirst("userId")?.Value 
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể xác định userId từ token.");
 
             var isAdmin = User.IsInRole("Admin");
 
-            var result = await _disposalService.GetAllAsync(userId, isAdmin);
+            var result = await _disposalService
+                .GetAllAsync(userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -48,7 +52,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Farmer,Admin")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
-            var result = await _disposalService.GetByIdAsync(id);
+            var result = await _disposalService
+                .GetByIdAsync(id);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -62,14 +67,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // Tạo mới
         [HttpPost]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> Create([FromBody] ProcessingWasteDisposalCreateDto input)
+        public async Task<IActionResult> Create(
+            [FromBody] ProcessingWasteDisposalCreateDto input)
         {
-            var userIdStr = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdStr = User.FindFirst("userId")?.Value 
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
 
-            var result = await _disposalService.CreateAsync(input, userId); 
+            var result = await _disposalService
+                .CreateAsync(input, userId); 
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return StatusCode(StatusCodes.Status201Created, result.Message);
@@ -82,14 +90,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Farmer, BusinessManager")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ProcessingWasteDisposalUpdateDto dto)
+        public async Task<IActionResult> Update(
+            Guid id, 
+            [FromBody] ProcessingWasteDisposalUpdateDto dto)
         {
-            var userIdStr = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdStr = User.FindFirst("userId")?.Value 
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
 
-            var result = await _disposalService.UpdateAsync(id, dto, userId);
+            var result = await _disposalService
+                .UpdateAsync(id, dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Message);
@@ -100,9 +112,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return BadRequest(result.Message);
         }
 
-
         // Xóa mềm
-
         [HttpPatch("{id}/soft-delete")]
         [Authorize(Roles = "Farmer,BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
@@ -113,10 +123,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
 
-            // ❌ Không cho Admin
+            // Không cho Admin
             var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _disposalService.SoftDeleteAsync(id, userId, isManager);
+            var result = await _disposalService
+                .SoftDeleteAsync(id, userId, isManager);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -126,7 +137,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
-        //// Xóa cứng
+
+        // Xóa cứng
         [HttpDelete("hard/{id}")]
         [Authorize(Roles = "Farmer,BusinessManager")]
         public async Task<IActionResult> HardDelete(Guid id)
@@ -137,10 +149,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!Guid.TryParse(userIdStr, out var userId))
                 return BadRequest("Không thể lấy userId từ token.");
 
-            // ❌ Không cho Admin
+            // Không cho Admin
             var isManager = User.IsInRole("BusinessManager");
 
-            var result = await _disposalService.HardDeleteAsync(id, userId, isManager);
+            var result = await _disposalService
+                .HardDeleteAsync(id, userId, isManager);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);

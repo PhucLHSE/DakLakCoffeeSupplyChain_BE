@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class AgriculturalExpert
 {
+    [Key]
     public Guid ExpertId { get; set; }
 
     public string ExpertCode { get; set; }

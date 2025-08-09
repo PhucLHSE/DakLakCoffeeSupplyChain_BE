@@ -34,7 +34,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var isAdmin = User.IsInRole("Admin");
 
             // Gọi Service
-            var result = await _processingWasteService.GetAllByUserIdAsync(userId, isAdmin);
+            var result = await _processingWasteService
+                .GetAllByUserIdAsync(userId, isAdmin);
 
             // Trả kết quả
             if (result.Status == Const.SUCCESS_READ_CODE)
@@ -58,7 +59,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var isAdmin = User.IsInRole("Admin");
 
-            var result = await _processingWasteService.GetByIdAsync(id, userId, isAdmin);
+            var result = await _processingWasteService
+                .GetByIdAsync(id, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -68,9 +70,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(403, result.Message);
         }
+
         [HttpPost]
         [Authorize(Roles = "Farmer,Admin")]
-        public async Task<IActionResult> Create([FromBody] ProcessingWasteCreateDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] ProcessingWasteCreateDto dto)
         {
             var userIdStr = User.FindFirst("userId")?.Value
                          ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -80,7 +84,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var isAdmin = User.IsInRole("Admin");
 
-            var result = await _processingWasteService.CreateAsync(dto, userId, isAdmin);
+            var result = await _processingWasteService
+                .CreateAsync(dto, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data);
@@ -90,10 +95,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);
         }
+
         // PUT: api/processingwaste/{id}
         [HttpPut("{id}")]
         [Authorize(Roles = "Farmer,Admin")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ProcessingWasteUpdateDto dto)
+        public async Task<IActionResult> Update(
+            Guid id, 
+            [FromBody] ProcessingWasteUpdateDto dto)
         {
             // Lấy userId từ token
             var userIdStr = User.FindFirst("userId")?.Value
@@ -105,7 +113,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var isAdmin = User.IsInRole("Admin");
 
             // Gọi service để cập nhật chất thải
-            var result = await _processingWasteService.UpdateAsync(id, dto, userId, isAdmin);
+            var result = await _processingWasteService
+                .UpdateAsync(id, dto, userId, isAdmin);
 
             // Trả về kết quả dựa trên trạng thái của service
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
@@ -116,6 +125,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return BadRequest(result.Message);  // Lỗi khi cập nhật (ví dụ: dữ liệu không hợp lệ)
         }
+
         [HttpPatch("{id}/soft-delete")]
         [Authorize(Roles = "Farmer,Admin")]
         public async Task<IActionResult> SoftDelete(Guid id)
@@ -128,7 +138,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var isAdmin = User.IsInRole("Admin"); 
 
-            var result = await _processingWasteService.SoftDeleteAsync(id, userId, isAdmin);
+            var result = await _processingWasteService
+                .SoftDeleteAsync(id, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -151,7 +162,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var isAdmin = User.IsInRole("Admin"); 
 
-            var result = await _processingWasteService.HardDeleteAsync(id, userId, isAdmin);
+            var result = await _processingWasteService
+                .HardDeleteAsync(id, userId, isAdmin);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);

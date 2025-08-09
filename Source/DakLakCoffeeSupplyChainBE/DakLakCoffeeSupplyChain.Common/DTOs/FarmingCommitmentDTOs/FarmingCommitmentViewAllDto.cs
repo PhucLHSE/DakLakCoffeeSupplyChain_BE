@@ -13,7 +13,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public string FarmerName { get; set; } = string.Empty;
         public string BusinessName { get; set; } = string.Empty;
         public string PlanTitle { get; set; } = string.Empty;
-        public double? TotalPrice { get; set; } = 0.0;
+        public double? TotalPrice { get; set; }
+        public double? ProgressPercentage { get; set; }
         public DateTime CommitmentDate { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;

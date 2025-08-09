@@ -15,12 +15,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class RoleMapper
     {
         // Mapper RoleViewAllDto
-        public static RoleViewAllDto MapToRoleViewAllDto(this Role role)
+        public static RoleViewAllDto MapToRoleViewAllDto(
+            this Role role)
         {
             // Parse Status string to enum
-            RoleStatus status = Enum.TryParse<RoleStatus>(role.Status, ignoreCase: true, out var parsedStatus)
-                     ? parsedStatus
-                     : RoleStatus.Inactive;
+            RoleStatus status = Enum.TryParse<RoleStatus>
+                (role.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : RoleStatus.Inactive;
 
             return new RoleViewAllDto
             {
@@ -31,9 +33,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper RoleViewDetailsDto
-        public static RoleViewDetailsDto MapToRoleViewDetailsDto(this Role role)
+        public static RoleViewDetailsDto MapToRoleViewDetailsDto(
+            this Role role)
         {
-            RoleStatus status = Enum.TryParse<RoleStatus>(role.Status, ignoreCase: true, out var parsedStatus)
+            RoleStatus status = Enum.TryParse<RoleStatus>
+                (role.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : RoleStatus.Inactive;
 
@@ -49,7 +53,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper RoleCreateDto
-        public static Role MapToNewRole(this RoleCreateDto dto)
+        public static Role MapToNewRole(
+            this RoleCreateDto dto)
         {
             return new Role
             {
@@ -63,7 +68,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper RoleUpdateDto
-        public static void MapToUpdateRole(this RoleUpdateDto dto, Role role)
+        public static void MapToUpdateRole(
+            this RoleUpdateDto dto, 
+            Role role)
         {
             role.RoleName = dto.RoleName;
             role.Description = dto.Description;

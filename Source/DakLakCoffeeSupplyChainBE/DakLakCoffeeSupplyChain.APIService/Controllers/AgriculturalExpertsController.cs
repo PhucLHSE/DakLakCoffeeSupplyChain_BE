@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -18,9 +19,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/agriculturalexperts
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _agriculturalExpertService.GetAllAsync();
+            var result = await _agriculturalExpertService
+                .GetAllAsync();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -35,7 +38,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var result = await _agriculturalExpertService.GetByIdAsync(id);
+            var result = await _agriculturalExpertService
+                .GetByIdAsync(id);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);

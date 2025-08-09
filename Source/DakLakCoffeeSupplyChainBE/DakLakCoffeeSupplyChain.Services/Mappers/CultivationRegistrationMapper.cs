@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -20,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RegisteredArea = cultivation.RegisteredArea,
                 RegisteredAt = cultivation.RegisteredAt,
                 TotalWantedPrice = cultivation.TotalWantedPrice,
+                Status = EnumHelper.ParseEnumFromString(cultivation.Status, CultivationRegistrationStatus.Unknown)
             };
         }
         public static CultivationRegistrationViewAllAvailableDto MapToCultivationRegistrationViewAllAvailableDto(this CultivationRegistration cultivation)
@@ -37,6 +39,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RegisteredArea = cultivation.RegisteredArea,
                 RegisteredAt = cultivation.RegisteredAt,
                 TotalWantedPrice = cultivation.TotalWantedPrice,
+                Note = cultivation.Note,
+                Status = EnumHelper.ParseEnumFromString(cultivation.Status, CultivationRegistrationStatus.Unknown),
+                CommitmentStatus = EnumHelper.ParseEnumFromString(cultivation.FarmingCommitment?.Status, FarmingCommitmentStatus.Unknown),
                 CultivationRegistrationDetails = [.. cultivation.CultivationRegistrationsDetails.Select(detail => new CultivationRegistrationViewDetailsDto
                 {
                     CultivationRegistrationDetailId = detail.CultivationRegistrationDetailId,

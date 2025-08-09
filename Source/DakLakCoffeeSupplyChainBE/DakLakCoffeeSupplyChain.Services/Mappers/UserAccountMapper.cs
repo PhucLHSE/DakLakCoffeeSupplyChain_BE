@@ -8,10 +8,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class UserAccountMapper
     {
         // Mapper UserAccountViewAllDto
-        public static UserAccountViewAllDto MapToUserAccountViewAllDto(this UserAccount userAccount)
+        public static UserAccountViewAllDto MapToUserAccountViewAllDto(
+            this UserAccount userAccount)
         {
             // Parse Status string to enum
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(userAccount.Status, ignoreCase: true, out var parsedStatus)
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>
+                (userAccount.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 
@@ -30,15 +32,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountViewDetailsDto
-        public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(this UserAccount userAccount)
+        public static UserAccountViewDetailsDto MapToUserAccountViewDetailsDto(
+            this UserAccount userAccount)
         {
             // Parse Gender string to enum
-            Gender gender = Enum.TryParse<Gender>(userAccount.Gender, ignoreCase: true, out var parsedGender)
+            Gender gender = Enum.TryParse<Gender>
+                (userAccount.Gender, ignoreCase: true, out var parsedGender)
                 ? parsedGender
                 : Gender.Unknown;
 
             // Parse Status string to enum
-            UserAccountStatus status = Enum.TryParse<UserAccountStatus>(userAccount.Status, ignoreCase: true, out var parsedStatus)
+            UserAccountStatus status = Enum.TryParse<UserAccountStatus>
+                (userAccount.Status, ignoreCase: true, out var parsedStatus)
                 ? parsedStatus
                 : UserAccountStatus.Unknown;
 
@@ -65,7 +70,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountCreateDto
-        public static UserAccount MapToNewUserAccount(this UserAccountCreateDto dto, string passwordHash, string userCode, int RoleId)
+        public static UserAccount MapToNewUserAccount(
+            this UserAccountCreateDto dto, 
+            string passwordHash, 
+            string userCode, 
+            int RoleId)
         {
             return new UserAccount
             {
@@ -92,7 +101,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper UserAccountUpdateDto
-        public static void MapToUpdateUserAccount(this UserAccountUpdateDto dto, UserAccount userAccount, int roleId)
+        public static void MapToUpdateUserAccount(
+            this UserAccountUpdateDto dto, 
+            UserAccount userAccount, 
+            int roleId)
         {
             userAccount.Email = dto.Email;
             userAccount.PhoneNumber = dto.PhoneNumber;

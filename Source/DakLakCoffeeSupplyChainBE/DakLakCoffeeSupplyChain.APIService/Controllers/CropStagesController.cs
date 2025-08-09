@@ -22,7 +22,8 @@ public class CropStagesController : ControllerBase
     [EnableQuery]
     public async Task<IActionResult> GetAll()
     {
-        var result = await _cropStageService.GetAll();
+        var result = await _cropStageService
+            .GetAll();
 
         if (result.Status == Const.SUCCESS_READ_CODE)
             return Ok(result.Data);
@@ -36,7 +37,8 @@ public class CropStagesController : ControllerBase
     [HttpGet("{stageId}")]
     public async Task<IActionResult> GetById(int stageId)
     {
-        var result = await _cropStageService.GetById(stageId);
+        var result = await _cropStageService
+            .GetById(stageId);
 
         if (result.Status == Const.SUCCESS_READ_CODE)
             return Ok(result.Data);
@@ -49,13 +51,14 @@ public class CropStagesController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin,AgriculturalExpert")]
-
-    public async Task<IActionResult> CreateCropStage([FromBody] CropStageCreateDto dto)
+    public async Task<IActionResult> CreateCropStage(
+        [FromBody] CropStageCreateDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _cropStageService.Create(dto);
+        var result = await _cropStageService
+            .Create(dto);
 
         if (result.Status == Const.SUCCESS_CREATE_CODE)
             return Ok(result.Data);
@@ -68,7 +71,9 @@ public class CropStagesController : ControllerBase
 
     [HttpPut("{stageId}")]
     [Authorize(Roles = "Admin,AgriculturalExpert")]
-    public async Task<IActionResult> UpdateCropStage(int stageId, [FromBody] CropStageUpdateDto dto)
+    public async Task<IActionResult> UpdateCropStage(
+        int stageId, 
+        [FromBody] CropStageUpdateDto dto)
     {
         if (stageId != dto.StageId)
             return BadRequest("ID không khớp với nội dung cập nhật.");
@@ -76,7 +81,8 @@ public class CropStagesController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _cropStageService.Update(dto);
+        var result = await _cropStageService
+            .Update(dto);
 
         if (result.Status == Const.SUCCESS_UPDATE_CODE)
             return Ok(result.Data);
@@ -94,7 +100,9 @@ public class CropStagesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCropStage(int stageId)
     {
-        var result = await _cropStageService.DeleteById(stageId); 
+        var result = await _cropStageService
+            .DeleteById(stageId); 
+
         if (result.Status == Const.SUCCESS_DELETE_CODE)
             return Ok(result.Message);
 
@@ -108,7 +116,8 @@ public class CropStagesController : ControllerBase
     [Authorize(Roles = "Admin,BusinessManager")]
     public async Task<IActionResult> SoftDeleteCropStage(int stageId)
     {
-        var result = await _cropStageService.SoftDeleteById(stageId); 
+        var result = await _cropStageService
+            .SoftDeleteById(stageId); 
 
         if (result.Status == Const.SUCCESS_DELETE_CODE)
             return Ok(result.Message);
@@ -118,5 +127,4 @@ public class CropStagesController : ControllerBase
 
         return StatusCode(500, result.Message);
     }
-
 }

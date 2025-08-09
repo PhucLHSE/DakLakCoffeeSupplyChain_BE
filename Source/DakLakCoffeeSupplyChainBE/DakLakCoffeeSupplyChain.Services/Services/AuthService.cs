@@ -162,7 +162,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var responseDto = newUser.MapToUserAccountViewDetailsDto();
 
                     // Gửi email xác minh
-                    await _emailService.SendEmailAsync(newUser.Email, "Xác minh tài khoản", $"Click vào đường link này để xác minh tài khoản của bạn: <b>{verifyUrl}</b>");
+                    _emailService.SendEmailAsync(newUser.Email, "Xác minh tài khoản", $"Click vào đường link này để xác minh tài khoản của bạn: <b>{verifyUrl}</b>");
 
                     return new ServiceResult(
                         Const.SUCCESS_CREATE_CODE,
@@ -239,7 +239,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (businessManager != null && businessManager.User.Role.RoleName == "BusinessManager")
                 {
                     var businessURL = $"https://localhost:7163/api/BusinessManagers/{businessManager.ManagerId}";
-                    await _emailService.SendEmailAsync("xuandang854@gmail.com", $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>");
+                    _emailService.SendEmailAsync("xuandang854@gmail.com", $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>");
                 }
 
                 return new ServiceResult(Const.SUCCESS_VERIFY_OTP_CODE, "Xác minh email thành công.");
@@ -273,7 +273,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var verifyUrlExisting = $"https://localhost:7163/api/Auth/verify-email/userId={user.UserId}&code={existingCode}";
 
                     // Gửi lại email xác minh với mã cũ
-                    await _emailService.SendEmailAsync(
+                    _emailService.SendEmailAsync(
                         user.Email,
                         "Xác minh tài khoản (gửi lại)",
                         $"Mã xác minh trước đó vẫn còn hiệu lực. Vui lòng click vào link sau để xác minh tài khoản của bạn: <b>{verifyUrlExisting}</b>"

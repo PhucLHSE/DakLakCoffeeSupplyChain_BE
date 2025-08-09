@@ -21,13 +21,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet]
+        [EnableQuery]
         public async Task<IActionResult> GetAllCropProgressesAsync()
         {
             Guid userId;
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.GetAll(userId);
+            var result = await _cropProgressService
+                .GetAll(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -45,7 +47,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.GetByCropSeasonDetailId(cropSeasonDetailId, userId);
+            var result = await _cropProgressService
+                .GetByCropSeasonDetailId(cropSeasonDetailId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -66,7 +69,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.Create(dto, userId);
+            var result = await _cropProgressService
+                .Create(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Created(string.Empty, result.Data);
@@ -90,7 +94,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.Update(dto, userId);
+            var result = await _cropProgressService
+                .Update(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -108,7 +113,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.SoftDeleteById(progressId, userId);
+            var result = await _cropProgressService
+                .SoftDeleteById(progressId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);
@@ -123,7 +129,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService.DeleteById(progressId, userId);
+            var result = await _cropProgressService
+                .DeleteById(progressId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok(result.Message);

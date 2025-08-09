@@ -12,7 +12,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class BusinessBuyerMapper
     {
         // Mapper BusinessBuyerViewAllDto
-        public static BusinessBuyerViewAllDto MapToBusinessBuyerViewAllDto(this BusinessBuyer businessBuyer)
+        public static BusinessBuyerViewAllDto MapToBusinessBuyerViewAllDto(
+            this BusinessBuyer businessBuyer)
         {
             return new BusinessBuyerViewAllDto
             {
@@ -28,7 +29,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessBuyerViewDetailsDto
-        public static BusinessBuyerViewDetailsDto MapToBusinessBuyerViewDetailDto(this BusinessBuyer businessBuyer)
+        public static BusinessBuyerViewDetailsDto MapToBusinessBuyerViewDetailDto(
+            this BusinessBuyer businessBuyer)
         {
             return new BusinessBuyerViewDetailsDto
             {
@@ -49,7 +51,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessBuyerCreateDto
-        public static BusinessBuyer MapToNewBusinessBuyer(this BusinessBuyerCreateDto dto, Guid managerId, string buyerCode)
+        public static BusinessBuyer MapToNewBusinessBuyer(
+            this BusinessBuyerCreateDto dto, 
+            Guid managerId, 
+            string buyerCode)
         {
             return new BusinessBuyer
             {
@@ -70,7 +75,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessBuyerUpdateDto
-        public static void MapToUpdateBusinessBuyer(this BusinessBuyerUpdateDto dto, BusinessBuyer businessBuyer)
+        public static void MapToUpdateBusinessBuyer(
+            this BusinessBuyerUpdateDto dto, 
+            BusinessBuyer businessBuyer)
         {
             businessBuyer.CompanyName = dto.CompanyName;
             businessBuyer.ContactPerson = dto.ContactPerson;

@@ -2,7 +2,7 @@
 {
     public enum FarmingCommitmentStatus
     {
-        Pending_farmer = 0,             // Trạng thái chờ farmer duyệt
+        Pending = 0,             // Trạng thái chờ farmer duyệt
         Active = 1,                     // Trạng thái đã được farmer duyệt và đi vào hoạt động
         Completed = 2,                  // Trạng thái sau khi cả 2 bên đã hoàn thành cam kết
         Cancelled = 3,                  // Trạng thái sau khi BM hủy bỏ cam kết

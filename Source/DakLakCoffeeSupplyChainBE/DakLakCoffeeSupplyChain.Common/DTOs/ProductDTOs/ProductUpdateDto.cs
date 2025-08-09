@@ -76,7 +76,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
         {
             if (Status == ProductStatus.Approved)
             {
-                if (ApprovedBy == null || ApprovedAt == null)
+                if (ApprovedBy == null || 
+                    ApprovedAt == null)
                 {
                     yield return new ValidationResult(
                         "Trạng thái duyệt yêu cầu phải có thông tin người duyệt và ngày duyệt.",
@@ -85,7 +86,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
                 }
             }
 
-            if (!string.IsNullOrEmpty(CertificationUrl) && string.IsNullOrWhiteSpace(EvaluatedQuality))
+            if (!string.IsNullOrEmpty(CertificationUrl) && 
+                string.IsNullOrWhiteSpace(EvaluatedQuality))
             {
                 yield return new ValidationResult(
                     "Nếu có chứng nhận, bạn cần cung cấp chất lượng đánh giá.",
