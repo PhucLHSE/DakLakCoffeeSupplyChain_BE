@@ -3755,6 +3755,14 @@ VALUES (
 
 GO
 
+-- Set mềm giá trị thuế cho bảng cam kết
+INSERT INTO SystemConfiguration 
+    (Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom)
+VALUES 
+    ('TAX_RATE_FOR_COMMITMENT', N'Giá trị thuế khi tạo cam kết với nông dân', 0.05, NULL, '%', 1, GETDATE());
+
+GO
+
 -- Insert vào bảng SystemConfigurationUsers
 -- Lấy ID của tham số "MIN_AGE_FOR_REGISTRATION"
 DECLARE @MinAgeConfigID INT = (
@@ -3773,3 +3781,11 @@ VALUES (
    @MinAgeConfigID, @AdminID, 'manage'
 );
 
+GO
+
+DECLARE @TaxRateConfigID INT = (
+   SELECT Id FROM SystemConfiguration WHERE Name = 'TAX_RATE_FOR_COMMITMENT'
+);
+
+INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
+VALUES (@TaxRateConfigID, @AdminID, 'manage');
