@@ -10,5 +10,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IWalletRepository : IGenericRepository<Wallet>
     {
+
     }
 }

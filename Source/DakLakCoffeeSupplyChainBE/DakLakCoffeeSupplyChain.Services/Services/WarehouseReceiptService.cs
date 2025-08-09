@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Threading.Tasks;
+using System.Linq; // cần cho .Sum()
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 
@@ -37,36 +38,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (existing != null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Yêu cầu này đã có phiếu nhập.");
 
-            if (dto.ReceivedQuantity != request.RequestedQuantity)
-            {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Số lượng nhập ({dto.ReceivedQuantity}kg) không khớp với số lượng yêu cầu ({request.RequestedQuantity}kg).");
-            }
+            // ❌ KHÔNG kiểm tra số lượng/ sức chứa ở bước tạo (DB chỉ có 1 cột số lượng dùng cho thực nhận)
+            // -> Chỉ chọn kho, tạo phiếu rỗng về số lượng.
 
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
 
-            var currentInventories = await _unitOfWork.Inventories
-                .GetAllAsync(i => i.WarehouseId == dto.WarehouseId && !i.IsDeleted);
-            double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
-            double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
-
-            if (dto.ReceivedQuantity > available)
-            {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể tạo phiếu nhập với {dto.ReceivedQuantity}kg.");
-            }
-
             var receiptCode = await _codeGenerator.GenerateWarehouseReceiptCodeAsync();
-
             var receiptId = Guid.NewGuid();
+
             var receipt = dto.ToEntityFromCreateDto(
                 receiptId,
                 receiptCode,
                 staff.StaffId,
                 request.BatchId
             );
+
+            // ✅ Để trống số lượng đến khi xác nhận
+            receipt.ReceivedQuantity = null;
+            receipt.ReceivedAt = null;
 
             await _unitOfWork.WarehouseReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
@@ -87,27 +78,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu nhập kho tương ứng.");
 
+            // ✅ Chỉ giới hạn bởi số lượng đã YÊU CẦU
             if (dto.ConfirmedQuantity > request.RequestedQuantity)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá yêu cầu ({request.RequestedQuantity}kg).");
 
-            if (dto.ConfirmedQuantity > receipt.ReceivedQuantity)
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá số lượng đã tạo phiếu ({receipt.ReceivedQuantity}kg).");
-
+            // Ghi chú xác nhận
             var confirmNote = WarehouseReceiptMapper.BuildConfirmationNote(
-            receipt.ReceivedQuantity ?? 0, // fallback nếu null
-            dto.ConfirmedQuantity,
-            dto.Note
-);
+                request.RequestedQuantity??0,
+                dto.ConfirmedQuantity,
+                dto.Note
+            );
 
+            // Cập nhật thông tin phiếu
             receipt.Note = string.IsNullOrWhiteSpace(receipt.Note)
                 ? confirmNote
-                : receipt.Note + " " + confirmNote;
-
-            receipt.ReceivedQuantity = dto.ConfirmedQuantity;
+                : $"{receipt.Note} {confirmNote}";
+            receipt.ReceivedQuantity = dto.ConfirmedQuantity; // ✅ DB chỉ 1 cột -> ghi tại bước confirm
             receipt.ReceivedAt ??= DateTime.UtcNow;
 
+            // Kiểm tra sức chứa tại thời điểm xác nhận
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(receipt.WarehouseId);
             if (warehouse == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy kho.");
@@ -123,6 +113,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể nhập {dto.ConfirmedQuantity}kg.");
             }
 
+            // Cập nhật tồn kho (find-or-create theo WarehouseId + BatchId)
             Inventory inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId);
             if (inventory != null)
             {
@@ -142,6 +133,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.Inventories.CreateAsync(inventory);
             }
 
+            // Ghi log
             var log = receipt.ToInventoryLogFromInbound(
                 inventory.InventoryId,
                 dto.ConfirmedQuantity,
@@ -149,6 +141,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
             await _unitOfWork.InventoryLogs.CreateAsync(log);
 
+            // Hoàn tất yêu cầu
             request.Status = InboundRequestStatus.Completed.ToString();
             request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
             request.UpdatedAt = DateTime.UtcNow;
@@ -159,7 +152,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu nhập thành công", receipt.ReceiptId);
         }
-
 
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
@@ -187,7 +179,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var receipts = await _unitOfWork.WarehouseReceipts.GetAllWithIncludesAsync();
 
-            // Lọc ra những receipt mà warehouse.ManagerId == managerId
             var filtered = receipts
                 .Where(r => r.Warehouse?.ManagerId == managerId)
                 .Select(r => new WarehouseReceiptListItemDto
@@ -196,7 +187,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ReceiptCode = r.ReceiptCode,
                     WarehouseName = r.Warehouse?.Name,
                     BatchCode = r.Batch?.BatchCode,
-                    ReceivedQuantity = (double)r.ReceivedQuantity,
+                    ReceivedQuantity = (double)(r.ReceivedQuantity ?? 0), // tránh null
                     ReceivedAt = r.ReceivedAt,
                     StaffName = r.ReceivedByNavigation?.User?.Name,
                     Note = r.Note
@@ -219,7 +210,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 WarehouseName = receipt.Warehouse?.Name,
                 BatchId = receipt.BatchId,
                 BatchCode = receipt.Batch?.BatchCode,
-                ReceivedQuantity = (double)receipt.ReceivedQuantity,
+                ReceivedQuantity = (double)(receipt.ReceivedQuantity ?? 0),
                 ReceivedAt = receipt.ReceivedAt,
                 StaffName = receipt.ReceivedByNavigation?.User?.Name,
                 Note = receipt.Note
@@ -227,6 +218,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu nhập thành công", dto);
         }
+
         public async Task<IServiceResult> SoftDeleteAsync(Guid receiptId, Guid userId)
         {
             var receipt = await _unitOfWork.WarehouseReceipts.GetDetailByIdAsync(receiptId);
@@ -254,6 +246,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm phiếu nhập kho thành công.");
         }
+
         public async Task<IServiceResult> HardDeleteAsync(Guid receiptId)
         {
             var receipt = await _unitOfWork.WarehouseReceipts.GetByIdAsync(receiptId);
@@ -265,7 +258,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn phiếu nhập kho.");
         }
-
-
     }
 }

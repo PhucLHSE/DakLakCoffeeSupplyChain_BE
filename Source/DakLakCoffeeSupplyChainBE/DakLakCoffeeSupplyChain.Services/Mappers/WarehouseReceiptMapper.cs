@@ -54,12 +54,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static string BuildConfirmationNote(double original, double confirmed, string? reason)
+        public static string BuildConfirmationNote(double requested, double confirmed, string? reason)
         {
             var noteParts = new List<string>();
 
-            if (original != confirmed)
-                noteParts.Add($"[Chênh lệch: tạo {original}kg, xác nhận {confirmed}kg]");
+            if (requested != confirmed)
+                noteParts.Add($"[Chênh lệch: yêu cầu {requested}kg, xác nhận {confirmed}kg]");
 
             if (!string.IsNullOrWhiteSpace(reason))
                 noteParts.Add($"[Lý do: {reason}]");
