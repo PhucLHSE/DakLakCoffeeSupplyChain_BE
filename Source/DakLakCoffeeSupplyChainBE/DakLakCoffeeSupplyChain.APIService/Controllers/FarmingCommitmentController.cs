@@ -77,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET api/<FarmingCommitment>/{commitmentId}
         [HttpGet("{commitmentId}")]
         [EnableQuery]
-        [Authorize(Roles = "Admin, BusinessManager")]
+        [Authorize(Roles = "Admin, BusinessManager, Farmer")]
         public async Task<IActionResult> GetById(Guid commitmentId)
         {
             var result = await _service

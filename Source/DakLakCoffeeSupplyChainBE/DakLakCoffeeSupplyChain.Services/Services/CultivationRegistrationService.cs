@@ -110,7 +110,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         ThenInclude(c => c.User).
                     Include(c => c.CultivationRegistrationsDetails).
                         ThenInclude(c => c.PlanDetail).
-                            ThenInclude(c => c.CoffeeType),
+                            ThenInclude(c => c.CoffeeType).
+                    Include(c => c.FarmingCommitment),
                 orderBy: c => c.OrderBy(c => c.RegistrationCode),
                 asNoTracking: true);
 
