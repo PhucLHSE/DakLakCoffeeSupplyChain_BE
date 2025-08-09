@@ -12,8 +12,6 @@
         public string Note { get; set; } = string.Empty;
         public string PhotoUrl { get; set; } = string.Empty;
         public string VideoUrl { get; set; } = string.Empty;
-        public double? ActualYield { get; set; }
-
     }
 
 }
