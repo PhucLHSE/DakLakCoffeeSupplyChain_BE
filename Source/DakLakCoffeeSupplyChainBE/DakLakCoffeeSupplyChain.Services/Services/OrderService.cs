@@ -161,7 +161,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                    .Include(o => o.DeliveryBatch)
                       .ThenInclude(db => db.Contract)
                    .Include(o => o.OrderItems.Where(oi => !oi.IsDeleted))
-                      .ThenInclude(oi => oi.Product),
+                      .ThenInclude(oi => oi.Product)
+                   .Include(o => o.OrderItems.Where(oi => !oi.IsDeleted))
+                      .ThenInclude(oi => oi.ContractDeliveryItem),
                 asNoTracking: true
             );
 

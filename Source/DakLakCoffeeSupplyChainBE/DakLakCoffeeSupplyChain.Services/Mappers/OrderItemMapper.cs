@@ -19,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 OrderItemId = orderItem.OrderItemId,
                 ProductId = orderItem.ProductId,
                 ProductName = orderItem.Product?.ProductName ?? string.Empty,
+                ContractDeliveryItemId = orderItem.ContractDeliveryItemId,
                 Quantity = orderItem.Quantity,
                 UnitPrice = orderItem.UnitPrice,
                 DiscountAmount = orderItem.DiscountAmount,

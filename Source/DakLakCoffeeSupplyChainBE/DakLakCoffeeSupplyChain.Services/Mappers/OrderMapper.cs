@@ -55,6 +55,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Note = order.Note ?? string.Empty,
                 CancelReason = order.CancelReason ?? string.Empty,
                 Status = status,
+                DeliveryBatchId = order.DeliveryBatchId,
                 DeliveryBatchCode = order.DeliveryBatch?.DeliveryBatchCode ?? string.Empty,
                 ContractNumber = order.DeliveryBatch?.Contract?.ContractNumber ?? string.Empty,
                 OrderItems = order.OrderItems?
@@ -64,6 +65,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         OrderItemId = item.OrderItemId,
                         ProductId = item.ProductId,
                         ProductName = item.Product?.ProductName ?? string.Empty,
+                        ContractDeliveryItemId = item.ContractDeliveryItemId,
                         Quantity = item.Quantity,
                         UnitPrice = item.UnitPrice,
                         DiscountAmount = item.DiscountAmount,

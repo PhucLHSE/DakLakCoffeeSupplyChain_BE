@@ -31,7 +31,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs
 
         public string CancelReason { get; set; } = string.Empty;
 
-        // Display info (not navigation)
+        public Guid DeliveryBatchId { get; set; }
+
         public string DeliveryBatchCode { get; set; } = string.Empty;
 
         public string ContractNumber { get; set; } = string.Empty;
