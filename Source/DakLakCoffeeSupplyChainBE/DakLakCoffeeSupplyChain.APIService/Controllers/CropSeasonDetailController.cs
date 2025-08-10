@@ -70,90 +70,72 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // Tạo vùng trồng: chỉ Admin, BusinessManager và Farmer được tạo
         [HttpPost]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
-        public async Task<IActionResult> CreateAsync(
-            [FromBody] CropSeasonDetailCreateDto dto)
+        public async Task<IActionResult> CreateAsync([FromBody] CropSeasonDetailCreateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var result = await _cropSeasonDetailService
-                .Create(dto);
+            Guid userId;
+            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            bool isAdmin = User.IsInRole("Admin");
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return StatusCode(201, result.Data);
+            var result = await _cropSeasonDetailService.Create(dto, userId, isAdmin);
 
-            if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(result.Message);
-
+            if (result.Status == Const.SUCCESS_CREATE_CODE) return StatusCode(201, result.Data);
+            if (result.Status == Const.FAIL_CREATE_CODE) return Conflict(result.Message);
             return StatusCode(500, result.Message);
         }
 
-        // Cập nhật vùng trồng: chỉ Admin, BusinessManager, Farmer được phép sửa vùng trồng của mình
+
         [HttpPut("{detailId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
-        public async Task<IActionResult> UpdateAsync(
-            Guid detailId, 
-            [FromBody] CropSeasonDetailUpdateDto dto)
+        public async Task<IActionResult> UpdateAsync(Guid detailId, [FromBody] CropSeasonDetailUpdateDto dto)
         {
-            if (detailId != dto.DetailId)
-                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+            if (detailId != dto.DetailId) return BadRequest("ID trong route không khớp với ID trong nội dung.");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            Guid userId;
+            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            bool isAdmin = User.IsInRole("Admin");
 
-            var result = await _cropSeasonDetailService
-                .Update(dto);
+            var result = await _cropSeasonDetailService.Update(dto, userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(result.Data);
-
-            if (result.Status == Const.FAIL_UPDATE_CODE)
-                return Conflict(result.Message);
-
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy dòng mùa vụ.");
-
+            if (result.Status == Const.SUCCESS_UPDATE_CODE) return Ok(result.Data);
+            if (result.Status == Const.FAIL_UPDATE_CODE) return Conflict(result.Message);
+            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
             return StatusCode(500, result.Message);
         }
 
-        // Xóa cứng: chỉ Admin và người tạo được phép xóa
         [HttpDelete("{detailId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> DeleteByIdAsync(Guid detailId)
         {
-            var result = await _cropSeasonDetailService
-                .DeleteById(detailId);
+            Guid userId;
+            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            bool isAdmin = User.IsInRole("Admin");
 
-            if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa thành công.");
+            var result = await _cropSeasonDetailService.DeleteById(detailId, userId, isAdmin);
 
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy dòng mùa vụ.");
-
-            if (result.Status == Const.FAIL_DELETE_CODE)
-                return Conflict("Xóa thất bại.");
-
+            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok("Xóa thành công.");
+            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
+            if (result.Status == Const.FAIL_DELETE_CODE) return Conflict("Xóa thất bại.");
             return StatusCode(500, result.Message);
         }
 
-        // Xóa mềm: chỉ Admin, BM, Farmer được thực hiện
         [HttpPatch("soft-delete/{detailId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> SoftDeleteAsync(Guid detailId)
         {
-            var result = await _cropSeasonDetailService
-                .SoftDeleteById(detailId);
+            Guid userId;
+            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            bool isAdmin = User.IsInRole("Admin");
 
-            if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa mềm thành công.");
+            var result = await _cropSeasonDetailService.SoftDeleteById(detailId, userId, isAdmin);
 
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound("Không tìm thấy dòng mùa vụ.");
-
-            if (result.Status == Const.FAIL_DELETE_CODE)
-                return Conflict("Xóa mềm thất bại.");
-
+            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok("Xóa mềm thành công.");
+            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
+            if (result.Status == Const.FAIL_DELETE_CODE) return Conflict("Xóa mềm thất bại.");
             return StatusCode(500, result.Message);
         }
+
     }
 }

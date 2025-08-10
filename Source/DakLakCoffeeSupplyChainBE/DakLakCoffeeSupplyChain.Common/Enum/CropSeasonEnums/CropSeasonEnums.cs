@@ -4,8 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
-
 
 namespace DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums
 {
@@ -21,6 +19,6 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums
         Completed = 2,
 
         [Display(Name = "Đã hủy")]
-        Cancelled= 3
+        Cancelled = 3
     }
 }
