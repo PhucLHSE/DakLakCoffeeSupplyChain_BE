@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
         public string CropSeasonName { get; set; }
 
         public Guid CoffeeTypeId { get; set; }
-        public string CoffeeTypeName { get; set; }
+        public string TypeName { get; set; }
 
         public int MethodId { get; set; }
         public string MethodName { get; set; }

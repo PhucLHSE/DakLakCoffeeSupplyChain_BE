@@ -371,38 +371,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
-
-        //public async Task<IServiceResult> GetByIdAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
-        //{
-        //    var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-        //        x => x.BatchId == id && !x.IsDeleted,
-        //        include: q => q
-        //            .Include(x => x.CropSeason)
-        //            .Include(x => x.Method)
-        //            .Include(x => x.Farmer).ThenInclude(f => f.User),
-        //        asNoTracking: true
-        //    );
-
-        //    if (batch == null)
-        //        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
-
-        //    if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
-
-        //    var farmerName = batch.Farmer?.User?.Name ?? "N/A";
-        //    var dto = batch.MapToDetailsDto(farmerName);
-
-        //    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
-        //}
         public async Task<IServiceResult> GetFullDetailsAsync(
-      Guid batchId,
-      Guid userId,
-      bool isAdmin,
-      bool isManager)
+         Guid batchId,
+         Guid userId,
+         bool isAdmin,
+         bool isManager)
         {
             try
             {
-                // 1. Query cơ bản kèm các navigation cần thiết
                 var batchQuery = _unitOfWork.ProcessingBatchRepository
                     .GetQueryable()
                     .Include(b => b.Farmer).ThenInclude(f => f.User)
@@ -411,14 +387,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(b => b.CoffeeType)
                     .Include(b => b.ProcessingBatchProgresses)
                         .ThenInclude(p => p.Stage)
+                    .Include(b => b.ProcessingBatchProgresses)
+                        .ThenInclude(p => p.ProcessingBatchWastes)
                     .Where(b => !b.IsDeleted && b.BatchId == batchId);
 
-                // 2. Phân quyền
                 if (!isAdmin)
                 {
                     if (isManager)
                     {
-                        var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(b => b.UserId == userId && !b.IsDeleted);
+                        var manager = await _unitOfWork.BusinessManagerRepository
+                            .GetByIdAsync(b => b.UserId == userId && !b.IsDeleted);
                         if (manager == null)
                             return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager.");
 
@@ -440,14 +418,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (batch == null)
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
 
+                // ✅ Lấy toàn bộ UpdatedById từ progresses
+                var updatedByIds = batch.ProcessingBatchProgresses
+                    .Where(p => p.UpdatedBy != null)
+                    .Select(p => p.UpdatedBy)
+                    .Distinct()
+                    .ToList();
+
+                // ✅ Lấy danh sách Farmer tương ứng và tạo dictionary tên
+                var farmers = await _unitOfWork.FarmerRepository.GetAllAsync(
+                    f => updatedByIds.Contains(f.FarmerId),
+                    include: q => q.Include(f => f.User)
+                );
+
+                var farmerNameDict = farmers.ToDictionary(f => f.FarmerId, f => f.User?.Name ?? "N/A");
+
                 var progresses = new List<ProcessingProgressWithStageDto>();
 
-                // 3. Duyệt qua từng progress
                 foreach (var p in batch.ProcessingBatchProgresses
                     .Where(p => !p.IsDeleted)
                     .OrderBy(p => p.StepIndex))
                 {
-                    // 3.1 Lấy MediaFiles theo RelatedId + RelatedEntity
                     var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
                         m => !m.IsDeleted &&
                              m.RelatedEntity == "ProcessingProgress" &&
@@ -464,7 +455,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         UploadedAt = m.UploadedAt
                     }).ToList();
 
-                    // 3.2 Lấy Parameters theo ProgressId
                     var parameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
                         x => x.ProgressId == p.ProgressId && !x.IsDeleted
                     );
@@ -478,7 +468,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         RecordedAt = param.RecordedAt
                     }).ToList();
 
-                    // 3.3 Lấy Wastes
                     var wastes = p.ProcessingBatchWastes?.Select(w => new ProcessingWasteViewAllDto
                     {
                         WasteId = w.WasteId,
@@ -489,14 +478,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         CreatedAt = w.CreatedAt
                     }).ToList() ?? new();
 
-                    // 3.4 Tạo progress DTO
                     progresses.Add(new ProcessingProgressWithStageDto
                     {
                         ProgressId = p.ProgressId,
                         StepIndex = p.StepIndex,
                         ProgressDate = p.ProgressDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.MinValue,
                         OutputQuantity = p.OutputQuantity ?? 0,
-                        UpdatedByName = p.UpdatedByNavigation?.User?.Name ?? "N/A",
+
+                        // ✅ UpdatedByName dùng từ dictionary
+                        UpdatedByName = p.UpdatedBy != null && farmerNameDict.ContainsKey(p.UpdatedBy)
+                            ? farmerNameDict[p.UpdatedBy]
+                            : "N/A",
 
                         StageId = p.StageId.ToString(),
                         StageName = p.Stage?.StageName ?? "N/A",
@@ -508,7 +500,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     });
                 }
 
-                // 4. Map tổng thể
                 var resultDto = batch.MapToFullDetailDto(
                     batch.Farmer?.User?.Name ?? "N/A",
                     batch.CoffeeType?.TypeName ?? "Unknown",

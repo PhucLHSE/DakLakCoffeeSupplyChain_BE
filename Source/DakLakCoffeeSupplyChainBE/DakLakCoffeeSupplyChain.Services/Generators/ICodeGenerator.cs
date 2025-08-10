@@ -59,5 +59,7 @@
         Task<string> GenerateFarmingCommitmenstDetailCodeAsync();
 
         Task<string> GenerateProcessingWasteDisposalCodeAsync();
+
+        Task<string> GenerateEvaluationCodeAsync(int year);
     }
 }
