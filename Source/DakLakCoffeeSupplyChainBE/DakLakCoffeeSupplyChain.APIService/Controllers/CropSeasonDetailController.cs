@@ -35,8 +35,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _cropSeasonDetailService
                 .GetAll(userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result.Data);
-            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound(result.Message);
+            if (result.Status == Const.SUCCESS_READ_CODE) 
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE) 
+                return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
         }
@@ -75,33 +78,53 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             Guid userId;
-            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            try { userId = User.GetUserId(); } 
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
             bool isAdmin = User.IsInRole("Admin");
 
-            var result = await _cropSeasonDetailService.Create(dto, userId, isAdmin);
+            var result = await _cropSeasonDetailService
+                .Create(dto, userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE) return StatusCode(201, result.Data);
-            if (result.Status == Const.FAIL_CREATE_CODE) return Conflict(result.Message);
+            if (result.Status == Const.SUCCESS_CREATE_CODE) 
+                return StatusCode(201, result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE) 
+                return Conflict(result.Message);
+
             return StatusCode(500, result.Message);
         }
 
-
         [HttpPut("{detailId}")]
         [Authorize(Roles = "Admin,BusinessManager,Farmer")]
-        public async Task<IActionResult> UpdateAsync(Guid detailId, [FromBody] CropSeasonDetailUpdateDto dto)
+        public async Task<IActionResult> UpdateAsync(
+            Guid detailId, 
+            [FromBody] CropSeasonDetailUpdateDto dto)
         {
-            if (detailId != dto.DetailId) return BadRequest("ID trong route không khớp với ID trong nội dung.");
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (detailId != dto.DetailId) 
+                return BadRequest("ID trong route không khớp với ID trong nội dung.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             Guid userId;
-            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            try { userId = User.GetUserId(); } 
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
             bool isAdmin = User.IsInRole("Admin");
 
-            var result = await _cropSeasonDetailService.Update(dto, userId, isAdmin);
+            var result = await _cropSeasonDetailService
+                .Update(dto, userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_UPDATE_CODE) return Ok(result.Data);
-            if (result.Status == Const.FAIL_UPDATE_CODE) return Conflict(result.Message);
-            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
+            if (result.Status == Const.SUCCESS_UPDATE_CODE) 
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE) 
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE) 
+                return NotFound("Không tìm thấy dòng mùa vụ.");
+
             return StatusCode(500, result.Message);
         }
 
@@ -110,14 +133,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> DeleteByIdAsync(Guid detailId)
         {
             Guid userId;
-            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            try { userId = User.GetUserId(); } 
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
             bool isAdmin = User.IsInRole("Admin");
 
-            var result = await _cropSeasonDetailService.DeleteById(detailId, userId, isAdmin);
+            var result = await _cropSeasonDetailService
+                .DeleteById(detailId, userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok("Xóa thành công.");
-            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
-            if (result.Status == Const.FAIL_DELETE_CODE) return Conflict("Xóa thất bại.");
+            if (result.Status == Const.SUCCESS_DELETE_CODE) 
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy dòng mùa vụ.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE) 
+                return Conflict("Xóa thất bại.");
+
             return StatusCode(500, result.Message);
         }
 
@@ -126,16 +158,24 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> SoftDeleteAsync(Guid detailId)
         {
             Guid userId;
-            try { userId = User.GetUserId(); } catch { return Unauthorized("Không xác thực được người dùng."); }
+            try { userId = User.GetUserId(); } 
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
             bool isAdmin = User.IsInRole("Admin");
 
-            var result = await _cropSeasonDetailService.SoftDeleteById(detailId, userId, isAdmin);
+            var result = await _cropSeasonDetailService
+                .SoftDeleteById(detailId, userId, isAdmin);
 
-            if (result.Status == Const.SUCCESS_DELETE_CODE) return Ok("Xóa mềm thành công.");
-            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound("Không tìm thấy dòng mùa vụ.");
-            if (result.Status == Const.FAIL_DELETE_CODE) return Conflict("Xóa mềm thất bại.");
+            if (result.Status == Const.SUCCESS_DELETE_CODE) 
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy dòng mùa vụ.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
+
             return StatusCode(500, result.Message);
         }
-
     }
 }

@@ -278,10 +278,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã đơn hàng
-                string orderCode = await _codeGenerator.GenerateOrderCodeAsync();
+                string orderCode = await _codeGenerator
+                    .GenerateOrderCodeAsync();
 
                 // Ánh xạ dữ liệu từ DTO vào entity
-                var newOrder = orderCreateDto.MapToNewOrder(orderCode);
+                var newOrder = orderCreateDto
+                    .MapToNewOrder(orderCode, userId);
 
                 // Tính tổng tiền và gán lại
                 newOrder.TotalAmount = newOrder.OrderItems
@@ -289,10 +291,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Sum(i => i.TotalPrice);
 
                 // Lưu vào DB
-                await _unitOfWork.OrderRepository.CreateAsync(newOrder);
+                await _unitOfWork.OrderRepository
+                    .CreateAsync(newOrder);
 
                 // Lưu thay đổi vào database
-                var result = await _unitOfWork.SaveChangesAsync();
+                var result = await _unitOfWork
+                    .SaveChangesAsync();
 
                 if (result > 0)
                 {
@@ -424,7 +428,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         oldItem.IsDeleted = true;
                         oldItem.UpdatedAt = now;
 
-                        await _unitOfWork.OrderItemRepository.UpdateAsync(oldItem);
+                        await _unitOfWork.OrderItemRepository
+                            .UpdateAsync(oldItem);
                     }
                 }
 
@@ -459,7 +464,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingItem.IsDeleted = false;
                         existingItem.UpdatedAt = now;
 
-                        await _unitOfWork.OrderItemRepository.UpdateAsync(existingItem);
+                        await _unitOfWork.OrderItemRepository
+                            .UpdateAsync(existingItem);
                     }
                     else
                     {
@@ -480,7 +486,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             IsDeleted = false
                         };
 
-                        await _unitOfWork.OrderItemRepository.CreateAsync(newItem);
+                        await _unitOfWork.OrderItemRepository
+                            .CreateAsync(newItem);
+
                         order.OrderItems.Add(newItem);
                     }
                 }
@@ -492,10 +500,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 order.UpdatedAt = now;
 
                 // Cập nhật Order ở repository
-                await _unitOfWork.OrderRepository.UpdateAsync(order);
+                await _unitOfWork.OrderRepository
+                    .UpdateAsync(order);
 
                 // Lưu thay đổi vào database
-                var result = await _unitOfWork.SaveChangesAsync();
+                var result = await _unitOfWork
+                    .SaveChangesAsync();
 
                 if (result > 0)
                 {

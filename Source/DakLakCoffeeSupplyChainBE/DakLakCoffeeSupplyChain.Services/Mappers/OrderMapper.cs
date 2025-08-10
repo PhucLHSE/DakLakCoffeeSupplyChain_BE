@@ -77,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper OrderCreateDto -> Order
-        public static Order MapToNewOrder(this OrderCreateDto dto, string orderCode)
+        public static Order MapToNewOrder(this OrderCreateDto dto, string orderCode, Guid userId)
         {
             var orderId = Guid.NewGuid();
 
@@ -92,7 +92,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Note = dto.Note,
                 Status = dto.Status.ToString(), // enum to string
                 CancelReason = dto.CancelReason,
-                CreatedBy = dto.CreatedBy,
+                CreatedBy = userId,
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false,

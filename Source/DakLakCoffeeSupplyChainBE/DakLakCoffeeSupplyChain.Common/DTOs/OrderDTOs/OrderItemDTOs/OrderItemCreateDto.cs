@@ -9,7 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
 {
     public class OrderItemCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "OrderId là bắt buộc.")]
+        //[Required(ErrorMessage = "OrderId là bắt buộc.")]
         public Guid OrderId { get; set; }
 
         [Required(ErrorMessage = "ContractDeliveryItemId là bắt buộc.")]
