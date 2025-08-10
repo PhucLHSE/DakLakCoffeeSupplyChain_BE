@@ -35,7 +35,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs
         public string? CancelReason { get; set; }
 
         // Người tạo
-        [Required(ErrorMessage = "Người tạo là bắt buộc.")]
+        //[Required(ErrorMessage = "Người tạo là bắt buộc.")]
+        [JsonIgnore]
         public Guid CreatedBy { get; set; }
 
         // Danh sách sản phẩm
