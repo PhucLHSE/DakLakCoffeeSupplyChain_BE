@@ -81,6 +81,7 @@ builder.Services.AddScoped<IFarmingCommitmentService, FarmingCommitmentService>(
 builder.Services.AddScoped<IBusinessStaffService, BusinessStaffService>();
 builder.Services.AddScoped<IExpertAdviceService, ExpertAdviceService>();
 builder.Services.AddScoped<IAgriculturalExpertService, AgriculturalExpertService>();
+builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
 builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();

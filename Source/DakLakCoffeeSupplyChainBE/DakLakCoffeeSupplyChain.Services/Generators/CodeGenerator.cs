@@ -400,6 +400,23 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
             return $"{prefix}{nextNumber:D4}";
         }
-
+        public async Task<string> GenerateEvaluationCodeAsync(int year)
+        {
+            var prefix = $"EVAL-{year}-";
+            var lastCode = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByPredicateAsync(
+                predicate: x => x.EvaluationCode.StartsWith(prefix),
+                selector: x => x.EvaluationCode,
+                include: null,
+                orderBy: q => q.OrderByDescending(e => e.EvaluationCode),
+                asNoTracking: true
+            );
+            var next = 1;
+            if (!string.IsNullOrWhiteSpace(lastCode))
+            {
+                var seg = lastCode.Split('-').Last();
+                if (int.TryParse(seg, out var n)) next = n + 1;
+            }
+            return $"{prefix}{next:0000}";
+        }
     }
 }

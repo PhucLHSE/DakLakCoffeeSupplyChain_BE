@@ -64,7 +64,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerId = batch.FarmerId,
                 FarmerName = farmerName,
                 CropSeasonId = batch.CropSeasonId,
-                CoffeeTypeName = coffeeTypeName,
+                TypeName = coffeeTypeName,
                 CropSeasonName = cropSeasonName,
                 MethodId = batch.MethodId,
                 MethodName = methodName,
