@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
-    public interface IWalletRepository : IGenericRepository<Wallet>
+    public interface IProcessingBatchEvaluationRepository : IGenericRepository<ProcessingBatchEvaluation>
     {
 
     }

@@ -10,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs
     {
         public Guid InventoryId { get; set; }
         public string InventoryCode { get; set; } = default!;
+        public Guid WarehouseId { get; set; }
+        public Guid? BatchId { get; set; }
         public string WarehouseName { get; set; } = default!;
         public string BatchCode { get; set; } = default!;
         public string ProductName { get; set; } = default!;

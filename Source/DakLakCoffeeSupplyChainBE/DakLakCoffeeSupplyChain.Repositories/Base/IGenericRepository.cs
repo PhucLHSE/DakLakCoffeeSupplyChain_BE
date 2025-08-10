@@ -41,6 +41,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
         );
 
         Task CreateAsync(T entity);
+
         Task BulkCreateAsync(IEnumerable<T> entities);
 
         //Task<int> CreateAsync(T entity);
