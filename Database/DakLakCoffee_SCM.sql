@@ -372,7 +372,7 @@ GO
 CREATE TABLE ProcurementPlans (
     PlanID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                               -- ID kế hoạch thu mua
 	PlanCode VARCHAR(20) UNIQUE,                                                       -- PLAN-2025-0001
-    Title NVARCHAR(100) NOT NULL,                                                      -- Tên kế hoạch: "Thu mua cà phê Arabica 2025"
+    Title NVARCHAR(255) NOT NULL,                                                      -- Tên kế hoạch: "Thu mua cà phê Arabica 2025"
     Description NVARCHAR(MAX),                                                         -- Mô tả yêu cầu và thông tin bổ sung
     TotalQuantity FLOAT,                                                               -- Tổng sản lượng cần thu mua (Kg hoặc tấn)
     CreatedBy UNIQUEIDENTIFIER NOT NULL,                                               -- Người tạo kế hoạch (doanh nghiệp)
@@ -487,23 +487,27 @@ GO
 
 -- FarmingCommitments – Cam kết chính thức giữa Farmer và hệ thống
 CREATE TABLE FarmingCommitments (
-    CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),         -- ID cam kết
-	CommitmentCode VARCHAR(20) UNIQUE,                                 -- FC-2025-0001
-	CommitmentName NVARCHAR(MAX),									   -- Tên của bảng cam kết
-    PlanID UNIQUEIDENTIFIER NOT NULL,                                  -- FK đến kế hoạch chính
-    RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                   -- FK đến đơn đăng ký chính
-    FarmerID UNIQUEIDENTIFIER NOT NULL,                                -- Nông dân cam kết
-    TotalPrice FLOAT DEFAULT 0,                                        -- Tổng giá tiền
-    CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,        -- Ngày xác lập cam kết
-    ApprovedBy UNIQUEIDENTIFIER,                                       -- Người duyệt
-    ApprovedAt DATETIME,                                               -- Ngày duyệt
-    Status NVARCHAR(50) DEFAULT 'Active',                              -- Trạng thái cam kết
-    RejectionReason NVARCHAR(MAX),                                     -- Lý do từ chối (nếu có)
-    Note NVARCHAR(MAX),                                                -- Ghi chú thêm
-	--ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
+    CommitmentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                                  -- ID cam kết
+	CommitmentCode VARCHAR(20) UNIQUE,                                                          -- FC-2025-0001
+	CommitmentName NVARCHAR(MAX),									                            -- Tên của bảng cam kết
+    PlanID UNIQUEIDENTIFIER NOT NULL,                                                           -- FK đến kế hoạch chính
+    RegistrationID UNIQUEIDENTIFIER NOT NULL UNIQUE,                                            -- FK đến đơn đăng ký chính
+    FarmerID UNIQUEIDENTIFIER NOT NULL,                                                         -- Nông dân cam kết
+    TotalPrice FLOAT DEFAULT 0,                                                                 -- Tổng giá tiền
+    TotalAdvancePayment FLOAT DEFAULT 0,                                                        -- Tổng số tiền ứng trước (nếu có)
+    TotalTaxPrice FLOAT DEFAULT 0,                                                              -- Tổng giá trị thuế (nếu có)
+    CommitmentDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                                 -- Ngày xác lập cam kết
+    ApprovedBy UNIQUEIDENTIFIER,                                                                -- Người duyệt
+    ApprovedAt DATETIME,                                                                        -- Ngày duyệt
+    Status NVARCHAR(50) DEFAULT 'Pending',                                                      -- Trạng thái cam kết
+    ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0,          -- % hoàn thành
+    RejectionReason NVARCHAR(MAX),                                                              -- Lý do từ chối (nếu có)
+    Note NVARCHAR(MAX),                                                                         -- Ghi chú thêm
+    TotalRatingByBusiness FLOAT CHECK (TotalRatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,     -- Tổng điểm đánh giá (nếu có)
+    TotalRatingByFarmer FLOAT CHECK (TotalRatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,         -- Tổng điểm đánh giá (nếu có)
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	IsDeleted BIT NOT NULL DEFAULT 0                                   -- 0 = chưa xoá, 1 = đã xoá mềm
+	IsDeleted BIT NOT NULL DEFAULT 0                                                            -- 0 = chưa xoá, 1 = đã xoá mềm
 
     -- Foreign Keys
     CONSTRAINT FK_FarmingCommitments_FarmerID 
@@ -523,16 +527,31 @@ GO
 
 -- FarmingCommitmentsDetails – Chi tiết từng dòng cam kết
 CREATE TABLE FarmingCommitmentsDetails (
-    CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),   -- ID chi tiết cam kết
-    CommitmentDetailCode VARCHAR(20) UNIQUE,                           -- FCD-2025-0001
-    CommitmentID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến cam kết chính
-    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                    -- FK đến chi tiết đơn đã duyệt
-    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến loại cây cụ thể
-    ConfirmedPrice FLOAT,                                              -- Giá xác nhận mua
-    CommittedQuantity FLOAT,                                           -- Khối lượng cam kết
-    EstimatedDeliveryStart DATE,                                       -- Ngày giao hàng dự kiến bắt đầu
-    EstimatedDeliveryEnd DATE,                                         -- Ngày giao hàng dự kiến kết thúc
-    Note NVARCHAR(MAX),                                                -- Ghi chú thêm
+    CommitmentDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                   -- ID chi tiết cam kết
+    CommitmentDetailCode VARCHAR(20) UNIQUE,                                           -- FCD-2025-0001
+    CommitmentID UNIQUEIDENTIFIER NOT NULL,                                            -- FK đến cam kết chính
+    RegistrationDetailID UNIQUEIDENTIFIER NOT NULL,                                    -- FK đến chi tiết đơn đã duyệt
+    PlanDetailID UNIQUEIDENTIFIER NOT NULL,                                            -- FK đến loại cây cụ thể
+    ConfirmedPrice FLOAT,                                                              -- Giá xác nhận mua
+    AdvancePayment FLOAT DEFAULT 0,                                                    -- Số tiền ứng trước (nếu có)
+    CommittedQuantity FLOAT,                                                           -- Khối lượng cam kết
+    EstimatedDeliveryStart DATE,                                                       -- Ngày giao hàng dự kiến bắt đầu
+    EstimatedDeliveryEnd DATE,                                                         -- Ngày giao hàng dự kiến kết thúc
+    Note NVARCHAR(MAX),                                                                -- Ghi chú thêm
+    Status NVARCHAR(50) DEFAULT 'Pending',                                             -- Trạng thái cam kết
+    DeliveriedQuantity FLOAT DEFAULT 0,                                                -- Số lượng đã giao
+    ProgressPercentage FLOAT CHECK (ProgressPercentage BETWEEN 0 AND 100) DEFAULT 0.0, -- % hoàn thành
+    TaxPrice FLOAT DEFAULT 0,                                                          -- Giá trị thuế (nếu có)
+    RejectionReason NVARCHAR(MAX),                                                     -- Lý do từ chối (nếu có)
+    RejectionBy UNIQUEIDENTIFIER NULL,                                                 -- Người từ chối (nếu có)
+    RejectionAt DATETIME,                                                              -- Thời gian từ chối (nếu có)
+    BreachedReason NVARCHAR(MAX),                                                      -- Nguyên nhân cam kết bị vi phạm (nếu có)
+    BreachedBy UNIQUEIDENTIFIER NULL,                                                  -- Người khiến cam kết bị vi phạm (nếu có)
+    BreachedAt DATETIME,                                                               -- Thời gian cam kết bị vi phạm (nếu có)
+    RatingByBusiness FLOAT CHECK (RatingByBusiness BETWEEN 0 AND 5) DEFAULT NULL,      -- Đánh giá của doanh nghiệp về cam kết sau khi đã hoàn thành hợp đồng
+    RatingCommentByBusiness NVARCHAR(MAX) NULL,                                        -- Nhận xét đánh giá (nếu có)
+    RatingByFarmer FLOAT CHECK (RatingByFarmer BETWEEN 0 AND 5) DEFAULT NULL,          -- Đánh giá của nông dân về cam kết sau khi đã hoàn thành hợp đồng
+    RatingCommentByFarmer NVARCHAR(MAX) NULL,                                          -- Nhận xét đánh giá (nếu có)
     ContractDeliveryItemID UNIQUEIDENTIFIER NULL,
     CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -549,7 +568,13 @@ CREATE TABLE FarmingCommitmentsDetails (
         FOREIGN KEY (ContractDeliveryItemID) REFERENCES ContractDeliveryItems(DeliveryItemID),
 
     CONSTRAINT FK_FarmingCommitmentsDetails_CommitmentID               -- FK tới bảng FarmingCommitments
-        FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID)
+        FOREIGN KEY (CommitmentID) REFERENCES FarmingCommitments(CommitmentID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_RejectionBy                -- FK tới bảng UserAccounts
+        FOREIGN KEY (RejectionBy) REFERENCES UserAccounts(UserID),
+
+    CONSTRAINT FK_FarmingCommitmentsDetails_BreachedBy                 -- FK tới bảng UserAccounts
+        FOREIGN KEY (BreachedBy) REFERENCES UserAccounts(UserID)
 );
 
 GO
@@ -969,7 +994,7 @@ CREATE TABLE WarehouseInboundRequests (
   RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
-  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, Rejected, Completed
   Note NVARCHAR(MAX),                                               -- Ghi chú thêm từ Farmer
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,            -- Ngày cập nhật cuối
@@ -1132,7 +1157,7 @@ CREATE TABLE WarehouseOutboundRequests (
   Purpose NVARCHAR(100),                                              -- Mục đích xuất: Giao đơn hàng, Kiểm định, Nội bộ...
   OrderItemID UNIQUEIDENTIFIER,                                       -- (Nullable) Liên kết dòng đơn hàng nếu xuất cho B2B
   Reason NVARCHAR(MAX),                                               -- Ghi chú/giải thích chi tiết
-  Status NVARCHAR(50) DEFAULT 'Pending',                              -- Trạng thái: Pending, Approved, rejected, completed
+  Status NVARCHAR(50) DEFAULT 'Pending',                              -- Trạng thái: Pending, Approved, Rejected, Completed
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày tạo yêu cầu
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,              -- Ngày cập nhật cuối
   IsDeleted BIT NOT NULL DEFAULT 0                                    -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -1707,7 +1732,7 @@ VALUES
 GO
 
 -- Insert CoffeeTypes – Danh sách các loại cà phê phổ biến tại Đắk Lắk
--- Định dạng TypeCode: CFT-2025-0001++
+-- Định dạng TypeCode: CFT-2025-0001
 
 -- Arabica (vùng cao Đắk Lắk như M'Đrắk, Krông Bông)
 INSERT INTO CoffeeTypes (TypeCode, TypeName, BotanicalName, Description, TypicalRegion, SpecialtyLevel, DefaultYieldPerHectare)
@@ -2606,8 +2631,382 @@ INSERT INTO CultivationRegistrationsDetail (
 VALUES (
     @RegistrationDetailID, @RegistrationID, @PlanDetailID, 2200,
     '2025-11-01', '2026-01-15',
-    N'Dự kiến sử dụng phân bón hữu cơ và công nghệ AI kiểm tra sâu bệnh', 95
+    N'Dự kiến sử dụng phân bón hữu cơ', 95
 );
+
+GO
+
+-- Insert vào bảng CultivationRegistrations và CultivationRegistrationsDetail
+/* =========================================================
+   NHIỀU ĐƠN ĐĂNG KÝ CULTIVATION + CHI TIẾT (multi-farmers)
+   - Không hardcode GUID
+   - Theo style: DECLARE biến, lấy ID từ Code rồi INSERT
+   - Tự sinh RegistrationCode nối tiếp theo năm hiện tại
+   ========================================================= */
+
+-- Helper: hàm sinh mã REG-YYYY-XXXX tiếp theo trong cùng transaction
+DECLARE @REG_PREFIX VARCHAR(20) = 'REG-' + CONVERT(VARCHAR(4), YEAR(GETDATE())) + '-';
+DECLARE @NextRegCode VARCHAR(20);
+
+-- Hàm inline: trả về mã kế tiếp
+-- (dùng như subquery mỗi lần cần phát sinh mã)
+-- SELECT @NextRegCode = (
+--   SELECT @REG_PREFIX + RIGHT('0000' + CAST(ISNULL(MAX(TRY_CAST(RIGHT(RegistrationCode,4) AS INT)),0) + 1 AS VARCHAR(10)), 4)
+--   FROM CultivationRegistrations WITH (UPDLOCK, HOLDLOCK)
+--   WHERE RegistrationCode LIKE @REG_PREFIX + '%'
+--);
+
+----------------------------------------------------------------
+-- R1: Farmer FRM-2025-0001 đăng ký cho PLAN-2025-0001
+----------------------------------------------------------------
+BEGIN TRAN;
+
+DECLARE @PlanID_1 UNIQUEIDENTIFIER = (
+   SELECT PlanID FROM ProcurementPlans WHERE PlanCode='PLAN-2025-0001'
+);
+
+DECLARE @FarmerID_1 UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode='FRM-2025-0001'
+);
+
+-- Lấy số tiếp theo (giữ lock để tránh trùng trong concurrent insert)
+SELECT @NextRegCode = @REG_PREFIX
+    + RIGHT('0000' + CAST(ISNULL(MAX(TRY_CAST(RIGHT(RegistrationCode,4) AS INT)),0) + 1 AS VARCHAR(10)),4)
+FROM CultivationRegistrations WITH (UPDLOCK, HOLDLOCK)
+WHERE RegistrationCode LIKE @REG_PREFIX + '%';
+
+DECLARE @RegID_1 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrations
+(RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, RegisteredAt, TotalWantedPrice,
+ Status, Note, SystemNote, IsDeleted, CreatedAt, UpdatedAt)
+VALUES
+(@RegID_1, @NextRegCode, @PlanID_1, @FarmerID_1, 1.8, GETDATE(), 95,
+ N'Pending', N'Đăng ký Arabica, tưới nhỏ giọt', NULL, 0, GETDATE(), GETDATE());
+
+-- Chi tiết R1.1: PLD-2025-A001 (1.2 ha, price 95)
+DECLARE @PDID_R1A UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-A001'
+);
+
+DECLARE @Min_R1A FLOAT, @Max_R1A FLOAT, @YieldHa_R1A FLOAT;
+
+SELECT @Min_R1A=MinPriceRange, @Max_R1A=MaxPriceRange, @YieldHa_R1A=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R1A;
+
+DECLARE @Area_R1A FLOAT = 1.2;
+
+DECLARE @Wanted_R1A FLOAT = CASE 
+   WHEN 95 < @Min_R1A THEN @Min_R1A
+   WHEN 95 > @Max_R1A THEN @Max_R1A
+   ELSE 95 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_1, @PDID_R1A, @Area_R1A * @YieldHa_R1A,
+ '2025-11-15','2026-01-15', @Wanted_R1A, N'Pending', N'Arabica specialty Krông Bông', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+-- Chi tiết R1.2: PLD-2025-A002 (0.6 ha, price 105)
+DECLARE @PDID_R1B UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-A002'
+);
+
+DECLARE @Min_R1B FLOAT, @Max_R1B FLOAT, @YieldHa_R1B FLOAT;
+
+SELECT @Min_R1B=MinPriceRange, @Max_R1B=MaxPriceRange, @YieldHa_R1B=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R1B;
+
+DECLARE @Area_R1B FLOAT = 0.6;
+
+DECLARE @Wanted_R1B FLOAT = CASE 
+   WHEN 105 < @Min_R1B THEN @Min_R1B
+   WHEN 105 > @Max_R1B THEN @Max_R1B
+   ELSE 105 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_1, @PDID_R1B, @Area_R1B * @YieldHa_R1B,
+ '2025-11-15','2026-01-15', @Wanted_R1B, N'Pending', N'Typica trưng bày hội chợ', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+COMMIT TRAN;
+
+----------------------------------------------------------------
+-- R2: Farmer FRM-2025-0002 → PLAN-2025-0002 (Robusta)
+----------------------------------------------------------------
+BEGIN TRAN;
+
+DECLARE @PlanID_2 UNIQUEIDENTIFIER = (
+   SELECT PlanID FROM ProcurementPlans WHERE PlanCode='PLAN-2025-0002'
+);
+
+DECLARE @FarmerID_2 UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode='FRM-2025-0002'
+);
+
+SELECT @NextRegCode = @REG_PREFIX
+    + RIGHT('0000' + CAST(ISNULL(MAX(TRY_CAST(RIGHT(RegistrationCode,4) AS INT)),0) + 1 AS VARCHAR(10)),4)
+FROM CultivationRegistrations WITH (UPDLOCK, HOLDLOCK)
+WHERE RegistrationCode LIKE @REG_PREFIX + '%';
+
+DECLARE @RegID_2 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrations
+(RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, RegisteredAt, TotalWantedPrice,
+ Status, Note, SystemNote, IsDeleted, CreatedAt, UpdatedAt)
+VALUES
+(@RegID_2, @NextRegCode, @PlanID_2, @FarmerID_2, 2.5, GETDATE(), NULL,
+ N'Pending', N'Robusta Ea Kar/Đắk Lắk', NULL, 0, GETDATE(), GETDATE());
+
+-- R2.1: PLD-2025-0002-002 (Washed) 1.5 ha, price = clamp(65)
+DECLARE @PDID_R2A UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0002-002'
+);
+
+DECLARE @Min_R2A FLOAT, @Max_R2A FLOAT, @YieldHa_R2A FLOAT;
+
+SELECT @Min_R2A=MinPriceRange, @Max_R2A=MaxPriceRange, @YieldHa_R2A=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R2A;
+
+DECLARE @Area_R2A FLOAT = 1.5;
+
+DECLARE @Wanted_R2A FLOAT = CASE 
+   WHEN 65 < @Min_R2A THEN @Min_R2A
+   WHEN 65 > @Max_R2A THEN @Max_R2A
+   ELSE 65 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_2, @PDID_R2A, @Area_R2A * @YieldHa_R2A,
+ '2025-11-20','2026-02-15', @Wanted_R2A, N'Pending', N'Robusta Washed', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+-- R2.2: PLD-2025-0002-001 (Robusta thường) 1.0 ha, price = clamp(65)
+DECLARE @PDID_R2B UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0002-001'
+);
+
+DECLARE @Min_R2B FLOAT, @Max_R2B FLOAT, @YieldHa_R2B FLOAT;
+
+SELECT @Min_R2B=MinPriceRange, @Max_R2B=MaxPriceRange, @YieldHa_R2B=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R2B;
+
+DECLARE @Area_R2B FLOAT = 1.0;
+DECLARE @Wanted_R2B FLOAT = CASE 
+   WHEN 65 < @Min_R2B THEN @Min_R2B
+   WHEN 65 > @Max_R2B THEN @Max_R2B
+   ELSE 65 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_2, @PDID_R2B, @Area_R2B * @YieldHa_R2B,
+ '2025-11-20','2026-02-15', @Wanted_R2B, N'Pending', N'Robusta thường', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+COMMIT TRAN;
+
+----------------------------------------------------------------
+-- R3: Farmer FRM-2025-0003 → PLAN-2025-0004 (Robusta Washed & TR9)
+----------------------------------------------------------------
+BEGIN TRAN;
+
+DECLARE @PlanID_3 UNIQUEIDENTIFIER = (
+   SELECT PlanID FROM ProcurementPlans WHERE PlanCode='PLAN-2025-0004'
+);
+
+DECLARE @FarmerID_3 UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode='FRM-2025-0003'
+);
+
+SELECT @NextRegCode = @REG_PREFIX
+    + RIGHT('0000' + CAST(ISNULL(MAX(TRY_CAST(RIGHT(RegistrationCode,4) AS INT)),0) + 1 AS VARCHAR(10)),4)
+FROM CultivationRegistrations WITH (UPDLOCK, HOLDLOCK)
+WHERE RegistrationCode LIKE @REG_PREFIX + '%';
+
+DECLARE @RegID_3 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrations
+(RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, RegisteredAt, TotalWantedPrice,
+ Status, Note, SystemNote, IsDeleted, CreatedAt, UpdatedAt)
+VALUES
+(@RegID_3, @NextRegCode, @PlanID_3, @FarmerID_3, 3.0, GETDATE(), NULL,
+ N'Pending', N'Robusta Washed + TR9 năng suất cao', NULL, 0, GETDATE(), GETDATE());
+
+-- R3.1: PLD-2025-0004-001 (Honey) 1.5 ha, price clamp(65)
+DECLARE @PDID_R3A UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0004-001'
+);
+
+DECLARE @Min_R3A FLOAT, @Max_R3A FLOAT, @YieldHa_R3A FLOAT;
+
+SELECT @Min_R3A=MinPriceRange, @Max_R3A=MaxPriceRange, @YieldHa_R3A=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R3A;
+
+DECLARE @Area_R3A FLOAT = 1.5;
+
+DECLARE @Wanted_R3A FLOAT = CASE 
+   WHEN 65 < @Min_R3A THEN @Min_R3A
+   WHEN 65 > @Max_R3A THEN @Max_R3A
+   ELSE 65 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_3, @PDID_R3A, @Area_R3A * @YieldHa_R3A,
+ '2025-11-20','2026-02-20', @Wanted_R3A, N'Pending', N'Robusta Honey', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+-- R3.2: PLD-2025-0004-002 (TR9) 1.5 ha, price clamp(60)
+DECLARE @PDID_R3B UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0004-002'
+);
+
+DECLARE @Min_R3B FLOAT, @Max_R3B FLOAT, @YieldHa_R3B FLOAT;
+
+SELECT @Min_R3B=MinPriceRange, @Max_R3B=MaxPriceRange, @YieldHa_R3B=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R3B;
+
+DECLARE @Area_R3B FLOAT = 1.5;
+
+DECLARE @Wanted_R3B FLOAT = CASE 
+   WHEN 60 < @Min_R3B THEN @Min_R3B
+   WHEN 60 > @Max_R3B THEN @Max_R3B
+   ELSE 60 END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_3, @PDID_R3B, @Area_R3B * @YieldHa_R3B,
+ '2025-11-20','2026-02-20', @Wanted_R3B, N'Pending', N'Robusta TR9', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+COMMIT TRAN;
+
+----------------------------------------------------------------
+-- R4: Farmer FRM-2025-0004 → PLAN-2025-0003 (GIAO LẦN 1)
+----------------------------------------------------------------
+BEGIN TRAN;
+
+DECLARE @PlanID_4 UNIQUEIDENTIFIER = (
+   SELECT PlanID FROM ProcurementPlans WHERE PlanCode='PLAN-2025-0003'
+);
+
+DECLARE @FarmerID_4 UNIQUEIDENTIFIER = (
+   SELECT FarmerID FROM Farmers WHERE FarmerCode='FRM-2025-0004'
+);
+
+SELECT @NextRegCode = @REG_PREFIX
+    + RIGHT('0000' + CAST(ISNULL(MAX(TRY_CAST(RIGHT(RegistrationCode,4) AS INT)),0) + 1 AS VARCHAR(10)),4)
+FROM CultivationRegistrations WITH (UPDLOCK, HOLDLOCK)
+WHERE RegistrationCode LIKE @REG_PREFIX + '%';
+
+DECLARE @RegID_4 UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO CultivationRegistrations
+(RegistrationID, RegistrationCode, PlanID, FarmerID, RegisteredArea, RegisteredAt, TotalWantedPrice,
+ Status, Note, SystemNote, IsDeleted, CreatedAt, UpdatedAt)
+VALUES
+(@RegID_4, @NextRegCode, @PlanID_4, @FarmerID_4, 2.0, GETDATE(), NULL,
+ N'Pending', N'Arabica + Culi cho đợt giao 1', NULL, 0, GETDATE(), GETDATE());
+
+-- R4.1: PLD-GIAO1-001 (Arabica) 1.0 ha, price = midpoint
+DECLARE @PDID_R4A UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-GIAO1-001'
+);
+
+DECLARE @Min_R4A FLOAT, @Max_R4A FLOAT, @YieldHa_R4A FLOAT;
+
+SELECT @Min_R4A=MinPriceRange, @Max_R4A=MaxPriceRange, @YieldHa_R4A=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R4A;
+
+DECLARE @Area_R4A FLOAT = 1.0;
+
+DECLARE @Wanted_R4A_INPUT FLOAT = NULL; -- không set -> midpoint
+
+DECLARE @Wanted_R4A FLOAT = 
+  CASE 
+    WHEN COALESCE(@Wanted_R4A_INPUT, (@Min_R4A+@Max_R4A)/2.0) < @Min_R4A THEN @Min_R4A
+    WHEN COALESCE(@Wanted_R4A_INPUT, (@Min_R4A+@Max_R4A)/2.0) > @Max_R4A THEN @Max_R4A
+    ELSE COALESCE(@Wanted_R4A_INPUT, (@Min_R4A+@Max_R4A)/2.0)
+  END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_4, @PDID_R4A, @Area_R4A * @YieldHa_R4A,
+ '2025-11-15','2026-01-31', @Wanted_R4A, N'Pending', N'Arabica nguyên chất', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+-- R4.2: PLD-2025-C002 (Robusta) 1.0 ha, price = midpoint
+DECLARE @PDID_R4B UNIQUEIDENTIFIER = (
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-C002'
+);
+
+DECLARE @Min_R4B FLOAT, @Max_R4B FLOAT, @YieldHa_R4B FLOAT;
+
+SELECT @Min_R4B=MinPriceRange, @Max_R4B=MaxPriceRange, @YieldHa_R4B=ExpectedYieldPerHectare
+FROM ProcurementPlansDetails WHERE PlanDetailsID=@PDID_R4B;
+
+DECLARE @Area_R4B FLOAT = 1.0;
+
+DECLARE @Wanted_R4B_INPUT FLOAT = NULL; -- midpoint
+
+DECLARE @Wanted_R4B FLOAT = 
+  CASE 
+    WHEN COALESCE(@Wanted_R4B_INPUT, (@Min_R4B+@Max_R4B)/2.0) < @Min_R4B THEN @Min_R4B
+    WHEN COALESCE(@Wanted_R4B_INPUT, (@Min_R4B+@Max_R4B)/2.0) > @Max_R4B THEN @Max_R4B
+    ELSE COALESCE(@Wanted_R4B_INPUT, (@Min_R4B+@Max_R4B)/2.0)
+  END;
+
+INSERT INTO CultivationRegistrationsDetail
+(CultivationRegistrationDetailID, RegistrationID, PlanDetailID, EstimatedYield,
+ ExpectedHarvestStart, ExpectedHarvestEnd, WantedPrice, Status, Note, SystemNote,
+ ApprovedBy, ApprovedAt, CreatedAt, UpdatedAt, IsDeleted)
+VALUES
+(NEWID(), @RegID_4, @PDID_R4B, @Area_R4B * @YieldHa_R4B,
+ '2025-11-15','2026-01-31', @Wanted_R4B, N'Pending', N'Robusta thông thường – giao 1', NULL,
+ NULL, NULL, GETDATE(), GETDATE(), 0);
+
+COMMIT TRAN;
+
+/* QUICK CHECK */
+SELECT cr.RegistrationCode, f.FarmerCode, pp.PlanCode, cr.RegisteredArea,
+       cr.TotalWantedPrice, cr.Status, cr.CreatedAt
+FROM CultivationRegistrations cr
+JOIN Farmers f          ON cr.FarmerID = f.FarmerID
+JOIN ProcurementPlans pp ON cr.PlanID  = pp.PlanID
+WHERE cr.CreatedAt >= DATEADD(DAY, -1, GETDATE())   -- hoặc lọc theo năm hiện tại
+ORDER BY cr.CreatedAt DESC;
+
+SELECT d.RegistrationID, pld.PlanDetailCode, d.EstimatedYield, d.WantedPrice, d.Status,
+       d.ExpectedHarvestStart, d.ExpectedHarvestEnd, d.CreatedAt
+FROM CultivationRegistrationsDetail d
+JOIN ProcurementPlansDetails pld ON d.PlanDetailID = pld.PlanDetailsID
+WHERE d.RegistrationID IN (
+    SELECT cr2.RegistrationID
+    FROM CultivationRegistrations cr2
+    WHERE cr2.CreatedAt >= DATEADD(DAY, -1, GETDATE())
+)
+ORDER BY d.CreatedAt DESC;
 
 GO
 
@@ -3532,7 +3931,7 @@ INSERT INTO Orders (
 VALUES (
   @OrderID, 'ORD-2025-0001', @DeliveryBatchID, 1,
   GETDATE(), GETDATE(), 95000 * 500,
-  N'First batch of Arabica delivery', 'preparing', NULL,
+  N'Đợt giao hàng Arabica đầu tiên', 'preparing', NULL,
   GETDATE(), GETDATE(), 0,
   @CreatedBy
 );
@@ -3560,7 +3959,7 @@ INSERT INTO OrderItems (
 VALUES (
   NEWID(), @OrderID, @ContractDeliveryItemID, @ProductID,
   500, 95000, 0.0, 95000 * 500,
-  N'Standard delivery item', GETDATE(), GETDATE(), 0
+  N'Mặt hàng giao tiêu chuẩn', GETDATE(), GETDATE(), 0
 );
 
 GO
@@ -3654,6 +4053,7 @@ GO
 -- Các ID cần dùng
 DECLARE @ShipmentID UNIQUEIDENTIFIER = NEWID();
 DECLARE @ShipmentCode VARCHAR(20) = 'SHIP-2025-0001';
+
 DECLARE @ComplaintID UNIQUEIDENTIFIER = NEWID();
 DECLARE @ComplaintCode VARCHAR(20) = 'CMP-2025-0001';
 
@@ -3720,10 +4120,20 @@ GO
 
 -- Insert vào bảng SystemConfiguration
 -- Tuổi tối thiểu để đăng ký tài khoản người dùng
+INSERT INTO SystemConfiguration (
+   Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom
+)
+VALUES (
+   'MIN_AGE_FOR_REGISTRATION', N'Tuổi tối thiểu để đăng ký tài khoản', 18, NULL, 'years', 1, GETDATE()
+);
+
+GO
+
+-- Set mềm giá trị thuế cho bảng cam kết
 INSERT INTO SystemConfiguration 
     (Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom)
 VALUES 
-    ('MIN_AGE_FOR_REGISTRATION', N'Tuổi tối thiểu để đăng ký tài khoản', 18, NULL, 'years', 1, GETDATE());
+    ('TAX_RATE_FOR_COMMITMENT', N'Giá trị thuế khi tạo cam kết với nông dân', 0.05, NULL, '%', 1, GETDATE());
 
 GO
 
@@ -3738,6 +4148,27 @@ DECLARE @AdminID UNIQUEIDENTIFIER = (
    SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
 );
 
-INSERT INTO SystemConfigurationUsers (SystemConfigurationID, UserID, PermissionLevel)
-VALUES (@MinAgeConfigID, @AdminID, 'manage');
+INSERT INTO SystemConfigurationUsers (
+   SystemConfigurationID, UserID, PermissionLevel
+)
+VALUES (
+   @MinAgeConfigID, @AdminID, 'manage'
+);
 
+GO
+
+-- Insert vào bảng SystemConfigurationUsers
+DECLARE @TaxRateConfigID INT = (
+   SELECT Id FROM SystemConfiguration WHERE Name = 'TAX_RATE_FOR_COMMITMENT'
+);
+
+DECLARE @AdminID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+);
+
+INSERT INTO SystemConfigurationUsers (
+   SystemConfigurationID, UserID, PermissionLevel
+)
+VALUES (
+   @TaxRateConfigID, @AdminID, 'manage'
+);

@@ -16,7 +16,8 @@ namespace DakLakCoffeeSupplyChain.API.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> Upload([FromForm] MediaUploadRequest request)
+        public async Task<IActionResult> Upload(
+            [FromForm] MediaUploadRequest request)
         {
             if (request.Files == null || request.Files.Count == 0)
                 return BadRequest("No files uploaded");

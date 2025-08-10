@@ -1,4 +1,8 @@
-﻿namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
+﻿using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+using System.Text.Json.Serialization;
+
+namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 {
     public class CultivationRegistrationViewAllAvailableDto
     {
@@ -19,7 +23,14 @@
         public DateTime RegisteredAt { get; set; }
 
         public double? TotalWantedPrice { get; set; }
+        public string Note { get; set; } = string.Empty;
 
-        public ICollection<CultivationRegistrationViewDetailsDto> CultivationRegistrationViewDetailsDtos { get; set; } = [];
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CultivationRegistrationStatus Status { get; set; } = CultivationRegistrationStatus.Unknown;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public FarmingCommitmentStatus CommitmentStatus { get; set; } = FarmingCommitmentStatus.Unknown;
+
+        public ICollection<CultivationRegistrationViewDetailsDto> CultivationRegistrationDetails { get; set; } = [];
     }
 }

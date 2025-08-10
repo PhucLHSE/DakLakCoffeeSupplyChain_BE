@@ -14,7 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonDetailId = entity.CropSeasonDetailId,
                 StageId = entity.StageId,
                 StepIndex = entity.StepIndex,
-                StageCode = entity.Stage?.StageCode ?? string.Empty, 
+                StageCode = entity.Stage?.StageCode ?? string.Empty,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
@@ -74,7 +74,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static void MapToUpdateCropProgress(this CropProgressUpdateDto dto, CropProgress entity, Guid farmerId)
         {
             entity.CropSeasonDetailId = dto.CropSeasonDetailId;
-            entity.UpdatedBy = farmerId; 
+            entity.UpdatedBy = farmerId;
             entity.StageId = dto.StageId;
             entity.StageDescription = dto.StageDescription;
             entity.ProgressDate = dto.ProgressDate;

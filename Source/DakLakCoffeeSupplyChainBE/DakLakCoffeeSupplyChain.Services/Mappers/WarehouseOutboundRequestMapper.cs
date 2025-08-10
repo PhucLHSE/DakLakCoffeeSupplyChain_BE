@@ -1,65 +1,56 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs;
+﻿// Services.Mappers/WarehouseOutboundRequestMapper.cs
+using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class WarehouseOutboundRequestMapper
     {
-        public static WarehouseOutboundRequestListItemDto ToListItemDto(this WarehouseOutboundRequest entity)
-        {
-            return new WarehouseOutboundRequestListItemDto
+        public static WarehouseOutboundRequestListItemDto ToListItemDto(this WarehouseOutboundRequest e)
+            => new()
             {
-                OutboundRequestId = entity.OutboundRequestId,
-                OutboundRequestCode = entity.OutboundRequestCode,
-                Status = entity.Status,
-                WarehouseId = entity.WarehouseId,               // ✅ thêm vào
-                WarehouseName = entity.Warehouse?.Name,
-                InventoryId = entity.InventoryId,               // ✅ thêm vào
-                RequestedQuantity = entity.RequestedQuantity,
-                Unit = entity.Unit,
-                CreatedAt = entity.CreatedAt
+                OutboundRequestId = e.OutboundRequestId,
+                OutboundRequestCode = e.OutboundRequestCode,
+                Status = e.Status,
+                WarehouseId = e.WarehouseId,
+                WarehouseName = e.Warehouse?.Name,
+                InventoryId = e.InventoryId,
+                RequestedQuantity = e.RequestedQuantity,
+                Unit = e.Unit,
+                CreatedAt = e.CreatedAt
             };
-        }
 
-        public static WarehouseOutboundRequestDetailDto ToDetailDto(this WarehouseOutboundRequest entity)
-        {
-            return new WarehouseOutboundRequestDetailDto
+        public static WarehouseOutboundRequestDetailDto ToDetailDto(this WarehouseOutboundRequest e)
+            => new()
             {
-                OutboundRequestId = entity.OutboundRequestId,
-                OutboundRequestCode = entity.OutboundRequestCode,
-                WarehouseId = entity.WarehouseId,
-                WarehouseName = entity.Warehouse?.Name,
-                InventoryId = entity.InventoryId,
-                InventoryName = entity.Inventory?.Products?.FirstOrDefault()?.ProductName,
-                RequestedQuantity = entity.RequestedQuantity,
-                Unit = entity.Unit,
-                Purpose = entity.Purpose,
-                Reason = entity.Reason,
-                OrderItemId = entity.OrderItemId,
-                RequestedBy = entity.RequestedBy,
-                RequestedByName = entity.RequestedByNavigation?.CompanyName,
-                Status = entity.Status,
-                CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                OutboundRequestId = e.OutboundRequestId,
+                OutboundRequestCode = e.OutboundRequestCode,
+                WarehouseId = e.WarehouseId,
+                WarehouseName = e.Warehouse?.Name,
+                InventoryId = e.InventoryId,
+                InventoryName = e.Inventory?.Products?.FirstOrDefault()?.ProductName,
+                RequestedQuantity = e.RequestedQuantity,
+                Unit = e.Unit,
+                Purpose = e.Purpose,
+                Reason = e.Reason,
+                OrderItemId = e.OrderItemId,
+                RequestedBy = e.RequestedBy,
+                RequestedByName = e.RequestedByNavigation?.CompanyName,
+                Status = e.Status,
+                CreatedAt = e.CreatedAt,
+                UpdatedAt = e.UpdatedAt
             };
-        }
+
         public static WarehouseOutboundRequest ToEntityCreate(
-    this WarehouseOutboundRequestCreateDto dto,
-    Guid generatedId,
-    string generatedCode,
-    Guid managerId
-)
-        {
-            return new WarehouseOutboundRequest
+            this WarehouseOutboundRequestCreateDto dto,
+            Guid id,
+            string code,
+            Guid managerId)
+            => new()
             {
-                OutboundRequestId = generatedId,
-                OutboundRequestCode = generatedCode,
+                OutboundRequestId = id,
+                OutboundRequestCode = code,
                 WarehouseId = dto.WarehouseId,
                 InventoryId = dto.InventoryId,
                 RequestedQuantity = dto.RequestedQuantity,
@@ -73,7 +64,5 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
-        }
-
     }
 }

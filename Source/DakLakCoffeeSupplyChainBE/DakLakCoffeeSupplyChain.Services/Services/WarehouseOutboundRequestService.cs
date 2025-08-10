@@ -157,7 +157,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseOutboundRequests.CreateAsync(request);
             await _unitOfWork.SaveChangesAsync();
 
-            await _notificationService.NotifyOutboundRequestCreatedAsync(request.OutboundRequestId, manager.ManagerId);
+             _notificationService.NotifyOutboundRequestCreatedAsync(request.OutboundRequestId, manager.ManagerId);
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }

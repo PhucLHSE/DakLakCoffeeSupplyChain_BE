@@ -12,7 +12,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class BusinessManagerMapper
     {
         // Mapper BusinessManagerViewAllDto
-        public static BusinessManagerViewAllDto MapToBusinessManagerViewAllDto(this BusinessManager manager)
+        public static BusinessManagerViewAllDto MapToBusinessManagerViewAllDto(
+            this BusinessManager manager)
         {
             return new BusinessManagerViewAllDto
             {
@@ -26,7 +27,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessManagerViewDetailsDto
-        public static BusinessManagerViewDetailsDto MapToBusinessManagerViewDetailsDto(this BusinessManager manager)
+        public static BusinessManagerViewDetailsDto MapToBusinessManagerViewDetailsDto(
+            this BusinessManager manager)
         {
             return new BusinessManagerViewDetailsDto
             {
@@ -52,7 +54,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessManagerCreateDto
-        public static BusinessManager MapToNewBusinessManager(this BusinessManagerCreateDto dto, Guid userId, string managerCode)
+        public static BusinessManager MapToNewBusinessManager(
+            this BusinessManagerCreateDto dto, 
+            Guid userId, 
+            string managerCode)
         {
             return new BusinessManager
             {
@@ -75,7 +80,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         }
 
         // Mapper BusinessManagerUpdateDto
-        public static void MapToUpdateBusinessManager(this BusinessManagerUpdateDto dto, BusinessManager businessManager)
+        public static void MapToUpdateBusinessManager(
+            this BusinessManagerUpdateDto dto, 
+            BusinessManager businessManager)
         {
             businessManager.CompanyName = dto.CompanyName;
             businessManager.Position = dto.Position;

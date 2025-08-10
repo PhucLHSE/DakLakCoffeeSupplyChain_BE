@@ -89,7 +89,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var entity = dto.MapToCropProgressCreateDto();
                 entity.UpdatedBy = farmer.FarmerId;
 
-                if (stage.StageCode == "HARVESTING")
+                if (stage.StageCode == "harvesting")
                 {
                     if (!dto.ActualYield.HasValue || dto.ActualYield.Value <= 0)
                         return new ServiceResult(Const.FAIL_CREATE_CODE, "Vui lòng nhập sản lượng thực tế hợp lệ (> 0).");
@@ -146,7 +146,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Giai đoạn không tồn tại.");
 
                 // ✅ Cho phép cập nhật ActualYield nếu là HARVESTING
-                if (stage.StageCode == "HARVESTING" && dto.ActualYield.HasValue && dto.ActualYield.Value > 0)
+                if (stage.StageCode == "harvesting" && dto.ActualYield.HasValue && dto.ActualYield.Value > 0)
                 {
                     detail.ActualYield = dto.ActualYield.Value;
                     detail.UpdatedAt = DateHelper.NowVietnamTime();

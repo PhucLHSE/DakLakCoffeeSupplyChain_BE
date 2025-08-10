@@ -47,7 +47,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper ContractDeliveryItemUpdateDto -> ContractDeliveryItem (cập nhật thông tin)
+        // Mapper ContractDeliveryItemUpdateDto -> ContractDeliveryItem
         public static void MapToUpdateContractDeliveryItem(
             this ContractDeliveryItemUpdateDto dto, 
             ContractDeliveryItem contractDeliveryItem)

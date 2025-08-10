@@ -22,14 +22,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // POST: api/Warehouses
         [HttpPost]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> Create([FromBody] WarehouseCreateDto dto)
+        public async Task<IActionResult> Create(
+            [FromBody] WarehouseCreateDto dto)
         {
             Guid userId;
 
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _warehouseService.CreateAsync(dto, userId);
+            var result = await _warehouseService
+                .CreateAsync(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById), new { id = result.Data }, result.Data);
@@ -51,7 +53,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _warehouseService.GetAllAsync(userId);
+            var result = await _warehouseService
+                .GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -67,7 +70,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var result = await _warehouseService.GetByIdAsync(id);
+            var result = await _warehouseService
+                .GetByIdAsync(id);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -81,9 +85,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT: api/Warehouses/{id}
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,BusinessManager")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] WarehouseUpdateDto dto)
+        public async Task<IActionResult> Update(
+            Guid id, 
+            [FromBody] WarehouseUpdateDto dto)
         {
-            var result = await _warehouseService.UpdateAsync(id, dto);
+            var result = await _warehouseService
+                .UpdateAsync(id, dto);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Message);
@@ -102,7 +109,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
-            var result = await _warehouseService.DeleteAsync(id); // Soft delete
+            var result = await _warehouseService
+                .DeleteAsync(id); // Soft delete
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -118,7 +126,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
-            var result = await _warehouseService.HardDeleteAsync(id);
+            var result = await _warehouseService
+                .HardDeleteAsync(id);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa vĩnh viễn thành công.");

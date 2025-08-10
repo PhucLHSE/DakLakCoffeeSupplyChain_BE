@@ -14,6 +14,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
 
         public string ProductName { get; set; } = string.Empty;
 
+        public Guid ContractDeliveryItemId { get; set; }
+
         public double? Quantity { get; set; }
 
         public double? UnitPrice { get; set; }

@@ -21,6 +21,8 @@ public partial class FarmingCommitmentsDetail
 
     public double? ConfirmedPrice { get; set; }
 
+    public double? AdvancePayment { get; set; }
+
     public double? CommittedQuantity { get; set; }
 
     public DateOnly? EstimatedDeliveryStart { get; set; }
@@ -29,6 +31,34 @@ public partial class FarmingCommitmentsDetail
 
     public string Note { get; set; }
 
+    public string Status { get; set; }
+
+    public double? DeliveriedQuantity { get; set; }
+
+    public double? ProgressPercentage { get; set; }
+
+    public double? TaxPrice { get; set; }
+
+    public string RejectionReason { get; set; }
+
+    public Guid? RejectionBy { get; set; }
+
+    public DateTime? RejectionAt { get; set; }
+
+    public string BreachedReason { get; set; }
+
+    public Guid? BreachedBy { get; set; }
+
+    public DateTime? BreachedAt { get; set; }
+
+    public double? RatingByBusiness { get; set; }
+
+    public string RatingCommentByBusiness { get; set; }
+
+    public double? RatingByFarmer { get; set; }
+
+    public string RatingCommentByFarmer { get; set; }
+
     public Guid? ContractDeliveryItemId { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -36,6 +66,8 @@ public partial class FarmingCommitmentsDetail
     public DateTime UpdatedAt { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    public virtual UserAccount BreachedByNavigation { get; set; }
 
     public virtual FarmingCommitment Commitment { get; set; }
 
@@ -46,4 +78,6 @@ public partial class FarmingCommitmentsDetail
     public virtual ProcurementPlansDetail PlanDetail { get; set; }
 
     public virtual CultivationRegistrationsDetail RegistrationDetail { get; set; }
+
+    public virtual UserAccount RejectionByNavigation { get; set; }
 }

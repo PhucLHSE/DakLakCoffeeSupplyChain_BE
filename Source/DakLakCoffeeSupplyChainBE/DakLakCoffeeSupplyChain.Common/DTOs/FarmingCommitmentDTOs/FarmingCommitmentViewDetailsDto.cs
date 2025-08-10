@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommitmentsDetailsDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
 {
@@ -13,17 +14,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public Guid FarmerId { get; set; }
         public string FarmerName { get; set; } = string.Empty;
         public string PlanTitle { get; set; } = string.Empty;
-        public double? TotalPrice { get; set; } = 0.0;
+        public double? TotalPrice { get; set; }
+        public double? TotalAdvancePayment { get; set; }
+        public double? TotalTaxPrice { get; set; }
+        public double? ProgressPercentage { get; set; }
         public DateTime CommitmentDate { get; set; }
         public Guid? ApprovedById { get; set; }
         public string ApprovedBy { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
         public DateTime? ApprovedAt { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;
         public string RejectionReason { get; set; } = string.Empty;
         public string Note { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentsDetailsDTOs { get; set; } = [];
+        public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentDetails { get; set; } = [];
     }
 }

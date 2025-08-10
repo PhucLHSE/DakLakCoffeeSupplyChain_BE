@@ -23,10 +23,8 @@
             }
 
             // GET: api/processing-batch
-
             [HttpGet]
             [EnableQuery]
-        
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
             public async Task<IActionResult> GetAll()
             {
@@ -41,7 +39,8 @@
                 var isAdmin = User.IsInRole("Admin");
                 var isManager = User.IsInRole("BusinessManager");
 
-                var result = await _processingbatchservice.GetAllByUserId(userId, isAdmin, isManager);
+                var result = await _processingbatchservice
+                .GetAllByUserId(userId, isAdmin, isManager);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);
@@ -51,9 +50,11 @@
 
                 return StatusCode(500, result.Message);
             }
+
             [HttpPost]
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
-            public async Task<IActionResult> Create([FromBody] ProcessingBatchCreateDto dto)
+            public async Task<IActionResult> Create(
+                [FromBody] ProcessingBatchCreateDto dto)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
                              ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -63,7 +64,8 @@
                     return BadRequest("Không thể lấy userId từ token.");
                 }
 
-                var result = await _processingbatchservice.CreateAsync(dto, userId);
+                var result = await _processingbatchservice
+                   .CreateAsync(dto, userId);
 
                 if (result.Status == Const.SUCCESS_CREATE_CODE)
                     return Ok(result.Data);
@@ -73,9 +75,11 @@
 
                 return BadRequest(result.Message);
             }
+
             [HttpPut]
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
-            public async Task<IActionResult> Update([FromBody] ProcessingBatchUpdateDto dto)
+            public async Task<IActionResult> Update(
+                [FromBody] ProcessingBatchUpdateDto dto)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
                              ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -86,7 +90,8 @@
                 var isAdmin = User.IsInRole("Admin");
                 var isManager = User.IsInRole("BusinessManager");
 
-                var result = await _processingbatchservice.UpdateAsync(dto, userId, isAdmin, isManager);
+                var result = await _processingbatchservice
+                   .UpdateAsync(dto, userId, isAdmin, isManager);
 
                 if (result.Status == Const.SUCCESS_UPDATE_CODE)
                     return Ok(result.Data);
@@ -96,6 +101,7 @@
 
                 return BadRequest(result.Message);
             }
+
             [HttpPatch("{id}/soft-delete")]
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
             public async Task<IActionResult> SoftDelete(Guid id)
@@ -109,7 +115,8 @@
                 var isAdmin = User.IsInRole("Admin");
                 var isManager = User.IsInRole("BusinessManager");
 
-                var result = await _processingbatchservice.SoftDeleteAsync(id, userId, isAdmin, isManager);
+                var result = await _processingbatchservice
+                   .SoftDeleteAsync(id, userId, isAdmin, isManager);
 
                 if (result.Status == Const.SUCCESS_DELETE_CODE)
                     return Ok(result.Message);
@@ -119,6 +126,7 @@
 
                 return BadRequest(result.Message);
             }
+
             [HttpDelete("hard/{id}")]
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
             public async Task<IActionResult> HardDelete(Guid id)
@@ -128,11 +136,13 @@
 
                 if (!Guid.TryParse(userIdStr, out var userId))
                     return BadRequest("Không thể lấy userId từ token.");
+
                 var isAdmin = User.IsInRole("Admin");
 
                 var isManager = User.IsInRole("BusinessManager");
 
-                var result = await _processingbatchservice.HardDeleteAsync(id, userId, isManager, isAdmin);
+                var result = await _processingbatchservice
+                   .HardDeleteAsync(id, userId, isManager, isAdmin);
 
                 if (result.Status == Const.SUCCESS_DELETE_CODE)
                     return Ok(result.Message);
@@ -145,7 +155,8 @@
       
             [HttpGet("available-coffee-types")]
             [Authorize(Roles = "Farmer,Admin, BusinessManager")]
-            public async Task<IActionResult> GetAvailableCoffeeTypes([FromQuery] Guid cropSeasonId)
+            public async Task<IActionResult> GetAvailableCoffeeTypes(
+                [FromQuery] Guid cropSeasonId)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
                              ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -153,7 +164,8 @@
                 if (!Guid.TryParse(userIdStr, out var userId))
                     return BadRequest("Không thể lấy userId từ token.");
 
-                var result = await _processingbatchservice.GetAvailableCoffeeTypesAsync(userId, cropSeasonId);
+                var result = await _processingbatchservice
+                   .GetAvailableCoffeeTypesAsync(userId, cropSeasonId);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);
@@ -163,6 +175,7 @@
 
                 return BadRequest(result.Message);
             }
+
             [HttpGet("{id}/full-details")]
             [Authorize(Roles = "Farmer,Admin,BusinessManager")]
             public async Task<IActionResult> GetFullDetails(Guid id)
@@ -174,9 +187,11 @@
                     return BadRequest("Không thể lấy userId từ token.");
 
                 var isAdmin = User.IsInRole("Admin");
+
                 var isManager = User.IsInRole("BusinessManager");
 
-                var result = await _processingbatchservice.GetFullDetailsAsync(id, userId, isAdmin, isManager);
+                var result = await _processingbatchservice
+                   .GetFullDetailsAsync(id, userId, isAdmin, isManager);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);
@@ -186,6 +201,5 @@
 
                 return StatusCode(500, result.Message);
             }
-
         }
     }

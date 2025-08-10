@@ -50,7 +50,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs
                 );
             }
 
-            if (ContractDeliveryItems == null || ContractDeliveryItems.Count == 0)
+            if (ContractDeliveryItems == null || 
+                ContractDeliveryItems.Count == 0)
             {
                 yield return new ValidationResult(
                     "Phải có ít nhất 1 dòng sản phẩm giao hàng.",

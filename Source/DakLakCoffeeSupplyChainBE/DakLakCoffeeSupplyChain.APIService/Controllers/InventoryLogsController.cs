@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -18,14 +19,17 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet]
+        [EnableQuery]
         [Authorize(Roles = "BusinessStaff,BusinessManager,Admin")]
         public async Task<IActionResult> GetAll()
         {
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!Guid.TryParse(userIdStr, out Guid userId))
                 return StatusCode(500, "Không xác định được người dùng.");
 
-            var result = await _inventoryLogService.GetAllAsync(userId);
+            var result = await _inventoryLogService
+                .GetAllAsync(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -35,15 +39,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(403, result.Message);
         }
+
         [HttpGet("by-inventory/{inventoryId}")]
         [Authorize(Roles = "BusinessStaff,BusinessManager,Admin")]
         public async Task<IActionResult> GetByInventoryId(Guid inventoryId)
         {
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!Guid.TryParse(userIdStr, out Guid userId))
                 return StatusCode(500, "Không xác định được người dùng.");
 
-            var result = await _inventoryLogService.GetLogsByInventoryIdAsync(inventoryId, userId);
+            var result = await _inventoryLogService
+                .GetLogsByInventoryIdAsync(inventoryId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -53,12 +60,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(403, result.Message); // Nếu bị chặn quyền, trả 403
         }
+
         // PATCH: api/InventoryLogs/soft-delete/{logId}
         [HttpPatch("soft-delete/{logId}")]
         [Authorize(Roles = "Admin,BusinessManager")]
         public async Task<IActionResult> SoftDelete(Guid logId)
         {
-            var result = await _inventoryLogService.SoftDeleteAsync(logId);
+            var result = await _inventoryLogService
+                .SoftDeleteAsync(logId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa mềm thành công.");
@@ -72,13 +81,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-
         // DELETE: api/InventoryLogs/hard-delete/{logId}
         [HttpDelete("hard-delete/{logId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HardDelete(Guid logId)
         {
-            var result = await _inventoryLogService.HardDeleteAsync(logId);
+            var result = await _inventoryLogService
+                .HardDeleteAsync(logId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
                 return Ok("Xóa vĩnh viễn thành công.");
@@ -97,10 +106,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetDetailById(Guid logId)
         {
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!Guid.TryParse(userIdStr, out Guid userId))
                 return StatusCode(500, "Không xác định được người dùng.");
 
-            var result = await _inventoryLogService.GetByIdAsync(logId, userId);
+            var result = await _inventoryLogService
+                .GetByIdAsync(logId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -110,6 +121,5 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(403, result.Message);
         }
-
     }
 }

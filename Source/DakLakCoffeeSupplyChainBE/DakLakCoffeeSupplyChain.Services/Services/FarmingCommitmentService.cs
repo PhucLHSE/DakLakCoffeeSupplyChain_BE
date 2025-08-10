@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -36,10 +37,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: fm => fm.IsDeleted != true,
                 include: fm => fm.
                 Include(fm => fm.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
-                    ThenInclude(fm => fm.User),
+                    ThenInclude(fm => fm.User).
+                Include(fm => fm.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
                 asNoTracking: true
                 );
@@ -87,11 +92,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: fm => fm.IsDeleted != true && fm.Farmer.User.UserId == userId,
                 include: fm => fm.
                 Include(fm => fm.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
                     ThenInclude(fm => fm.User).
-                Include(fm => fm.FarmingCommitmentsDetails),
+                Include(fm => fm.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
                 asNoTracking: true
                 );
@@ -133,7 +141,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
                     ThenInclude(fm => fm.User).
-                Include(p => p.FarmingCommitmentsDetails),
+                Include(p => p.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 asNoTracking: true
             );
 
@@ -181,9 +191,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     c.Status == FarmingCommitmentStatus.Active.ToString() &&
                     !c.IsDeleted,
                 include: c => c
-                .Include(c => c.Plan)
+                .Include(c => c.Plan).
+                    ThenInclude(fm => fm.CreatedByNavigation)
                 .Include(c => c.Farmer)
-                    .ThenInclude(f => f.User),
+                    .ThenInclude(f => f.User)
+                .Include(c => c.FarmingCommitmentsDetails).
+                    ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
                 asNoTracking: true
             );
 
@@ -235,7 +249,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Tự động map planId và farmerId từ Registration
                 newCommitment.PlanId = selectedRegistration.PlanId;
                 newCommitment.FarmerId = selectedRegistration.FarmerId;
-
+                                
                 // Tạo Commitment Detail
                 foreach (var detail in newCommitment.FarmingCommitmentsDetails)
                 {
@@ -262,9 +276,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     detail.CommitmentDetailCode = $"FCD-{DateHelper.NowVietnamTime().Year}-{(count):D4}";
                     count++;
                     detail.PlanDetailId = selectedPlanDetailId;
-                    newCommitment.TotalPrice += detail.ConfirmedPrice;
-                    await _unitOfWork.FarmingCommitmentsDetailRepository.CreateAsync(detail);
+
+                    var confirmedPriceAfterTax = detail.ConfirmedPrice;
+
+                    // Lấy giá trị thuế được set mềm ở bảng systemConfiguration
+                    var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                        predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
+                        asNoTracking: true
+                        );
+                    if(taxCode != null)
+                    {
+                        if (detail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                            detail.TaxPrice = detail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                        else detail.TaxPrice = 0;
+
+                        confirmedPriceAfterTax += detail.TaxPrice;
+                    }
+
+                    newCommitment.TotalPrice += confirmedPriceAfterTax;
+                    newCommitment.TotalAdvancePayment += detail.AdvancePayment;
+                    newCommitment.TotalTaxPrice += detail.TaxPrice;
                 }
+
+                // Cập nhật lại status của các chi tiết đơn đăng ký không được chọn
+                // Lấy các chi tiết vẫn đang là pending vì mặc định các chi tiết đã được chọn sẽ có status là "Approved"
+                var unselectedRegistrationDetails = await _unitOfWork.CultivationRegistrationsDetailRepository.GetAllAsync(
+                    predicate: r => r.Status == CultivationRegistrationStatus.Pending.ToString() &&
+                                    r.RegistrationId == selectedRegistration.RegistrationId &&
+                                    !registrationDetailIds.Contains(r.CultivationRegistrationDetailId),
+                    asNoTracking: false
+                    );
+                foreach (var detail in unselectedRegistrationDetails)
+                {
+                    // Cập nhật status của chi tiết đăng ký không được chọn
+                    detail.Status = CultivationRegistrationStatus.Rejected.ToString();
+                    await _unitOfWork.CultivationRegistrationsDetailRepository.UpdateAsync(detail);
+                }
+
+                // Cập nhật lại status của đơn đăng ký
+                var updateSelectedRegistration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
+                    predicate: r => r.RegistrationId == selectedRegistration.RegistrationId,
+                    asNoTracking: false
+                );
+                if (updateSelectedRegistration == null)
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Không tìm thấy phiếu đăng ký để cập nhật trạng thái."
+                    );
+                updateSelectedRegistration.Status = CultivationRegistrationStatus.Approved.ToString();
+                await _unitOfWork.CultivationRegistrationRepository.UpdateAsync(updateSelectedRegistration);
 
                 // Save data to database
                 await _unitOfWork.FarmingCommitmentRepository.CreateAsync(newCommitment);
@@ -282,7 +342,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                                 ThenInclude(f => f.User).
                             Include(p => p.Plan).
                                 ThenInclude(c => c.CreatedByNavigation).
-                            Include(p => p.FarmingCommitmentsDetails),
+                            Include(p => p.FarmingCommitmentsDetails).
+                                ThenInclude(fm => fm.PlanDetail).
+                                    ThenInclude(fm => fm.CoffeeType),
                             asNoTracking: true
                         );
                     if (commitment == null)
