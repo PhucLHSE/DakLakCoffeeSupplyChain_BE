@@ -57,9 +57,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CropSeasonDetailId = dto.CropSeasonDetailId,
                 StageId = dto.StageId,
                 StageDescription = dto.StageDescription ?? string.Empty,
-                ProgressDate = dto.ProgressDate.HasValue
-                    ? DateOnly.FromDateTime(dto.ProgressDate.Value)
-                    : null,
+                ProgressDate = dto.ProgressDate, 
                 PhotoUrl = dto.PhotoUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
                 Note = dto.Note ?? string.Empty,

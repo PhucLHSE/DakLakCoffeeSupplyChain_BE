@@ -2,12 +2,14 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
-using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -15,11 +17,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICropSeasonDetailService _cropSeasonDetailService;
+        private readonly ICropSeasonService _cropSeasonService;
 
-        public CropProgressService(IUnitOfWork unitOfWork, ICropSeasonDetailService cropSeasonDetailService)
+        public CropProgressService(
+            IUnitOfWork unitOfWork, 
+            ICropSeasonDetailService cropSeasonDetailService, 
+            ICropSeasonService cropSeasonService)
         {
             _unitOfWork = unitOfWork;
             _cropSeasonDetailService = cropSeasonDetailService;
+            _cropSeasonService = cropSeasonService;
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -52,8 +59,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }
 
-
-
         public async Task<IServiceResult> Create(CropProgressCreateDto dto, Guid userId)
         {
             try
@@ -70,14 +75,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (detail.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền ghi nhận tiến độ cho vùng trồng này.");
 
-                if (dto.ProgressDate.Value.Date > DateHelper.NowVietnamTime().Date)
+                if (!dto.ProgressDate.HasValue)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Vui lòng chọn ngày ghi nhận.");
+
+                if (dto.ProgressDate.Value > DateOnly.FromDateTime(DateHelper.NowVietnamTime()))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được lớn hơn hôm nay.");
 
                 var duplicate = await _unitOfWork.CropProgressRepository.GetAllAsync(p =>
                     !p.IsDeleted &&
                     p.CropSeasonDetailId == dto.CropSeasonDetailId &&
                     p.StageId == dto.StageId &&
-                    p.ProgressDate == DateOnly.FromDateTime(dto.ProgressDate.Value)
+                    p.ProgressDate == dto.ProgressDate.Value
                 );
                 if (duplicate.Any())
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tiến trình đã tồn tại với ngày và giai đoạn này.");
@@ -89,14 +97,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var entity = dto.MapToCropProgressCreateDto();
                 entity.UpdatedBy = farmer.FarmerId;
 
+                // Nếu là thu hoạch thì yêu cầu ActualYield > 0 và ghi vào detail
                 if (stage.StageCode == "harvesting")
                 {
                     if (!dto.ActualYield.HasValue || dto.ActualYield.Value <= 0)
                         return new ServiceResult(Const.FAIL_CREATE_CODE, "Vui lòng nhập sản lượng thực tế hợp lệ (> 0).");
 
-                    detail.ActualYield = dto.ActualYield.Value;
-                    detail.UpdatedAt = DateHelper.NowVietnamTime();
-                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                    if (detail != null)
+                    {
+                        detail.ActualYield = dto.ActualYield.Value;
+                        detail.UpdatedAt = DateHelper.NowVietnamTime();
+                        await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                    }
                 }
 
                 await _unitOfWork.CropProgressRepository.CreateAsync(entity);
@@ -104,12 +116,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    await _cropSeasonDetailService.UpdateStatusAsync(
-                        dto.CropSeasonDetailId,
-                        CropDetailStatus.InProgress,
-                        userId,
-                        false
-                    );
+                    // THÊM LOGIC NÀY: Auto update status của CropSeasonDetail
+                    await UpdateCropSeasonDetailStatusAsync(dto.CropSeasonDetailId);
 
                     var created = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(entity.ProgressId);
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG,
@@ -124,7 +132,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-
         public async Task<IServiceResult> Update(CropProgressUpdateDto dto, Guid userId)
         {
             try
@@ -137,7 +144,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (detail == null)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chi tiết mùa vụ không tồn tại.");
 
-                // ❗ Kiểm tra quyền
                 if (detail.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật tiến độ này.");
 
@@ -145,7 +151,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (stage == null)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Giai đoạn không tồn tại.");
 
-                // ✅ Cho phép cập nhật ActualYield nếu là HARVESTING
+                // Cho phép cập nhật ActualYield nếu là harvesting
                 if (stage.StageCode == "harvesting" && dto.ActualYield.HasValue && dto.ActualYield.Value > 0)
                 {
                     detail.ActualYield = dto.ActualYield.Value;
@@ -167,7 +173,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                          !p.IsDeleted
                 );
                 if (duplicates.Any())
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Đã có tiến trình khác cùng ngày và giai đoạn.");
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Đã có tiến trình khác cùng ngày và giai đoạn.");
 
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
@@ -192,7 +198,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-
         public async Task<IServiceResult> DeleteById(Guid progressId, Guid userId)
         {
             try
@@ -203,6 +208,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (progress.CropSeasonDetail?.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá tiến trình này.");
+
+                if (progress.Stage?.StageCode == "harvesting")
+                {
+                    progress.CropSeasonDetail!.ActualYield = null;
+                    progress.CropSeasonDetail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(progress.CropSeasonDetail);
+                }
 
                 await _unitOfWork.CropProgressRepository.RemoveAsync(progress);
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -228,6 +240,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (progress.CropSeasonDetail?.CropSeason?.Farmer?.UserId != userId)
                     return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá tiến trình này.");
 
+                if (progress.Stage?.StageCode == "harvesting")
+                {
+                    progress.CropSeasonDetail!.ActualYield = null;
+                    progress.CropSeasonDetail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(progress.CropSeasonDetail);
+                }
+
                 progress.IsDeleted = true;
                 progress.UpdatedAt = DateHelper.NowVietnamTime();
 
@@ -243,8 +262,59 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
+
+        private async Task UpdateCropSeasonDetailStatusAsync(Guid cropSeasonDetailId)
+        {
+            try
+            {
+                var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
+                    predicate: d => d.DetailId == cropSeasonDetailId && !d.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (detail == null) return;
+
+                // Kiểm tra status hiện tại
+                if (!Enum.TryParse<CropDetailStatus>(detail.Status, out var currentStatus))
+                {
+                    currentStatus = CropDetailStatus.Planned;
+                }
+
+                // Nếu đang Planned và tạo progress đầu tiên -> chuyển sang InProgress
+                if (currentStatus == CropDetailStatus.Planned)
+                {
+                    detail.Status = CropDetailStatus.InProgress.ToString();
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                // Nếu đang InProgress và tạo progress thu hoạch -> chuyển sang Completed
+                else if (currentStatus == CropDetailStatus.InProgress)
+                {
+                    // Kiểm tra xem có progress thu hoạch không
+                    var harvestProgress = await _unitOfWork.CropProgressRepository.GetAllAsync(
+                        predicate: p => p.CropSeasonDetailId == cropSeasonDetailId && 
+                                       !p.IsDeleted && 
+                                       p.Stage.StageCode == "harvesting",
+                        include: q => q.Include(p => p.Stage),
+                        asNoTracking: true
+                    );
+
+                    if (harvestProgress.Any() && detail.ActualYield.HasValue && detail.ActualYield.Value > 0)
+                    {
+                        detail.Status = CropDetailStatus.Completed.ToString();
+                        detail.UpdatedAt = DateHelper.NowVietnamTime();
+                        await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không throw để không ảnh hưởng đến việc tạo progress
+                Console.WriteLine($"Error updating CropSeasonDetail status: {ex.Message}");
+            }
+        }
     }
-
-
-
 }
+

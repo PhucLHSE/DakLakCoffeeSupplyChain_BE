@@ -1,118 +1,93 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropStageDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
-using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
     public class CropStageService : ICropStageService
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _uow;
 
-        public CropStageService(IUnitOfWork unitOfWork)
+        public CropStageService(IUnitOfWork uow)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _uow = uow ?? throw new ArgumentNullException(nameof(uow));
+        }
+
+        private static string Normalize(string s)
+        {
+            var v = (s ?? string.Empty).Trim().ToLowerInvariant();
+            return Regex.Replace(v, "[^a-z0-9-]", "");
         }
 
         public async Task<IServiceResult> GetAll()
         {
             try
             {
-                var entities = await _unitOfWork.CropStageRepository.GetAllOrderedAsync();
-
-                if (entities == null || !entities.Any())
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không có giai đoạn nào trong hệ thống.",
-                        new List<CropStageViewAllDto>()
-                    );
-                }
+                var entities = await _uow.CropStageRepository.GetAllAsync(
+                    predicate: s => !s.IsDeleted,
+                    orderBy: q => q.OrderBy(s => s.OrderIndex ?? int.MaxValue).ThenBy(s => s.StageId),
+                    asNoTracking: true
+                );
 
                 var dtos = entities.Select(x => x.ToViewDto()).ToList();
+                if (!dtos.Any())
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có giai đoạn nào trong hệ thống.", dtos);
 
-                return new ServiceResult(
-                    Const.SUCCESS_READ_CODE,
-                    Const.SUCCESS_READ_MSG,
-                    dtos
-                );
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos);
             }
             catch (Exception ex)
             {
                 return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi khi lấy danh sách giai đoạn: " + ex.Message);
             }
         }
+
         public async Task<IServiceResult> GetById(int id)
         {
-            var entity = await _unitOfWork.CropStageRepository.GetByIdAsync(id);
-
+            var entity = await _uow.CropStageRepository.GetByIdAsync(id);
             if (entity == null)
-            {
-                return new ServiceResult(
-                    Const.FAIL_READ_CODE,
-                    "Giai đoạn không tồn tại.",
-                    null
-                );
-            }
-
-            var dto = entity.MapToViewDto();
-
-            return new ServiceResult(
-                Const.SUCCESS_READ_CODE,
-                Const.SUCCESS_READ_MSG,
-                dto
-            );
+                return new ServiceResult(Const.FAIL_READ_CODE, "Giai đoạn không tồn tại.");
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, entity.MapToViewDto());
         }
 
         public async Task<IServiceResult> Create(CropStageCreateDto dto)
         {
             try
             {
-                // Kiểm tra trùng StageCode
-                var duplicateCode = await _unitOfWork.CropStageRepository
-                    .GetAllAsync(x => x.StageCode == dto.StageCode && x.IsDeleted == false);
+                if (string.IsNullOrWhiteSpace(dto.StageCode) || string.IsNullOrWhiteSpace(dto.StageName))
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "StageCode/StageName là bắt buộc.");
 
-                if (duplicateCode.Any())
-                {
+                dto.StageCode = Normalize(dto.StageCode);
+                dto.StageName = dto.StageName.Trim();
+
+                if (dto.OrderIndex is <= 0)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "OrderIndex phải > 0.");
+
+                if (await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.StageCode == dto.StageCode))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Mã giai đoạn đã tồn tại.");
-                }
-
-                // Kiểm tra trùng StageName
-                var duplicateName = await _unitOfWork.CropStageRepository
-                    .GetAllAsync(x => x.StageName == dto.StageName && x.IsDeleted == false);
-
-                if (duplicateName.Any())
-                {
+                if (await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.StageName == dto.StageName))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tên giai đoạn đã tồn tại.");
-                }
+                if (dto.OrderIndex.HasValue &&
+                    await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.OrderIndex == dto.OrderIndex))
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, $"Thứ tự {dto.OrderIndex} đã tồn tại.");
 
-                // Kiểm tra trùng OrderIndex
-                if (dto.OrderIndex.HasValue)
-                {
-                    var duplicateOrder = await _unitOfWork.CropStageRepository
-                        .GetAllAsync(x => x.OrderIndex == dto.OrderIndex && x.IsDeleted == false);
+                var entity = dto.MapToNewCropStage();
+                entity.StageCode = dto.StageCode;
+                entity.StageName = dto.StageName;
+                entity.CreatedAt = DateHelper.NowVietnamTime();
+                entity.UpdatedAt = entity.CreatedAt;
 
-                    if (duplicateOrder.Any())
-                    {
-                        return new ServiceResult(Const.FAIL_CREATE_CODE, $"Thứ tự giai đoạn {dto.OrderIndex} đã tồn tại.");
-                    }
-                }
+                await _uow.CropStageRepository.CreateAsync(entity);
+                var saved = await _uow.SaveChangesAsync();
+                if (saved <= 0) return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
 
-                var newStage = dto.MapToNewCropStage();
-                await _unitOfWork.CropStageRepository.CreateAsync(newStage);
-
-                var result = await _unitOfWork.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, newStage);
-                }
-
-                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+                var created = await _uow.CropStageRepository.GetByIdAsync(entity.StageId, true);
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, created!.MapToViewDto());
             }
             catch (Exception ex)
             {
@@ -124,40 +99,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
-
+                var stage = await _uow.CropStageRepository.GetByIdAsync(dto.StageId);
                 if (stage == null || stage.IsDeleted)
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy giai đoạn cần cập nhật.");
 
-                var duplicateCode = await _unitOfWork.CropStageRepository
-                    .GetAllAsync(x => x.StageCode == dto.StageCode && x.StageId != dto.StageId && x.IsDeleted == false);
+                if (string.IsNullOrWhiteSpace(dto.StageCode) || string.IsNullOrWhiteSpace(dto.StageName))
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "StageCode/StageName là bắt buộc.");
 
-                if (duplicateCode.Any())
+                dto.StageCode = Normalize(dto.StageCode);
+                dto.StageName = dto.StageName.Trim();
+
+                if (dto.OrderIndex is <= 0)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "OrderIndex phải > 0.");
+
+                if (await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.StageCode == dto.StageCode && x.StageId != dto.StageId))
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Mã giai đoạn đã tồn tại.");
-
-                var duplicateName = await _unitOfWork.CropStageRepository
-                    .GetAllAsync(x => x.StageName == dto.StageName && x.StageId != dto.StageId && x.IsDeleted == false);
-
-                if (duplicateName.Any())
+                if (await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.StageName == dto.StageName && x.StageId != dto.StageId))
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tên giai đoạn đã tồn tại.");
-
-                if (dto.OrderIndex.HasValue)
-                {
-                    var duplicateOrder = await _unitOfWork.CropStageRepository
-                        .GetAllAsync(x => x.OrderIndex == dto.OrderIndex && x.StageId != dto.StageId && x.IsDeleted == false);
-
-                    if (duplicateOrder.Any())
-                        return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Thứ tự giai đoạn {dto.OrderIndex} đã tồn tại.");
-                }
+                if (dto.OrderIndex.HasValue &&
+                    await _uow.CropStageRepository.AnyAsync(x => !x.IsDeleted && x.OrderIndex == dto.OrderIndex && x.StageId != dto.StageId))
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Thứ tự {dto.OrderIndex} đã tồn tại.");
 
                 dto.MapToUpdateCropStage(stage);
-                await _unitOfWork.CropStageRepository.UpdateAsync(stage);
+                stage.StageCode = dto.StageCode;
+                stage.StageName = dto.StageName;
+                stage.UpdatedAt = DateHelper.NowVietnamTime();
 
-                var result = await _unitOfWork.SaveChangesAsync();
-                if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, stage);
+                await _uow.CropStageRepository.UpdateAsync(stage);
+                var saved = await _uow.SaveChangesAsync();
+                if (saved <= 0) return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
 
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+                var updated = await _uow.CropStageRepository.GetByIdAsync(stage.StageId);
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, updated!.MapToViewDto());
             }
             catch (Exception ex)
             {
@@ -169,92 +142,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // Tìm giai đoạn theo ID
-                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
+                var stage = await _uow.CropStageRepository.GetByIdAsync(stageId);
+                if (stage == null) return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
-                // Không tìm thấy
-                if (stage == null)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        Const.WARNING_NO_DATA_MSG
-                    );
-                }
+                // block hard delete if in use by any progress
+                var inUse = await _uow.CropProgressRepository.AnyAsync(p => p.StageId == stageId && !p.IsDeleted);
+                if (inUse)
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Giai đoạn đang được sử dụng. Vui lòng xoá mềm.");
 
-                // Xóa giai đoạn
-                await _unitOfWork.CropStageRepository.RemoveAsync(stage);
+                await _uow.CropStageRepository.RemoveAsync(stage);
+                var saved = await _uow.SaveChangesAsync();
 
-                // Lưu thay đổi
-                var result = await _unitOfWork.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return new ServiceResult(
-                        Const.SUCCESS_DELETE_CODE,
-                        Const.SUCCESS_DELETE_MSG
-                    );
-                }
-
-                return new ServiceResult(
-                    Const.FAIL_DELETE_CODE,
-                    Const.FAIL_DELETE_MSG
-                );
+                return saved > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
             }
             catch (Exception ex)
             {
-                return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    $"Lỗi khi xóa giai đoạn: {ex.Message}"
-                );
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi xóa giai đoạn: {ex.Message}");
             }
         }
+
         public async Task<IServiceResult> SoftDeleteById(int stageId)
         {
             try
             {
-                // Tìm giai đoạn theo ID
-                var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(stageId);
-
-                // Không tìm thấy hoặc đã xóa mềm
+                var stage = await _uow.CropStageRepository.GetByIdAsync(stageId);
                 if (stage == null || stage.IsDeleted)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        Const.WARNING_NO_DATA_MSG
-                    );
-                }
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
-                // Gán trạng thái xoá mềm
                 stage.IsDeleted = true;
                 stage.UpdatedAt = DateHelper.NowVietnamTime();
+                await _uow.CropStageRepository.UpdateAsync(stage);
 
-                await _unitOfWork.CropStageRepository.UpdateAsync(stage);
-
-                // Lưu thay đổi
-                var result = await _unitOfWork.SaveChangesAsync();
-
-                if (result > 0)
-                {
-                    return new ServiceResult(
-                        Const.SUCCESS_DELETE_CODE,
-                        Const.SUCCESS_DELETE_MSG
-                    );
-                }
-
-                return new ServiceResult(
-                    Const.FAIL_DELETE_CODE,
-                    Const.FAIL_DELETE_MSG
-                );
+                var saved = await _uow.SaveChangesAsync();
+                return saved > 0
+                    ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
+                    : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
             }
             catch (Exception ex)
             {
-                return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    $"Lỗi khi xóa mềm giai đoạn: {ex.Message}"
-                );
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi xóa mềm giai đoạn: {ex.Message}");
             }
         }
-
-
     }
 }

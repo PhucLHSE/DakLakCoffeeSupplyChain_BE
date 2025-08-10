@@ -53,7 +53,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(cs => cs.CropSeasonDetails)
                         .ThenInclude(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
                     .Include(cs => cs.Commitment)
-                        .Include(cs => cs.Commitment).ThenInclude(c => c.Registration), 
+                    .Include(cs => cs.Commitment).ThenInclude(c => c.Registration),
                 asNoTracking: true
             );
 
@@ -61,16 +61,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền truy cập mùa vụ này.");
-            var registration = cropSeason.Commitment?.Registration;
+                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập mùa vụ này.");
 
+            var registration = cropSeason.Commitment?.Registration;
             var dto = cropSeason.MapToCropSeasonViewDetailsDto(registration);
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
 
         public async Task<IServiceResult> Create(CropSeasonCreateDto dto, Guid userId)
         {
-            // 1. Lấy cam kết
             var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
                 predicate: c => c.CommitmentId == dto.CommitmentId && !c.IsDeleted,
                 asNoTracking: true
@@ -78,46 +77,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (commitment == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy cam kết canh tác.");
 
-            // 2. Lấy nông hộ
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 f => f.FarmerId == commitment.FarmerId && !f.IsDeleted
             );
             if (farmer == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy nông hộ tương ứng.");
 
-            // 3. Kiểm tra quyền sở hữu
             if (farmer.UserId != userId)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết không thuộc về bạn.");
 
-            // 4. Kiểm tra trạng thái cam kết
             if (!string.Equals(commitment.Status, FarmingCommitmentStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase))
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
 
-            // 5. Kiểm tra mùa vụ trùng thời gian
             var existingSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
                 x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted,
                 include: q => q.Include(cs => cs.CropSeasonDetails),
                 asNoTracking: true
             );
 
-            bool overlaps = existingSeasons.Any(cs =>
-                (dto.StartDate < cs.EndDate) && (dto.EndDate > cs.StartDate));
-            if (overlaps)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Thời gian mùa vụ trùng với một mùa vụ khác trong cùng cam kết.");
-
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // 6. Tạo mã mùa vụ và ID
+            bool overlaps = existingSeasons.Any(cs =>
+                (dto.StartDate < cs.EndDate) && (dto.EndDate > cs.StartDate) && 
+                (dto.StartDate != cs.EndDate) && (dto.EndDate != cs.StartDate));
+            if (overlaps)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Thời gian mùa vụ trùng với một mùa vụ khác trong cùng cam kết.");
+
             string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
-            Guid cropSeasonId = Guid.NewGuid(); 
+            Guid cropSeasonId = Guid.NewGuid();
 
-            // 7. Map entity mùa vụ (sửa mapper để nhận cropSeasonId)
             var registration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
-            predicate: r => r.RegistrationId == commitment.RegistrationId && !r.IsDeleted,
-            asNoTracking: true
-);
-
+                predicate: r => r.RegistrationId == commitment.RegistrationId && !r.IsDeleted,
+                asNoTracking: true
+            );
             if (registration == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy đơn đăng ký canh tác.");
 
@@ -127,41 +120,36 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             await _unitOfWork.CropSeasonRepository.CreateAsync(cropSeason);
 
-            // 8. Lấy CommitmentDetail liên quan
             var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
                 predicate: cd => cd.CommitmentId == commitment.CommitmentId && !cd.IsDeleted,
                 include: q => q.Include(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType),
                 asNoTracking: true
             );
-
             if (!commitmentDetails.Any())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không có chi tiết cam kết để tạo vùng trồng.");
-
-            // 9. Tạo vùng trồng – cho phép dùng lại CommitmentDetail
 
             foreach (var detail in commitmentDetails)
             {
                 var seasonDetail = new CropSeasonDetail
                 {
-                    DetailId = Guid.NewGuid(), // ✅ Mỗi detail sinh Guid riêng
-                    CropSeasonId = cropSeason.CropSeasonId, // hoặc cropSeasonId cũng được
+                    DetailId = Guid.NewGuid(),
+                    CropSeasonId = cropSeason.CropSeasonId,
                     CommitmentDetailId = detail.CommitmentDetailId,
                     ExpectedHarvestStart = detail.EstimatedDeliveryStart ?? dto.StartDate,
                     ExpectedHarvestEnd = detail.EstimatedDeliveryEnd ?? dto.EndDate,
-                    AreaAllocated = 0,            
+                    AreaAllocated = 0,
                     EstimatedYield = 0,
                     PlannedQuality = null,
                     QualityGrade = null,
                     Status = CropDetailStatus.Planned.ToString(),
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = DateHelper.NowVietnamTime(),
+                    UpdatedAt = DateHelper.NowVietnamTime(),
                     IsDeleted = false
                 };
 
                 await _unitOfWork.CropSeasonDetailRepository.CreateAsync(seasonDetail);
             }
 
-            // 10. Lưu DB
             var result = await _unitOfWork.SaveChangesAsync();
             if (result > 0)
             {
@@ -176,39 +164,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
         }
 
-
         public async Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false)
         {
-            // 1. Lấy vụ mùa hiện tại
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdForUpdateAsync(dto.CropSeasonId);
             if (cropSeason == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.WARNING_NO_DATA_MSG);
 
-            // 2. Kiểm tra quyền truy cập
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật mùa vụ này.");
 
-            // ✅ 3. Lấy commitmentId từ DB thay vì dto
-            var commitmentId = cropSeason.CommitmentId;
-
-            // ✅ 4. Kiểm tra cam kết tồn tại
             var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
-                c => c.CommitmentId == commitmentId && !c.IsDeleted,
+                c => c.CommitmentId == cropSeason.CommitmentId && !c.IsDeleted,
                 asNoTracking: true
             );
             if (commitment == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cam kết canh tác không hợp lệ hoặc không tồn tại.");
 
-            // 5. Kiểm tra trạng thái cam kết
             if (!string.Equals(commitment.Status, FarmingCommitmentStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase))
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
 
-            // 6. Kiểm tra trùng thời gian
             var overlapping = await _unitOfWork.CropSeasonRepository.GetAllAsync(
-                x => x.CommitmentId == commitmentId
-                    && x.CropSeasonId != dto.CropSeasonId // loại trừ vụ mùa hiện tại
+                x => x.CommitmentId == cropSeason.CommitmentId
+                    && x.CropSeasonId != dto.CropSeasonId
                     && !x.IsDeleted
-                    && dto.StartDate < x.EndDate && dto.EndDate > x.StartDate,
+                    && dto.StartDate < x.EndDate && dto.EndDate > x.StartDate
+                    && dto.StartDate != x.EndDate && dto.EndDate != x.StartDate,
                 asNoTracking: true
             );
             if (overlapping.Any())
@@ -217,21 +197,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
-            // 7. Map lại các trường mới
             dto.MapToExistingEntity(cropSeason);
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
 
-            // 8. Gỡ tracking
+            // tránh vòng lặp tracking sâu
             foreach (var detail in cropSeason.CropSeasonDetails)
             {
                 if (detail?.CommitmentDetail?.PlanDetail?.CoffeeType != null)
                 {
-                    var typeStr = detail.CommitmentDetail.PlanDetail.CoffeeType.ToString();
                     detail.CommitmentDetail.PlanDetail.CoffeeType = null;
                 }
             }
 
-            // 9. Cập nhật
             await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
             var result = await _unitOfWork.SaveChangesAsync();
 
@@ -239,8 +216,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG)
                 : new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
         }
-
-
 
         public async Task<IServiceResult> DeleteById(Guid cropSeasonId, Guid userId, bool isAdmin)
         {
@@ -254,7 +229,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (cropSeason.Status != CropSeasonStatus.Cancelled.ToString())
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ có thể xoá mùa vụ đã huỷ.");
 
-            // ✅ Xoá toàn bộ CropSeasonDetail liên quan (hard delete)
             if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
             {
                 foreach (var detail in cropSeason.CropSeasonDetails)
@@ -271,30 +245,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mùa vụ thất bại.");
         }
 
-
+        // ====== ĐÃ SỬA GỌN, TRÁNH LỖI TRACKING/SEVERED RELATIONSHIP ======
         public async Task<IServiceResult> SoftDeleteAsync(Guid cropSeasonId, Guid userId, bool isAdmin)
         {
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetWithDetailsByIdAsync(cropSeasonId);
-            if (cropSeason == null || cropSeason.IsDeleted)
+            // Chỉ load Farmer và danh sách Details (không ThenInclude sâu)
+            var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
+                predicate: cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted,
+                include: q => q
+                    .Include(cs => cs.Farmer)
+                    .Include(cs => cs.CropSeasonDetails),
+                asNoTracking: false // cần tracking để set cờ IsDeleted
+            );
+
+            if (cropSeason == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá mùa vụ này.");
 
-            // ✅ Đánh dấu IsDeleted cho vùng trồng
+            var now = DateHelper.NowVietnamTime();
+
+            // Đánh dấu IsDeleted cho từng vùng trồng (KHÔNG đụng tới CommitmentDetail để tránh attach trùng)
             if (cropSeason.CropSeasonDetails != null && cropSeason.CropSeasonDetails.Any())
             {
-                foreach (var detail in cropSeason.CropSeasonDetails)
+                foreach (var d in cropSeason.CropSeasonDetails)
                 {
-                    detail.IsDeleted = true;
-                    detail.UpdatedAt = DateHelper.NowVietnamTime();
-                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
+                    d.IsDeleted = true;
+                    d.UpdatedAt = now;
+                    await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(d);
                 }
             }
 
-            // ✅ Đánh dấu IsDeleted cho mùa vụ
+            // Đánh dấu IsDeleted cho mùa vụ
             cropSeason.IsDeleted = true;
-            cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
+            cropSeason.UpdatedAt = now;
             await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
 
             var result = await _unitOfWork.SaveChangesAsync();
@@ -303,6 +287,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ và toàn bộ vùng trồng thành công.")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
         }
+        // ================================================================
 
         public async Task AutoUpdateCropSeasonStatusAsync(Guid cropSeasonId)
         {
@@ -312,16 +297,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var allDetails = cropSeason.CropSeasonDetails?.Where(d => !d.IsDeleted).ToList();
             if (allDetails == null || !allDetails.Any()) return;
 
-            bool allCompleted = allDetails.All(d => d.Status == CropDetailStatus.Completed.ToString());
-            bool anyInProgress = allDetails.Any(d => d.Status == CropDetailStatus.InProgress.ToString());
+            // Đếm số lượng details theo từng status
+            var completedCount = allDetails.Count(d => d.Status == CropDetailStatus.Completed.ToString());
+            var inProgressCount = allDetails.Count(d => d.Status == CropDetailStatus.InProgress.ToString());
+            var cancelledCount = allDetails.Count(d => d.Status == CropDetailStatus.Cancelled.ToString());
+            var plannedCount = allDetails.Count(d => d.Status == CropDetailStatus.Planned.ToString());
+            
+            var totalDetails = allDetails.Count;
 
-            var currentStatus = Enum.Parse<CropSeasonStatus>(cropSeason.Status);
+            // Parse current status
+            CropSeasonStatus currentStatus;
+            if (!Enum.TryParse<CropSeasonStatus>(cropSeason.Status, out currentStatus))
+            {
+                currentStatus = CropSeasonStatus.Active;
+            }
 
             CropSeasonStatus? newStatus = null;
-            if (allCompleted && currentStatus != CropSeasonStatus.Completed)
+
+            // Logic chuyển đổi status:
+            // 1. Nếu tất cả details đã Completed -> Completed
+            if (completedCount == totalDetails && currentStatus != CropSeasonStatus.Completed)
+            {
                 newStatus = CropSeasonStatus.Completed;
-            else if (anyInProgress && currentStatus != CropSeasonStatus.Active)
+            }
+            // 2. Nếu tất cả details bị Cancelled -> Cancelled  
+            else if (cancelledCount == totalDetails && currentStatus != CropSeasonStatus.Cancelled)
+            {
+                newStatus = CropSeasonStatus.Cancelled;
+            }
+            // 3. Nếu có ít nhất 1 detail đang InProgress -> Active
+            else if (inProgressCount > 0 && currentStatus != CropSeasonStatus.Active)
+            {
                 newStatus = CropSeasonStatus.Active;
+            }
+            // 4. Nếu tất cả details vẫn Planned -> Active (hoặc Paused tùy business logic)
+            else if (plannedCount == totalDetails && currentStatus != CropSeasonStatus.Active)
+            {
+                newStatus = CropSeasonStatus.Active;
+            }
+            // 5. Nếu có mix status (Completed + Cancelled, InProgress + Cancelled, etc.) -> Active
+            else if ((completedCount > 0 && cancelledCount > 0) || 
+                     (inProgressCount > 0 && cancelledCount > 0) ||
+                     (plannedCount > 0 && cancelledCount > 0))
+            {
+                if (currentStatus != CropSeasonStatus.Active)
+                {
+                    newStatus = CropSeasonStatus.Active;
+                }
+            }
 
             if (newStatus != null)
             {
@@ -331,6 +354,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.SaveChangesAsync();
             }
         }
-
     }
 }

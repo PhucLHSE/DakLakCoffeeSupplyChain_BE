@@ -19,6 +19,6 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums
         Completed = 2,
 
         [Display(Name = "Đã hủy")]
-        Cancelled =3 
+        Cancelled = 3 
     }
 }
