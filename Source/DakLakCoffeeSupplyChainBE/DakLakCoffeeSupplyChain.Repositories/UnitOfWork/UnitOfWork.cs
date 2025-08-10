@@ -428,6 +428,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return shipmentDetailRepository ??= new ShipmentDetailRepository(context);
             }
         }
+
         public IWalletRepository WalletRepository
         {
             get
@@ -435,6 +436,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return walletRepository ??= new WalletRepository(context);
             }
         }
+
         public IMediaFileRepository MediaFileRepository
         {
             get

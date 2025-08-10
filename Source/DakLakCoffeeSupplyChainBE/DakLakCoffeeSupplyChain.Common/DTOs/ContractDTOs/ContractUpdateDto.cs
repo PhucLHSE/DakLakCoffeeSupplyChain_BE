@@ -56,9 +56,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public List<ContractItemUpdateDto> ContractItems { get; set; } = new();
 
+        // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (StartDate.HasValue && EndDate.HasValue && StartDate > EndDate)
+            if (StartDate.HasValue && 
+                EndDate.HasValue && 
+                StartDate > EndDate)
             {
                 yield return new ValidationResult(
                     "Ngày bắt đầu không được sau ngày kết thúc.",
@@ -66,7 +69,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 );
             }
 
-            if (TotalQuantity.HasValue && TotalQuantity < 0)
+            if (TotalQuantity.HasValue && 
+                TotalQuantity < 0)
             {
                 yield return new ValidationResult(
                     "Tổng khối lượng không được âm.",
@@ -74,7 +78,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 );
             }
 
-            if (TotalValue.HasValue && TotalValue < 0)
+            if (TotalValue.HasValue && 
+                TotalValue < 0)
             {
                 yield return new ValidationResult(
                     "Tổng giá trị không được âm.",
@@ -87,6 +92,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 foreach (var item in ContractItems)
                 {
                     var itemResults = item.Validate(validationContext);
+
                     foreach (var result in itemResults)
                     {
                         yield return result;
