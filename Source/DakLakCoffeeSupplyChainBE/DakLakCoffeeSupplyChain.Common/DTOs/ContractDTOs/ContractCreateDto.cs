@@ -53,6 +53,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public List<ContractItemCreateDto> ContractItems { get; set; } = new();
 
+        // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (StartDate.HasValue && 
