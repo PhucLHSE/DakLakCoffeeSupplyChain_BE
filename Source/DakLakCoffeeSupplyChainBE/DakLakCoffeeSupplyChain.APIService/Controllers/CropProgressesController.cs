@@ -136,34 +136,16 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPut("{progressId}")]
-        [Consumes("application/json", "multipart/form-data")]
-        public async Task<IActionResult> Update(
-            Guid progressId, 
-            [FromBody] CropProgressUpdateDto? dto = null,
-            [FromForm] CropProgressUpdateWithMediaRequest? mediaRequest = null)
+        [Consumes("application/json")]
+        public async Task<IActionResult> Update(Guid progressId, [FromBody] CropProgressUpdateDto dto)
         {
             try
             {
-                // Validate input - either dto or mediaRequest must be provided
-                if (dto == null && mediaRequest == null)
+                if (dto == null)
                     return BadRequest("Phải cung cấp dữ liệu cập nhật.");
 
-                // If mediaRequest is provided, convert it to dto
-                if (mediaRequest != null)
-                {
-                    dto = new CropProgressUpdateDto
-                    {
-                        ProgressId = progressId,
-                        CropSeasonDetailId = mediaRequest.CropSeasonDetailId,
-                        StageId = mediaRequest.StageId,
-                        ProgressDate = mediaRequest.ProgressDate,
-                        ActualYield = mediaRequest.ActualYield,
-                        Note = mediaRequest.Notes
-                    };
-                }
-
                 // Validate progressId
-                if (progressId != dto!.ProgressId)
+                if (progressId != dto.ProgressId)
                     return BadRequest("ProgressId trong route không khớp với nội dung.");
 
                 if (!ModelState.IsValid)
@@ -179,38 +161,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 if (result.Status != Const.SUCCESS_UPDATE_CODE)
                     return BadRequest(new { message = result.Message });
 
-                // Handle media upload if mediaRequest is provided
-                string? photoUrl = null, videoUrl = null;
-                if (mediaRequest?.MediaFiles?.Any() == true)
-                {
-                    var mediaList = await _mediaService.UploadAndSaveMediaAsync(
-                        mediaRequest.MediaFiles,
-                        relatedEntity: "CropProgress",
-                        relatedId: progressId,
-                        uploadedBy: userId.ToString()
-                    );
-
-                    photoUrl = mediaList.FirstOrDefault(m => m.MediaType == "image")?.MediaUrl;
-                    videoUrl = mediaList.FirstOrDefault(m => m.MediaType == "video")?.MediaUrl;
-
-                    await _cropProgressService.UpdateMediaUrlsAsync(progressId, photoUrl, videoUrl);
-                }
-
-                // Return response based on whether media was uploaded
-                if (mediaRequest?.MediaFiles?.Any() == true)
-                {
-                    return Ok(new
-                    {
-                        message = result.Message,
-                        progress = result.Data,
-                        photoUrl,
-                        videoUrl
-                    });
-                }
-                else
-                {
-                    return Ok(result.Data);
-                }
+                return Ok(result.Data);
             }
             catch (Exception ex)
             {
