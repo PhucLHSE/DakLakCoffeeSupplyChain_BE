@@ -32,14 +32,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StageId = entity.StageId,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 StageCode = entity.Stage?.StageCode ?? string.Empty,
-                StageDescription = entity.Stage?.Description ?? string.Empty, // Sửa: lấy từ Stage.Description (không phải StageDescription)
+                StageDescription = entity.Stage?.Description ?? string.Empty, // Lấy từ Stage.Description
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
                 PhotoUrl = entity.PhotoUrl ?? string.Empty,
                 VideoUrl = entity.VideoUrl ?? string.Empty,
                 UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? string.Empty,
                 UpdatedBy = entity.UpdatedBy,
-                StepIndex = entity.Stage?.OrderIndex ?? entity.StageId, // Sửa: tự động lấy từ Stage.OrderIndex
+                StepIndex = entity.StepIndex ?? entity.Stage?.OrderIndex ?? entity.StageId, // Ưu tiên StepIndex, sau đó OrderIndex, cuối cùng StageId
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
                 ActualYield = entity.CropSeasonDetail?.ActualYield
