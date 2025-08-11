@@ -55,9 +55,6 @@ public class ExpertAdviceService : IExpertAdviceService
         if (expert == null)
             return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chuyên gia không tồn tại.");
 
-        if (expert.UserId != userId)
-            return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi phản hồi với tư cách chuyên gia này.");
-
         // 2. Kiểm tra báo cáo tồn tại
         var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(
             predicate: r => r.ReportId == dto.ReportId && !r.IsDeleted,
