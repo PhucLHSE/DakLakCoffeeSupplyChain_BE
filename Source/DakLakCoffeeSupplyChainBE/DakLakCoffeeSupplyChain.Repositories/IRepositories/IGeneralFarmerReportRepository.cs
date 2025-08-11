@@ -13,5 +13,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<string?> GetMaxReportCodeForYearAsync(int year);
         void Update(GeneralFarmerReport entity);
 
+        Task<GeneralFarmerReport?> GetByIdAsync(
+            Func<GeneralFarmerReport, bool>? predicate = null,
+            Func<IQueryable<GeneralFarmerReport>, IQueryable<GeneralFarmerReport>>? include = null,
+            bool asNoTracking = false);
     }
 }

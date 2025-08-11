@@ -8,7 +8,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
     public class GeneralFarmerReportRepository : GenericRepository<GeneralFarmerReport>, IGeneralFarmerReportRepository
     {
-        public GeneralFarmerReportRepository(DakLakCoffee_SCMContext context) : base(context) { }
+        private readonly DakLakCoffee_SCMContext _context;
+
+        public GeneralFarmerReportRepository(DakLakCoffee_SCMContext context) : base(context) 
+        {
+            _context = context;
+        }
 
         public async Task<List<GeneralFarmerReport>> GetAllWithIncludesAsync()
         {
@@ -36,12 +41,14 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(r => !r.IsDeleted && r.ReportedAt.Year == year)
                 .CountAsync();
         }
+
         public async Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId)
         {
             return await _context.GeneralFarmerReports
                 .IgnoreQueryFilters() // nếu dùng Global Filter
                 .FirstOrDefaultAsync(r => r.ReportId == reportId);
         }
+
         public async Task<string?> GetMaxReportCodeForYearAsync(int year)
         {
             return await _context.GeneralFarmerReports
@@ -50,10 +57,31 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Select(r => r.ReportCode)
                 .FirstOrDefaultAsync();
         }
+
         public void Update(GeneralFarmerReport entity)
         {
             _context.GeneralFarmerReports.Update(entity);
         }
 
+        public async Task<GeneralFarmerReport?> GetByIdAsync(
+            Func<GeneralFarmerReport, bool>? predicate = null,
+            Func<IQueryable<GeneralFarmerReport>, IQueryable<GeneralFarmerReport>>? include = null,
+            bool asNoTracking = false)
+        {
+            var query = _context.GeneralFarmerReports.AsQueryable();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (include != null)
+                query = include(query);
+
+            var result = await query.ToListAsync();
+
+            if (predicate != null)
+                result = result.Where(predicate).ToList();
+
+            return result.FirstOrDefault();
+        }
     }
 }
