@@ -17,14 +17,21 @@
         {
             private readonly IUnitOfWork _unitOfWork;
             private readonly ICodeGenerator _codeGenerator;
+            private readonly INotificationService _notificationService;
 
-            public GeneralFarmerReportService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
+            public GeneralFarmerReportService(
+                IUnitOfWork unitOfWork, 
+                ICodeGenerator codeGenerator,
+                INotificationService notificationService)
             {
                 _unitOfWork = unitOfWork
                     ?? throw new ArgumentNullException(nameof(unitOfWork));
 
                 _codeGenerator = codeGenerator
                     ?? throw new ArgumentNullException(nameof(codeGenerator));
+                
+                _notificationService = notificationService
+                    ?? throw new ArgumentNullException(nameof(notificationService));
             }
 
             public async Task<IServiceResult> GetAll()
@@ -118,6 +125,13 @@
 
                     if (result > 0)
                     {
+                        // ✅ Gửi thông báo cho các chuyên gia
+                        await _notificationService.NotifyFarmerReportCreatedAsync(
+                            newReport.ReportId, 
+                            userId, 
+                            newReport.Title
+                        );
+
                         var responseDto = newReport.MapToGeneralFarmerReportViewDetailsDto();
                         return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, responseDto);
                     }

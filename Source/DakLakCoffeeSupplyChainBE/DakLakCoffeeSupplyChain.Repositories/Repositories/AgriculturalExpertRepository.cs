@@ -8,22 +8,44 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
     public class AgriculturalExpertRepository : GenericRepository<AgriculturalExpert>, IAgriculturalExpertRepository
     {
-        public AgriculturalExpertRepository() { }
+        private readonly DakLakCoffee_SCMContext _context;
 
-        public AgriculturalExpertRepository(DakLakCoffee_SCMContext context)
-            => _context = context;
-
-        public async Task<int> CountVerifiedExpertsAsync()
+        public AgriculturalExpertRepository(DakLakCoffee_SCMContext context) : base(context)
         {
-            return await _context.AgriculturalExperts
-                .AsNoTracking()
-                .CountAsync(e => e.IsVerified == true && !e.IsDeleted);
+            _context = context;
         }
+
         public async Task<AgriculturalExpert?> GetByUserIdAsync(Guid userId)
         {
             return await _context.AgriculturalExperts
                 .Include(e => e.User)
                 .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
         }
+
+        public async Task<List<AgriculturalExpert>> GetAllAsync(
+            Func<AgriculturalExpert, bool>? predicate = null,
+            Func<IQueryable<AgriculturalExpert>, IQueryable<AgriculturalExpert>>? include = null,
+            Func<IQueryable<AgriculturalExpert>, IOrderedQueryable<AgriculturalExpert>>? orderBy = null,
+            bool asNoTracking = false)
+        {
+            var query = _context.AgriculturalExperts.AsQueryable();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (include != null)
+                query = include(query);
+
+            if (orderBy != null)
+                query = orderBy(query);
+
+            var result = await query.ToListAsync();
+
+            if (predicate != null)
+                result = result.Where(predicate).ToList();
+
+            return result;
+        }
+
     }
 }

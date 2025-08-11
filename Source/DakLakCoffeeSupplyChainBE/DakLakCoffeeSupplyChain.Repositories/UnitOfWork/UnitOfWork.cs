@@ -451,5 +451,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingBatchEvaluationRepository ??= new ProcessingBatchEvaluationRepository(context);
             }
         }
+
+        // ✅ Thêm method Dispose để implement IDisposable
+        public void Dispose()
+        {
+            context?.Dispose();
+        }
     }
 }

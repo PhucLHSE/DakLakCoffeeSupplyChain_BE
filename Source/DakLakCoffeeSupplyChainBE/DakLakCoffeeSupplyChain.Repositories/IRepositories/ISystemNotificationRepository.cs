@@ -11,5 +11,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface ISystemNotificationRepository : IGenericRepository<SystemNotification>
     {
         IQueryable<SystemNotification> GetQuery();
+        
+        Task CreateAsync(SystemNotification entity);
     }
 }
