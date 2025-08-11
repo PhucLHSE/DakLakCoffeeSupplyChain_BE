@@ -15,7 +15,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public string? StageDescription { get; set; }
 
         [Required(ErrorMessage = "Ngày ghi nhận là bắt buộc.")]
-        public DateTime? ProgressDate { get; set; }
+        public DateOnly? ProgressDate { get; set; }
 
 
         [Range(0.01, double.MaxValue, ErrorMessage = "Sản lượng thực tế phải lớn hơn 0.")]

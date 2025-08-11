@@ -9,7 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
 {
     public class OrderItemCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "OrderId là bắt buộc.")]
+        //[Required(ErrorMessage = "OrderId là bắt buộc.")]
         public Guid OrderId { get; set; }
 
         [Required(ErrorMessage = "ContractDeliveryItemId là bắt buộc.")]
@@ -29,6 +29,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
         [MaxLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự.")]
         public string? Note { get; set; }
 
+        // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (Quantity is null || 

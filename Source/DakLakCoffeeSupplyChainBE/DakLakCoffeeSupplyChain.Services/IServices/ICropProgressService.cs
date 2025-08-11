@@ -12,5 +12,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Update(CropProgressUpdateDto dto, Guid userId);
         Task<IServiceResult> DeleteById(Guid progressId, Guid userId);
         Task<IServiceResult> SoftDeleteById(Guid progressId, Guid userId);
+        Task UpdateMediaUrlsAsync(Guid progressId, string? photoUrl, string? videoUrl);
     }
 }

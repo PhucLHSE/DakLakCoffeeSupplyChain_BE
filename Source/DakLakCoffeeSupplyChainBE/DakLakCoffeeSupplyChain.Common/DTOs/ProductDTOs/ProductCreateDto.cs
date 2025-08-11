@@ -72,6 +72,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
         [JsonIgnore]
         public DateTime? ApprovedAt { get; set; }
 
+        // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (!string.IsNullOrEmpty(CertificationUrl) && 

@@ -8,6 +8,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     {
         Task<CropStage?> GetByCodeAsync(string code);
         Task<List<CropStage>> GetAllOrderedAsync();
-        Task<CropStage?> GetByIdAsync(int stageId);
+        Task<CropStage?> GetByIdAsync(int stageId, bool asNoTracking);
     }
 }

@@ -20,7 +20,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public string StageDescription { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Ngày thực hiện là bắt buộc.")]
-        public DateOnly ProgressDate { get; set; }
+        public DateOnly? ProgressDate { get; set; }
 
         [MaxLength(1000, ErrorMessage = "Link hình ảnh không được vượt quá 1000 ký tự.")]
         public string? PhotoUrl { get; set; }
