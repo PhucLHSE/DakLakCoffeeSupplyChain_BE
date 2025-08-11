@@ -17,9 +17,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
         [MaxLength(2000)]
         public string Description { get; set; }
 
-        [Range(0, 2)]
+        [Required(ErrorMessage = "Mức độ nghiêm trọng là bắt buộc.")]
+        [Range(0, 2, ErrorMessage = "Mức độ nghiêm trọng phải từ 0 đến 2.")]
         public int SeverityLevel { get; set; }
-
 
         [MaxLength(1000)]
         public string? ImageUrl { get; set; }

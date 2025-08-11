@@ -29,40 +29,54 @@
 
             public async Task<IServiceResult> GetAll()
             {
-                var reports = await _unitOfWork.GeneralFarmerReportRepository.GetAllWithIncludesAsync();
+                try
+                {
+                    var reports = await _unitOfWork.GeneralFarmerReportRepository.GetAllWithIncludesAsync();
 
-                if (reports == null || !reports.Any())
+                    if (reports == null || !reports.Any())
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Không có báo cáo nào."
+                        );
+
+                    var dtoList = reports.Select(r => r.MapToGeneralFarmerReportViewAllDto()).ToList();
+
                     return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không có báo cáo nào."
+                        Const.SUCCESS_READ_CODE,
+                        Const.SUCCESS_READ_MSG,
+                        dtoList
                     );
-
-                var dtoList = reports.Select(r => r.MapToGeneralFarmerReportViewAllDto()).ToList();
-
-                return new ServiceResult(
-                    Const.SUCCESS_READ_CODE,
-                    Const.SUCCESS_READ_MSG,
-                    dtoList
-                );
+                }
+                catch (Exception ex)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+                }
             }
 
             public async Task<IServiceResult> GetById(Guid reportId)
             {
-                var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdWithIncludesAsync(reportId);
+                try
+                {
+                    var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdWithIncludesAsync(reportId);
 
-                if (report == null)
+                    if (report == null)
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Không tìm thấy báo cáo."
+                         );
+
+                    var dto = report.MapToGeneralFarmerReportViewDetailsDto();
+
                     return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không tìm thấy báo cáo."
+                        Const.SUCCESS_READ_CODE,
+                        Const.SUCCESS_READ_MSG,
+                        dto
                      );
-
-                var dto = report.MapToGeneralFarmerReportViewDetailsDto();
-
-                return new ServiceResult(
-                    Const.SUCCESS_READ_CODE,
-                    Const.SUCCESS_READ_MSG,
-                    dto
-                 );
+                }
+                catch (Exception ex)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+                }
             }
 
             public async Task<IServiceResult> CreateGeneralFarmerReports(GeneralFarmerReportCreateDto dto, Guid userId)
@@ -135,8 +149,8 @@
                     // 2. Ánh xạ các trường cập nhật từ DTO → Entity
                     dto.MapToUpdatedReport(report);
 
-                    // 3. Cập nhật vào repository (không cần sửa interface)
-                    ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+                    // 3. Cập nhật vào repository
+                    _unitOfWork.GeneralFarmerReportRepository.Update(report);
 
                     // 4. Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -163,33 +177,47 @@
             }
             public async Task<IServiceResult> SoftDeleteGeneralFarmerReport(Guid reportId)
             {
-                var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
-                if (report == null || report.IsDeleted)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo cần xóa.");
+                try
+                {
+                    var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
+                    if (report == null || report.IsDeleted)
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo cần xóa.");
 
-                report.IsDeleted = true;
-                report.UpdatedAt = DateHelper.NowVietnamTime();
+                    report.IsDeleted = true;
+                    report.UpdatedAt = DateHelper.NowVietnamTime();
 
-                ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+                    _unitOfWork.GeneralFarmerReportRepository.Update(report);
 
-                var result = await _unitOfWork.SaveChangesAsync();
-                if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa mềm báo cáo thành công.");
+                    var result = await _unitOfWork.SaveChangesAsync();
+                    if (result > 0)
+                        return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa mềm báo cáo thành công.");
 
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+                }
+                catch (Exception ex)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+                }
             }
             public async Task<IServiceResult> HardDeleteGeneralFarmerReport(Guid reportId)
             {
-                var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
-                if (report == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo.");
+                try
+                {
+                    var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdEvenIfDeletedAsync(reportId);
+                    if (report == null)
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo.");
 
-                await _unitOfWork.GeneralFarmerReportRepository.RemoveAsync(report);
-                var result = await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.GeneralFarmerReportRepository.RemoveAsync(report);
+                    var result = await _unitOfWork.SaveChangesAsync();
 
-                if (result > 0)
-                    return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn báo cáo.");
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa vĩnh viễn thất bại.");
+                    if (result > 0)
+                        return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn báo cáo.");
+                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa vĩnh viễn thất bại.");
+                }
+                catch (Exception ex)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+                }
             }
         public async Task<IServiceResult> ResolveGeneralFarmerReportAsync(Guid reportId, Guid expertId)
         {
@@ -201,18 +229,20 @@
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Báo cáo đã được xử lý.");
 
             var expert = await _unitOfWork.UserAccountRepository.GetByIdAsync(expertId);
+            if (expert == null || expert.IsDeleted)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chuyên gia không tồn tại.");
+                
             if (expert.RoleId != 5)
             {
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Người xử lý không hợp lệ.");
             }
-
 
             // Cập nhật trạng thái xử lý
             report.IsResolved = true;
             report.ResolvedAt = DateHelper.NowVietnamTime();
             report.UpdatedAt = DateHelper.NowVietnamTime(); // cập nhật luôn thời điểm sửa đổi
 
-            ((GenericRepository<GeneralFarmerReport>)_unitOfWork.GeneralFarmerReportRepository).Update(report);
+            _unitOfWork.GeneralFarmerReportRepository.Update(report);
             var result = await _unitOfWork.SaveChangesAsync();
 
             if (result > 0)
