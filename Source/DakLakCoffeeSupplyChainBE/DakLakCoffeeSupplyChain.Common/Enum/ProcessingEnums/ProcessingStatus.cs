@@ -18,7 +18,10 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums
         [Display(Name = "Hoàn thành")]
         Completed = 2,
 
+        [Display(Name = "Chờ đánh giá")]
+        AwaitingEvaluation = 3,
+
         [Display(Name = "Đã hủy")]
-        Cancelled = 3
+        Cancelled = 4
     }
 }

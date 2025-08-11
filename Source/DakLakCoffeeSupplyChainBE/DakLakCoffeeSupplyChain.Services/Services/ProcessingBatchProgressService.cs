@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -113,9 +114,157 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (entity == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy tiến trình xử lý", null);
 
+            // Lấy toàn bộ media từ bảng MediaFile
+            var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
+                m => !m.IsDeleted &&
+                     m.RelatedEntity == "ProcessingProgress" &&
+                     m.RelatedId == progressId,
+                orderBy: q => q.OrderByDescending(m => m.UploadedAt)
+            );
+
+            var mediaDtos = mediaFiles.Select(m => new MediaFileResponse
+            {
+                MediaId = m.MediaId,
+                MediaUrl = m.MediaUrl,
+                MediaType = m.MediaType,
+                Caption = m.Caption,
+                UploadedAt = m.UploadedAt
+            }).ToList();
+
             var dto = entity.MapToProcessingBatchProgressDetailDto();
+            
+            // Chỉ lấy PhotoUrl và VideoUrl từ MediaFile, không dùng từ ProcessingBatchProgress
+            var photoFiles = mediaFiles.Where(m => m.MediaType == "image").ToList();
+            var videoFiles = mediaFiles.Where(m => m.MediaType == "video").ToList();
+            
+            // Ghi đè PhotoUrl và VideoUrl từ MediaFile
+            dto.PhotoUrl = photoFiles.Any() ? photoFiles.First().MediaUrl : null;
+            dto.VideoUrl = videoFiles.Any() ? videoFiles.First().MediaUrl : null;
+            
+            // Thêm media vào DTO
+            dto.MediaFiles = mediaDtos;
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Thành công", dto);
+        }
+
+        public async Task<IServiceResult> GetAllByBatchIdAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // 1. Kiểm tra batch tồn tại
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: b => b.BatchId == batchId && !b.IsDeleted,
+                    include: q => q
+                        .Include(b => b.CropSeason).ThenInclude(cs => cs.Commitment)
+                        .Include(b => b.Farmer),
+                    asNoTracking: true
+                );
+
+                if (batch == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
+                }
+
+                // 2. Kiểm tra quyền truy cập
+                if (!isAdmin)
+                {
+                    if (isManager)
+                    {
+                        var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                            m => m.UserId == userId && !m.IsDeleted,
+                            asNoTracking: true
+                        );
+
+                        if (manager == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin Business Manager.");
+                        }
+
+                        if (batch.CropSeason?.Commitment?.ApprovedBy != manager.ManagerId)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+                        }
+                    }
+                    else
+                    {
+                        var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                            f => f.UserId == userId && !f.IsDeleted,
+                            asNoTracking: true
+                        );
+
+                        if (farmer == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                        }
+
+                        if (batch.FarmerId != farmer.FarmerId)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+                        }
+                    }
+                }
+
+                // 3. Lấy tất cả progress của batch
+                var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    predicate: p => p.BatchId == batchId && !p.IsDeleted,
+                    include: q => q
+                        .Include(p => p.Stage)
+                        .Include(p => p.UpdatedByNavigation).ThenInclude(u => u.User)
+                        .Include(p => p.ProcessingParameters.Where(pp => !pp.IsDeleted)),
+                    orderBy: q => q.OrderBy(p => p.StepIndex),
+                    asNoTracking: true
+                );
+
+                // Debug: Kiểm tra parameters
+                foreach (var progress in progresses)
+                {
+                    Console.WriteLine($"Progress {progress.ProgressId}: {progress.ProcessingParameters?.Count ?? 0} parameters");
+                    if (progress.ProcessingParameters?.Any() == true)
+                    {
+                        foreach (var param in progress.ProcessingParameters)
+                        {
+                            Console.WriteLine($"  - {param.ParameterName}: {param.ParameterValue} {param.Unit}");
+                        }
+                    }
+                }
+
+                if (!progresses.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có tiến trình nào cho lô sơ chế này.", new List<ProcessingBatchProgressViewAllDto>());
+                }
+
+                // 4. Lấy media files cho từng progress
+                var dtoList = new List<ProcessingBatchProgressViewAllDto>();
+                
+                foreach (var progress in progresses)
+                {
+                    var dto = progress.MapToProcessingBatchProgressViewAllDto(batch);
+                    
+                    // Lấy media files từ MediaFile table
+                    var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
+                        m => !m.IsDeleted &&
+                             m.RelatedEntity == "ProcessingProgress" &&
+                             m.RelatedId == progress.ProgressId,
+                        orderBy: q => q.OrderByDescending(m => m.UploadedAt)
+                    );
+                    
+                    // Chỉ lấy PhotoUrl và VideoUrl từ MediaFile, không dùng từ ProcessingBatchProgress
+                    var photoFiles = mediaFiles.Where(m => m.MediaType == "image").ToList();
+                    var videoFiles = mediaFiles.Where(m => m.MediaType == "video").ToList();
+                    
+                    // Ghi đè PhotoUrl và VideoUrl từ MediaFile
+                    dto.PhotoUrl = photoFiles.Any() ? photoFiles.First().MediaUrl : null;
+                    dto.VideoUrl = videoFiles.Any() ? videoFiles.First().MediaUrl : null;
+                    
+                    dtoList.Add(dto);
+                }
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
         }
         public async Task<IServiceResult> CreateAsync(
             Guid batchId,
@@ -155,22 +304,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!stages.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có công đoạn nào cho phương pháp chế biến này.");
 
-                // 4. Tìm bước tiếp theo
-                var progresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                // 4. Kiểm tra xem đã có progress nào chưa
+                var existingProgresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                     p => p.BatchId == batchId && !p.IsDeleted,
-                    q => q.OrderByDescending(p => p.StepIndex))).ToList();
+                    q => q.OrderBy(p => p.StepIndex))).ToList();
 
+                // 5. Xác định bước tiếp theo
                 int nextStepIndex;
                 int nextStageId;
+                bool isLastStep = false;
 
-                if (!progresses.Any())
+                if (!existingProgresses.Any())
                 {
+                    // Bước đầu tiên
                     nextStageId = stages[0].StageId;
                     nextStepIndex = stages[0].OrderIndex;
+                    // Kiểm tra nếu chỉ có 1 stage thì đó là bước cuối
+                    isLastStep = (stages.Count == 1);
                 }
                 else
                 {
-                    var latestProgress = progresses.First();
+                    // Tìm bước tiếp theo
+                    var latestProgress = existingProgresses.Last();
                     var currentStageIndex = stages.FindIndex(s => s.StageId == latestProgress.StageId);
 
                     if (currentStageIndex == -1 || currentStageIndex >= stages.Count - 1)
@@ -179,15 +334,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var nextStage = stages[currentStageIndex + 1];
                     nextStageId = nextStage.StageId;
                     nextStepIndex = nextStage.OrderIndex;
+                    
+                    // Kiểm tra có phải bước cuối không - ĐẾM SỐ LƯỢNG STAGES
+                    isLastStep = (currentStageIndex + 1 == stages.Count - 1);
                 }
 
-                // 5. Lấy danh sách parameters cho Stage này
-                var parameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
+                // 6. Lấy danh sách parameters cho Stage này
+                var stageParameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
                     p => p.Progress.StageId == nextStageId && !p.IsDeleted,
                     include: q => q.Include(p => p.Progress)
                 );
 
-                // 6. Tạo tiến trình mới
+                // 7. Tạo tiến trình mới
                 var progress = new ProcessingBatchProgress
                 {
                     ProgressId = Guid.NewGuid(),
@@ -204,32 +362,118 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     UpdatedAt = DateTime.UtcNow,
                     UpdatedBy = batch.FarmerId,
                     IsDeleted = false,
-                    ProcessingParameters = parameters?.Select(p => new ProcessingParameter
+                    ProcessingParameters = new List<ProcessingParameter>()
+                };
+
+                // Lưu progress trước để có ProgressId
+                await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(progress);
+                await _unitOfWork.SaveChangesAsync();
+
+                // 8. Tạo parameters - luôn tạo (từ input hoặc mặc định)
+                Console.WriteLine($"DEBUG: Input parameters count: {input.Parameters?.Count ?? 0}");
+                Console.WriteLine($"DEBUG: Stage parameters count: {stageParameters?.Count ?? 0}");
+                
+                var parametersToCreate = new List<ProcessingParameter>();
+                
+                if (input.Parameters?.Any() == true)
+                {
+                    Console.WriteLine($"DEBUG: Creating {input.Parameters.Count} parameters from input for progress {progress.ProgressId}");
+                    
+                    // Tạo parameters từ input
+                    parametersToCreate = input.Parameters.Select(p => new ProcessingParameter
                     {
                         ParameterId = Guid.NewGuid(),
+                        ProgressId = progress.ProgressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt ?? DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    }).ToList();
+                }
+                else if (stageParameters?.Any() == true)
+                {
+                    Console.WriteLine($"DEBUG: Creating {stageParameters.Count} default parameters for progress {progress.ProgressId}");
+                    
+                    // Tạo parameters mặc định từ stage
+                    parametersToCreate = stageParameters.Select(p => new ProcessingParameter
+                    {
+                        ParameterId = Guid.NewGuid(),
+                        ProgressId = progress.ProgressId,
                         ParameterName = p.ParameterName,
                         Unit = p.Unit,
-                        ParameterValue = null,
+                        ParameterValue = null, // Giá trị mặc định là null
                         RecordedAt = null,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                         IsDeleted = false
-                    }).ToList()
-                };
-
-                await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(progress);
-
-                // 7. Nếu batch đang NotStarted thì chuyển sang InProgress
-                if (batch.Status == ProcessingStatus.NotStarted.ToString())
+                    }).ToList();
+                }
+                
+                // Luôn tạo parameters nếu có (từ input hoặc mặc định)
+                if (parametersToCreate.Any())
                 {
-                    batch.Status = ProcessingStatus.InProgress.ToString();
+                    Console.WriteLine($"DEBUG: Creating {parametersToCreate.Count} parameters total");
+                    
+                    foreach (var param in parametersToCreate)
+                    {
+                        Console.WriteLine($"DEBUG: Creating parameter: {param.ParameterName} = {param.ParameterValue} {param.Unit}");
+                        await _unitOfWork.ProcessingParameterRepository.CreateAsync(param);
+                    }
+                    
+                    // Lưu parameters ngay lập tức
+                    await _unitOfWork.SaveChangesAsync();
+                    Console.WriteLine($"DEBUG: Parameters saved successfully");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG: No parameters to create (no input and no stage parameters)");
+                }
+
+                // 8. Xử lý workflow theo bước
+                if (!existingProgresses.Any())
+                {
+                    // Bước đầu tiên: Chuyển từ NotStarted sang InProgress
+                    if (batch.Status == ProcessingStatus.NotStarted.ToString())
+                    {
+                        batch.Status = ProcessingStatus.InProgress.ToString();
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    }
+                }
+                else if (isLastStep)
+                {
+                    // Bước cuối cùng: Chuyển sang AwaitingEvaluation và tạo evaluation
+                    batch.Status = "AwaitingEvaluation";
                     batch.UpdatedAt = DateTime.UtcNow;
                     await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+
+                    // Tạo evaluation cho expert
+                    var evaluation = new ProcessingBatchEvaluation
+                    {
+                        EvaluationId = Guid.NewGuid(),
+                        BatchId = batchId,
+                        EvaluatedBy = null, // Sẽ được expert cập nhật khi đánh giá
+                        EvaluatedAt = null,
+                        EvaluationResult = null,
+                        Comments = $"Tự động tạo evaluation khi hoàn thành bước cuối cùng: {stages.Last().StageName}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
                 }
 
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Đã tạo bước tiến trình thành công.", progress.ProgressId);
+                var responseMessage = isLastStep 
+                    ? "Đã tạo bước cuối cùng và chuyển sang chờ đánh giá từ chuyên gia." 
+                    : "Đã tạo bước tiến trình thành công.";
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage, progress.ProgressId);
 
             }
             catch (Exception ex)
@@ -237,18 +481,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
-        public async Task UpdateMediaUrlsAsync(Guid progressId, string? photoUrl, string? videoUrl)
-        {
-            var progress = await _unitOfWork.ProcessingBatchProgressRepository.GetByIdAsync(progressId);
-            if (progress == null) return;
 
-            progress.PhotoUrl = photoUrl;
-            progress.VideoUrl = videoUrl;
-            progress.UpdatedAt = DateTime.UtcNow;
-
-            await _unitOfWork.ProcessingBatchProgressRepository.UpdateAsync(progress);
-            await _unitOfWork.SaveChangesAsync();
-        }
 
         public async Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto dto)
         {
@@ -295,17 +528,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 isModified = true;
             }
 
-            if (entity.PhotoUrl != dto.PhotoUrl)
-            {
-                entity.PhotoUrl = dto.PhotoUrl;
-                isModified = true;
-            }
-
-            if (entity.VideoUrl != dto.VideoUrl)
-            {
-                entity.VideoUrl = dto.VideoUrl;
-                isModified = true;
-            }
+            // Không cập nhật PhotoUrl và VideoUrl từ dto nữa
+            // Hệ thống sẽ tự động lấy từ MediaFile table
 
             var dtoDateOnly = DateOnly.FromDateTime(dto.ProgressDate);
             if (entity.ProgressDate != dtoDateOnly)
@@ -331,13 +555,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 var resultDto = entity.MapToProcessingBatchProgressDetailDto();
 
-                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "[Step 6] Cập nhật thành công.", dto);
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "[Step 6] Cập nhật thành công.", resultDto);
             }
             else
             {
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 6] Không có thay đổi nào được lưu.");
             }
         }
+
         public async Task<IServiceResult> SoftDeleteAsync(Guid progressId)
         {
             try
@@ -401,73 +626,128 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Starting advance for batchId: {batchId}, userId: {userId}");
+                
                 if (batchId == Guid.Empty)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "BatchId không hợp lệ.");
 
-                if (isAdmin || isManager)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Chỉ nông hộ mới được phép cập nhật tiến trình.");
+                // if (isAdmin || isManager)
+                //     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Chỉ nông hộ mới được phép cập nhật tiến trình.");
 
                 // Lấy Farmer từ userId
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Looking for farmer with userId: {userId}");
                 var farmer = (await _unitOfWork.FarmerRepository.GetAllAsync(f => f.UserId == userId && !f.IsDeleted)).FirstOrDefault();
                 if (farmer == null)
+                {
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Farmer not found for userId: {userId}");
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy nông hộ.");
+                }
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Found farmer: {farmer.FarmerId}");
 
                 // Lấy Batch
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Getting batch: {batchId}");
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
                 if (batch == null || batch.IsDeleted)
+                {
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Batch not found or deleted: {batchId}");
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+                }
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Found batch: {batch.BatchId}, status: {batch.Status}, farmerId: {batch.FarmerId}");
 
                 if (batch.FarmerId != farmer.FarmerId)
+                {
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Permission denied - batch farmer: {batch.FarmerId}, current farmer: {farmer.FarmerId}");
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không có quyền cập nhật batch này.");
+                }
 
                 // Lấy danh sách các stage theo method → dùng để mapping StepIndex → StageId
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Getting stages for methodId: {batch.MethodId}");
                 var stages = (await _unitOfWork.ProcessingStageRepository.GetAllAsync(
                     s => s.MethodId == batch.MethodId && !s.IsDeleted,
                     q => q.OrderBy(s => s.OrderIndex))).ToList();
 
                 if (stages.Count == 0)
+                {
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: No stages found for methodId: {batch.MethodId}");
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có công đoạn nào cho phương pháp này.");
+                }
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Found {stages.Count} stages");
 
                 // Lấy progress cuối cùng
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Getting latest progress for batchId: {batchId}");
                 var progresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                     p => p.BatchId == batchId && !p.IsDeleted,
                     q => q.OrderByDescending(p => p.StepIndex))).ToList();
 
                 ProcessingBatchProgress? latestProgress = progresses.FirstOrDefault();
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Found {progresses.Count} progresses, latest: {(latestProgress != null ? $"stepIndex: {latestProgress.StepIndex}, stageId: {latestProgress.StageId}" : "none")}");
 
                 int nextStepIndex;
                 ProcessingStage? nextStage;
 
+                bool isLastStep = false;
+
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Calculating next step...");
                 if (latestProgress == null)
                 {
                     // Chưa có bước nào → bắt đầu từ StepIndex 1 và Stage đầu tiên
                     nextStepIndex = 1;
                     nextStage = stages.FirstOrDefault();
+                    // Kiểm tra nếu chỉ có 1 stage thì đó là bước cuối
+                    isLastStep = (stages.Count == 1);
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: No previous progress, starting with stepIndex: {nextStepIndex}, stageId: {nextStage?.StageId}, isLastStep: {isLastStep}");
                 }
                 else
                 {
                     // Đã có bước → tìm stage hiện tại
                     int currentStageIdx = stages.FindIndex(s => s.StageId == latestProgress.StageId);
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage index: {currentStageIdx}, total stages: {stages.Count}");
+                    
                     if (currentStageIdx == -1)
+                    {
+                        Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage not found in stages list");
                         return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
+                    }
 
                     if (currentStageIdx >= stages.Count - 1)
                     {
-                        batch.Status = ProcessingStatus.Completed.ToString();
+                        Console.WriteLine($"DEBUG SERVICE ADVANCE: All stages completed, creating evaluation");
+                        // Đã hoàn thành tất cả stages - tạo evaluation và chuyển sang AwaitingEvaluation
+                        batch.Status = "AwaitingEvaluation";
                         batch.UpdatedAt = DateTime.UtcNow;
                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+
+                        // Tạo evaluation cho expert
+                        var evaluation = new ProcessingBatchEvaluation
+                        {
+                            EvaluationId = Guid.NewGuid(),
+                            BatchId = batchId,
+                            EvaluatedBy = null,
+                            EvaluatedAt = null,
+                            EvaluationResult = null,
+                            Comments = $"Tự động tạo evaluation khi hoàn thành bước cuối cùng: {stages.Last().StageName}",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            IsDeleted = false
+                        };
+
+                        await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
                         await _unitOfWork.SaveChangesAsync();
 
-                        return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Batch đã hoàn tất toàn bộ tiến trình.");
+                        return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã hoàn thành tất cả tiến trình và chuyển sang chờ đánh giá từ chuyên gia.");
                     }
 
                     nextStepIndex = latestProgress.StepIndex + 1;
                     nextStage = stages[currentStageIdx + 1];
+                    // Kiểm tra có phải bước cuối không - ĐẾM SỐ LƯỢNG STAGES
+                    isLastStep = (currentStageIdx + 1 == stages.Count - 1);
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Next stepIndex: {nextStepIndex}, nextStageId: {nextStage?.StageId}, isLastStep: {isLastStep}");
                 }
 
                 if (nextStage == null)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy công đoạn kế tiếp.");
 
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Creating new progress - stepIndex: {nextStepIndex}, stageId: {nextStage.StageId}");
                 var newProgress = new ProcessingBatchProgress
                 {
                     ProgressId = Guid.NewGuid(),
@@ -483,24 +763,149 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     UpdatedBy = farmer.FarmerId,
-                    IsDeleted = false
+                    IsDeleted = false,
+                    ProcessingParameters = new List<ProcessingParameter>()
                 };
 
+                // Lưu progress trước để có ProgressId
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Saving progress to database...");
                 await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(newProgress);
+                await _unitOfWork.SaveChangesAsync();
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Progress saved successfully with ID: {newProgress.ProgressId}");
 
-                // Chuyển trạng thái batch nếu đang là NotStarted
-                if (batch.Status == ProcessingStatus.NotStarted.ToString())
+                // Tạo parameters mặc định cho stage này (nếu có)
+                // Lấy parameters từ ProcessingParameter table dựa trên StageId
+                var stageParameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
+                    p => p.Progress.StageId == nextStage.StageId && !p.IsDeleted,
+                    include: q => q.Include(p => p.Progress)
+                );
+
+                // Tạo parameters - luôn tạo (từ input hoặc mặc định)
+                Console.WriteLine($"DEBUG ADVANCE: Input parameters count: {input.Parameters?.Count ?? 0}");
+                Console.WriteLine($"DEBUG ADVANCE: Stage parameters count: {stageParameters?.Count ?? 0}");
+                
+                var parametersToCreate = new List<ProcessingParameter>();
+                
+                if (input.Parameters?.Any() == true)
                 {
-                    batch.Status = ProcessingStatus.InProgress.ToString();
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    Console.WriteLine($"DEBUG ADVANCE: Creating {input.Parameters.Count} parameters from input for progress {newProgress.ProgressId}");
+                    
+                    // Tạo parameters từ input
+                    parametersToCreate = input.Parameters.Select(p => new ProcessingParameter
+                    {
+                        ParameterId = Guid.NewGuid(),
+                        ProgressId = newProgress.ProgressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt ?? DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    }).ToList();
+                }
+                else if (stageParameters?.Any() == true)
+                {
+                    Console.WriteLine($"DEBUG ADVANCE: Creating {stageParameters.Count} default parameters for progress {newProgress.ProgressId}");
+                    
+                    // Tạo parameters mặc định từ stage
+                    parametersToCreate = stageParameters.Select(p => new ProcessingParameter
+                    {
+                        ParameterId = Guid.NewGuid(),
+                        ProgressId = newProgress.ProgressId,
+                        ParameterName = p.ParameterName,
+                        Unit = p.Unit,
+                        ParameterValue = null, // Giá trị mặc định là null
+                        RecordedAt = null,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    }).ToList();
+                }
+                
+                // Luôn tạo parameters nếu có (từ input hoặc mặc định)
+                if (parametersToCreate.Any())
+                {
+                    Console.WriteLine($"DEBUG ADVANCE: Creating {parametersToCreate.Count} parameters total");
+                    
+                    foreach (var param in parametersToCreate)
+                    {
+                        Console.WriteLine($"DEBUG ADVANCE: Creating parameter: {param.ParameterName} = {param.ParameterValue} {param.Unit}");
+                        await _unitOfWork.ProcessingParameterRepository.CreateAsync(param);
+                    }
+                    
+                    // Lưu parameters ngay lập tức
+                    await _unitOfWork.SaveChangesAsync();
+                    Console.WriteLine($"DEBUG ADVANCE: Parameters saved successfully");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG ADVANCE: No parameters to create (no input and no stage parameters)");
                 }
 
-                var saveResult = await _unitOfWork.SaveChangesAsync();
+                // Xử lý workflow theo bước
+                bool hasChanges = false;
+                
+                if (latestProgress == null)
+                {
+                    // Bước đầu tiên: Chuyển từ NotStarted sang InProgress
+                    if (batch.Status == ProcessingStatus.NotStarted.ToString())
+                    {
+                        batch.Status = ProcessingStatus.InProgress.ToString();
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                        hasChanges = true;
+                    }
+                }
+                else if (isLastStep)
+                {
+                    // Bước cuối cùng: Chuyển sang AwaitingEvaluation và tạo evaluation
+                    batch.Status = "AwaitingEvaluation";
+                    batch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
 
-                return saveResult > 0
-                    ? new ServiceResult(Const.SUCCESS_CREATE_CODE, "Đã tạo bước tiến trình kế tiếp.")
-                    : new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước kế tiếp.");
+                    // Tạo evaluation cho expert
+                    var evaluation = new ProcessingBatchEvaluation
+                    {
+                        EvaluationId = Guid.NewGuid(),
+                        BatchId = batchId,
+                        EvaluatedBy = null,
+                        EvaluatedAt = null,
+                        EvaluationResult = null,
+                        Comments = $"Tự động tạo evaluation khi hoàn thành bước cuối cùng: {stages.Last().StageName}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
+                    hasChanges = true;
+                }
+
+                var responseMessage = isLastStep 
+                    ? "Đã tạo bước cuối cùng và chuyển sang chờ đánh giá từ chuyên gia." 
+                    : "Đã tạo bước tiến trình kế tiếp.";
+
+                Console.WriteLine($"DEBUG ADVANCE: Response message: {responseMessage}");
+                Console.WriteLine($"DEBUG ADVANCE: Is last step: {isLastStep}");
+                Console.WriteLine($"DEBUG ADVANCE: Has changes: {hasChanges}");
+
+                // Chỉ save changes nếu có thay đổi
+                if (hasChanges)
+                {
+                    Console.WriteLine($"DEBUG ADVANCE: Final save changes...");
+                    var saveResult = await _unitOfWork.SaveChangesAsync();
+                    Console.WriteLine($"DEBUG ADVANCE: Save result: {saveResult}");
+                    
+                    return saveResult > 0
+                        ? new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage)
+                        : new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước kế tiếp.");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG ADVANCE: No additional changes to save");
+                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage);
+                }
             }
             catch (Exception ex)
             {

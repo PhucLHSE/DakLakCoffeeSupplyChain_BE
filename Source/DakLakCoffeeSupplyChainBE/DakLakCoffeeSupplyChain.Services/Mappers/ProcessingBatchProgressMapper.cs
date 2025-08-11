@@ -30,11 +30,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProgressDate = entity.ProgressDate,
                 OutputQuantity = entity.OutputQuantity,
                 OutputUnit = entity.OutputUnit,
-                PhotoUrl = entity.PhotoUrl,
-                VideoUrl = entity.VideoUrl,
+                PhotoUrl = null, // Sẽ được cập nhật từ MediaFile
+                VideoUrl = null, // Sẽ được cập nhật từ MediaFile
                 UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? "N/A",
                 CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt
+                UpdatedAt = entity.UpdatedAt,
+                Parameters = entity.ProcessingParameters?
+                    .Where(p => !p.IsDeleted)
+                    .Select(p => new ProcessingParameterViewAllDto
+                    {
+                        ParameterId = p.ParameterId,
+                        ProgressId = p.ProgressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt
+                    }).ToList() ?? new List<ProcessingParameterViewAllDto>()
             };
         }
 
@@ -52,8 +63,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProgressDate = entity.ProgressDate,
                 OutputQuantity = entity.OutputQuantity,
                 OutputUnit = entity.OutputUnit,
-                PhotoUrl = entity.PhotoUrl,
-                VideoUrl = entity.VideoUrl,
+                PhotoUrl = null, // Sẽ được cập nhật từ MediaFile
+                VideoUrl = null, // Sẽ được cập nhật từ MediaFile
                 UpdatedByName = entity.UpdatedByNavigation?.User?.Name,
                 UpdatedAt = entity.UpdatedAt,
                 Parameters = entity.ProcessingParameters?

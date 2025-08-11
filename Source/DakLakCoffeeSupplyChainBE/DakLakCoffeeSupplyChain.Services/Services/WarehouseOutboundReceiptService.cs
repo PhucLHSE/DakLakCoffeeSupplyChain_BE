@@ -8,6 +8,8 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -54,58 +56,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu xuất kho thành công", receipt.ToDetailDto());
         }
 
-        //public async Task<IServiceResult> CreateAsync(Guid staffUserId, WarehouseOutboundReceiptCreateDto dto)
-        //{
-        //    var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
-        //    if (staff == null)
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy nhân viên.");
 
-        //    var request = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(dto.OutboundRequestId);
-        //    if (request == null)
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu xuất kho không tồn tại.");
-
-        //    var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(request.WarehouseId);
-        //    if (warehouse == null || warehouse.ManagerId != staff.SupervisorId)
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền tạo phiếu xuất cho kho này.");
-
-        //    if (request.Status != WarehouseOutboundRequestStatus.Accepted.ToString())
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu chưa được tiếp nhận hoặc đã xử lý.");
-
-        //    var existing = await _unitOfWork.WarehouseOutboundReceipts.GetByOutboundRequestIdAsync(dto.OutboundRequestId);
-        //    if (existing != null)
-        //        return new ServiceResult(Const.FAIL_CREATE_CODE, "Yêu cầu này đã có phiếu xuất.");
-
-        //    var inventory = await _unitOfWork.Inventories.FindByIdAsync(request.InventoryId);
-        //    if (inventory == null)
-        //        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tồn kho không tồn tại.");
-
-        //    if (dto.ExportedQuantity != request.RequestedQuantity)
-        //    {
-        //        return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-        //            $"Số lượng xuất ({dto.ExportedQuantity}kg) không khớp với yêu cầu ({request.RequestedQuantity}kg).");
-        //    }
-
-        //    if (dto.ExportedQuantity > inventory.Quantity)
-        //    {
-        //        return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-        //            $"Tồn kho không đủ. Còn {inventory.Quantity}kg, yêu cầu xuất {dto.ExportedQuantity}kg.");
-        //    }
-
-        //    // ✅ Dùng mapper để tạo entity
-        //    var outboundReceiptId = Guid.NewGuid();
-        //    var receiptCode = "WOR-" + outboundReceiptId.ToString("N")[..8];
-        //    var receipt = dto.MapFromCreateDto(
-        //        outboundReceiptId: outboundReceiptId,
-        //        receiptCode: receiptCode,
-        //        staffId: staff.StaffId,
-        //        batchId: inventory.BatchId
-        //    );
-
-        //    await _unitOfWork.WarehouseOutboundReceipts.CreateAsync(receipt);
-        //    await _unitOfWork.SaveChangesAsync();
-
-        //    return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo phiếu xuất kho thành công", receipt.OutboundReceiptId);
-        //}
         public async Task<IServiceResult> CreateAsync(Guid staffUserId, WarehouseOutboundReceiptCreateDto dto)
         {
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
@@ -116,11 +67,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu xuất kho không tồn tại.");
 
-            // ✅ Kiểm tra kho được chọn từ FE có khớp với yêu cầu không
             if (dto.WarehouseId != request.WarehouseId)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Kho được chọn không khớp với yêu cầu xuất kho.");
-
-            // ✅ Kiểm tra tồn kho được chọn từ FE có khớp với yêu cầu không
             if (dto.InventoryId != request.InventoryId)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Tồn kho được chọn không khớp với yêu cầu xuất kho.");
 
@@ -131,42 +79,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request.Status != WarehouseOutboundRequestStatus.Accepted.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu chưa được tiếp nhận hoặc đã xử lý.");
 
-            var existing = await _unitOfWork.WarehouseOutboundReceipts.GetByOutboundRequestIdAsync(dto.OutboundRequestId);
-            if (existing != null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Yêu cầu này đã có phiếu xuất.");
-
             var inventory = await _unitOfWork.Inventories.FindByIdAsync(dto.InventoryId);
             if (inventory == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Tồn kho không tồn tại.");
 
-            if (dto.ExportedQuantity != request.RequestedQuantity)
-            {
+            if (dto.ExportedQuantity <= 0)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Số lượng xuất phải lớn hơn 0.");
+
+            // CHỐT: chỉ trừ phần đã CONFIRMED
+            var existingReceipts = await _unitOfWork.WarehouseOutboundReceipts
+                .GetAllAsync(r => r.OutboundRequestId == dto.OutboundRequestId && !r.IsDeleted);
+
+            double confirmedSoFar = existingReceipts
+                .SelectMany(r => ParseConfirmedFromNote(r.Note))
+                .Sum();
+
+            double remainingOfRequest = request.RequestedQuantity - confirmedSoFar;
+            if (dto.ExportedQuantity > remainingOfRequest)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Số lượng xuất ({dto.ExportedQuantity}kg) không khớp với yêu cầu ({request.RequestedQuantity}kg).");
-            }
+                    $"Số lượng vượt quá phần còn lại của yêu cầu: {remainingOfRequest:n0}kg.");
 
             if (dto.ExportedQuantity > inventory.Quantity)
-            {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Tồn kho không đủ. Còn {inventory.Quantity}kg, yêu cầu xuất {dto.ExportedQuantity}kg.");
-            }
+                    $"Tồn kho không đủ. Còn {inventory.Quantity:n0} {inventory.Unit}.");
 
-            // ✅ Tạo mã phiếu và mapping entity
             var outboundReceiptId = Guid.NewGuid();
             var receiptCode = "WOR-" + outboundReceiptId.ToString("N")[..8];
-            var receipt = dto.MapFromCreateDto(
-                outboundReceiptId: outboundReceiptId,
-                receiptCode: receiptCode,
-                staffId: staff.StaffId,
-                batchId: inventory.BatchId
-            );
+            var receipt = dto.MapFromCreateDto(outboundReceiptId, receiptCode, staff.StaffId, inventory.BatchId);
 
             await _unitOfWork.WarehouseOutboundReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo phiếu xuất kho thành công", receipt.OutboundReceiptId);
         }
-
 
 
         public async Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseOutboundReceiptConfirmDto dto)
@@ -193,7 +138,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(receipt.ExportedBy);
             if (staff == null || staff.SupervisorId != warehouse.ManagerId)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xác nhận phiếu này.");
-            // ✅ Kiểm tra OrderItem nếu có
+
+            if (dto.ConfirmedQuantity <= 0)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Số lượng xác nhận phải lớn hơn 0.");
+
+            // Đã confirmed bao nhiêu trên chính receipt này?
+            var confirmedOnThisReceipt = ParseConfirmedFromNote(receipt.Note).Sum();
+            var remainingOnThisReceipt = receipt.Quantity - confirmedOnThisReceipt;
+            if (dto.ConfirmedQuantity > remainingOnThisReceipt)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Xác nhận vượt quá phần còn lại của phiếu ({remainingOnThisReceipt:n0}kg).");
+
+            // Tổng confirmed của toàn request trước khi xác nhận lần này
+            var allReceipts = await _unitOfWork.WarehouseOutboundReceipts
+                .GetAllAsync(r => r.OutboundRequestId == request.OutboundRequestId && !r.IsDeleted);
+
+            double totalConfirmedSoFar = allReceipts
+                .SelectMany(r => ParseConfirmedFromNote(r.Note))
+                .Sum();
+
+            double totalAfterThis = totalConfirmedSoFar + dto.ConfirmedQuantity;
+            if (totalAfterThis > request.RequestedQuantity)
+                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
+                    $"Tổng xác nhận sẽ vượt yêu cầu ({request.RequestedQuantity:n0}kg).");
+
+            // Nếu request gắn OrderItem → ràng buộc theo OrderItem
             if (request.OrderItemId.HasValue)
             {
                 var orderItemId = request.OrderItemId.Value;
@@ -201,50 +170,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (orderItem == null)
                     return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy dòng đơn hàng tương ứng.");
 
-                var relatedReceipts = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItemId);
-                var totalConfirmed = relatedReceipts
-        .Where(r => !string.IsNullOrWhiteSpace(r.Note) && r.Note.StartsWith("Xác nhận"))
-        .Sum(r => r.Quantity);
-                var afterThis = totalConfirmed + dto.ConfirmedQuantity;
+                var receiptsByOrderItem = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItemId);
+                var totalConfirmedOrderItem = receiptsByOrderItem
+                    .SelectMany(r => ParseConfirmedFromNote(r.Note))
+                    .Sum();
 
-                if (afterThis > orderItem.Quantity)
-                {
+                var afterThisOrderItem = totalConfirmedOrderItem + dto.ConfirmedQuantity;
+                var allowedQuantity = orderItem.Quantity ?? 0.0;
+                if (afterThisOrderItem > allowedQuantity)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                        $"Tổng lượng xuất sau khi xác nhận ({afterThis:n0}kg) vượt quá số lượng đơn hàng ({orderItem.Quantity:n0}kg).");
-                }
-            }
-            if (dto.ConfirmedQuantity > request.RequestedQuantity)
-            {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá yêu cầu ({request.RequestedQuantity}kg).");
-            }
-
-            if (dto.ConfirmedQuantity > receipt.Quantity)
-            {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Xác nhận vượt quá số lượng ghi nhận ({receipt.Quantity}kg).");
+                        $"Tổng lượng xác nhận cho dòng đơn sẽ vượt mức ({allowedQuantity:n0}kg).");
             }
 
             if (dto.ConfirmedQuantity > inventory.Quantity)
-            {
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Tồn kho không đủ. Chỉ còn {inventory.Quantity}kg.");
-            }
+                    $"Tồn kho không đủ. Chỉ còn {inventory.Quantity:n0} {inventory.Unit}.");
 
-            // ✅ Cập nhật tồn kho
+            // Trừ tồn kho + log
             inventory.Quantity -= dto.ConfirmedQuantity;
             inventory.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Inventories.Update(inventory);
 
-            // ✅ Ghi log xuất kho qua mapper
             var log = receipt.ToInventoryLogFromOutbound(inventory.InventoryId, dto.ConfirmedQuantity);
             await _unitOfWork.InventoryLogs.CreateAsync(log);
 
-            // ✅ Cập nhật phiếu xuất & yêu cầu qua mapper
+            // Append tag xác nhận vào Note
             receipt.UpdateAfterConfirm(dto.ConfirmedQuantity, dto.DestinationNote);
             _unitOfWork.WarehouseOutboundReceipts.Update(receipt);
 
-            request.MarkAsCompleted();
+            // Update trạng thái request
+            if (Math.Abs((request.RequestedQuantity - totalAfterThis)) < 1e-9)
+                request.MarkAsCompleted();
+            else
+                request.UpdatedAt = DateTime.UtcNow;
+
             _unitOfWork.WarehouseOutboundRequests.Update(request);
 
             await _unitOfWork.SaveChangesAsync();
@@ -252,7 +211,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu xuất kho thành công.", receipt.OutboundReceiptId);
         }
 
+        // Helper: parse các đoạn [CONFIRMED:x] trong Note để lấy list double
+        private IEnumerable<double> ParseConfirmedFromNote(string? note)
+        {
+            if (string.IsNullOrWhiteSpace(note)) yield break;
 
+            // Tách theo token
+            var tokens = note.Split("[CONFIRMED:", StringSplitOptions.RemoveEmptyEntries);
+            // Bỏ phần trước token đầu tiên (Skip(1))
+            foreach (var token in tokens.Skip(1))
+            {
+                var end = token.IndexOf(']');
+                if (end <= 0) continue;
+
+                var valStr = token.Substring(0, end).Trim();
+                if (double.TryParse(valStr, out var val))
+                    yield return val;
+            }
+        }
+        // Service (trong WarehouseOutboundRequestsService hoặc ReceiptService)
+        public async Task<IServiceResult> GetSummaryAsync(Guid requestId)
+        {
+            var req = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(requestId);
+            if (req == null) return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu.");
+
+            var receipts = await _unitOfWork.WarehouseOutboundReceipts
+                .GetAllAsync(r => r.OutboundRequestId == requestId && !r.IsDeleted);
+
+            double confirmed = receipts.SelectMany(r => ParseConfirmedFromNote(r.Note)).Sum();
+            double created = receipts.Sum(r => r.Quantity);
+            double draft = Math.Max(0, created - confirmed);
+
+            double remainingByConfirm = Math.Max(0, req.RequestedQuantity - confirmed);
+            double remainingHardCap = Math.Max(0, req.RequestedQuantity - created);
+
+            var inv = await _unitOfWork.Inventories.FindByIdAsync(req.InventoryId);
+            double inventoryAvailable = inv?.Quantity ?? 0;
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "OK", new
+            {
+                requestedQuantity = req.RequestedQuantity,
+                confirmedQuantity = confirmed,
+                createdQuantity = created,
+                draftQuantity = draft,
+                remainingByConfirm,
+                remainingHardCap,
+                inventoryAvailable
+            });
+        }
 
     }
 }
