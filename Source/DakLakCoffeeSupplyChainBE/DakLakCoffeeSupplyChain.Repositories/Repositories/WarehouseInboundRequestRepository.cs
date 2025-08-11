@@ -19,21 +19,30 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<WarehouseInboundRequest?> GetByIdAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r => 
+                   r.InboundRequestId == id && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task<WarehouseInboundRequest?> GetByIdWithFarmerAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
                 .Include(r => r.Farmer)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r => 
+                   r.InboundRequestId == id && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task<WarehouseInboundRequest?> GetByIdWithBatchAsync(Guid id)
         {
             return await _context.WarehouseInboundRequests
                 .Include(r => r.Batch)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r => 
+                   r.InboundRequestId == id && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task<List<WarehouseInboundRequest>> GetAllPendingAsync()
@@ -52,12 +61,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Batch)
                     .ThenInclude(b => b.CropSeason)
                         .ThenInclude(cs => cs.Commitment)
-                            .ThenInclude(c => c.Plan) // ✅ THÊM DÒNG NÀY
+                            .ThenInclude(c => c.Plan)
                 .Where(r => !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
-
 
         public async Task<WarehouseInboundRequest?> GetDetailByIdAsync(Guid id)
         {
@@ -81,7 +89,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountInboundRequestsInYearAsync(int year)
         {
             return await _context.WarehouseInboundRequests
-                .CountAsync(r => r.CreatedAt.Year == year && !r.IsDeleted);
+                .CountAsync(r => 
+                   r.CreatedAt.Year == year && 
+                   !r.IsDeleted
+                );
         }
         public async Task<List<WarehouseInboundRequest>> GetAllByFarmerIdAsync(Guid farmerId)
         {

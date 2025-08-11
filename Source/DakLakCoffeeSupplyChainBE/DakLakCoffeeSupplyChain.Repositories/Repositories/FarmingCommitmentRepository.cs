@@ -33,11 +33,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         //        .OrderByDescending(fc => fc.CreatedAt)
         //        .FirstOrDefaultAsync();
         //}
+
         public async Task<int> CountFarmingCommitmentsInYearAsync(int year)
         {
             return await _context.FarmingCommitments
                 .CountAsync(p => p.CreatedAt.Year == year);
         }
-
     }
 }

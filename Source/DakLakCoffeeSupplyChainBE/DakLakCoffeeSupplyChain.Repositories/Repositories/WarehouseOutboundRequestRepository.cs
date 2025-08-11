@@ -22,21 +22,25 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseOutboundRequests
                 .AsNoTracking()
                 .Include(r => r.Inventory)
-                .ThenInclude(inv => inv.Products)
+                   .ThenInclude(inv => inv.Products)
                 .Include(r => r.Warehouse)
-            .Include(r => r.RequestedByNavigation)
+                .Include(r => r.RequestedByNavigation)
                 .FirstOrDefaultAsync(r => r.OutboundRequestId == id && !r.IsDeleted);
         }
         public async Task<WarehouseOutboundRequest?> GetByIdWithoutIncludesAsync(Guid id)
         {
             return await _context.WarehouseOutboundRequests
-                .FirstOrDefaultAsync(r => r.OutboundRequestId == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r => 
+                   r.OutboundRequestId == id && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task CreateAsync(WarehouseOutboundRequest entity)
         {
             await _context.WarehouseOutboundRequests.AddAsync(entity);
         }
+
         public async Task<List<WarehouseOutboundRequest>> GetAllAsync()
         {
             return await _context.WarehouseOutboundRequests
@@ -53,8 +57,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountOutboundRequestsInYearAsync(int year)
         {
             return await _context.WarehouseOutboundRequests
-                .CountAsync(r => r.CreatedAt.Year == year && !r.IsDeleted);
+                .CountAsync(r => 
+                   r.CreatedAt.Year == year && 
+                   !r.IsDeleted
+                );
         }
+
         public async Task<double> SumRequestedQuantityByOrderItemId(Guid orderItemId)
         {
             return await _context.WarehouseOutboundRequests

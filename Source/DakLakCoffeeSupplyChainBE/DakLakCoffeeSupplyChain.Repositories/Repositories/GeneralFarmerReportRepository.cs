@@ -42,6 +42,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .IgnoreQueryFilters() // nếu dùng Global Filter
                 .FirstOrDefaultAsync(r => r.ReportId == reportId);
         }
+
         public async Task<string?> GetMaxReportCodeForYearAsync(int year)
         {
             return await _context.GeneralFarmerReports
@@ -50,10 +51,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Select(r => r.ReportCode)
                 .FirstOrDefaultAsync();
         }
+
         public void Update(GeneralFarmerReport entity)
         {
             _context.GeneralFarmerReports.Update(entity);
         }
-
     }
 }

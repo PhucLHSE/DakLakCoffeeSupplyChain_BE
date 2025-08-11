@@ -17,10 +17,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(f => f.User)
                 .FirstOrDefaultAsync(f => f.FarmerId == id);
         }
+
         public async Task<Farmer?> FindByUserIdAsync(Guid userId)
         {
-            return await _context.Farmers.FirstOrDefaultAsync(f => f.UserId == userId);
+            return await _context.Farmers
+                .FirstOrDefaultAsync(f => f.UserId == userId);
         }
+
         public async Task<int> CountFarmerInYearAsync(int year)
             => await _context.Farmers.CountAsync(p => p.CreatedAt.Year == year);
     }

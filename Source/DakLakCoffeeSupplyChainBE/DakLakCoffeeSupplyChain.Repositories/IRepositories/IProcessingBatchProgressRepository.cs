@@ -15,10 +15,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         public interface IProcessingBatchProgressRepository : IGenericRepository<ProcessingBatchProgress>
         {
             Task<List<ProcessingBatchProgress>> GetAllWithIncludesAsync();
+
             Task<ProcessingBatchProgress?> GetByIdAsync(Guid id);
+
             Task<bool> UpdateAsync(ProcessingBatchProgress entity);
+
             Task<bool> SoftDeleteAsync(Guid progressId);
+
             Task<bool> HardDeleteAsync(Guid progressId);
+
             //Task<ProcessingBatchProgress?> GetByIdWithBatchAsync(Guid progressId);
         }
     }

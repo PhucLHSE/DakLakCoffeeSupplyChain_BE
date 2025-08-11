@@ -16,5 +16,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             _context = context;
         }
-}
+    }
 }
