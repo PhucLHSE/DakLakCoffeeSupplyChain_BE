@@ -206,8 +206,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
 
-
-
         public async Task<IServiceResult> Create(FarmingCommitmentCreateDto commitmentCreateDto)
         {
             try
@@ -249,7 +247,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Tự động map planId và farmerId từ Registration
                 newCommitment.PlanId = selectedRegistration.PlanId;
                 newCommitment.FarmerId = selectedRegistration.FarmerId;
-                                
+
                 // Tạo Commitment Detail
                 foreach (var detail in newCommitment.FarmingCommitmentsDetails)
                 {
@@ -284,7 +282,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
                         asNoTracking: true
                         );
-                    if(taxCode != null)
+                    if (taxCode != null)
                     {
                         if (detail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
                             detail.TaxPrice = detail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
@@ -428,6 +426,109 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> UpdateStatusByFarmer(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId)
+        {
+            try
+            {
+                
+                // Lấy commitment theo ID và kiểm tra quyền truy cập
+                var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted
+                );
+                if (commitment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy cam kết tương ứng."
+                    );
+                }
+                // Cập nhật trạng thái và lý do từ DTO
+                commitment.Status = dto.Status.ToString();
+                commitment.RejectionReason = dto.RejectReason;
+                // Nếu trạng thái là Approved thì cập nhật thông tin phê duyệt
+                if (dto.Status == FarmingCommitmentStatus.Active)
+                    commitment.ApprovedAt = DateTime.UtcNow;
+
+                var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
+                    predicate: d => d.CommitmentId == commitmentId && !d.IsDeleted
+                );
+                // Cập nhật trạng thái cho từng chi tiết cam kết
+                if (commitmentDetails == null)
+                    {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy chi tiết cam kết tương ứng."
+                    );
+                }
+                foreach (var detail in commitmentDetails)
+                {
+                    // Nếu trạng thái là Approved thì cập nhật thông tin phê duyệt
+                    if (dto.Status == FarmingCommitmentStatus.Active)
+                        detail.Status = FarmingCommitmentStatus.Active.ToString();
+                    else if (dto.Status == FarmingCommitmentStatus.Rejected)
+                    {
+                        detail.Status = FarmingCommitmentStatus.Rejected.ToString();
+                        detail.RejectionBy = userId;
+                        detail.RejectionAt = DateHelper.NowVietnamTime();
+                    }
+                    else detail.Status = dto.Status.ToString();
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(detail);
+                }
+
+                commitment.UpdatedAt = DateHelper.NowVietnamTime();
+
+                // Cập nhật vào DB
+                await _unitOfWork.FarmingCommitmentRepository.UpdateAsync(commitment);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var response = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted,
+                    include: fm => fm.
+                        Include(fm => fm.Plan).
+                            ThenInclude(fm => fm.CreatedByNavigation).
+                        Include(fm => fm.Farmer).
+                            ThenInclude(fm => fm.User).
+                        Include(fm => fm.ApprovedByNavigation).
+                            ThenInclude(fm => fm.User).
+                        Include(p => p.FarmingCommitmentsDetails).
+                            ThenInclude(fm => fm.PlanDetail).
+                                ThenInclude(fm => fm.CoffeeType)
+                    );
+                    if (response == null)
+                    {
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            Const.WARNING_NO_DATA_MSG,
+                            new FarmingCommitmentViewDetailsDto() //Trả về DTO rỗng
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        response.MapToFarmingCommitmentViewDetailsDto()
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }

@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Create(FarmingCommitmentCreateDto commitment);
         Task<IServiceResult> BulkCreate(FarmingCommitmentBulkCreateDto commitments);
         Task<IServiceResult> GetAvailableForCropSeason(Guid userId);
+        Task<IServiceResult> UpdateStatusByFarmer(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId);
 
     }
 }
