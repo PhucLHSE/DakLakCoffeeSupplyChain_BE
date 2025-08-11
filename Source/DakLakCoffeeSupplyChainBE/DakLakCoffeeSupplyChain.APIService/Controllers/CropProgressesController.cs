@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -14,10 +15,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
     public class CropProgressesController : ControllerBase
     {
         private readonly ICropProgressService _cropProgressService;
+        private readonly IMediaService _mediaService;
 
-        public CropProgressesController(ICropProgressService cropProgressService)
+        public CropProgressesController(
+            ICropProgressService cropProgressService,
+            IMediaService mediaService)
         {
             _cropProgressService = cropProgressService;
+            _mediaService = mediaService;
         }
 
         [HttpGet]
@@ -60,53 +65,158 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(
-            [FromBody] CropProgressCreateDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Create([FromForm] CropProgressCreateWithMediaRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            Guid userId;
-            try { userId = User.GetUserId(); }
-            catch { return Unauthorized("Không xác định được userId từ token."); }
+                Guid userId;
+                try { userId = User.GetUserId(); }
+                catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            var result = await _cropProgressService
-                .Create(dto, userId);
+                // Tạo DTO từ request
+                var dto = new CropProgressCreateDto
+                {
+                    CropSeasonDetailId = request.CropSeasonDetailId,
+                    StageId = request.StageId,
+                    ProgressDate = request.ProgressDate,
+                    ActualYield = request.ActualYield,
+                    Note = request.Notes,
+                    // StageDescription sẽ được tự động lấy từ CropStage.Description
+                    PhotoUrl = string.Empty, // Sẽ được cập nhật sau khi upload media
+                    VideoUrl = string.Empty, // Sẽ được cập nhật sau khi upload media
+                    StepIndex = request.StageId // Tạm thời dùng StageId, sẽ được cập nhật thành OrderIndex sau
+                };
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return Created(string.Empty, result.Data);
+                // Tạo progress trước
+                var result = await _cropProgressService.Create(dto, userId);
 
-            if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(result.Message);
+                if (result.Status != Const.SUCCESS_CREATE_CODE)
+                    return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+                if (result.Data is not CropProgressViewDetailsDto createdProgress)
+                    return StatusCode(500, new { message = "Không lấy được progress sau khi tạo." });
+
+                string? photoUrl = null, videoUrl = null;
+
+                // Nếu có media files thì upload
+                if (request.MediaFiles?.Any() == true)
+                {
+                    var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                        request.MediaFiles,
+                        relatedEntity: "CropProgress",
+                        relatedId: createdProgress.ProgressId,
+                        uploadedBy: userId.ToString()
+                    );
+
+                    photoUrl = mediaList.FirstOrDefault(m => m.MediaType == "image")?.MediaUrl;
+                    videoUrl = mediaList.FirstOrDefault(m => m.MediaType == "video")?.MediaUrl;
+
+                    // Cập nhật media URLs vào progress
+                    await _cropProgressService.UpdateMediaUrlsAsync(createdProgress.ProgressId, photoUrl, videoUrl);
+                }
+
+                // Trả về kết quả hoàn chỉnh
+                return StatusCode(StatusCodes.Status201Created, new
+                {
+                    message = result.Message,
+                    progress = createdProgress,
+                    photoUrl,
+                    videoUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                var fullMessage = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = "Đã xảy ra lỗi hệ thống: " + fullMessage });
+            }
         }
 
         [HttpPut("{progressId}")]
+        [Consumes("application/json", "multipart/form-data")]
         public async Task<IActionResult> Update(
             Guid progressId, 
-            [FromBody] CropProgressUpdateDto dto)
+            [FromBody] CropProgressUpdateDto? dto = null,
+            [FromForm] CropProgressUpdateWithMediaRequest? mediaRequest = null)
         {
-            if (progressId != dto.ProgressId)
-                return BadRequest("ProgressId trong route không khớp với nội dung.");
+            try
+            {
+                // Validate input - either dto or mediaRequest must be provided
+                if (dto == null && mediaRequest == null)
+                    return BadRequest("Phải cung cấp dữ liệu cập nhật.");
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                // If mediaRequest is provided, convert it to dto
+                if (mediaRequest != null)
+                {
+                    dto = new CropProgressUpdateDto
+                    {
+                        ProgressId = progressId,
+                        CropSeasonDetailId = mediaRequest.CropSeasonDetailId,
+                        StageId = mediaRequest.StageId,
+                        ProgressDate = mediaRequest.ProgressDate,
+                        ActualYield = mediaRequest.ActualYield,
+                        Note = mediaRequest.Notes
+                    };
+                }
 
-            Guid userId;
-            try { userId = User.GetUserId(); }
-            catch { return Unauthorized("Không xác định được userId từ token."); }
+                // Validate progressId
+                if (progressId != dto!.ProgressId)
+                    return BadRequest("ProgressId trong route không khớp với nội dung.");
 
-            var result = await _cropProgressService
-                .Update(dto, userId);
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(result.Data);
+                Guid userId;
+                try { userId = User.GetUserId(); }
+                catch { return Unauthorized("Không xác định được userId từ token."); }
 
-            if (result.Status == Const.FAIL_UPDATE_CODE)
-                return Conflict(result.Message);
+                // Update progress
+                var result = await _cropProgressService.Update(dto, userId);
 
-            return NotFound(result.Message);
+                if (result.Status != Const.SUCCESS_UPDATE_CODE)
+                    return BadRequest(new { message = result.Message });
+
+                // Handle media upload if mediaRequest is provided
+                string? photoUrl = null, videoUrl = null;
+                if (mediaRequest?.MediaFiles?.Any() == true)
+                {
+                    var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                        mediaRequest.MediaFiles,
+                        relatedEntity: "CropProgress",
+                        relatedId: progressId,
+                        uploadedBy: userId.ToString()
+                    );
+
+                    photoUrl = mediaList.FirstOrDefault(m => m.MediaType == "image")?.MediaUrl;
+                    videoUrl = mediaList.FirstOrDefault(m => m.MediaType == "video")?.MediaUrl;
+
+                    await _cropProgressService.UpdateMediaUrlsAsync(progressId, photoUrl, videoUrl);
+                }
+
+                // Return response based on whether media was uploaded
+                if (mediaRequest?.MediaFiles?.Any() == true)
+                {
+                    return Ok(new
+                    {
+                        message = result.Message,
+                        progress = result.Data,
+                        photoUrl,
+                        videoUrl
+                    });
+                }
+                else
+                {
+                    return Ok(result.Data);
+                }
+            }
+            catch (Exception ex)
+            {
+                var fullMessage = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = "Đã xảy ra lỗi hệ thống: " + fullMessage });
+            }
         }
 
         [HttpPatch("soft-delete/{progressId}")]
