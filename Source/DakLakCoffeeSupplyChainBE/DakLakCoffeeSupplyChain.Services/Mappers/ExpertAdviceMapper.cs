@@ -11,8 +11,8 @@ public static class ExpertAdviceMapper
             AdviceId = entity.AdviceId,
             ReportId = entity.ReportId,
             ExpertName = entity.Expert?.User?.Name ?? "N/A",
-            ResponseType = entity.ResponseType,
-            AdviceSource = entity.AdviceSource,
+            ResponseType = entity.ResponseType ?? string.Empty,
+            AdviceSource = entity.AdviceSource ?? string.Empty,
             CreatedAt = entity.CreatedAt
         };
     }
@@ -25,10 +25,10 @@ public static class ExpertAdviceMapper
             ReportId = entity.ReportId,
             ExpertId = entity.ExpertId,
             ExpertName = entity.Expert?.User?.Name ?? "N/A",
-            ResponseType = entity.ResponseType,
-            AdviceSource = entity.AdviceSource,
-            AdviceText = entity.AdviceText,
-            AttachedFileUrl = entity.AttachedFileUrl,
+            ResponseType = entity.ResponseType ?? string.Empty,
+            AdviceSource = entity.AdviceSource ?? string.Empty,
+            AdviceText = entity.AdviceText ?? string.Empty,
+            AttachedFileUrl = entity.AttachedFileUrl ?? string.Empty,
             CreatedAt = entity.CreatedAt
         };
     }

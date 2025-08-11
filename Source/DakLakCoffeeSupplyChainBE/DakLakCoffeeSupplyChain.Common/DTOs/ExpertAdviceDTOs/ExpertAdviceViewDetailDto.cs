@@ -11,11 +11,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs
         public Guid AdviceId { get; set; }
         public Guid ReportId { get; set; }
         public Guid ExpertId { get; set; }
-        public string ExpertName { get; set; }
-        public string ResponseType { get; set; }
-        public string AdviceSource { get; set; }
-        public string AdviceText { get; set; }
-        public string AttachedFileUrl { get; set; }
+        public string ExpertName { get; set; } = string.Empty;
+        public string ResponseType { get; set; } = string.Empty;
+        public string AdviceSource { get; set; } = string.Empty;
+        public string AdviceText { get; set; } = string.Empty;
+        public string? AttachedFileUrl { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }
