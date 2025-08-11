@@ -1,14 +1,18 @@
 ﻿using DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReques;
 using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
+using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System;
 using System.Security.Claims;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -19,15 +23,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         private readonly IProcessingBatchProgressService _processingBatchProgressService;
         private readonly IUploadService _uploadService;
         private readonly IMediaService _mediaService;
+        private readonly IUnitOfWork _unitOfWork;
 
         public ProcessingBatchsProgressController(
             IProcessingBatchProgressService processingBatchProgressService, 
             IUploadService uploadService, 
-            IMediaService mediaService)
+            IMediaService mediaService,
+            IUnitOfWork unitOfWork)
         {
             _processingBatchProgressService = processingBatchProgressService;
             _uploadService = uploadService;
             _mediaService = mediaService;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpGet]
@@ -73,6 +80,134 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        [HttpGet("batch/{batchId}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> GetByBatchId(Guid batchId)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingBatchProgressService
+                .GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        [HttpGet("progress/{progressId}/media")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> GetProgressMedia(Guid progressId)
+        {
+            try
+            {
+                var mediaFiles = await _mediaService.GetMediaByRelatedAsync("ProcessingProgress", progressId);
+                
+                var photoUrls = mediaFiles.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                var videoUrls = mediaFiles.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                
+                return Ok(new
+                {
+                    progressId,
+                    photoUrls,
+                    videoUrls,
+                    totalCount = mediaFiles.Count,
+                    message = "Lấy media thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi khi lấy media: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("debug-advance/{batchId}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> DebugAdvance(Guid batchId)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst("userId")?.Value 
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest(new { message = "Không thể lấy userId từ token." });
+
+                var isAdmin = User.IsInRole("Admin");
+                var isManager = User.IsInRole("BusinessManager");
+                var isFarmer = User.IsInRole("Farmer");
+
+                // Lấy thông tin batch và stages
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
+                    return BadRequest(new { message = "Batch không tồn tại." });
+
+                var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                    q => q.OrderBy(s => s.OrderIndex)
+                );
+
+                var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderByDescending(p => p.StepIndex)
+                );
+
+                var latestProgress = progresses.FirstOrDefault();
+
+                return Ok(new
+                {
+                    message = "Debug advance info",
+                    batchId,
+                    userId,
+                    batchStatus = batch.Status,
+                    roles = new
+                    {
+                        isAdmin,
+                        isManager,
+                        isFarmer
+                    },
+                    stages = stages.Select(s => new
+                    {
+                        stageId = s.StageId,
+                        stageName = s.StageName,
+                        orderIndex = s.OrderIndex
+                    }).ToList(),
+                    totalStages = stages.Count(),
+                    progresses = progresses.Select(p => new
+                    {
+                        progressId = p.ProgressId,
+                        stepIndex = p.StepIndex,
+                        stageId = p.StageId,
+                        progressDate = p.ProgressDate
+                    }).ToList(),
+                    totalProgresses = progresses.Count(),
+                    latestProgress = latestProgress != null ? new
+                    {
+                        progressId = latestProgress.ProgressId,
+                        stepIndex = latestProgress.StepIndex,
+                        stageId = latestProgress.StageId
+                    } : null,
+                    note = "Chỉ Farmer mới được phép advance progress"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi debug: {ex.Message}" });
+            }
+        }
+
+
 
         [HttpPost("{batchId}")]
         [Authorize(Roles = "Farmer,Admin,BusinessManager")]
@@ -121,11 +256,36 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
                 var isManager = User.IsInRole("BusinessManager");
 
+                // Tạo parameters - chỉ sử dụng single parameter
+                var parameters = new List<ProcessingParameterInProgressDto>();
+                
+                Console.WriteLine($"DEBUG CONTROLLER CREATE: Single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                
+                if (!string.IsNullOrEmpty(request.ParameterName))
+                {
+                    Console.WriteLine($"DEBUG CONTROLLER CREATE: Adding single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                    parameters.Add(new ProcessingParameterInProgressDto
+                    {
+                        ParameterName = request.ParameterName,
+                        ParameterValue = request.ParameterValue,
+                        Unit = request.Unit,
+                        RecordedAt = request.RecordedAt
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("DEBUG CONTROLLER CREATE: No parameter found in request");
+                }
+
+                // Tạo progress trước, sau đó upload media
                 var dto = new ProcessingBatchProgressCreateDto
                 {
                     ProgressDate = request.ProgressDate,
                     OutputQuantity = request.OutputQuantity,
-                    OutputUnit = request.OutputUnit
+                    OutputUnit = request.OutputUnit,
+                    PhotoUrl = null, // Sẽ được cập nhật sau
+                    VideoUrl = null, // Sẽ được cập nhật sau
+                    Parameters = parameters.Any() ? parameters : null
                 };
 
                 var result = await _processingBatchProgressService
@@ -138,28 +298,64 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     return StatusCode(500, new { message = "Không lấy được progressId sau khi tạo." });
 
                 string? photoUrl = null, videoUrl = null;
+                List<string> photoUrls = new List<string>();
+                List<string> videoUrls = new List<string>();
 
-                if (request.MediaFiles?.Any() == true)
+                // Upload media sau khi có progressId để tránh conflict
+                var allMediaFiles = new List<IFormFile>();
+                if (request.PhotoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.PhotoFiles);
+                if (request.VideoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.VideoFiles);
+
+                if (allMediaFiles.Any())
                 {
-                    var mediaList = await _mediaService.UploadAndSaveMediaAsync(
-                        request.MediaFiles,
-                        relatedEntity: "ProcessingProgress",
-                        relatedId: progressId,
-                        uploadedBy: userId.ToString()
-                    );
+                    try
+                    {
+                        var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                            allMediaFiles,
+                            relatedEntity: "ProcessingProgress",
+                            relatedId: progressId, // Sử dụng progressId thực tế
+                            uploadedBy: userId.ToString()
+                        );
 
-                    photoUrl = mediaList.FirstOrDefault(m => m.MediaType == "image")?.MediaUrl;
-                    videoUrl = mediaList.FirstOrDefault(m => m.MediaType == "video")?.MediaUrl;
+                        // Lấy tất cả URLs của mỗi loại media
+                        photoUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                        videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                        
+                        photoUrl = photoUrls.FirstOrDefault();
+                        videoUrl = videoUrls.FirstOrDefault();
 
-                    await _processingBatchProgressService.UpdateMediaUrlsAsync(progressId, photoUrl, videoUrl);
+                                                 // Không cần cập nhật PhotoUrl và VideoUrl trong database nữa
+                         // Hệ thống sẽ tự động lấy từ MediaFile table dựa trên ProgressId
+                    }
+                    catch (Exception mediaEx)
+                    {
+                        // Log lỗi media nhưng không fail toàn bộ request
+                        // Progress đã được tạo thành công, chỉ có media bị lỗi
+                        return StatusCode(500, new { message = $"Progress đã tạo thành công nhưng lỗi upload media: {mediaEx.Message}" });
+                    }
                 }
 
-                return StatusCode(StatusCodes.Status201Created, new
+                // Lấy parameters của progress vừa tạo
+                var progressWithParams = await _processingBatchProgressService.GetByIdAsync(progressId);
+                var responseParameters = new List<ProcessingParameterViewAllDto>();
+                
+                if (progressWithParams.Status == Const.SUCCESS_READ_CODE && progressWithParams.Data is ProcessingBatchProgressDetailDto detailDto)
                 {
-                    message = result.Message,
-                    progressId,
-                    photoUrl,
-                    videoUrl
+                    responseParameters = detailDto.Parameters ?? new List<ProcessingParameterViewAllDto>();
+                }
+
+                return StatusCode(StatusCodes.Status201Created, new ProcessingBatchProgressMediaResponse
+                {
+                    Message = result.Message,
+                    ProgressId = progressId,
+                    PhotoUrl = photoUrl,
+                    VideoUrl = videoUrl,
+                    MediaCount = allMediaFiles.Count,
+                    AllPhotoUrls = photoUrls ?? new List<string>(),
+                    AllVideoUrls = videoUrls ?? new List<string>(),
+                    Parameters = responseParameters
                 });
             }
             catch (Exception ex)
@@ -241,38 +437,120 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
                 string? photoUrl = null;
                 string? videoUrl = null;
+                List<string> photoUrls = new List<string>();
+                List<string> videoUrls = new List<string>();
 
-                if (request.PhotoFile != null)
+                // Tạo parameters - chỉ sử dụng single parameter
+                var parameters = new List<ProcessingParameterInProgressDto>();
+                
+                Console.WriteLine($"DEBUG CONTROLLER ADVANCE: Single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                
+                if (!string.IsNullOrEmpty(request.ParameterName))
                 {
-                    var uploadResult = await _uploadService.UploadAsync(request.PhotoFile);
-                    photoUrl = uploadResult?.Url;
+                    Console.WriteLine($"DEBUG CONTROLLER ADVANCE: Adding single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                    parameters.Add(new ProcessingParameterInProgressDto
+                    {
+                        ParameterName = request.ParameterName,
+                        ParameterValue = request.ParameterValue,
+                        Unit = request.Unit,
+                        RecordedAt = request.RecordedAt
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("DEBUG CONTROLLER ADVANCE: No parameter found in request");
                 }
 
-                if (request.VideoFile != null)
-                {
-                    var uploadResult = await _uploadService.UploadAsync(request.VideoFile);
-                    videoUrl = uploadResult?.Url;
-                }
-
+                // Tạo progress trước
                 var dto = new AdvanceProcessingBatchProgressDto
                 {
                     ProgressDate = request.ProgressDate,
                     OutputQuantity = request.OutputQuantity,
                     OutputUnit = request.OutputUnit,
-                    PhotoUrl = photoUrl,
-                    VideoUrl = videoUrl
+                    PhotoUrl = null, // Sẽ được cập nhật sau
+                    VideoUrl = null, // Sẽ được cập nhật sau
+                    Parameters = parameters.Any() ? parameters : null
                 };
 
                 var result = await _processingBatchProgressService
                     .AdvanceProgressByBatchIdAsync(batchId, dto, userId, isAdmin, isManager);
 
-                if (result.Status == Const.SUCCESS_CREATE_CODE || result.Status == Const.SUCCESS_UPDATE_CODE)
-                    return Ok(new { message = result.Message });
+                if (result.Status != Const.SUCCESS_CREATE_CODE && result.Status != Const.SUCCESS_UPDATE_CODE)
+                {
+                    if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                        return BadRequest(new { message = result.Message });
+                    return StatusCode(500, new { message = result.Message });
+                }
 
-                if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
-                    return BadRequest(new { message = result.Message });
+                // Upload media sau khi tạo progress thành công
+                var allMediaFiles = new List<IFormFile>();
+                if (request.PhotoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.PhotoFiles);
+                if (request.VideoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.VideoFiles);
 
-                return StatusCode(500, new { message = result.Message });
+                if (allMediaFiles.Any())
+                {
+                    try
+                    {
+
+                        // Lấy progressId từ result nếu có thể
+                        // Hoặc có thể cần thêm logic để lấy progressId mới nhất của batch
+                        var latestProgressForMedia = await _processingBatchProgressService.GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                        if (latestProgressForMedia.Status == Const.SUCCESS_READ_CODE && latestProgressForMedia.Data is List<ProcessingBatchProgressViewAllDto> progressesForMedia)
+                        {
+                            var latestProgressId = progressesForMedia.LastOrDefault()?.ProgressId;
+                            if (latestProgressId.HasValue)
+                            {
+                                var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                                    allMediaFiles,
+                                    relatedEntity: "ProcessingProgress",
+                                    relatedId: latestProgressId.Value,
+                                    uploadedBy: userId.ToString()
+                                );
+
+                                // Lấy tất cả URLs của mỗi loại media
+                                photoUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                                videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                                
+                                photoUrl = photoUrls.FirstOrDefault();
+                                videoUrl = videoUrls.FirstOrDefault();
+                            }
+                        }
+                    }
+                    catch (Exception mediaEx)
+                    {
+                        // Progress đã tạo thành công, chỉ có media bị lỗi
+                        return StatusCode(500, new { message = $"Progress đã tạo thành công nhưng lỗi upload media: {mediaEx.Message}" });
+                    }
+                }
+
+                // Lấy parameters của progress vừa tạo
+                var latestProgressResult = await _processingBatchProgressService.GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                var responseParameters = new List<ProcessingParameterViewAllDto>();
+                var actualProgressId = Guid.Empty;
+                
+                if (latestProgressResult.Status == Const.SUCCESS_READ_CODE && latestProgressResult.Data is List<ProcessingBatchProgressViewAllDto> progressesList)
+                {
+                    var latestProgressDto = progressesList.LastOrDefault();
+                    if (latestProgressDto != null)
+                    {
+                        actualProgressId = latestProgressDto.ProgressId;
+                        responseParameters = latestProgressDto.Parameters ?? new List<ProcessingParameterViewAllDto>();
+                    }
+                }
+
+                return Ok(new ProcessingBatchProgressMediaResponse
+                {
+                    Message = result.Message,
+                    ProgressId = actualProgressId,
+                    PhotoUrl = photoUrl,
+                    VideoUrl = videoUrl,
+                    MediaCount = allMediaFiles.Count,
+                    AllPhotoUrls = photoUrls,
+                    AllVideoUrls = videoUrls,
+                    Parameters = responseParameters
+                });
             }
             catch (Exception ex)
             {

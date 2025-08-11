@@ -17,5 +17,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string VideoUrl { get; set; }
         public List<IFormFile>? ImageFiles { get; set; }
         public List<IFormFile>? VideoFiles { get; set; }
+        public List<ProcessingParameterInProgressDto>? Parameters { get; set; }
     }
 }

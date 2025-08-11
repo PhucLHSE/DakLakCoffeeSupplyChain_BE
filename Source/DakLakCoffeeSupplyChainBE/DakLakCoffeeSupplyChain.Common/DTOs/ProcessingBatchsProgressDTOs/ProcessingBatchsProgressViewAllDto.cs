@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
 {
@@ -23,5 +24,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string UpdatedByName { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public List<ProcessingParameterViewAllDto> Parameters { get; set; }
     }
 }

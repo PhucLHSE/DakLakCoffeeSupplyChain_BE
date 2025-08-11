@@ -7,5 +7,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     {
         Task<List<MediaFile>> UploadAndSaveMediaAsync(IEnumerable<IFormFile> files, string relatedEntity, Guid relatedId, string uploadedBy);
         Task<List<MediaFile>> GetMediaByRelatedAsync(string relatedEntity, Guid relatedId);
+        Task UpdateRelatedIdAsync(string relatedEntity, Guid oldRelatedId, Guid newRelatedId);
     }
 }
