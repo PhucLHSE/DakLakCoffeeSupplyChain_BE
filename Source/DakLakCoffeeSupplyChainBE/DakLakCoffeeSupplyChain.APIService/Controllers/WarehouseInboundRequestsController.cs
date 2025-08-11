@@ -72,28 +72,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpGet]
         [Authorize(Roles = "BusinessStaff,Administrator")]
-        [EnableQuery]
         public async Task<IActionResult> GetAll()
         {
-            var userId = User.GetUserId();
+            try
+            {
+                var userId = User.GetUserId();
+                var result = await _service.GetAllAsync(userId);
 
-            var result = await _service
-                .GetAllAsync(userId);
+                if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result);
+                if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound(result);
+                if (result.Status == Const.FAIL_UPDATE_CODE) return BadRequest(result);
 
-            if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result);
-
-            if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result);
-
-            if (result.Status == Const.FAIL_UPDATE_CODE)
-                return BadRequest(result);
-
-            if (result.Status == Const.ERROR_EXCEPTION)
                 return StatusCode(500, result);
-
-            return StatusCode(500, result); // fallback
+            }
+            catch (Exception ex)
+            {
+                // luôn trả JSON
+                return StatusCode(500, new { status = Const.ERROR_EXCEPTION, message = ex.Message });
+            }
         }
+
 
         [HttpGet("{id}")]
         [Authorize(Roles = "BusinessStaff,Administrator,Farmer")]
