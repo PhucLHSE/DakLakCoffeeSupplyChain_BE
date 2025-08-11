@@ -83,5 +83,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             return result.FirstOrDefault();
         }
+
     }
 }

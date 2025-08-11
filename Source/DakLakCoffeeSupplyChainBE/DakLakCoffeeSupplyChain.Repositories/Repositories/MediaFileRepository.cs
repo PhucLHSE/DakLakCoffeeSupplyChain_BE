@@ -14,8 +14,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
     {
         public MediaFileRepository(DakLakCoffee_SCMContext context) : base(context)
         {
-        }
 
-            
+        }  
     }
 }

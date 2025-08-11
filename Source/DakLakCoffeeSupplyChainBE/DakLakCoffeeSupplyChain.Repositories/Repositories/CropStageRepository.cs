@@ -31,10 +31,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<CropStage?> GetByIdAsync(int stageId, bool asNoTracking)
         {
             var query = _context.CropStages.AsQueryable();
+
             if (asNoTracking) query = query.AsNoTracking();
+
             return await query.FirstOrDefaultAsync(cs => cs.StageId == stageId);
         }
-
-
     }
 }

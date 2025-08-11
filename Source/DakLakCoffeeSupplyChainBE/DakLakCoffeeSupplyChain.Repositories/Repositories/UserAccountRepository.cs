@@ -59,6 +59,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.UserAccounts
                 .CountAsync(u => u.RegistrationDate.Year == year);
         }
-       
     }
 }
