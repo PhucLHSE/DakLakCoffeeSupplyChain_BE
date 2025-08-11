@@ -32,14 +32,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StageId = entity.StageId,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 StageCode = entity.Stage?.StageCode ?? string.Empty,
-                StageDescription = entity.StageDescription ?? string.Empty,
+                StageDescription = entity.Stage?.Description ?? string.Empty, // Sửa: lấy từ Stage.Description (không phải StageDescription)
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
                 PhotoUrl = entity.PhotoUrl ?? string.Empty,
                 VideoUrl = entity.VideoUrl ?? string.Empty,
                 UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? string.Empty,
                 UpdatedBy = entity.UpdatedBy,
-                StepIndex = entity.StepIndex,
+                StepIndex = entity.Stage?.OrderIndex ?? entity.StageId, // Sửa: tự động lấy từ Stage.OrderIndex
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
                 ActualYield = entity.CropSeasonDetail?.ActualYield
@@ -56,12 +56,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProgressId = Guid.NewGuid(),
                 CropSeasonDetailId = dto.CropSeasonDetailId,
                 StageId = dto.StageId,
-                StageDescription = dto.StageDescription ?? string.Empty,
+                // StageDescription sẽ được set tự động từ CropStage.Description trong service
                 ProgressDate = dto.ProgressDate, 
                 PhotoUrl = dto.PhotoUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
                 Note = dto.Note ?? string.Empty,
-                StepIndex = dto.StepIndex,
+                StepIndex = dto.StageId, // Sửa: tự động dùng StageId làm StepIndex (sẽ được cập nhật sau)
                 CreatedAt = now,
                 UpdatedAt = now,
                 IsDeleted = false
