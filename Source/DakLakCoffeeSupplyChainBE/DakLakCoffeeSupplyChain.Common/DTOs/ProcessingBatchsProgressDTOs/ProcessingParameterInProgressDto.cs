@@ -1,0 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
+{
+    public class ProcessingParameterInProgressDto
+    {
+        public string ParameterName { get; set; } = default!;
+        public string ParameterValue { get; set; } = default!;
+        public string Unit { get; set; } = default!;
+        public DateTime? RecordedAt { get; set; }
+    }
+}

@@ -13,5 +13,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string OutputUnit { get; set; } = null!;
         public string? PhotoUrl { get; set; }
         public string? VideoUrl { get; set; }
+        public List<ProcessingParameterInProgressDto>? Parameters { get; set; }
     }
 }

@@ -66,5 +66,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 MediaType = m.MediaType
             }).ToList();
         }
+
+        public async Task UpdateRelatedIdAsync(string relatedEntity, Guid oldRelatedId, Guid newRelatedId)
+        {
+            var mediaFiles = await _unitOfWork.MediaFileRepository
+                .GetAllAsync(m => m.RelatedEntity == relatedEntity && m.RelatedId == oldRelatedId && !m.IsDeleted);
+
+            foreach (var media in mediaFiles)
+            {
+                media.RelatedId = newRelatedId;
+                media.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.MediaFileRepository.UpdateAsync(media);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

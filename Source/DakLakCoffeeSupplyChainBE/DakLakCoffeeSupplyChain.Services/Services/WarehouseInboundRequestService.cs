@@ -257,5 +257,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var dto = request.ToFarmerDetailDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
         }
+
+
     }
 }
