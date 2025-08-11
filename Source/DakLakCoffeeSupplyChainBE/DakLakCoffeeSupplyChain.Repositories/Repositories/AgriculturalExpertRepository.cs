@@ -47,5 +47,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return result;
         }
 
+        public async Task<int> CountVerifiedExpertsAsync()
+        {
+            return await _context.AgriculturalExperts
+                .CountAsync(e => e.IsVerified == true && !e.IsDeleted);
+        }
+
     }
 }
