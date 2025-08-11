@@ -8,11 +8,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
     public class ProcurementPlanRepository : GenericRepository<ProcurementPlan>, IProcurementPlanRepository
     {
-        public ProcurementPlanRepository(DakLakCoffee_SCMContext context) => _context = context;
+        public ProcurementPlanRepository(DakLakCoffee_SCMContext context) 
+            => _context = context;
+
         public async Task<int> CountProcurementPlansInYearAsync(int year)
         {
             return await _context.ProcurementPlans
-                .CountAsync(p => p.StartDate.HasValue && p.StartDate.Value.Year == year);
+                .CountAsync(p => 
+                   p.StartDate.HasValue && 
+                   p.StartDate.Value.Year == year
+                );
         }
     }
 }

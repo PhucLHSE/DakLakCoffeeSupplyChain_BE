@@ -6,12 +6,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IGeneralFarmerReportRepository : IGenericRepository<GeneralFarmerReport>
     {
         Task<List<GeneralFarmerReport>> GetAllWithIncludesAsync();
+
         Task<GeneralFarmerReport?> GetByIdWithIncludesAsync(Guid reportId);
 
         Task<int> CountReportsInYearAsync(int year);
-        Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId);
-        Task<string?> GetMaxReportCodeForYearAsync(int year);
-        void Update(GeneralFarmerReport entity);
 
+        Task<GeneralFarmerReport?> GetByIdEvenIfDeletedAsync(Guid reportId);
+
+        Task<string?> GetMaxReportCodeForYearAsync(int year);
+
+        void Update(GeneralFarmerReport entity);
     }
 }

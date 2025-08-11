@@ -34,6 +34,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(l => l.LoggedAt)
                 .ToListAsync();
         }
+
         public async Task<IEnumerable<InventoryLog>> GetAllAsync()
         {
             return await _context.InventoryLogs
@@ -52,6 +53,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(log => log.LoggedAt)
                 .ToListAsync();
         }
+
         public async Task<InventoryLog?> GetByIdWithAllRelationsAsync(Guid logId)
         {
             return await _context.InventoryLogs
@@ -59,7 +61,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(i => i.Warehouse)
                 .Include(l => l.Inventory)
                     .ThenInclude(i => i.Batch)
-                        .ThenInclude(b => b.Products) // ✅ Thêm dòng đúng này
+                        .ThenInclude(b => b.Products) // Thêm dòng đúng này
                 .Include(l => l.Inventory)
                     .ThenInclude(i => i.Batch)
                         .ThenInclude(b => b.CoffeeType)

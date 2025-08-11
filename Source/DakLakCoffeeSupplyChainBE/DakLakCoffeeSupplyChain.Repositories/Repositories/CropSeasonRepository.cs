@@ -47,7 +47,10 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     public async Task<int> CountByYearAsync(int year)
     {
         return await _context.CropSeasons
-            .CountAsync(c => c.StartDate.HasValue && c.StartDate.Value.Year == year);
+            .CountAsync(c => 
+               c.StartDate.HasValue && 
+               c.StartDate.Value.Year == year
+            );
     }
 
     public async Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId)
@@ -91,9 +94,11 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
         _context.CropSeasonDetails.RemoveRange(details);
     }
 
-    public async Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate)
+    public async Task<bool> ExistsAsync(
+        Expression<Func<CropSeason, bool>> predicate)
     {
-        return await _context.CropSeasons.AnyAsync(predicate);
+        return await _context.CropSeasons
+            .AnyAsync(predicate);
     }
 
     public IQueryable<CropSeason> GetQuery()

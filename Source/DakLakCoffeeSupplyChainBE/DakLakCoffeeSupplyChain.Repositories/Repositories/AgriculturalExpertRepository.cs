@@ -25,6 +25,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(e => e.User)
                 .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
         }
-
     }
 }

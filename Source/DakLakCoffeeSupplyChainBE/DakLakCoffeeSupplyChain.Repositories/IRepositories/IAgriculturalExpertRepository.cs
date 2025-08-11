@@ -6,6 +6,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IAgriculturalExpertRepository : IGenericRepository<AgriculturalExpert>
     {
         Task<int> CountVerifiedExpertsAsync();
+
         Task<AgriculturalExpert?> GetByUserIdAsync(Guid userId);
     }
 }

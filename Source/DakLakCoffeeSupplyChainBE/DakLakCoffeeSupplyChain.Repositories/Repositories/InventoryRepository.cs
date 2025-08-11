@@ -18,7 +18,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
         }
 
-        public async Task<Inventory?> FindByWarehouseAndBatchAsync(Guid warehouseId, Guid batchId)
+        public async Task<Inventory?> FindByWarehouseAndBatchAsync(
+            Guid warehouseId, Guid batchId)
         {
             return await _context.Inventories
                 .FirstOrDefaultAsync(inv =>
@@ -26,20 +27,23 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     inv.BatchId == batchId &&
                     !inv.IsDeleted);
         }
+
         public async Task<Inventory?> FindByIdAsync(Guid id)
         {
             return await _context.Inventories
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
-        public async Task<List<Inventory>> GetAllWithIncludesAsync(Expression<Func<Inventory, bool>> predicate)
+
+        public async Task<List<Inventory>> GetAllWithIncludesAsync(
+            Expression<Func<Inventory, bool>> predicate)
         {
             return await _context.Inventories
                 .Where(predicate)
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.CoffeeType) // ✅ Lấy loại cà phê
+                    .ThenInclude(b => b.CoffeeType) // Lấy loại cà phê
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.Products)   // ✅ Nếu vẫn cần productName
+                    .ThenInclude(b => b.Products)   //  Nếu vẫn cần productName
                 .ToListAsync();
         }
 
@@ -48,25 +52,31 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.CoffeeType) // ✅ Bắt buộc để lấy CoffeeTypeName
+                    .ThenInclude(b => b.CoffeeType) // Bắt buộc để lấy CoffeeTypeName
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.Products)   // ✅ Nếu bạn cần ProductName
+                    .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
                 .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
         }
+
         public async Task<int> CountCreatedInYearAsync(int year)
         {
             return await _context.Inventories
-                .CountAsync(i => i.CreatedAt.Year == year && !i.IsDeleted);
+                .CountAsync(i => 
+                   i.CreatedAt.Year == year && 
+                   !i.IsDeleted
+                );
         }
+
         public async Task<Inventory?> GetByIdWithWarehouseAsync(Guid id)
         {
             return await _context.Inventories
                 .Include(i => i.Warehouse)
-                .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
+                .FirstOrDefaultAsync(i => 
+                   i.InventoryId == id && 
+                   !i.IsDeleted
+                );
         }
-
     }
-
 }
 
 

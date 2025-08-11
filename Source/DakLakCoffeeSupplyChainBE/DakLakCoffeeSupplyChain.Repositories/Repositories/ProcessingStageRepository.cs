@@ -30,13 +30,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .ToListAsync();
         }
+
         public async Task CreateAsync(ProcessingStage entity)
         {
             await _context.AddAsync(entity);
         }
+
         public async Task<bool> SoftDeleteAsync(int stageId)
         {
-            var stage = await _context.ProcessingStages.FirstOrDefaultAsync(s => s.StageId == stageId && !s.IsDeleted);
+            var stage = await _context.ProcessingStages
+                .FirstOrDefaultAsync(s => s.StageId == stageId && !s.IsDeleted);
+
             if (stage == null)
                 return false;
 
@@ -44,8 +48,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             stage.UpdatedAt = DateTime.UtcNow;
 
             _context.ProcessingStages.Update(stage);
+
             return true;
         }
+
         public async Task<bool> UpdateAsync(ProcessingStage entity)
         {
             var existing = await _context.ProcessingStages
@@ -53,7 +59,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             if (existing == null)
                 return false;
-
 
             existing.StageCode = entity.StageCode;
             existing.StageName = entity.StageName;
@@ -64,6 +69,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             existing.UpdatedAt = DateTime.UtcNow;
 
             _context.ProcessingStages.Update(existing);
+
             return true;
         }
     }

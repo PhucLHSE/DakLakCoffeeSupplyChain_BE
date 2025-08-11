@@ -11,9 +11,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IProcessingParameterRepository : IGenericRepository<ProcessingParameter>
     {
         Task<List<ProcessingParameter>> GetAllActiveAsync();
-        Task<ProcessingParameter?> GetByIdAsync(Guid parameterId);
-        Task<bool> SoftDeleteAsync(Guid parameterId);
-        Task<bool> HardDeleteAsync(Guid parameterId);
 
+        Task<ProcessingParameter?> GetByIdAsync(Guid parameterId);
+
+        Task<bool> SoftDeleteAsync(Guid parameterId);
+
+        Task<bool> HardDeleteAsync(Guid parameterId);
     }
 }

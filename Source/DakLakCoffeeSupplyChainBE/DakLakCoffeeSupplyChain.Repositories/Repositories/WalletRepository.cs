@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
     public class WalletRepository : GenericRepository<Wallet>, IWalletRepository
     {
-        public WalletRepository(DakLakCoffee_SCMContext context) => _context = context;
+        public WalletRepository(DakLakCoffee_SCMContext context) 
+            => _context = context;
     }
 }
