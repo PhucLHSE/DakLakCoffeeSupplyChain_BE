@@ -29,10 +29,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.GeneralFarmerReports
                 .Include(r => r.ReportedByNavigation)
                 .Include(r => r.CropProgress)
-                    .ThenInclude(cp => cp.Stage)
+                   .ThenInclude(cp => cp.Stage)
                 .Include(r => r.ProcessingProgress)
-                    .ThenInclude(pp => pp.Batch)
-                .FirstOrDefaultAsync(r => r.ReportId == reportId && !r.IsDeleted);
+                   .ThenInclude(pp => pp.Batch)
+                .FirstOrDefaultAsync(r => 
+                   r.ReportId == reportId && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task<int> CountReportsInYearAsync(int year)
@@ -83,6 +86,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
             return result.FirstOrDefault();
         }
-
     }
 }

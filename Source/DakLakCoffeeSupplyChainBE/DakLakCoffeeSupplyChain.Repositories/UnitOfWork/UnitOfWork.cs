@@ -321,6 +321,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return generalFarmerReportRepository ??= new GeneralFarmerReportRepository(context);
             }
         }
+
         public IProcessingBatchProgressRepository ProcessingBatchProgressRepository
         {
             get
@@ -328,6 +329,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
             }
         }
+
         public IProcessingParameterRepository ProcessingParameterRepository
         {
             get
@@ -444,6 +446,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return mediaFileRepository ??= new MediaFileRepository(context);
             }
         }
+
         public IProcessingBatchEvaluationRepository ProcessingBatchEvaluationRepository
         {
             get
@@ -452,7 +455,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             }
         }
 
-        // ✅ Thêm method Dispose để implement IDisposable
+        // Thêm method Dispose để implement IDisposable
         public void Dispose()
         {
             context?.Dispose();

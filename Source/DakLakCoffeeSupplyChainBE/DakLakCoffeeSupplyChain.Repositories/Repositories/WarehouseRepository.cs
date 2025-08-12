@@ -21,7 +21,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Warehouses.AnyAsync(w =>
                 w.Name == name &&
                 !w.IsDeleted &&
-                (excludeId == null || w.WarehouseId != excludeId));
+                (excludeId == null || w.WarehouseId != excludeId)
+            );
         }
 
         public async Task<IEnumerable<Warehouse>> FindAsync(
@@ -35,7 +36,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<Warehouse?> GetByIdAsync(Guid id)
         {
             return await _context.Warehouses
-                .FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == id &&
+                   !w.IsDeleted
+                );
         }
 
         public void Update(Warehouse entity)
@@ -53,7 +57,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId)
         {
             return await _context.Warehouses
-                .FirstOrDefaultAsync(w => w.WarehouseId == warehouseId && !w.IsDeleted);
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == warehouseId && 
+                   !w.IsDeleted
+                );
         }
 
         public async Task<Warehouse?> GetByIdWithManagerAsync(Guid id)
@@ -61,7 +68,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Warehouses
                 .Include(w => w.Manager)
                    .ThenInclude(m => m.User)
-                .FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == id && 
+                   !w.IsDeleted
+                );
         }
 
         public async Task<int> CountWarehousesCreatedInYearAsync(int year)

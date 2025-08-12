@@ -24,7 +24,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Shipments
                 .CountAsync(s =>
                     s.CreatedAt.Year == year &&
-                    !s.IsDeleted);
+                    !s.IsDeleted
+                );
         }
     }
 }

@@ -52,10 +52,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Inventories
                 .Include(i => i.Warehouse)
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.CoffeeType) // Bắt buộc để lấy CoffeeTypeName
+                   .ThenInclude(b => b.CoffeeType) // Bắt buộc để lấy CoffeeTypeName
                 .Include(i => i.Batch)
-                    .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
-                .FirstOrDefaultAsync(i => i.InventoryId == id && !i.IsDeleted);
+                   .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
+                .FirstOrDefaultAsync(i => 
+                   i.InventoryId == id && 
+                   !i.IsDeleted
+                );
         }
 
         public async Task<int> CountCreatedInYearAsync(int year)

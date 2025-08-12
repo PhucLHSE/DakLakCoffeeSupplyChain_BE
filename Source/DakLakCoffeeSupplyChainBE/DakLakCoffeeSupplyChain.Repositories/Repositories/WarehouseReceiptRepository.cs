@@ -42,7 +42,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Batch)
                 .Include(r => r.ReceivedByNavigation)
                    .ThenInclude(s => s.User)
-                .FirstOrDefaultAsync(r => r.ReceiptId == id && !r.IsDeleted);
+                .FirstOrDefaultAsync(r => 
+                   r.ReceiptId == id && 
+                   !r.IsDeleted
+                );
         }
 
         public async Task<int> CountCreatedInYearAsync(int year)

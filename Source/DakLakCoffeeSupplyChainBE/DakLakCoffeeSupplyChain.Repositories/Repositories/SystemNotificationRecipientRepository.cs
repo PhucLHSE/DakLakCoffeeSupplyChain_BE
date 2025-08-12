@@ -19,19 +19,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             _context = context;
         }
 
-        // ✅ Thêm method để lấy query
+        // Thêm method để lấy query
         public IQueryable<SystemNotificationRecipient> GetQuery()
         {
             return _context.SystemNotificationRecipients.AsQueryable();
         }
 
-        // ✅ Thêm method Update
+        // Thêm method Update
         public void Update(SystemNotificationRecipient entity)
         {
             _context.SystemNotificationRecipients.Update(entity);
         }
 
-        // ✅ Thêm method CreateAsync
+        // Thêm method CreateAsync
         public async Task CreateAsync(SystemNotificationRecipient entity)
         {
             await _context.SystemNotificationRecipients.AddAsync(entity);

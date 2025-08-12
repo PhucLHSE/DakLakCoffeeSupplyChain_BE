@@ -59,7 +59,7 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .Include(cs => cs.CropSeasonDetails)
                 .ThenInclude(d => d.CommitmentDetail)
                     .ThenInclude(d => d.PlanDetail)
-                                        .ThenInclude(pd => pd.CoffeeType) 
+                       .ThenInclude(pd => pd.CoffeeType) 
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
@@ -74,16 +74,21 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
-            .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
+            .FirstOrDefaultAsync(cs => 
+               cs.CropSeasonId == cropSeasonId && 
+               !cs.IsDeleted
+            );
     }
 
     public async Task<CropSeason?> GetByIdAsync(Guid cropSeasonId)
     {
         return await _context.CropSeasons
             .Include(c => c.Farmer)
-            .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId && !c.IsDeleted);
+            .FirstOrDefaultAsync(c => 
+               c.CropSeasonId == cropSeasonId && 
+               !c.IsDeleted
+            );
     }
-
 
     public async Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId)
     {

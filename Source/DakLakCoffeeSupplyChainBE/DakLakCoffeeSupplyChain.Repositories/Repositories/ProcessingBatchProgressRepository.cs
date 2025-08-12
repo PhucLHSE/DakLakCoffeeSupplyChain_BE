@@ -41,6 +41,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             try
             {
                 _context.ProcessingBatchProgresses.Update(entity);
+
                 return true;
             }
             catch (Exception ex)
