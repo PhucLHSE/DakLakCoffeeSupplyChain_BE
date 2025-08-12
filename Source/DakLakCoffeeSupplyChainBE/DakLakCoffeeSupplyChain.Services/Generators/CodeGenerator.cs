@@ -158,8 +158,20 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         public async Task<string> GenerateProcurementPlanDetailsCodeAsync()
         {
             // Đếm số procurement plan detail tạo trong năm
-            var count = await _unitOfWork.ProcurementPlanDetailsRepository
-                .CountProcurementPlanDetailsInYearAsync(CurrentYear);
+            //var count = await _unitOfWork.ProcurementPlanDetailsRepository
+                //.CountProcurementPlanDetailsInYearAsync(CurrentYear);
+
+            string prefix = $"PLD-{CurrentYear}-";
+
+            var latestCode = await _unitOfWork.ProcurementPlanDetailsRepository.GetByPredicateAsync(
+                predicate: x => x.PlanDetailCode.StartsWith(prefix),
+                selector: x => x.PlanDetailCode,
+                orderBy: x => x.OrderByDescending(x => x.PlanDetailCode),
+                asNoTracking: true
+                ) ?? throw new InvalidOperationException("Không tìm thấy mã PlanDetailCode nào phù hợp với prefix.");
+
+            var count = GeneratedCodeHelpler
+                .GetGeneratedCodeLastNumber(latestCode);
 
             return $"PLD-{CurrentYear}-{(count + 1):D4}";
         }

@@ -8,10 +8,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
     {
         [Required(ErrorMessage = "ID Chi tiết kế hoạch không xác định")]
         public Guid PlanDetailsId { get; set; }
-
-        //public string PlanDetailCode { get; set; }
-
-        //public Guid PlanId { get; set; }
         public Guid CoffeeTypeId { get; set; }
 
         public int ProcessMethodId { get; set; }
@@ -33,11 +29,5 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Unknown;
-
-        //public DateTime CreatedAt { get; set; }
-
-        //public DateTime UpdatedAt { get; set; }
-
-        //public bool IsDeleted { get; set; }
     }
 }
