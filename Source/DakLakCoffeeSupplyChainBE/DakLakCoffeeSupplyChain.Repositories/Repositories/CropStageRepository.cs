@@ -32,9 +32,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             var query = _context.CropStages.AsQueryable();
 
-            if (asNoTracking) query = query.AsNoTracking();
+            if (asNoTracking) 
+                query = query.AsNoTracking();
 
-            return await query.FirstOrDefaultAsync(cs => cs.StageId == stageId);
+            return await query
+                .FirstOrDefaultAsync(cs => cs.StageId == stageId);
         }
     }
 }

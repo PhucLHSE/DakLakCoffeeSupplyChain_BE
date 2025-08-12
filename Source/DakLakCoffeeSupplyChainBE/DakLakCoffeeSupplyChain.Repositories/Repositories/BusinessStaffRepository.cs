@@ -63,7 +63,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<BusinessStaff?> GetByUserIdAsync(Guid userId)
         {
             return await _context.BusinessStaffs
-                                 .FirstOrDefaultAsync(m => m.UserId == userId && !m.IsDeleted);
+                                 .FirstOrDefaultAsync(m => 
+                                    m.UserId == userId && 
+                                    !m.IsDeleted
+                                 );
         }
     }
 }
