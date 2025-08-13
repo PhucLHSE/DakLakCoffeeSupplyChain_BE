@@ -11,8 +11,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public string PlanDetailCode { get; set; } = string.Empty;
 
         public Guid PlanId { get; set; }
+        public Guid CoffeeTypeId { get; set; }
 
         public CoffeeTypePlanDetailsViewDto? CoffeeType { get; set; }
+        public int ProcessMethodId { get; set; }
         public string ProcessingMethodName { get; set; } = string.Empty;
 
         public double? TargetQuantity { get; set; }
@@ -24,6 +26,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public double? MinPriceRange { get; set; }
 
         public double? MaxPriceRange { get; set; }
+        public double? ExpectedYieldPerHectare { get; set; }
 
         public string Note { get; set; } = string.Empty;
 

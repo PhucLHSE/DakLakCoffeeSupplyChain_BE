@@ -27,7 +27,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         }
 
         // Tính tổng PlannedQuantity của tất cả DeliveryItem thuộc ContractItemId (trừ một DeliveryItem cụ thể)
-        public async Task<double> SumPlannedQuantityAsync(Guid contractItemId, Guid excludeDeliveryItemId)
+        public async Task<double> SumPlannedQuantityAsync(
+            Guid contractItemId, 
+            Guid excludeDeliveryItemId)
         {
             return await _context.ContractDeliveryItems
                 .Where(cdi =>

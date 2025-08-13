@@ -106,7 +106,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: p => p.PlanId == planId,
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
-                Include(p => p.ProcurementPlansDetails).    //Order ProcurementPlansDetails bên mapper
+                Include(p => p.ProcurementPlansDetails.Where(p => !p.IsDeleted)).    //Order ProcurementPlansDetails bên mapper
                     ThenInclude(d => d.CoffeeType).
                 Include(p => p.ProcurementPlansDetails).
                     ThenInclude(p => p.ProcessMethod), 

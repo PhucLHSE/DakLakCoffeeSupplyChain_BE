@@ -149,6 +149,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     PlanDetailsId = p.PlanDetailsId,
                     PlanDetailCode = p.PlanDetailCode,
                     PlanId = p.PlanId,
+                    CoffeeTypeId = p.CoffeeTypeId,
                     CoffeeType = p.CoffeeType == null ? null : new CoffeeTypePlanDetailsViewDto
                     {
                         CoffeeTypeId = p.CoffeeTypeId,
@@ -159,12 +160,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         TypicalRegion = p.CoffeeType.TypicalRegion,
                         SpecialtyLevel = p.CoffeeType.SpecialtyLevel
                     },
+                    ProcessMethodId = p.ProcessMethodId,
                     ProcessingMethodName = p.ProcessMethod.Name,
                     TargetQuantity = p.TargetQuantity,
                     TargetRegion = p.TargetRegion,
                     MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
                     MinPriceRange = p.MinPriceRange,
                     MaxPriceRange = p.MaxPriceRange,
+                    ExpectedYieldPerHectare = p.ExpectedYieldPerHectare,
                     Note = p.Note,
                     ProgressPercentage = p.ProgressPercentage,
                     Status = EnumHelper.ParseEnumFromString(p.Status, ProcurementPlanDetailsStatus.Disable),

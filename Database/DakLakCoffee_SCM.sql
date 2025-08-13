@@ -394,7 +394,7 @@ GO
 -- ProcurementPlansDetails – Bảng chi tiết từng loại cây trong kế hoạch
 CREATE TABLE ProcurementPlansDetails (
     PlanDetailsID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),                        -- ID chi tiết kế hoạch
-	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-A001
+	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-0001
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
 	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
@@ -2301,7 +2301,7 @@ INSERT INTO ProcurementPlansDetails (
   ContractItemID, ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-GIAO1-001', @PlanID, @CoffeeID_Arabica, @Washed, 5000, N'Krông Bông',
+  'PLD-2025-0001', @PlanID, @CoffeeID_Arabica, @Washed, 5000, N'Krông Bông',
   100, 75, 95, N'Phục vụ hợp đồng CTR-2025-0001 – đợt giao 1', 
   @CTI_Arabica, 0, 1100
 );
@@ -2312,7 +2312,7 @@ INSERT INTO ProcurementPlansDetails (
   MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-C002', @PlanID, @CoffeeID_Robusta, @Natural, 12500, N'Ea Kar',
+  'PLD-2025-0002', @PlanID, @CoffeeID_Robusta, @Natural, 12500, N'Ea Kar',
   150, 50, 65, N'Robusta thông thường – giao lần 1', 2500
 );
 
@@ -2323,7 +2323,7 @@ INSERT INTO ProcurementPlansDetails (
   MinimumRegistrationQuantity, MinPriceRange, MaxPriceRange, Note, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-C003', @PlanID, @CoffeeID_Honey, @Honey, 2500, N'Cư M’gar',
+  'PLD-2025-0003', @PlanID, @CoffeeID_Honey, @Honey, 2500, N'Cư M’gar',
   100, 60, 75, N'Robusta sơ chế Honey đợt giao đầu tiên', 2450
 );
 
@@ -2416,7 +2416,7 @@ INSERT INTO ProcurementPlansDetails (
   ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-A001', @PlanID1, @CoffeeID_Arabica, @Washed, 3000, N'Krông Bông',
+  'PLD-2025-0004', @PlanID1, @CoffeeID_Arabica, @Washed, 3000, N'Krông Bông',
   100, 80, 100, N'Thu mua dành cho thị trường specialty',
   73.33, 950
 );
@@ -2428,7 +2428,7 @@ INSERT INTO ProcurementPlansDetails (
   ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-A002', @PlanID1, @CoffeeID_Typica, @SemiWashed, 3000, N'M''Đrắk',
+  'PLD-2025-0005', @PlanID1, @CoffeeID_Typica, @SemiWashed, 3000, N'M''Đrắk',
   150, 90, 120, N'Sản phẩm trưng bày hội chợ cà phê 2025',
   0, 1000
 );
@@ -2440,7 +2440,7 @@ INSERT INTO ProcurementPlansDetails (
   ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-B001', @PlanID2, @CoffeeID_Honey, @Honey, 7000, N'Cư M’gar',
+  'PLD-2025-0006', @PlanID2, @CoffeeID_Honey, @Honey, 7000, N'Cư M’gar',
   200, 60, 75, N'Yêu cầu sơ chế Honey tại chỗ, không vận chuyển trước khi phơi',
   0, 2450
 );
@@ -2452,7 +2452,7 @@ INSERT INTO ProcurementPlansDetails (
   ProgressPercentage, ExpectedYieldPerHectare
 )
 VALUES (
-  'PLD-2025-B002', @PlanID2, @CoffeeID_TR9, @Natural, 5000, N'Ea Kar',
+  'PLD-2025-0007', @PlanID2, @CoffeeID_TR9, @Natural, 5000, N'Ea Kar',
   300, 55, 68, N'Áp dụng tiêu chuẩn ISO 8451',
   0, 3100
 );
@@ -2618,7 +2618,7 @@ DECLARE @RegistrationID UNIQUEIDENTIFIER = (
 );
 
 DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
-    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-0001'
 );
 
 DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = NEWID();
@@ -2686,7 +2686,7 @@ VALUES
 
 -- Chi tiết R1.1: PLD-2025-A001 (1.2 ha, price 95)
 DECLARE @PDID_R1A UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-A001'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0001'
 );
 
 DECLARE @Min_R1A FLOAT, @Max_R1A FLOAT, @YieldHa_R1A FLOAT;
@@ -2712,7 +2712,7 @@ VALUES
 
 -- Chi tiết R1.2: PLD-2025-A002 (0.6 ha, price 105)
 DECLARE @PDID_R1B UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-A002'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0002'
 );
 
 DECLARE @Min_R1B FLOAT, @Max_R1B FLOAT, @YieldHa_R1B FLOAT;
@@ -2767,7 +2767,7 @@ VALUES
 
 -- R2.1: PLD-2025-0002-002 (Washed) 1.5 ha, price = clamp(65)
 DECLARE @PDID_R2A UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0002-002'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0003'
 );
 
 DECLARE @Min_R2A FLOAT, @Max_R2A FLOAT, @YieldHa_R2A FLOAT;
@@ -2793,7 +2793,7 @@ VALUES
 
 -- R2.2: PLD-2025-0002-001 (Robusta thường) 1.0 ha, price = clamp(65)
 DECLARE @PDID_R2B UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0002-001'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0004'
 );
 
 DECLARE @Min_R2B FLOAT, @Max_R2B FLOAT, @YieldHa_R2B FLOAT;
@@ -2847,7 +2847,7 @@ VALUES
 
 -- R3.1: PLD-2025-0004-001 (Honey) 1.5 ha, price clamp(65)
 DECLARE @PDID_R3A UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0004-001'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0005'
 );
 
 DECLARE @Min_R3A FLOAT, @Max_R3A FLOAT, @YieldHa_R3A FLOAT;
@@ -2873,7 +2873,7 @@ VALUES
 
 -- R3.2: PLD-2025-0004-002 (TR9) 1.5 ha, price clamp(60)
 DECLARE @PDID_R3B UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0004-002'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0006'
 );
 
 DECLARE @Min_R3B FLOAT, @Max_R3B FLOAT, @YieldHa_R3B FLOAT;
@@ -2928,7 +2928,7 @@ VALUES
 
 -- R4.1: PLD-GIAO1-001 (Arabica) 1.0 ha, price = midpoint
 DECLARE @PDID_R4A UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-GIAO1-001'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0007'
 );
 
 DECLARE @Min_R4A FLOAT, @Max_R4A FLOAT, @YieldHa_R4A FLOAT;
@@ -2958,7 +2958,7 @@ VALUES
 
 -- R4.2: PLD-2025-C002 (Robusta) 1.0 ha, price = midpoint
 DECLARE @PDID_R4B UNIQUEIDENTIFIER = (
-   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-C002'
+   SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode='PLD-2025-0007'
 );
 
 DECLARE @Min_R4B FLOAT, @Max_R4B FLOAT, @YieldHa_R4B FLOAT;
@@ -3046,11 +3046,11 @@ GO
 DECLARE @RegistrationDetailID UNIQUEIDENTIFIER = (
     SELECT CultivationRegistrationDetailID FROM CultivationRegistrationsDetail
     WHERE RegistrationID = (SELECT RegistrationID FROM CultivationRegistrations WHERE RegistrationCode = 'REG-2025-0001')
-    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001')
+    AND PlanDetailID = (SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-0001')
 );
 
 DECLARE @PlanDetailID UNIQUEIDENTIFIER = (
-    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-A001'
+    SELECT PlanDetailsID FROM ProcurementPlansDetails WHERE PlanDetailCode = 'PLD-2025-0001'
 );
 
 DECLARE @CommitmentID UNIQUEIDENTIFIER = (

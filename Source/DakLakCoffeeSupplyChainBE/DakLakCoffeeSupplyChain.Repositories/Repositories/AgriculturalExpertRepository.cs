@@ -19,7 +19,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.AgriculturalExperts
                 .Include(e => e.User)
-                .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
+                .FirstOrDefaultAsync(e => 
+                   e.UserId == userId && 
+                   !e.IsDeleted
+                );
         }
 
         public async Task<List<AgriculturalExpert>> GetAllAsync(
@@ -50,8 +53,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountVerifiedExpertsAsync()
         {
             return await _context.AgriculturalExperts
-                .CountAsync(e => e.IsVerified == true && !e.IsDeleted);
+                .CountAsync(e => 
+                   e.IsVerified == true && 
+                   !e.IsDeleted
+                );
         }
-
     }
 }

@@ -31,10 +31,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
          .Include(d => d.CommitmentDetail)
             .ThenInclude(d => d.PlanDetail)
          .Include(d => d.CropSeason)
-             .ThenInclude(cs => cs.Farmer) // nếu bạn muốn lấy FarmerName từ entity Farmer
+            .ThenInclude(cs => cs.Farmer) // nếu bạn muốn lấy FarmerName từ entity Farmer
          .FirstOrDefaultAsync(d => d.DetailId == detailId && !d.IsDeleted);
-
         }
+
         public async Task<bool> ExistsAsync(
             Expression<Func<CropSeasonDetail, bool>> predicate)
         {

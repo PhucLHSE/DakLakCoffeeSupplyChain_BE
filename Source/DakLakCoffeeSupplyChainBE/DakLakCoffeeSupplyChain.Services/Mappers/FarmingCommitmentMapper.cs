@@ -17,7 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
                 FarmerName = fm.Farmer.User.Name,
-                BusinessName = fm.Plan.CreatedByNavigation.CompanyName,
+                CompanyName = fm.Plan.CreatedByNavigation.CompanyName,
                 PlanTitle = fm.Plan.Title,
                 TotalPrice = fm.TotalPrice,
                 CommitmentDate = fm.CommitmentDate,
