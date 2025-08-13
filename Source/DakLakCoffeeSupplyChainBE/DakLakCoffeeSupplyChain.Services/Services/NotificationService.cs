@@ -78,6 +78,48 @@ public class NotificationService : INotificationService
         return notification;
     }
 
+    public async Task<SystemNotification> NotifyEvaluationFailedAsync(Guid batchId, Guid farmerId, string evaluationComments)
+    {
+        var title = "⚠️ Lô sơ chế cần cải thiện";
+        var message = $"Lô sơ chế của bạn đã được đánh giá không đạt. Vui lòng xem chi tiết và cải thiện theo hướng dẫn.";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "EvaluationFailed",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = null
+        };
+
+        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+
+        // Tạo recipient cho Farmer
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = farmerId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+
+        // Gửi email nếu có
+        var farmerUser = await _unitOfWork.UserAccountRepository.GetByIdAsync(farmerId);
+        if (farmerUser != null && !string.IsNullOrWhiteSpace(farmerUser.Email))
+        {
+            var emailMessage = $"{message}\n\nChi tiết đánh giá:\n{evaluationComments}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết và cải thiện.";
+            await _emailService.SendEmailAsync(farmerUser.Email, title, emailMessage);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+        return notification;
+    }
+
     public async Task<SystemNotification> NotifyInboundRequestApprovedAsync(Guid requestId, Guid farmerId)
     {
         var title = "✅ Yêu cầu nhập kho đã được duyệt";

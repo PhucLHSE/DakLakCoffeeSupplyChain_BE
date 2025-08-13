@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
 {
-    public class EvaluationCreateDto
+    public class EvaluationRequestCreateDto
     {
         public Guid BatchId { get; set; }
-        public string EvaluationResult { get; set; } = default!;
-        public string? Comments { get; set; }
-        public DateTime? EvaluatedAt { get; set; }
+        public string RequestReason { get; set; } = default!;
+        public string? AdditionalNotes { get; set; }
+        public DateTime? RequestedAt { get; set; }
         
         /// <summary>
         /// Mô tả chi tiết vấn đề theo tiến trình (nếu có)
@@ -29,15 +29,5 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
         /// Khuyến nghị cải thiện (nếu có)
         /// </summary>
         public string? Recommendations { get; set; }
-        
-        /// <summary>
-        /// Lý do yêu cầu đánh giá (cho farmer tạo đơn đánh giá)
-        /// </summary>
-        public string? RequestReason { get; set; }
-        
-        /// <summary>
-        /// Ghi chú bổ sung (cho farmer tạo đơn đánh giá)
-        /// </summary>
-        public string? AdditionalNotes { get; set; }
     }
 }

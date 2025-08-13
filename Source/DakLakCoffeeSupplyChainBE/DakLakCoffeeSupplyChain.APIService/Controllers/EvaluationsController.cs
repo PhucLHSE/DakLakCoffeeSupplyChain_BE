@@ -18,6 +18,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _evaluationService = evaluationService;
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
+        public async Task<IActionResult> GetAll()
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+            var isExpert = User.IsInRole("AgriculturalExpert");
+            var isManagerOrExpert = isManager || isExpert;
+
+            var result = await _evaluationService.GetAllAsync(userId, isAdmin, isManagerOrExpert, isExpert);
+
+            if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result.Data);
+            if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound(result.Message);
+            if (result.Status == Const.ERROR_EXCEPTION) return Forbid();
+            return StatusCode(500, result.Message);
+        }
+
         [HttpGet("by-batch/{batchId:guid}")]
         [Authorize(Roles = "Farmer,Admin,BusinessManager,AgriculturalExpert")]
         public async Task<IActionResult> GetByBatch(Guid batchId)
