@@ -127,11 +127,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest(ModelState);
 
             Guid userId;
+            string userRole;
 
             try
             {
-                // Lấy userId từ token qua ClaimsHelper
+                // Lấy userId và userRole từ token qua ClaimsHelper
                 userId = User.GetUserId();
+                userRole = User.GetRole();
+
             }
             catch
             {
@@ -139,7 +142,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             var result = await _businessBuyerService
-                .Update(businessBuyerDto, userId);
+                .Update(businessBuyerDto, userId, userRole);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
