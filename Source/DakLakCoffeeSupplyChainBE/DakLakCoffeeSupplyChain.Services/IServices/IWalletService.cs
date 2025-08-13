@@ -11,6 +11,11 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IWalletService
     {
         Task<IServiceResult> Create(WalletCreateDto walletCreateDto, Guid userId);
-
+        Task<IServiceResult> GetAllAsync(Guid userId);
+        Task<IServiceResult> GetByIdAsync(Guid walletId, Guid userId);
+        Task<IServiceResult> UpdateAsync(Guid walletId, WalletUpdateDto dto, Guid userId);
+        Task<IServiceResult> DeleteAsync(Guid walletId, Guid userId);
+        Task<IServiceResult> GetMyWalletAsync(Guid userId);
+        Task<IServiceResult> GetWalletBalanceAsync(Guid walletId, Guid userId);
     }
 }
