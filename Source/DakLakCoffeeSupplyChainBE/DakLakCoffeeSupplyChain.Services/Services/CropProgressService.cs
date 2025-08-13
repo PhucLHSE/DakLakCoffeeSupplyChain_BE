@@ -25,7 +25,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
-        public async Task<IServiceResult> GetAll(Guid userId)
+        public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false)
         {
             try
             {
@@ -48,7 +48,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId, Guid userId)
+        public async Task<IServiceResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId, Guid userId, bool isAdmin = false, bool isManager = false)
         {
             try
             {

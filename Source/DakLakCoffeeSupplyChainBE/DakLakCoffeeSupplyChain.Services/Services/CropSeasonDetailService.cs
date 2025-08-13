@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _cropSeasonService = cropSeasonService ?? throw new ArgumentNullException(nameof(cropSeasonService));
         }
 
-        public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false)
+        public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false)
         {
             var details = await _uow.CropSeasonDetailRepository.GetAllAsync(
                 predicate: d => !d.IsDeleted && (isAdmin || d.CropSeason.Farmer.UserId == userId),
@@ -38,7 +38,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos);
         }
 
-        public async Task<IServiceResult> GetById(Guid detailId, Guid userId, bool isAdmin = false)
+        public async Task<IServiceResult> GetById(Guid detailId, Guid userId, bool isAdmin = false, bool isManager = false)
         {
             var d = await _uow.CropSeasonDetailRepository.GetByIdAsync(
                 predicate: x => x.DetailId == detailId && !x.IsDeleted,
