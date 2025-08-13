@@ -25,7 +25,7 @@
             // GET: api/processing-batch
             [HttpGet]
             [EnableQuery]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> GetAll()
             {
                 var userIdStr = User.FindFirst("userId")?.Value
@@ -38,9 +38,10 @@
 
                 var isAdmin = User.IsInRole("Admin");
                 var isManager = User.IsInRole("BusinessManager");
+                var isExpert = User.IsInRole("AgriculturalExpert");
 
                 var result = await _processingbatchservice
-                .GetAllByUserId(userId, isAdmin, isManager);
+                .GetAllByUserId(userId, isAdmin, isManager, isExpert);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);
@@ -52,7 +53,7 @@
             }
 
             [HttpPost]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> Create(
                 [FromBody] ProcessingBatchCreateDto dto)
             {
@@ -77,7 +78,7 @@
             }
 
             [HttpPut]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> Update(
                 [FromBody] ProcessingBatchUpdateDto dto)
             {
@@ -103,7 +104,7 @@
             }
 
             [HttpPatch("{id}/soft-delete")]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> SoftDelete(Guid id)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
@@ -128,7 +129,7 @@
             }
 
             [HttpDelete("hard/{id}")]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> HardDelete(Guid id)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
@@ -154,7 +155,7 @@
             }
       
             [HttpGet("available-coffee-types")]
-            [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> GetAvailableCoffeeTypes(
                 [FromQuery] Guid cropSeasonId)
             {
@@ -177,7 +178,7 @@
             }
 
             [HttpGet("{id}/full-details")]
-            [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+            [Authorize(Roles = "Farmer,Admin,BusinessManager, AgriculturalExpert")]
             public async Task<IActionResult> GetFullDetails(Guid id)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
@@ -187,11 +188,11 @@
                     return BadRequest("Không thể lấy userId từ token.");
 
                 var isAdmin = User.IsInRole("Admin");
-
                 var isManager = User.IsInRole("BusinessManager");
+                var isExpert = User.IsInRole("AgriculturalExpert");
 
                 var result = await _processingbatchservice
-                   .GetFullDetailsAsync(id, userId, isAdmin, isManager);
+                   .GetFullDetailsAsync(id, userId, isAdmin, isManager, isExpert);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);

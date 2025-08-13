@@ -22,13 +22,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
+        private readonly INotificationService _notificationService;
 
         public EvaluationService(
             IUnitOfWork unitOfWork, 
-            ICodeGenerator codeGenerator)
+            ICodeGenerator codeGenerator,
+            INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _codeGenerator = codeGenerator;
+            _notificationService = notificationService;
         }
 
      
@@ -59,23 +62,47 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Lô sơ chế không hợp lệ.");
 
             // Validate EvaluationResult
-            var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary" };
+            var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary", "Pending" };
             if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Kết quả đánh giá không hợp lệ. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary.");
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Kết quả đánh giá không hợp lệ. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary, Pending.");
 
             // Kiểm tra batch status trước khi đánh giá
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
             if (batch == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Chỉ cho phép đánh giá khi batch đã hoàn thành hoặc đang xử lý
-            if (batch.Status != "Completed" && batch.Status != "InProgress")
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể đánh giá lô đã hoàn thành hoặc đang xử lý.");
+            // Cho phép farmer tạo đơn đánh giá khi batch đã hoàn thành
+            // Cho phép Expert tạo đánh giá khi batch đã hoàn thành hoặc đang chờ đánh giá
+            if (batch.Status != "Completed" && batch.Status != "AwaitingEvaluation")
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đánh giá cho lô đã hoàn thành hoặc đang chờ đánh giá.");
+            
+            // Nếu là Expert và batch đang chờ đánh giá, cho phép tạo đánh giá
+            if (isExpert && batch.Status == "AwaitingEvaluation")
+            {
+                // Expert có thể tạo đánh giá cho batch đang chờ đánh giá
+            }
+            // Nếu là Farmer và batch chưa hoàn thành, không cho phép
+            else if (!isAdmin && !isManager && !isExpert && batch.Status != "Completed")
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đơn đánh giá cho lô đã hoàn thành.");
+            }
 
             var code = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
 
-            // Tạo comments chi tiết bao gồm thông tin tiến trình
+            // Tạo comments chi tiết bao gồm thông tin đơn yêu cầu đánh giá và tiến trình
             var detailedComments = dto.Comments ?? "";
+            
+            // Thêm thông tin đơn yêu cầu đánh giá nếu có
+            if (!string.IsNullOrEmpty(dto.RequestReason))
+            {
+                detailedComments += $"\n\nLý do yêu cầu đánh giá: {dto.RequestReason}";
+            }
+            if (!string.IsNullOrEmpty(dto.AdditionalNotes))
+            {
+                detailedComments += $"\nGhi chú bổ sung: {dto.AdditionalNotes}";
+            }
+            
+            // Thêm thông tin đánh giá chi tiết nếu có
             if (!string.IsNullOrEmpty(dto.DetailedFeedback))
             {
                 detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
@@ -103,10 +130,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 IsDeleted = false
             };
 
+            // Nếu là farmer tạo đơn đánh giá, set EvaluationResult = "Pending"
+            if (!isAdmin && !isManager && !isExpert)
+            {
+                entity.EvaluationResult = "Pending"; // Đơn đánh giá chờ expert xử lý
+                entity.EvaluatedAt = null; // Chưa được đánh giá
+            }
+
+            // Xóa evaluation tự động cũ (nếu có) trước khi tạo evaluation mới
+            var existingAutoEvaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                e => e.BatchId == dto.BatchId && e.EvaluatedBy == null && !e.IsDeleted
+            );
+            
+            foreach (var autoEval in existingAutoEvaluations)
+            {
+                autoEval.IsDeleted = true;
+                autoEval.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(autoEval);
+            }
+
             await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
 
-            // Xử lý logic workflow theo kết quả đánh giá
-            if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                        // Xử lý logic workflow theo kết quả đánh giá
+            if (dto.EvaluationResult.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                // Nếu farmer tạo đơn đánh giá, chuyển batch sang AwaitingEvaluation
+                if (batch.Status == "Completed")
+                {
+                    batch.Status = "AwaitingEvaluation";
+                    batch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                }
+            }
+            else if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
             {
                 // Nếu đánh giá Fail, chuyển batch về trạng thái InProgress để farmer sửa
                 if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
@@ -114,6 +170,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     batch.Status = "InProgress";
                     batch.UpdatedAt = DateTime.UtcNow;
                     await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    
+                    // Gửi notification cho Farmer
+                    try
+                    {
+                        var batchWithFarmer = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                            predicate: b => b.BatchId == dto.BatchId,
+                            include: b => b.Include(b => b.Farmer)
+                        );
+                        
+                        if (batchWithFarmer?.Farmer?.UserId != null)
+                        {
+                            await _notificationService.NotifyEvaluationFailedAsync(
+                                dto.BatchId, 
+                                batchWithFarmer.Farmer.UserId, 
+                                detailedComments
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log lỗi notification nhưng không ảnh hưởng đến việc tạo evaluation
+                        Console.WriteLine($"Lỗi gửi notification: {ex.Message}");
+                    }
                 }
             }
             else if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
@@ -142,7 +221,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                  {
                      // Batch đã được chuyển sang Completed thành công
                  }
-            }
+             }
 
             var saved = await _unitOfWork.SaveChangesAsync();
 
@@ -358,6 +437,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.FAIL_UPDATE_CODE, "Khôi phục đánh giá thất bại.");
         }
 
+        // ================== GET ALL ==================
+        public async Task<IServiceResult> GetAllAsync(Guid userId, bool isAdmin, bool isManager, bool isExpert)
+        {
+            // Chỉ Admin, Manager, Expert mới có quyền xem tất cả evaluations
+            if (!isAdmin && !isManager && !isExpert)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xem tất cả đánh giá.");
+
+            var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                e => !e.IsDeleted,
+                include: q => q.Include(e => e.Batch).ThenInclude(b => b.Farmer).ThenInclude(f => f.User),
+                orderBy: q => q.OrderByDescending(x => x.EvaluatedAt).ThenByDescending(x => x.CreatedAt),
+                asNoTracking: true
+            );
+
+            var dtos = list.Select(x => x.MapToViewDto()).ToList();
+            return dtos.Any()
+                ? new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos)
+                : new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG, new List<EvaluationViewDto>());
+        }
+
         // ================== LIST BY BATCH ==================
         public async Task<IServiceResult> GetByBatchAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert)
         {
@@ -367,6 +466,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted && e.BatchId == batchId,
+                include: q => q.Include(e => e.Batch).ThenInclude(b => b.Farmer).ThenInclude(f => f.User),
                 orderBy: q => q.OrderByDescending(x => x.EvaluatedAt).ThenByDescending(x => x.CreatedAt),
                 asNoTracking: true
             );

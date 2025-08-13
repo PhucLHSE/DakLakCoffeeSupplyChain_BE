@@ -5,6 +5,7 @@ using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -20,10 +21,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class ProcessingBatchProgressService : IProcessingBatchProgressService
     {
         private readonly IUnitOfWork _unitOfWork;
+            private readonly ICodeGenerator _codeGenerator;
 
-        public ProcessingBatchProgressService(IUnitOfWork unitOfWork)
+            public ProcessingBatchProgressService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
             _unitOfWork = unitOfWork;
+                _codeGenerator = codeGenerator;
         }
 
 
@@ -296,7 +299,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Bạn không có quyền tạo tiến trình cho batch này.");
                 }
 
-                // 3. Lấy danh sách công đoạn (stage) theo MethodId
+                // 3. Kiểm tra khối lượng còn lại của batch
+                var existingProgresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderBy(p => p.StepIndex))).ToList();
+
+                // Tính tổng khối lượng đã chế biến
+                var totalProcessedQuantity = existingProgresses
+                    .Where(p => p.OutputQuantity.HasValue)
+                    .Sum(p => p.OutputQuantity.Value);
+
+                // Khối lượng còn lại = InputQuantity - totalProcessedQuantity
+                var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
+
+                if (remainingQuantity <= 0)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                        $"Không thể tạo tiến độ mới. Khối lượng cà phê đã được chế biến hết. " +
+                        $"Tổng đầu vào: {batch.InputQuantity} {batch.InputUnit}, " +
+                        $"Đã chế biến: {totalProcessedQuantity} {batch.InputUnit}, " +
+                        $"Còn lại: {remainingQuantity} {batch.InputUnit}");
+                }
+
+                // Kiểm tra nếu có OutputQuantity trong input thì phải <= remainingQuantity
+                if (input.OutputQuantity.HasValue && input.OutputQuantity.Value > remainingQuantity)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                        $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit ?? batch.InputUnit}) " +
+                        $"không thể lớn hơn khối lượng còn lại ({remainingQuantity} {batch.InputUnit})");
+                }
+
+                // 4. Lấy danh sách công đoạn (stage) theo MethodId
                 var stages = (await _unitOfWork.ProcessingStageRepository.GetAllAsync(
                     s => s.MethodId == batch.MethodId && !s.IsDeleted,
                     q => q.OrderBy(s => s.OrderIndex))).ToList();
@@ -304,12 +337,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!stages.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có công đoạn nào cho phương pháp chế biến này.");
 
-                // 4. Kiểm tra xem đã có progress nào chưa
-                var existingProgresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
-                    p => p.BatchId == batchId && !p.IsDeleted,
-                    q => q.OrderBy(p => p.StepIndex))).ToList();
+                // 5. Xác định bước tiếp theo (sử dụng existingProgresses đã lấy ở trên)
 
-                // 5. Xác định bước tiếp theo
+                // 6. Xác định bước tiếp theo
                 int nextStepIndex;
                 int nextStageId;
                 bool isLastStep = false;
@@ -339,13 +369,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     isLastStep = (currentStageIndex + 1 == stages.Count - 1);
                 }
 
-                // 6. Lấy danh sách parameters cho Stage này
+                // 7. Lấy danh sách parameters cho Stage này
                 var stageParameters = await _unitOfWork.ProcessingParameterRepository.GetAllAsync(
                     p => p.Progress.StageId == nextStageId && !p.IsDeleted,
                     include: q => q.Include(p => p.Progress)
                 );
 
-                // 7. Tạo tiến trình mới
+                // 8. Tạo tiến trình mới
                 var progress = new ProcessingBatchProgress
                 {
                     ProgressId = Guid.NewGuid(),
@@ -369,7 +399,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(progress);
                 await _unitOfWork.SaveChangesAsync();
 
-                // 8. Tạo parameters - luôn tạo (từ input hoặc mặc định)
+                // 9. Tạo parameters - luôn tạo (từ input hoặc mặc định)
                 Console.WriteLine($"DEBUG: Input parameters count: {input.Parameters?.Count ?? 0}");
                 Console.WriteLine($"DEBUG: Stage parameters count: {stageParameters?.Count ?? 0}");
                 
@@ -432,7 +462,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Console.WriteLine($"DEBUG: No parameters to create (no input and no stage parameters)");
                 }
 
-                // 8. Xử lý workflow theo bước
+                // 10. Xử lý workflow theo bước
                 if (!existingProgresses.Any())
                 {
                     // Bước đầu tiên: Chuyển từ NotStarted sang InProgress
@@ -492,6 +522,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (entity == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"[Step 1] Không tìm thấy tiến độ với ID = {progressId}");
+
+            // [Step 1.5] Kiểm tra batch status - chỉ cho phép update khi batch đang InProgress
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(entity.BatchId);
+            if (batch == null)
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "[Step 1.5] Không tìm thấy batch tương ứng.");
+            
+            if (batch.Status != "InProgress")
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 1.5] Chỉ có thể cập nhật tiến độ khi batch đang trong trạng thái 'Đang thực hiện'.");
 
             // [Step 2] Kiểm tra StepIndex trùng (nếu thay đổi)
             if (dto.StepIndex != entity.StepIndex)
@@ -913,6 +951,287 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> GetAvailableBatchesForProgressAsync(Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                List<ProcessingBatch> availableBatches;
 
+                if (isAdmin)
+                {
+                    // Admin có thể xem tất cả batch có thể tạo progress
+                    availableBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                        predicate: b => !b.IsDeleted && 
+                                       (b.Status == ProcessingStatus.NotStarted.ToString() || 
+                                        b.Status == ProcessingStatus.InProgress.ToString()),
+                        include: q => q
+                            .Include(b => b.Method)
+                            .Include(b => b.CropSeason)
+                            .Include(b => b.CoffeeType)
+                            .Include(b => b.Farmer).ThenInclude(f => f.User)
+                            .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted)),
+                        orderBy: q => q.OrderByDescending(b => b.CreatedAt),
+                        asNoTracking: true
+                    );
+                }
+                else if (isManager)
+                {
+                    // Manager chỉ xem batch của nông dân được quản lý
+                    var manager = await _unitOfWork.BusinessManagerRepository
+                        .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+
+                    if (manager == null)
+                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+
+                    var managerId = manager.ManagerId;
+
+                    availableBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                        predicate: b => !b.IsDeleted && 
+                                       (b.Status == ProcessingStatus.NotStarted.ToString() || 
+                                        b.Status == ProcessingStatus.InProgress.ToString()) &&
+                                       b.CropSeason != null &&
+                                       b.CropSeason.Commitment != null &&
+                                       b.CropSeason.Commitment.ApprovedBy == managerId,
+                        include: q => q
+                            .Include(b => b.Method)
+                            .Include(b => b.CropSeason)
+                            .Include(b => b.CoffeeType)
+                            .Include(b => b.Farmer).ThenInclude(f => f.User)
+                            .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted)),
+                        orderBy: q => q.OrderByDescending(b => b.CreatedAt),
+                        asNoTracking: true
+                    );
+                }
+                else
+                {
+                    // Farmer chỉ xem batch của mình
+                    var farmer = await _unitOfWork.FarmerRepository
+                        .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+
+                    if (farmer == null)
+                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+
+                    availableBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                        predicate: b => !b.IsDeleted && 
+                                       b.FarmerId == farmer.FarmerId &&
+                                       (b.Status == ProcessingStatus.NotStarted.ToString() || 
+                                        b.Status == ProcessingStatus.InProgress.ToString()),
+                        include: q => q
+                            .Include(b => b.Method)
+                            .Include(b => b.CropSeason)
+                            .Include(b => b.CoffeeType)
+                            .Include(b => b.Farmer).ThenInclude(f => f.User)
+                            .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted)),
+                        orderBy: q => q.OrderByDescending(b => b.CreatedAt),
+                        asNoTracking: true
+                    );
+                }
+
+                if (!availableBatches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có lô chế biến nào có thể tạo tiến độ.", new List<object>());
+                }
+
+                // Tính toán khối lượng còn lại cho mỗi batch
+                var result = new List<AvailableBatchForProgressDto>();
+                foreach (var batch in availableBatches)
+                {
+                    // Tính tổng khối lượng đã chế biến
+                    var totalProcessedQuantity = batch.ProcessingBatchProgresses
+                        .Where(p => p.OutputQuantity.HasValue)
+                        .Sum(p => p.OutputQuantity.Value);
+
+                    // Khối lượng còn lại = InputQuantity - totalProcessedQuantity
+                    var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
+
+                    // Chỉ trả về batch có khối lượng còn lại > 0
+                    if (remainingQuantity > 0)
+                    {
+                        result.Add(new AvailableBatchForProgressDto
+                        {
+                            BatchId = batch.BatchId,
+                            BatchCode = batch.BatchCode,
+                            SystemBatchCode = batch.SystemBatchCode,
+                            Status = batch.Status,
+                            CreatedAt = batch.CreatedAt ?? DateTime.MinValue,
+                            
+                            // Thông tin liên kết
+                            CoffeeTypeId = batch.CoffeeTypeId,
+                            CoffeeTypeName = batch.CoffeeType?.TypeName ?? "N/A",
+                            CropSeasonId = batch.CropSeasonId,
+                            CropSeasonName = batch.CropSeason?.SeasonName ?? "N/A",
+                            MethodId = batch.MethodId,
+                            MethodName = batch.Method?.Name ?? "N/A",
+                            FarmerId = batch.FarmerId,
+                            FarmerName = batch.Farmer?.User?.Name ?? "N/A",
+                            
+                            // Thông tin khối lượng
+                            TotalInputQuantity = batch.InputQuantity,
+                            TotalProcessedQuantity = totalProcessedQuantity,
+                            RemainingQuantity = remainingQuantity,
+                            InputUnit = batch.InputUnit,
+                            
+                            // Thông tin tiến độ
+                            TotalProgresses = batch.ProcessingBatchProgresses.Count,
+                            LastProgressDate = batch.ProcessingBatchProgresses
+                                .OrderByDescending(p => p.ProgressDate)
+                                .FirstOrDefault()?.ProgressDate
+                        });
+                    }
+                }
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách batch có thể tạo tiến độ thành công.", result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi lấy danh sách batch: {ex.Message}");
+            }
+        }
+
+        public async Task<IServiceResult> AdvanceProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // Kiểm tra quyền truy cập
+                if (!isAdmin)
+                {
+                    if (isManager)
+                    {
+                        var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+                        if (manager == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin Business Manager.");
+                        }
+
+                        var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(b => b.BatchId == batchId && !b.IsDeleted);
+                        if (batch == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến.");
+                        }
+
+                        var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(c => c.CommitmentId == batch.CropSeason.CommitmentId && !c.IsDeleted);
+                        if (commitment?.ApprovedBy != manager.ManagerId)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô chế biến này.");
+                        }
+                    }
+                    else
+                    {
+                        var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+                        if (farmer == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                        }
+
+                        var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(b => b.BatchId == batchId && b.FarmerId == farmer.FarmerId && !b.IsDeleted);
+                        if (batch == null)
+                        {
+                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến hoặc bạn không có quyền truy cập.");
+                        }
+                    }
+                }
+
+                // Lấy batch và thông tin liên quan
+                var processingBatch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    predicate: b => b.BatchId == batchId && !b.IsDeleted,
+                    include: q => q
+                        .Include(b => b.Method)
+                        .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted).OrderBy(p => p.StepIndex))
+                        .Include(b => b.ProcessingBatchProgresses).ThenInclude(p => p.Stage),
+                    asNoTracking: false
+                );
+
+                if (processingBatch == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến.");
+                }
+
+                // Kiểm tra trạng thái batch
+                if (processingBatch.Status != ProcessingStatus.InProgress.ToString() && 
+                    processingBatch.Status != ProcessingStatus.NotStarted.ToString())
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Lô chế biến không ở trạng thái có thể tiến hành.");
+                }
+
+                // Lấy bước tiếp theo
+                var currentStepIndex = processingBatch.ProcessingBatchProgresses.Any() 
+                    ? processingBatch.ProcessingBatchProgresses.Max(p => p.StepIndex) 
+                    : 0;
+
+                var nextStepIndex = currentStepIndex + 1;
+
+                // Lấy thông tin stage cho bước tiếp theo
+                var nextStage = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(
+                    predicate: s => s.MethodId == processingBatch.MethodId && s.OrderIndex == nextStepIndex && !s.IsDeleted
+                );
+
+                if (nextStage == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin bước tiếp theo.");
+                }
+
+                // Tạo progress mới cho bước tiếp theo
+                var newProgress = new ProcessingBatchProgress
+                {
+                    ProgressId = Guid.NewGuid(),
+                    BatchId = batchId,
+                    StepIndex = nextStepIndex,
+                    StageId = nextStage.StageId,
+                    StageDescription = nextStage.Description,
+                    ProgressDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    UpdatedBy = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(newProgress);
+
+                // Cập nhật trạng thái batch
+                if (processingBatch.Status == ProcessingStatus.NotStarted.ToString())
+                {
+                    processingBatch.Status = ProcessingStatus.InProgress.ToString();
+                    processingBatch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(processingBatch);
+                }
+
+                // Kiểm tra xem có phải bước cuối cùng không
+                var totalStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    predicate: s => s.MethodId == processingBatch.MethodId && !s.IsDeleted
+                );
+                
+                if (nextStepIndex >= totalStages.Count())
+                {
+                    // Tạo evaluation tự động
+                    var evaluation = new ProcessingBatchEvaluation
+                    {
+                        EvaluationId = Guid.NewGuid(),
+                        EvaluationCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year),
+                        BatchId = batchId,
+                        EvaluationResult = "Temporary",
+                        Comments = "Đánh giá tự động sau khi hoàn thành tất cả các bước.",
+                        EvaluatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
+
+                    // Cập nhật trạng thái batch thành AwaitingEvaluation
+                    processingBatch.Status = ProcessingStatus.AwaitingEvaluation.ToString();
+                    processingBatch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(processingBatch);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tiến hành bước tiếp theo thành công.", newProgress);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi tiến hành bước tiếp theo: {ex.Message}");
+            }
+        }
     }
 }

@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<SystemNotification> NotifyInboundRequestApprovedAsync(Guid requestId, Guid farmerId);
         Task<SystemNotification> NotifyOutboundRequestCreatedAsync(Guid requestId, Guid staffId);
+        Task<SystemNotification> NotifyEvaluationFailedAsync(Guid batchId, Guid farmerId, string evaluationComments);
         
         Task<SystemNotification> NotifyFarmerReportCreatedAsync(Guid reportId, Guid farmerId, string reportTitle);
         Task<SystemNotification> NotifyExpertAdviceCreatedAsync(Guid reportId, Guid expertId, string expertName, string adviceText);

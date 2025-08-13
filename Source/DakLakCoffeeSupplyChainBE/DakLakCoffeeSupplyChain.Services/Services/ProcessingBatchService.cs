@@ -59,7 +59,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
-        public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager)
+        public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager, bool isExpert = false)
         {
             List<ProcessingBatch> batches;
 
@@ -104,8 +104,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ lô sơ chế nào.");
                 }
             }
+            else if (isExpert)
+            {
+                // AgriculturalExpert có thể xem tất cả batches để đánh giá
+                batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: x => !x.IsDeleted,
+                    include: query => query
+                        .Include(x => x.Method)
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User),
+                    orderBy: q => q.OrderByDescending(x => x.CreatedAt),
+                    asNoTracking: true
+                );
+
+                if (batches == null || !batches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có lô sơ chế nào để đánh giá.");
+                }
+            }
             else
             {
+                // Kiểm tra xem user có phải là Farmer không
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
 
                 if (farmer == null)
@@ -375,7 +394,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
          Guid batchId,
          Guid userId,
          bool isAdmin,
-         bool isManager)
+         bool isManager,
+         bool isExpert = false)
         {
             try
             {
@@ -406,6 +426,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             b.CropSeason.Commitment != null &&
                             b.CropSeason.Commitment.ApprovedBy == managerId
                         );
+                    }
+                    else if (isExpert)
+                    {
+                        // Expert có thể xem tất cả batches không bị xóa
+                        // Không cần filter thêm
                     }
                     else
                     {

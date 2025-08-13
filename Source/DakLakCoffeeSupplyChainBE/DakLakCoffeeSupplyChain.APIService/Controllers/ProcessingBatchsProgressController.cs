@@ -13,6 +13,7 @@ using System;
 using System.Security.Claims;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -35,6 +36,95 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             _uploadService = uploadService;
             _mediaService = mediaService;
             _unitOfWork = unitOfWork;
+        }
+
+        [HttpGet("available-batches")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> GetAvailableBatchesForProgress()
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            var result = await _processingBatchProgressService
+                .GetAvailableBatchesForProgressAsync(userId, isAdmin, isManager);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        [HttpGet("check-batch/{batchId}")]
+        [Authorize(Roles = "Farmer,Admin, BusinessManager")]
+        public async Task<IActionResult> CheckBatchCanCreateProgress(Guid batchId)
+        {
+            var userIdStr = User.FindFirst("userId")?.Value
+                         ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return BadRequest("Không thể lấy userId từ token.");
+
+            var isAdmin = User.IsInRole("Admin");
+            var isManager = User.IsInRole("BusinessManager");
+
+            // Lấy thông tin batch
+            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                b => b.BatchId == batchId && !b.IsDeleted,
+                include: q => q
+                    .Include(b => b.Method)
+                    .Include(b => b.CropSeason)
+                    .Include(b => b.CoffeeType)
+                    .Include(b => b.Farmer).ThenInclude(f => f.User)
+                    .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
+            );
+
+            if (batch == null)
+                return NotFound("Không tìm thấy lô chế biến.");
+
+            // Kiểm tra quyền truy cập
+            if (!isAdmin && !isManager)
+            {
+                var farmer = await _unitOfWork.FarmerRepository
+                    .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+
+                if (farmer == null)
+                    return BadRequest("Không tìm thấy thông tin nông hộ.");
+
+                if (batch.FarmerId != farmer.FarmerId)
+                    return Forbid("Bạn không có quyền truy cập lô chế biến này.");
+            }
+
+            // Tính toán khối lượng còn lại
+            var totalProcessedQuantity = batch.ProcessingBatchProgresses
+                .Where(p => p.OutputQuantity.HasValue)
+                .Sum(p => p.OutputQuantity.Value);
+
+            var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
+            var canCreateProgress = remainingQuantity > 0;
+
+            return Ok(new
+            {
+                BatchId = batch.BatchId,
+                BatchCode = batch.BatchCode,
+                Status = batch.Status,
+                CanCreateProgress = canCreateProgress,
+                TotalInputQuantity = batch.InputQuantity,
+                TotalProcessedQuantity = totalProcessedQuantity,
+                RemainingQuantity = remainingQuantity,
+                InputUnit = batch.InputUnit,
+                Message = canCreateProgress 
+                    ? $"Có thể tạo tiến độ. Còn lại {remainingQuantity} {batch.InputUnit}" 
+                    : $"Không thể tạo tiến độ. Đã chế biến hết khối lượng."
+            });
         }
 
         [HttpGet]

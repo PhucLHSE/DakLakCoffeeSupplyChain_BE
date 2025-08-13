@@ -13,10 +13,12 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> AdvanceProgressByBatchIdAsync( Guid batchId, AdvanceProcessingBatchProgressDto input, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetAllByBatchIdAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
-        Task<IServiceResult> GetByIdAsync(Guid progressId);
-        Task<IServiceResult> CreateAsync(Guid batchId,  ProcessingBatchProgressCreateDto input, Guid userId, bool isAdmin, bool isManager);
-        Task<IServiceResult> UpdateAsync(Guid progressId, ProcessingBatchProgressUpdateDto input);
-        Task<IServiceResult> SoftDeleteAsync(Guid progressId);  
+        Task<IServiceResult> GetByIdAsync(Guid id);
+        Task<IServiceResult> CreateAsync(Guid batchId, ProcessingBatchProgressCreateDto input, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> UpdateAsync(Guid id, ProcessingBatchProgressUpdateDto input);
+        Task<IServiceResult> SoftDeleteAsync(Guid id);
         Task<IServiceResult> HardDeleteAsync(Guid progressId);
+        Task<IServiceResult> AdvanceProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> GetAvailableBatchesForProgressAsync(Guid userId, bool isAdmin, bool isManager);
     }
 }
