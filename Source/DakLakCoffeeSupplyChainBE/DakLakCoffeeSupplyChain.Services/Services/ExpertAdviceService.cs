@@ -3,15 +3,20 @@ using DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.EntityFrameworkCore;
 
 public class ExpertAdviceService : IExpertAdviceService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationService _notificationService; // ✅ Thêm notification service
 
-    public ExpertAdviceService(IUnitOfWork unitOfWork)
+    public ExpertAdviceService(
+        IUnitOfWork unitOfWork,
+        INotificationService notificationService) // ✅ Inject notification service
     {
         _unitOfWork = unitOfWork;
+        _notificationService = notificationService;
     }
 
     public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin = false)
@@ -55,9 +60,6 @@ public class ExpertAdviceService : IExpertAdviceService
         if (expert == null)
             return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chuyên gia không tồn tại.");
 
-        if (expert.UserId != userId)
-            return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi phản hồi với tư cách chuyên gia này.");
-
         // 2. Kiểm tra báo cáo tồn tại
         var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(
             predicate: r => r.ReportId == dto.ReportId && !r.IsDeleted,
@@ -95,6 +97,17 @@ public class ExpertAdviceService : IExpertAdviceService
 
         await _unitOfWork.SaveChangesAsync();
 
+        // ✅ Gửi thông báo cho Farmer
+        var expertUser = await _unitOfWork.AgriculturalExpertRepository.GetByUserIdAsync(userId);
+        if (expertUser?.User != null)
+        {
+            await _notificationService.NotifyExpertAdviceCreatedAsync(
+                dto.ReportId,
+                userId,
+                expertUser.User.Name,
+                dto.AdviceText
+            );
+        }
 
         // 4. Trả lại kết quả chi tiết
         var savedAdvice = await _unitOfWork.ExpertAdviceRepository.GetByIdAsync(

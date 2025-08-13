@@ -5,6 +5,7 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -27,13 +28,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetAll()
         {
             Guid userId;
-            try { userId = User.GetUserId(); }
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
+            bool isManager = role == "BusinessManager";
 
             var result = await _cropSeasonDetailService
-                .GetAll(userId, isAdmin);
+                .GetAll(userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE) 
                 return Ok(result.Data);
@@ -50,13 +57,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> GetDetail(Guid detailId)
         {
             Guid userId;
-            try { userId = User.GetUserId(); }
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
+            bool isManager = role == "BusinessManager";
 
             var result = await _cropSeasonDetailService
-                .GetById(detailId, userId, isAdmin);
+                .GetById(detailId, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -78,10 +91,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             Guid userId;
-            try { userId = User.GetUserId(); } 
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
 
             var result = await _cropSeasonDetailService
                 .Create(dto, userId, isAdmin);
@@ -108,10 +126,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest(ModelState);
 
             Guid userId;
-            try { userId = User.GetUserId(); } 
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
 
             var result = await _cropSeasonDetailService
                 .Update(dto, userId, isAdmin);
@@ -133,10 +156,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> DeleteByIdAsync(Guid detailId)
         {
             Guid userId;
-            try { userId = User.GetUserId(); } 
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
 
             var result = await _cropSeasonDetailService
                 .DeleteById(detailId, userId, isAdmin);
@@ -158,10 +186,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> SoftDeleteAsync(Guid detailId)
         {
             Guid userId;
-            try { userId = User.GetUserId(); } 
+            string? role;
+            try 
+            { 
+                userId = User.GetUserId();
+                role = User.FindFirst(ClaimTypes.Role)?.Value;
+            }
             catch { return Unauthorized("Không xác thực được người dùng."); }
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = role == "Admin";
 
             var result = await _cropSeasonDetailService
                 .SoftDeleteById(detailId, userId, isAdmin);

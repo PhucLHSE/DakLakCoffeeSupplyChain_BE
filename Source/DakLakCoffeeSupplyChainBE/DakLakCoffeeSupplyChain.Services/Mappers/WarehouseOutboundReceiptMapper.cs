@@ -23,10 +23,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 WarehouseId = dto.WarehouseId,
                 InventoryId = dto.InventoryId,
                 BatchId = batchId,
-                Quantity = dto.ExportedQuantity,
+                Quantity = dto.ExportedQuantity,                 // SL ghi nhận cho phiếu (draft)
                 ExportedBy = staffId,
                 ExportedAt = DateTime.UtcNow,
-                Note = dto.Note,
+                Note = dto.Note,                                  // Confirm sẽ append "[CONFIRMED:x]"
                 DestinationNote = "",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -34,14 +34,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
+        // LƯU Ý: Không ghi đè Quantity nữa để hỗ trợ partial; chỉ append tag xác nhận
         public static void UpdateAfterConfirm(
             this WarehouseOutboundReceipt receipt,
             double confirmedQuantity,
             string? destinationNote)
         {
-            receipt.Quantity = confirmedQuantity;
-            receipt.DestinationNote = destinationNote ?? "";
-            receipt.Note = (receipt.Note ?? "") + $" [Đã xác nhận lúc {DateTime.UtcNow:HH:mm dd/MM/yyyy}]";
+            // Append tag xác nhận cho lần này
+            receipt.Note = (receipt.Note ?? "") + $" [CONFIRMED:{confirmedQuantity}]";
+            if (!string.IsNullOrWhiteSpace(destinationNote))
+                receipt.DestinationNote = destinationNote!;
             receipt.UpdatedAt = DateTime.UtcNow;
         }
 

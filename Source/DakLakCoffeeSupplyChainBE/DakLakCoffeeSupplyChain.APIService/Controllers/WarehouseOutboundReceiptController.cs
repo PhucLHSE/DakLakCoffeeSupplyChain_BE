@@ -110,5 +110,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+        [HttpGet("{id}/summary")]
+        [Authorize(Roles = "BusinessStaff")]
+        public async Task<IActionResult> GetSummary(Guid id)
+        {
+            var result = await _receiptService.GetSummaryAsync(id);
+            if (result.Status == Const.SUCCESS_READ_CODE) return Ok(result.Data);
+            if (result.Status == Const.FAIL_READ_CODE) return NotFound(result.Message);
+            return StatusCode(500, result.Message);
+        }
     }
 }

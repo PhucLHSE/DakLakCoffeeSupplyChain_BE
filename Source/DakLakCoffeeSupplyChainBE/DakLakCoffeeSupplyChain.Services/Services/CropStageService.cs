@@ -77,8 +77,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_CREATE_CODE, $"Thứ tự {dto.OrderIndex} đã tồn tại.");
 
                 var entity = dto.MapToNewCropStage();
-                entity.StageCode = dto.StageCode;
-                entity.StageName = dto.StageName;
                 entity.CreatedAt = DateHelper.NowVietnamTime();
                 entity.UpdatedAt = entity.CreatedAt;
 
@@ -121,8 +119,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Thứ tự {dto.OrderIndex} đã tồn tại.");
 
                 dto.MapToUpdateCropStage(stage);
-                stage.StageCode = dto.StageCode;
-                stage.StageName = dto.StageName;
                 stage.UpdatedAt = DateHelper.NowVietnamTime();
 
                 await _uow.CropStageRepository.UpdateAsync(stage);

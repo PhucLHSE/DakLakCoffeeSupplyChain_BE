@@ -10,9 +10,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IProcessingStageRepository : IGenericRepository<ProcessingStage>
     {
-        Task<List<ProcessingStage>> GetAllStagesAsync();  
+        Task<List<ProcessingStage>> GetAllStagesAsync();
+        
         Task CreateAsync(ProcessingStage entity);
+
         Task<bool> SoftDeleteAsync(int stageId);
+
         Task<bool> UpdateAsync(ProcessingStage entity);
     }
 }

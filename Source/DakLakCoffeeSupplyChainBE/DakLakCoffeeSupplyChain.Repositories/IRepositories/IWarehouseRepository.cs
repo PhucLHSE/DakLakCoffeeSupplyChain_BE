@@ -12,12 +12,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IWarehouseRepository : IGenericRepository<Warehouse>
     {
         Task<bool> IsNameExistsAsync(string name, Guid? excludeId = null);
+
         Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate);
+
         Task<Warehouse?> GetByIdAsync(Guid id);
+
         void Update(Warehouse entity);
+
         Task<bool> HasDependenciesAsync(Guid warehouseId);
+
         Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId);
+
         Task<Warehouse?> GetByIdWithManagerAsync(Guid id);
+
         Task<int> CountWarehousesCreatedInYearAsync(int year);
     }
 }

@@ -23,7 +23,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerName = request.Farmer?.User?.Name ?? "N/A",
                 BusinessStaffName = request.BusinessStaff?.User?.Name?? "N/A",
                 BatchId = request.BatchId,
-                BatchCode = request.Batch?.BatchCode
+                BatchCode = request.Batch?.BatchCode,
+                RequestedQuantity = request.RequestedQuantity ?? 0
             };
         }
         public static WarehouseInboundRequestDetailDto ToDetailDto(this WarehouseInboundRequest r)

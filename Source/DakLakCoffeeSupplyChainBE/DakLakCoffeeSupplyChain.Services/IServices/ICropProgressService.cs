@@ -6,8 +6,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface ICropProgressService
     {
-        Task<IServiceResult> GetAll(Guid userId);
-        Task<IServiceResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId, Guid userId);
+        Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false);
+        Task<IServiceResult> GetByCropSeasonDetailId(Guid cropSeasonDetailId, Guid userId, bool isAdmin = false, bool isManager = false);
         Task<IServiceResult> Create(CropProgressCreateDto dto, Guid userId);
         Task<IServiceResult> Update(CropProgressUpdateDto dto, Guid userId);
         Task<IServiceResult> DeleteById(Guid progressId, Guid userId);

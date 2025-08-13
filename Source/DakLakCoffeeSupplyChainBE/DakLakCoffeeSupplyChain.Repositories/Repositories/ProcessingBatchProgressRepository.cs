@@ -24,6 +24,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(p => !p.IsDeleted)
                 .ToListAsync();
         }
+
         public async Task<ProcessingBatchProgress?> GetByIdAsync(Guid id)
         {
             return await _context.ProcessingBatchProgresses
@@ -34,11 +35,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(p => p.ProcessingParameters)
                 .FirstOrDefaultAsync(p => p.ProgressId == id && !p.IsDeleted);
         }
+
         public async Task<bool> UpdateAsync(ProcessingBatchProgress entity)
         {
             try
             {
                 _context.ProcessingBatchProgresses.Update(entity);
+
                 return true;
             }
             catch (Exception ex)
@@ -46,6 +49,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 return false;
             }
         }
+
         public async Task<bool> SoftDeleteAsync(Guid progressId)
         {
             var entity = await _context.ProcessingBatchProgresses
@@ -57,8 +61,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             entity.UpdatedAt = DateTime.UtcNow;
 
             _context.ProcessingBatchProgresses.Update(entity); // cần thiết để EF ghi nhận thay đổi
+
             return true;
         }
+
         public async Task<bool> HardDeleteAsync(Guid progressId)
         {
             var entity = await _context.ProcessingBatchProgresses
@@ -68,8 +74,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 return false;
 
             _context.ProcessingBatchProgresses.Remove(entity);
+
             return true;
         }
+
         //public async Task<ProcessingBatchProgress?> GetByIdWithBatchAsync(Guid progressId)
         //{
         //    return await _context.ProcessingBatchProgresses
@@ -77,6 +85,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         //        .Include(p => p.ProcessingBatch)
         //        .FirstOrDefaultAsync();
         //}
-
     }
 }

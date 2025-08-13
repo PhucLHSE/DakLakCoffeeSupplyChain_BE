@@ -33,7 +33,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.BusinessStaffs
                 .AsNoTracking()
-                .CountAsync(bs => bs.CreatedAt.Year == year && !bs.IsDeleted);
+                .CountAsync(bs => 
+                   bs.CreatedAt.Year == year && 
+                   !bs.IsDeleted
+                );
         }
 
         public async Task<BusinessStaff?> GetByIdWithUserAsync(Guid staffId)
@@ -41,7 +44,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.BusinessStaffs
                 .Include(bs => bs.User)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(bs => bs.StaffId == staffId && !bs.IsDeleted);
+                .FirstOrDefaultAsync(bs => 
+                   bs.StaffId == staffId && 
+                   !bs.IsDeleted
+                );
         }
 
         public async Task<List<BusinessStaff>> GetBySupervisorIdAsync(Guid supervisorId)
@@ -57,7 +63,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<BusinessStaff?> GetByUserIdAsync(Guid userId)
         {
             return await _context.BusinessStaffs
-                                 .FirstOrDefaultAsync(m => m.UserId == userId && !m.IsDeleted);
+                                 .FirstOrDefaultAsync(m => 
+                                    m.UserId == userId && 
+                                    !m.IsDeleted
+                                 );
         }
     }
 }

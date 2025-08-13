@@ -24,7 +24,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .FirstOrDefaultAsync(c => c.Name == name
                                        && c.IsActive
                                        && c.EffectedDateFrom <= DateTime.Now
-                                       && (c.EffectedDateTo == null || c.EffectedDateTo >= DateTime.Now));
+                                       && (c.EffectedDateTo == null || c.EffectedDateTo >= DateTime.Now)
+                );
         }
     }
 }

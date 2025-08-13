@@ -23,15 +23,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(d => d.CropSeason)
                     .ThenInclude(cs => cs.Farmer)
                         .ThenInclude(f => f.User)
-                .FirstOrDefaultAsync(d => d.DetailId == cropSeasonDetailId && !d.IsDeleted);
+                .FirstOrDefaultAsync(d => 
+                   d.DetailId == cropSeasonDetailId && 
+                   !d.IsDeleted
+                );
         }
-
 
         public async Task<int> CountCultivationRegistrationsInYearAsync(int year)
         {
             return await _context.CultivationRegistrations
                 .CountAsync(p => p.RegisteredAt.Year == year);
         }
-
     }
 }

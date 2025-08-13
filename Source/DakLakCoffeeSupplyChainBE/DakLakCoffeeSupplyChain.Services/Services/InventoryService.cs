@@ -57,8 +57,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (inv == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin tồn kho.");
 
-            var dto = inv.ToDetailDto(); // ✅ Dùng mapper
-
+            var dto = inv.ToDetailDto();
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết tồn kho thành công.", dto);
         }
 

@@ -10,18 +10,21 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface ICropSeasonRepository : IGenericRepository<CropSeason>
     {
         Task<List<CropSeason>> GetAllCropSeasonsAsync();
+
         Task<CropSeason?> GetCropSeasonByIdAsync(Guid cropSeasonId);
+
         Task<int> CountByYearAsync(int year);
 
         Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId);
 
         Task<CropSeason?> GetWithDetailsByIdForUpdateAsync(Guid cropSeasonId);
+
         Task<CropSeason?> GetByIdAsync(Guid cropSeasonId);
 
         Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId);
 
         Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate);
+
         IQueryable<CropSeason> GetQuery();
-        
     }
 }

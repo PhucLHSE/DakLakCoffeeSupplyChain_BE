@@ -30,7 +30,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.BusinessManagers
                 .AsNoTracking()
-                .FirstOrDefaultAsync(bm => bm.TaxId == taxId && !bm.IsDeleted);
+                .FirstOrDefaultAsync(bm => 
+                   bm.TaxId == taxId && 
+                   !bm.IsDeleted
+                );
         }
 
         // Đếm số BusinessManager đã đăng ký trong một năm
@@ -38,13 +41,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.BusinessManagers
                 .AsNoTracking()
-                .CountAsync(bm => bm.CreatedAt.Year == year && !bm.IsDeleted);
+                .CountAsync(bm => 
+                   bm.CreatedAt.Year == year && 
+                   !bm.IsDeleted
+                );
         }
 
         public async Task<BusinessManager?> FindByUserIdAsync(Guid userId)
         {
             return await _context.BusinessManagers
-                .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted);
+                .FirstOrDefaultAsync(x => 
+                   x.UserId == userId && 
+                   !x.IsDeleted
+                );
         }
     }
 }

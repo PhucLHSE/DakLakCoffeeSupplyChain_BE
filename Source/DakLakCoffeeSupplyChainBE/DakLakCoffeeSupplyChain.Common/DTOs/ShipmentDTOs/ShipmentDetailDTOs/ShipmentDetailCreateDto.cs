@@ -11,7 +11,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs
 {
     public class ShipmentDetailCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "ShipmentId là bắt buộc.")]
+        //[Required(ErrorMessage = "ShipmentId là bắt buộc.")]
         public Guid ShipmentId { get; set; }
 
         [Required(ErrorMessage = "OrderItemId là bắt buộc.")]
@@ -28,6 +28,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs
         [MaxLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự.")]
         public string Note { get; set; } = string.Empty;
 
+        // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (Quantity is null || 

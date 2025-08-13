@@ -14,6 +14,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> UpdateGeneralFarmerReport(GeneralFarmerReportUpdateDto dto);
         Task<IServiceResult> SoftDeleteGeneralFarmerReport(Guid reportId);
         Task<IServiceResult> HardDeleteGeneralFarmerReport(Guid reportId);
-
+        Task<IServiceResult> ResolveGeneralFarmerReportAsync(Guid reportId, Guid expertId);
     }
 }

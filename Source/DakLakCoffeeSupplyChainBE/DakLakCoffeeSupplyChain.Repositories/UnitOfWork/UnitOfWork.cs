@@ -56,6 +56,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IShipmentRepository? shipmentRepository;
         private IShipmentDetailRepository? shipmentDetailRepository;
         private IWalletRepository? walletRepository;
+        private IWalletTransactionRepository? walletTransactionRepository;
         private IMediaFileRepository? mediaFileRepository;
         private IProcessingBatchEvaluationRepository? processingBatchEvaluationRepository;
         public UnitOfWork()
@@ -321,6 +322,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return generalFarmerReportRepository ??= new GeneralFarmerReportRepository(context);
             }
         }
+
         public IProcessingBatchProgressRepository ProcessingBatchProgressRepository
         {
             get
@@ -328,6 +330,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return processingBatchProgressRepository ??= new ProcessingBatchProgressRepository(context);
             }
         }
+
         public IProcessingParameterRepository ProcessingParameterRepository
         {
             get
@@ -437,6 +440,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             }
         }
 
+
         public IMediaFileRepository MediaFileRepository
         {
             get
@@ -444,12 +448,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
                 return mediaFileRepository ??= new MediaFileRepository(context);
             }
         }
+
         public IProcessingBatchEvaluationRepository ProcessingBatchEvaluationRepository
         {
             get
             {
                 return processingBatchEvaluationRepository ??= new ProcessingBatchEvaluationRepository(context);
             }
+        }
+
+        // Thêm method Dispose để implement IDisposable
+        public void Dispose()
+        {
+            context?.Dispose();
         }
     }
 }

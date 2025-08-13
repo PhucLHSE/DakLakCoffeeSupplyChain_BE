@@ -28,12 +28,17 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .ToListAsync();
         }
+
         public async Task<ProcessingParameter?> GetByIdAsync(Guid parameterId)
         {
             return await _context.ProcessingParameters
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ParameterId == parameterId && !p.IsDeleted);
+                .FirstOrDefaultAsync(p => 
+                   p.ParameterId == parameterId && 
+                   !p.IsDeleted
+                );
         }
+
         public async Task<bool> SoftDeleteAsync(Guid parameterId)
         {
             var entity = await _context.ProcessingParameters
@@ -46,8 +51,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             entity.UpdatedAt = DateTime.UtcNow;
 
             _context.ProcessingParameters.Update(entity);
+
             return true;
         }
+
         public async Task<bool> HardDeleteAsync(Guid parameterId)
         {
             var entity = await _context.ProcessingParameters
@@ -57,8 +64,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 return false;
 
             _context.ProcessingParameters.Remove(entity);
+
             return true;
         }
-
     }
 }

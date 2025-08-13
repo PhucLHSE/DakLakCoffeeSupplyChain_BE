@@ -19,14 +19,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             await _context.ExpertAdvices.AddAsync(entity);
         }
+
         public void Update(ExpertAdvice entity)
         {
             _context.ExpertAdvices.Update(entity);
         }
+
         public void Delete(ExpertAdvice entity)
         {
             _context.ExpertAdvices.Remove(entity);
         }
-
     }
 }

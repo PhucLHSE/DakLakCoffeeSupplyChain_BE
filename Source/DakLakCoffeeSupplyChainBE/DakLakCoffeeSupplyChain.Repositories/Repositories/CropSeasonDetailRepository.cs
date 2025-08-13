@@ -31,13 +31,15 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
          .Include(d => d.CommitmentDetail)
             .ThenInclude(d => d.PlanDetail)
          .Include(d => d.CropSeason)
-             .ThenInclude(cs => cs.Farmer) // nếu bạn muốn lấy FarmerName từ entity Farmer
+            .ThenInclude(cs => cs.Farmer) // nếu bạn muốn lấy FarmerName từ entity Farmer
          .FirstOrDefaultAsync(d => d.DetailId == detailId && !d.IsDeleted);
-
         }
-        public async Task<bool> ExistsAsync(Expression<Func<CropSeasonDetail, bool>> predicate)
+
+        public async Task<bool> ExistsAsync(
+            Expression<Func<CropSeasonDetail, bool>> predicate)
         {
-            return await _context.CropSeasonDetails.AnyAsync(predicate);
+            return await _context.CropSeasonDetails
+                .AnyAsync(predicate);
         }
 
         public async Task<CropSeasonDetail?> GetDetailWithIncludesAsync(Guid detailId)
@@ -51,6 +53,5 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                         .ThenInclude(f => f.User)
                 .FirstOrDefaultAsync(d => d.DetailId == detailId && !d.IsDeleted);
         }
-
     }
 }

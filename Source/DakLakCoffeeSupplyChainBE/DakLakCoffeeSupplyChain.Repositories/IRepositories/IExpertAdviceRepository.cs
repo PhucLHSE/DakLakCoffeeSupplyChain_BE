@@ -6,8 +6,9 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IExpertAdviceRepository : IGenericRepository<ExpertAdvice>
     {
         Task AddAsync(ExpertAdvice entity);
-        void Update(ExpertAdvice entity);
-        void Delete(ExpertAdvice entity);
 
+        void Update(ExpertAdvice entity);
+
+        void Delete(ExpertAdvice entity);
     }
 }

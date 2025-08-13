@@ -68,11 +68,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             entity.Title = dto.Title;
             entity.Description = dto.Description;
-            entity.SeverityLevel = (int)dto.SeverityLevel;
+            entity.SeverityLevel = dto.SeverityLevel;
             entity.ImageUrl = dto.ImageUrl ?? string.Empty;
             entity.VideoUrl = dto.VideoUrl ?? string.Empty;
             entity.UpdatedAt = DateHelper.NowVietnamTime();
-
         }
 
 

@@ -10,5 +10,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface ISystemNotificationRecipientRepository : IGenericRepository<SystemNotificationRecipient>
     {
+        IQueryable<SystemNotificationRecipient> GetQuery();
+        void Update(SystemNotificationRecipient entity);
+        Task CreateAsync(SystemNotificationRecipient entity);
     }
 }

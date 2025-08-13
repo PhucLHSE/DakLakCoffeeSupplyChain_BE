@@ -24,5 +24,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return _context.SystemNotifications.AsQueryable();
         }
+
+        public async Task CreateAsync(SystemNotification entity)
+        {
+            await _context.SystemNotifications.AddAsync(entity);
+        }
     }
 }

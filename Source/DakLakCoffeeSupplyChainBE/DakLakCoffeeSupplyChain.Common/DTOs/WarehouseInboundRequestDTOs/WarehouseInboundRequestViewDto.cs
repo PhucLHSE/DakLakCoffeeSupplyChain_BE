@@ -16,6 +16,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs
 
         public string FarmerName { get; set; } = string.Empty;
         public string? BusinessStaffName { get; set; }
+        public double RequestedQuantity { get; set; }
 
         public Guid? BatchId { get; set; }
         public string? BatchCode { get; set; }

@@ -133,5 +133,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        [HttpPatch("{reportId}/resolve")]
+        [Authorize(Roles = "AgriculturalExpert,Admin")]
+        public async Task<IActionResult> ResolveAsync(Guid reportId)
+        {
+            Guid expertId;
+            try { expertId = User.GetUserId(); }
+            catch { return Unauthorized("Không xác định được expertId từ token."); }
+
+            var result = await _reportService
+                .ResolveGeneralFarmerReportAsync(reportId, expertId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }

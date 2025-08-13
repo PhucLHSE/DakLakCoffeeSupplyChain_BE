@@ -34,18 +34,28 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(w => w.Progress)
                    .ThenInclude(p => p.Stage)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(w => w.WasteId == wasteId && !w.IsDeleted);
+                .FirstOrDefaultAsync(w => 
+                   w.WasteId == wasteId && 
+                   !w.IsDeleted
+                );
         }
 
         public async Task<int> CountByProgressIdAsync(Guid progressId)
         {
             return await _context.ProcessingBatchWastes
-                .CountAsync(w => w.ProgressId == progressId && !w.IsDeleted);
+                .CountAsync(w => 
+                   w.ProgressId == progressId && 
+                   !w.IsDeleted
+                );
         }
+
         public async Task<int> CountCreatedInYearAsync(int year)
         {
             return await _context.ProcessingBatchWastes
-                .CountAsync(w => !w.IsDeleted && w.CreatedAt.Year == year);
+                .CountAsync(w => 
+                   !w.IsDeleted &&
+                   w.CreatedAt.Year == year
+                );
         }
     }
 }

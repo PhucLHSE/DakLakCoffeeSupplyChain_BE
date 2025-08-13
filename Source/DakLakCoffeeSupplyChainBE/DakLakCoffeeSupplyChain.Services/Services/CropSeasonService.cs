@@ -44,7 +44,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
 
-        public async Task<IServiceResult> GetById(Guid cropSeasonId, Guid userId, bool isAdmin = false)
+        public async Task<IServiceResult> GetById(Guid cropSeasonId, Guid userId, bool isAdmin = false, bool isManager = false)
         {
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
                 predicate: cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted,

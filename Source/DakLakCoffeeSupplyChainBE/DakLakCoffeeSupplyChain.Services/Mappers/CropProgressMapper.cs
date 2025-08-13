@@ -16,24 +16,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StepIndex = entity.StepIndex,
                 StageCode = entity.Stage?.StageCode ?? string.Empty,
                 StageName = entity.Stage?.StageName ?? string.Empty,
-                StageDescription = entity.Stage?.Description ?? string.Empty, // Thêm StageDescription
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
                 PhotoUrl = entity.PhotoUrl ?? string.Empty,
-                VideoUrl = entity.VideoUrl ?? string.Empty,
-                ActualYield = entity.CropSeasonDetail?.ActualYield,
-                
-                // Thêm thông tin về người tạo/cập nhật
-                UpdatedBy = entity.UpdatedBy,
-                UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? string.Empty,
-                
-                // Thêm thông tin thời gian
-                CreatedAt = entity.CreatedAt,
-                UpdatedAt = entity.UpdatedAt,
-                
-                // Thêm thông tin về vùng trồng
-                CropSeasonName = entity.CropSeasonDetail?.CropSeason?.SeasonName ?? string.Empty,
-                CropSeasonDetailName = entity.CropSeasonDetail?.CommitmentDetail?.CommitmentDetailCode ?? string.Empty // Sử dụng CommitmentDetailCode thay vì DetailName
+                VideoUrl = entity.VideoUrl ?? string.Empty
             };
         }
 
@@ -46,29 +32,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StageId = entity.StageId,
                 StageName = entity.Stage?.StageName ?? string.Empty,
                 StageCode = entity.Stage?.StageCode ?? string.Empty,
-                StageDescription = entity.Stage?.Description ?? string.Empty, // Sửa: lấy từ Stage.Description (không phải StageDescription)
+                StageDescription = entity.Stage?.Description ?? string.Empty, // Lấy từ Stage.Description
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
                 PhotoUrl = entity.PhotoUrl ?? string.Empty,
                 VideoUrl = entity.VideoUrl ?? string.Empty,
                 UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? string.Empty,
                 UpdatedBy = entity.UpdatedBy,
-                StepIndex = entity.Stage?.OrderIndex ?? entity.StepIndex, // Sửa: ưu tiên Stage.OrderIndex
+                StepIndex = entity.StepIndex ?? entity.Stage?.OrderIndex ?? entity.StageId, // Ưu tiên StepIndex, sau đó OrderIndex, cuối cùng StageId
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt,
-                ActualYield = entity.CropSeasonDetail?.ActualYield,
-                
-                // Thêm thông tin chi tiết về vùng trồng
-                CropSeasonName = entity.CropSeasonDetail?.CropSeason?.SeasonName ?? string.Empty,
-                CropSeasonDetailName = entity.CropSeasonDetail?.CommitmentDetail?.CommitmentDetailCode ?? string.Empty, // Sử dụng CommitmentDetailCode
-                FarmerName = entity.CropSeasonDetail?.CropSeason?.Farmer?.User?.Name ?? string.Empty,
-                CropName = entity.CropSeasonDetail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? string.Empty, // Sử dụng CoffeeType.TypeName
-                Location = entity.CropSeasonDetail?.CropSeason?.Farmer?.FarmLocation ?? string.Empty, // Sử dụng Farmer.FarmLocation thay vì CropSeason.Location
-                Status = entity.CropSeasonDetail?.Status ?? string.Empty,
-                
-                // Thêm thông tin về giai đoạn
-                StageOrderIndex = entity.Stage?.OrderIndex,
-                IsFinalStage = entity.Stage?.StageCode == "harvesting" // Kiểm tra có phải giai đoạn cuối không
+                ActualYield = entity.CropSeasonDetail?.ActualYield
             };
         }
 
@@ -82,7 +56,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProgressId = Guid.NewGuid(),
                 CropSeasonDetailId = dto.CropSeasonDetailId,
                 StageId = dto.StageId,
-                // StageDescription sẽ được set tự động từ CropStage.Description trong service
+                StageDescription = dto.StageDescription ?? string.Empty,
                 ProgressDate = dto.ProgressDate, 
                 PhotoUrl = dto.PhotoUrl ?? string.Empty,
                 VideoUrl = dto.VideoUrl ?? string.Empty,
@@ -100,7 +74,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.CropSeasonDetailId = dto.CropSeasonDetailId;
             entity.UpdatedBy = farmerId;
             entity.StageId = dto.StageId;
-            // StageDescription sẽ được set tự động từ CropStage.Description trong service
+            entity.StageDescription = dto.StageDescription;
             entity.ProgressDate = dto.ProgressDate;
             entity.PhotoUrl = dto.PhotoUrl ?? string.Empty;
             entity.VideoUrl = dto.VideoUrl ?? string.Empty;

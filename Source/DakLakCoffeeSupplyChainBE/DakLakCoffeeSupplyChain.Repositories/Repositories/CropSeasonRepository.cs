@@ -47,7 +47,10 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     public async Task<int> CountByYearAsync(int year)
     {
         return await _context.CropSeasons
-            .CountAsync(c => c.StartDate.HasValue && c.StartDate.Value.Year == year);
+            .CountAsync(c => 
+               c.StartDate.HasValue && 
+               c.StartDate.Value.Year == year
+            );
     }
 
     public async Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId)
@@ -56,7 +59,7 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .Include(cs => cs.CropSeasonDetails)
                 .ThenInclude(d => d.CommitmentDetail)
                     .ThenInclude(d => d.PlanDetail)
-                                        .ThenInclude(pd => pd.CoffeeType) 
+                       .ThenInclude(pd => pd.CoffeeType) 
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
@@ -71,16 +74,21 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
-            .FirstOrDefaultAsync(cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted);
+            .FirstOrDefaultAsync(cs => 
+               cs.CropSeasonId == cropSeasonId && 
+               !cs.IsDeleted
+            );
     }
 
     public async Task<CropSeason?> GetByIdAsync(Guid cropSeasonId)
     {
         return await _context.CropSeasons
             .Include(c => c.Farmer)
-            .FirstOrDefaultAsync(c => c.CropSeasonId == cropSeasonId && !c.IsDeleted);
+            .FirstOrDefaultAsync(c => 
+               c.CropSeasonId == cropSeasonId && 
+               !c.IsDeleted
+            );
     }
-
 
     public async Task DeleteCropSeasonDetailsBySeasonIdAsync(Guid cropSeasonId)
     {
@@ -91,9 +99,11 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
         _context.CropSeasonDetails.RemoveRange(details);
     }
 
-    public async Task<bool> ExistsAsync(Expression<Func<CropSeason, bool>> predicate)
+    public async Task<bool> ExistsAsync(
+        Expression<Func<CropSeason, bool>> predicate)
     {
-        return await _context.CropSeasons.AnyAsync(predicate);
+        return await _context.CropSeasons
+            .AnyAsync(predicate);
     }
 
     public IQueryable<CropSeason> GetQuery()

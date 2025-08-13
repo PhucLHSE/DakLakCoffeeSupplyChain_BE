@@ -21,44 +21,66 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.Warehouses.AnyAsync(w =>
                 w.Name == name &&
                 !w.IsDeleted &&
-                (excludeId == null || w.WarehouseId != excludeId));
+                (excludeId == null || w.WarehouseId != excludeId)
+            );
         }
-        public async Task<IEnumerable<Warehouse>> FindAsync(Expression<Func<Warehouse, bool>> predicate)
+
+        public async Task<IEnumerable<Warehouse>> FindAsync(
+            Expression<Func<Warehouse, bool>> predicate)
         {
             return await _context.Warehouses
                 .Where(predicate)
                 .ToListAsync();
         }
+
         public async Task<Warehouse?> GetByIdAsync(Guid id)
         {
-            return await _context.Warehouses.FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+            return await _context.Warehouses
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == id &&
+                   !w.IsDeleted
+                );
         }
+
         public void Update(Warehouse entity)
         {
             _context.Warehouses.Update(entity);
         }
+
         public async Task<bool> HasDependenciesAsync(Guid warehouseId)
         {
             return await _context.Inventories.AnyAsync(i => i.WarehouseId == warehouseId && !i.IsDeleted)
                 || await _context.WarehouseReceipts.AnyAsync(r => r.WarehouseId == warehouseId && !r.IsDeleted)
                 || await _context.WarehouseOutboundRequests.AnyAsync(r => r.WarehouseId == warehouseId && !r.IsDeleted);
         }
+
         public async Task<Warehouse?> GetDeletableByIdAsync(Guid warehouseId)
         {
             return await _context.Warehouses
-                .FirstOrDefaultAsync(w => w.WarehouseId == warehouseId && !w.IsDeleted);
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == warehouseId && 
+                   !w.IsDeleted
+                );
         }
+
         public async Task<Warehouse?> GetByIdWithManagerAsync(Guid id)
         {
             return await _context.Warehouses
                 .Include(w => w.Manager)
-                .ThenInclude(m => m.User)
-                .FirstOrDefaultAsync(w => w.WarehouseId == id && !w.IsDeleted);
+                   .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(w => 
+                   w.WarehouseId == id && 
+                   !w.IsDeleted
+                );
         }
+
         public async Task<int> CountWarehousesCreatedInYearAsync(int year)
         {
             return await _context.Warehouses
-                .CountAsync(w => w.CreatedAt.Year == year && !w.IsDeleted);
+                .CountAsync(w => 
+                   w.CreatedAt.Year == year && 
+                   !w.IsDeleted
+                );
         }
     }
 }
