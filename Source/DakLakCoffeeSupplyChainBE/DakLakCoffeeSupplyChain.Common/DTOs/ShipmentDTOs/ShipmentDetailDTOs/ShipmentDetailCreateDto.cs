@@ -11,7 +11,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs
 {
     public class ShipmentDetailCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "ShipmentId là bắt buộc.")]
+        //[Required(ErrorMessage = "ShipmentId là bắt buộc.")]
         public Guid ShipmentId { get; set; }
 
         [Required(ErrorMessage = "OrderItemId là bắt buộc.")]
