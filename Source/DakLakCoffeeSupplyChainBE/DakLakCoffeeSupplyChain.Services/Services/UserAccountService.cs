@@ -89,9 +89,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                userAccounts = staffs
-                    .Where(s => s.User != null)
+                var staffUsers = staffs
+                    .Where(s => s.User != null && !s.User!.IsDeleted)
                     .Select(s => s.User!)
+                    .ToList();
+
+                // Lấy tất cả DeliveryStaff từ bảng UserAccount (lọc theo RoleName)
+                var deliveryUsers = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                    predicate: u => 
+                       !u.IsDeleted && 
+                       u.Role != null && 
+                       u.Role.RoleName == "DeliveryStaff",
+                    include: q => 
+                       q.Include(u => u.Role),
+                    asNoTracking: true
+                );
+
+                // Lấy chính tài khoản BusinessManager hiện tại
+                var me = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => 
+                       u.UserId == userId && 
+                       !u.IsDeleted,
+                    include: q => 
+                       q.Include(u => u.Role),
+                    asNoTracking: true
+                );
+
+                // Gộp: chính mình + staff dưới quyền + delivery staff
+                var combined = new List<UserAccount>();
+                if (me != null) combined.Add(me);
+                combined.AddRange(staffUsers);
+                combined.AddRange(deliveryUsers);
+
+                // Loại trùng theo UserId + sắp xếp theo UserCode
+                userAccounts = combined
+                    .DistinctBy(u => u.UserId)
+                    .OrderBy(u => u.UserCode)
                     .ToList();
             }
 
