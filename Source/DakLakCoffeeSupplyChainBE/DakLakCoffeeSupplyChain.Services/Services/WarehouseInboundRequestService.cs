@@ -31,34 +31,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
-        /// Tính khối lượng còn lại của lô:
-        /// remaining = totalOutput - (confirmedReceipts + reservedByOtherRequests)
+        /// Tính khối lượng còn lại có thể yêu cầu nhập kho cho một batch
         /// </summary>
         private async Task<double> CalcRemainingForBatchAsync(Guid batchId, Guid? excludeRequestId = null)
         {
-            // Tổng output của lô
+            // 1. Tổng output của lô (từ ProcessingBatchProgress)
             var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                 p => p.BatchId == batchId && !p.IsDeleted && p.OutputQuantity != null
             );
             double totalOutput = progresses.Sum(p => p.OutputQuantity ?? 0);
 
-            // Đã xác nhận nhập kho
-            var receipts = await _unitOfWork.WarehouseReceipts.GetAllAsync(
-                r => r.BatchId == batchId && !r.IsDeleted && r.ReceivedQuantity != null
+            // 2. Tổng tất cả InboundRequest đã được xử lý (trừ request hiện tại)
+            var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
+                r => r.BatchId == batchId && !r.IsDeleted && 
+                     r.InboundRequestId != (excludeRequestId ?? Guid.Empty)
             );
-            double totalConfirmed = receipts.Sum(r => r.ReceivedQuantity ?? 0);
+            
+            // 3. Tính theo trạng thái
+            double totalCompleted = allRequests
+                .Where(r => r.Status == InboundRequestStatus.Completed.ToString())
+                .Sum(r => r.RequestedQuantity ?? 0);
+                
+            double totalPendingApproved = allRequests
+                .Where(r => r.Status == InboundRequestStatus.Pending.ToString() || 
+                           r.Status == InboundRequestStatus.Approved.ToString())
+                .Sum(r => r.RequestedQuantity ?? 0);
 
-            // Các yêu cầu khác đang giữ chỗ (Pending/Approved)
-            var holding = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
-                r => r.BatchId == batchId
-                     && !r.IsDeleted
-                     && r.InboundRequestId != (excludeRequestId ?? Guid.Empty)
-                     && (r.Status == InboundRequestStatus.Pending.ToString()
-                         || r.Status == InboundRequestStatus.Approved.ToString())
-            );
-            double totalReserved = holding.Sum(r => r.RequestedQuantity ?? 0);
-
-            double remaining = totalOutput - (totalConfirmed + totalReserved);
+            // 4. Tính khối lượng còn lại
+            double remaining = totalOutput - (totalCompleted + totalPendingApproved);
             return remaining < 0 ? 0 : remaining;
         }
 

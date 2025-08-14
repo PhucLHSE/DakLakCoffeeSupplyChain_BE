@@ -27,7 +27,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ExportedBy = staffId,
                 ExportedAt = DateTime.UtcNow,
                 Note = dto.Note,                                  // Confirm sẽ append "[CONFIRMED:x]"
-                DestinationNote = "",
+                DestinationNote = dto.Destination ?? "",          // Map từ Destination
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
