@@ -93,6 +93,7 @@ builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
+builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
