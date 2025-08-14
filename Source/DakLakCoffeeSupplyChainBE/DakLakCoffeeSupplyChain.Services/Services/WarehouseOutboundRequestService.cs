@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -105,7 +106,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (staff != null && !staff.IsDeleted)
             {
                 var filtered = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
-                    r => r.RequestedBy == staff.SupervisorId && !r.IsDeleted);
+                    r => r.RequestedBy == staff.SupervisorId && !r.IsDeleted,
+                    include: query => query.Include(r => r.Warehouse)
+                                               .Include(r => r.Inventory)
+                                                   .ThenInclude(inv => inv.Products));
                 if (!filtered.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
                 return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());
@@ -115,7 +119,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (manager != null && !manager.IsDeleted)
             {
                 var filtered = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
-                    r => r.RequestedBy == manager.ManagerId && !r.IsDeleted);
+                    r => r.RequestedBy == manager.ManagerId && !r.IsDeleted,
+                    include: query => query.Include(r => r.Warehouse)
+                                               .Include(r => r.Inventory)
+                                                   .ThenInclude(inv => inv.Products));
                 if (!filtered.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
                 return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());
