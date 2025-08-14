@@ -1840,16 +1840,16 @@ INSERT INTO Contracts (
 ) VALUES (
     @ContractID, 'CTR-2025-0001', @SellerID, @BuyerID, N'HĐ-2025-001-VINCAFE',
     N'Hợp đồng cung ứng 100 tấn cà phê Đắk Lắk trong 3 năm',
-    4, 100000, 500000000,
-    '2025-06-15', '2028-06-15', '2025-06-10 14:00:00', N'PreparingDelivery',
+    4, 100000, 90000000000,
+    '2025-06-15', '2028-06-15', '2025-06-10 14:00:00', N'InProgress',
     GETDATE(), GETDATE()
 );
 
 INSERT INTO Contracts (ContractID, ContractCode, SellerID, BuyerID, ContractNumber, ContractTitle, DeliveryRounds, TotalQuantity, TotalValue, StartDate, EndDate, SignedAt, Status, CreatedAt, UpdatedAt)
 VALUES 
-(NEWID(), 'CTR-2025-0002', @SellerID, @Buyer2, N'HĐ-2025-002-COFFEELAND', N'Cung cấp 50 tấn Robusta Washed', 2, 50000, 280000000, '2025-07-01', '2026-07-01', '2025-06-20', N'PreparingDelivery', GETDATE(), GETDATE()),
-(NEWID(), 'CTR-2025-0003', @SellerID, @Buyer3, N'HĐ-2025-003-BAOAN',      N'Cung cấp 30 tấn Arabica & Culi', 3, 30000, 200000000, '2025-07-10', '2026-01-10', '2025-06-25', N'PreparingDelivery', GETDATE(), GETDATE()),
-(NEWID(), 'CTR-2025-0004', @SellerID, @Buyer4, N'HĐ-2025-004-VNCOFFEE',   N'Cung cấp cà phê đặc sản phối trộn', 1, 20000, 160000000, '2025-07-15', '2025-12-31', '2025-07-01', N'PreparingDelivery', GETDATE(), GETDATE());
+(NEWID(), 'CTR-2025-0002', @SellerID, @Buyer2, N'HĐ-2025-002-COFFEELAND', N'Cung cấp 50 tấn Robusta Washed', 2, 50000, 28000000000, '2025-07-01', '2026-07-01', '2025-06-20', N'InProgress', GETDATE(), GETDATE()),
+(NEWID(), 'CTR-2025-0003', @SellerID, @Buyer3, N'HĐ-2025-003-BAOAN',      N'Cung cấp 30 tấn Arabica & Culi', 3, 30000, 20000000000, '2025-07-10', '2026-01-10', '2025-06-25', N'InProgress', GETDATE(), GETDATE()),
+(NEWID(), 'CTR-2025-0004', @SellerID, @Buyer4, N'HĐ-2025-004-VNCOFFEE',   N'Cung cấp cà phê đặc sản phối trộn', 1, 20000, 16000000000, '2025-07-15', '2025-12-31', '2025-07-01', N'InProgress', GETDATE(), GETDATE());
 
 GO
 
@@ -1974,7 +1974,7 @@ INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'Planned', GETDATE(), GETDATE()
+    @Batch1, 'DELB-2025-0001', @ContractID, 1, '2025-07-01', 30000, 'InProgress', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Arabica UNIQUEIDENTIFIER = (
@@ -2004,7 +2004,7 @@ INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'Planned', GETDATE(), GETDATE()
+    @Batch2, 'DELB-2025-0002', @ContractID, 2, '2025-10-01', 20000, 'InProgress', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Washed UNIQUEIDENTIFIER = (
@@ -2029,7 +2029,7 @@ INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'Planned', GETDATE(), GETDATE()
+    @Batch3, 'DELB-2025-0003', @ContractID, 3, '2026-01-01', 25000, 'InProgress', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Natural UNIQUEIDENTIFIER = (
@@ -2051,7 +2051,7 @@ INSERT INTO ContractDeliveryBatches (
     DeliveryBatchID, DeliveryBatchCode, ContractID, DeliveryRound,
     ExpectedDeliveryDate, TotalPlannedQuantity, Status, CreatedAt, UpdatedAt
 ) VALUES (
-    @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'Planned', GETDATE(), GETDATE()
+    @Batch4, 'DELB-2025-0004', @ContractID, 4, '2026-04-01', 25000, 'InProgress', GETDATE(), GETDATE()
 );
 
 DECLARE @CTI_Typica UNIQUEIDENTIFIER = (
@@ -2091,7 +2091,7 @@ INSERT INTO ContractDeliveryBatches (
     CreatedAt, UpdatedAt, IsDeleted
 ) VALUES (
     @Batch_C2_D1, 'DELB-2025-0005', @CID2, 1,
-    '2025-07-15', 25000, 'Planned',
+    '2025-07-15', 25000, 'InProgress',
     GETDATE(), GETDATE(), 0
 );
 
@@ -2118,7 +2118,7 @@ INSERT INTO ContractDeliveryBatches (
     CreatedAt, UpdatedAt, IsDeleted
 ) VALUES (
     @Batch_C2_D2, 'DELB-2025-0006', @CID2, 2,
-    '2026-03-01', 25000, 'Planned',
+    '2026-03-01', 25000, 'InProgress',
     GETDATE(), GETDATE(), 0
 );
 
@@ -2141,7 +2141,7 @@ INSERT INTO ContractDeliveryItems (
 DECLARE @Batch_C3_D1 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches VALUES (
-    @Batch_C3_D1, 'DELB-2025-0007', @CID3, 1, '2025-08-01', 10000, 'Planned', GETDATE(), GETDATE(), 0
+    @Batch_C3_D1, 'DELB-2025-0007', @CID3, 1, '2025-08-01', 10000, 'InProgress', GETDATE(), GETDATE(), 0
 );
 
 DECLARE @CTI_C3_Arabica UNIQUEIDENTIFIER = (
@@ -2156,7 +2156,7 @@ INSERT INTO ContractDeliveryItems VALUES (
 DECLARE @Batch_C3_D2 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches VALUES (
-    @Batch_C3_D2, 'DELB-2025-0008', @CID3, 2, '2025-10-15', 10000, 'Planned', GETDATE(), GETDATE(), 0
+    @Batch_C3_D2, 'DELB-2025-0008', @CID3, 2, '2025-10-15', 10000, 'InProgress', GETDATE(), GETDATE(), 0
 );
 
 DECLARE @CTI_C3_Culi UNIQUEIDENTIFIER = (
@@ -2171,7 +2171,7 @@ INSERT INTO ContractDeliveryItems VALUES (
 DECLARE @Batch_C3_D3 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches VALUES (
-    @Batch_C3_D3, 'DELB-2025-0009', @CID3, 3, '2026-01-05', 10000, 'Planned', GETDATE(), GETDATE(), 0
+    @Batch_C3_D3, 'DELB-2025-0009', @CID3, 3, '2026-01-05', 10000, 'InProgress', GETDATE(), GETDATE(), 0
 );
 
 INSERT INTO ContractDeliveryItems VALUES 
@@ -2183,7 +2183,7 @@ INSERT INTO ContractDeliveryItems VALUES
 DECLARE @Batch_C4_D1 UNIQUEIDENTIFIER = NEWID();
 
 INSERT INTO ContractDeliveryBatches VALUES (
-    @Batch_C4_D1, 'DELB-2025-0010', @CID4, 1, '2025-08-20', 20000, 'Planned', GETDATE(), GETDATE(), 0
+    @Batch_C4_D1, 'DELB-2025-0010', @CID4, 1, '2025-08-20', 20000, 'InProgress', GETDATE(), GETDATE(), 0
 );
 
 DECLARE @CTI_C4_Typica UNIQUEIDENTIFIER = (
