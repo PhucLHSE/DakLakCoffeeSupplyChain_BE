@@ -17,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
                 FarmerId = fm.FarmerId, // Thêm FarmerId
+                RegistrationId =fm.RegistrationId,
                 FarmerName = fm.Farmer.User.Name,
                 CompanyName = fm.Plan.CreatedByNavigation.CompanyName,
                 PlanTitle = fm.Plan.Title,
