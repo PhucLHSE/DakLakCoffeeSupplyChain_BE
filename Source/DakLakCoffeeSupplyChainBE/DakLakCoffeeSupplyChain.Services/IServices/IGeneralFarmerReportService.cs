@@ -9,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IGeneralFarmerReportService
     {
         Task<IServiceResult> GetAll();
+        Task<IServiceResult> GetAllForManagerAsync();
         Task<IServiceResult> GetById(Guid reportId);
         Task<IServiceResult> CreateGeneralFarmerReports(GeneralFarmerReportCreateDto dto, Guid userId);
         Task<IServiceResult> UpdateGeneralFarmerReport(GeneralFarmerReportUpdateDto dto);

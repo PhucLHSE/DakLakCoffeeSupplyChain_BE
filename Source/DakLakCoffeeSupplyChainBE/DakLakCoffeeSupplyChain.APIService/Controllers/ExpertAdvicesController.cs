@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "AgriculturalExpert,Admin")] // ✅ Áp dụng xác thực mặc định
+    [Authorize(Roles = "AgriculturalExpert,Admin,BusinessManager")] // ✅ Áp dụng xác thực mặc định
     public class ExpertAdvicesController : ControllerBase
     {
         private readonly IExpertAdviceService _expertAdviceService;
@@ -41,6 +41,36 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             var result = await _expertAdviceService
                 .GetAllByUserIdAsync(userId, isAdmin);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // ✅ Thêm endpoint cho BusinessManager xem tất cả expert advice
+        [HttpGet("manager/all")]
+        [Authorize(Roles = "BusinessManager,Admin")]
+        public async Task<IActionResult> GetAllForManagerAsync()
+        {
+            // Kiểm tra role của user hiện tại
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (string.IsNullOrEmpty(role))
+            {
+                return Unauthorized("Không xác định được role của user.");
+            }
+
+            // Chỉ cho phép BusinessManager và Admin
+            if (role != "BusinessManager" && role != "Admin")
+            {
+                return Forbid("Bạn không có quyền truy cập endpoint này.");
+            }
+
+            var result = await _expertAdviceService
+                .GetAllForManagerAsync();
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);

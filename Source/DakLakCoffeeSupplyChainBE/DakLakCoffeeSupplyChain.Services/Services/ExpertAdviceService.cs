@@ -36,6 +36,41 @@ public class ExpertAdviceService : IExpertAdviceService
         return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
     }
 
+    // ✅ Thêm method cho BusinessManager xem tất cả expert advice
+    public async Task<IServiceResult> GetAllForManagerAsync()
+    {
+        var advices = await _unitOfWork.ExpertAdviceRepository.GetAllAsync(
+            predicate: a => !a.IsDeleted,
+            include: q => q.Include(a => a.Expert).ThenInclude(e => e.User)
+                        .Include(a => a.Report).ThenInclude(r => r.ReportedByNavigation),
+            orderBy: q => q.OrderByDescending(a => a.CreatedAt),
+            asNoTracking: true
+        );
+
+        var result = advices.Select(a => new ExpertAdviceViewForManagerDto
+        {
+            AdviceId = a.AdviceId,
+            ReportId = a.ReportId,
+            ReportTitle = a.Report?.Title ?? "Không xác định",
+            ReportCode = a.Report?.ReportCode ?? "Không xác định",
+            ExpertId = a.ExpertId,
+            ExpertName = a.Expert?.User?.Name ?? "Không xác định",
+            ExpertEmail = a.Expert?.User?.Email ?? "Không xác định",
+            ResponseType = a.ResponseType ?? "Không xác định",
+            AdviceSource = a.AdviceSource ?? "Không xác định",
+            AdviceText = a.AdviceText,
+            AttachedFileUrl = a.AttachedFileUrl,
+            CreatedAt = a.CreatedAt,
+            ReportedByName = a.Report?.ReportedByNavigation?.Name ?? "Không xác định",
+            ReportedByEmail = a.Report?.ReportedByNavigation?.Email ?? "Không xác định"
+        }).ToList();
+
+        if (!result.Any())
+            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có phản hồi nào.");
+
+        return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+    }
+
     public async Task<IServiceResult> GetByIdAsync(Guid adviceId, Guid userId, bool isAdmin = false)
     {
         var advice = await _unitOfWork.ExpertAdviceRepository.GetByIdAsync(
