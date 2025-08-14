@@ -4087,7 +4087,7 @@ INSERT INTO Shipments (
 )
 VALUES (
   @ShipmentID, @ShipmentCode, @OrderID, @DeliveryStaffID,
-  500, GETDATE(), 'Delivered', GETDATE(),
+  500, GETDATE(), 'Pending', GETDATE(),
   @CreatedBy, GETDATE(), GETDATE(), 0
 );
 
