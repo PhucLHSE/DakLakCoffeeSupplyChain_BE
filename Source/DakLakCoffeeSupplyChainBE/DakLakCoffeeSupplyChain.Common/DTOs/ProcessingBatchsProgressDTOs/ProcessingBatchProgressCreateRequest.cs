@@ -7,6 +7,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
     public class ProcessingBatchProgressCreateRequest
     {
         public Guid ProcessingBatchId { get; set; }
+        public int? StageId { get; set; } // Thêm StageId để validation
         public DateOnly? ProgressDate { get; set; }
         public double? OutputQuantity { get; set; }
         public string OutputUnit { get; set; }

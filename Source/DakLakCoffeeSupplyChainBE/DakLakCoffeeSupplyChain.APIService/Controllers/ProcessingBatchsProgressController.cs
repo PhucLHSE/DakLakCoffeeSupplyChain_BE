@@ -370,6 +370,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 // Tạo progress trước, sau đó upload media
                 var dto = new ProcessingBatchProgressCreateDto
                 {
+                    StageId = request.StageId, // Thêm StageId từ request
                     ProgressDate = request.ProgressDate,
                     OutputQuantity = request.OutputQuantity,
                     OutputUnit = request.OutputUnit,
@@ -559,7 +560,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     OutputUnit = request.OutputUnit,
                     PhotoUrl = null, // Sẽ được cập nhật sau
                     VideoUrl = null, // Sẽ được cập nhật sau
-                    Parameters = parameters.Any() ? parameters : null
+                    Parameters = parameters.Any() ? parameters : null,
+                    StageId = request.StageId, // Thêm stageId từ request
+                    CurrentStageId = request.CurrentStageId, // Thêm currentStageId từ request
+                    StageDescription = request.StageDescription // Thêm stageDescription từ request
                 };
 
                 var result = await _processingBatchProgressService

@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -71,20 +72,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (batch == null)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô sơ chế.");
 
-            // Cho phép farmer tạo đơn đánh giá khi batch đã hoàn thành
-            // Cho phép Expert tạo đánh giá khi batch đã hoàn thành hoặc đang chờ đánh giá
-            if (batch.Status != "Completed" && batch.Status != "AwaitingEvaluation")
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đánh giá cho lô đã hoàn thành hoặc đang chờ đánh giá.");
-            
-            // Nếu là Expert và batch đang chờ đánh giá, cho phép tạo đánh giá
-            if (isExpert && batch.Status == "AwaitingEvaluation")
+            // Cho phép Expert tạo đánh giá cho batch đã hoàn thành, đang chờ đánh giá, hoặc đang xử lý
+            // Cho phép Admin/Manager tạo đánh giá cho mọi trạng thái
+            // Cho phép Farmer tạo đơn đánh giá khi batch đã hoàn thành
+            if (isExpert)
             {
-                // Expert có thể tạo đánh giá cho batch đang chờ đánh giá
+                // Expert có thể tạo đánh giá cho batch Completed, AwaitingEvaluation, hoặc InProgress
+                if (batch.Status != "Completed" && batch.Status != "AwaitingEvaluation" && batch.Status != "InProgress")
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đánh giá cho lô đã hoàn thành, đang chờ đánh giá, hoặc đang xử lý.");
             }
-            // Nếu là Farmer và batch chưa hoàn thành, không cho phép
-            else if (!isAdmin && !isManager && !isExpert && batch.Status != "Completed")
+            else if (isAdmin || isManager)
             {
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đơn đánh giá cho lô đã hoàn thành.");
+                // Admin/Manager có thể tạo đánh giá cho mọi trạng thái
+            }
+            else
+            {
+                // Farmer chỉ có thể tạo đơn đánh giá khi batch đã hoàn thành
+                if (batch.Status != "Completed")
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đơn đánh giá cho lô đã hoàn thành.");
             }
 
             var code = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
@@ -92,28 +97,80 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tạo comments chi tiết bao gồm thông tin đơn yêu cầu đánh giá và tiến trình
             var detailedComments = dto.Comments ?? "";
             
-            // Thêm thông tin đơn yêu cầu đánh giá nếu có
-            if (!string.IsNullOrEmpty(dto.RequestReason))
+            // Nếu là Fail và có thông tin stage cụ thể, tạo format chuẩn
+            if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase) && 
+                dto.ProblematicSteps?.Any() == true)
             {
-                detailedComments += $"\n\nLý do yêu cầu đánh giá: {dto.RequestReason}";
+                // Lấy thông tin stage đầu tiên có vấn đề
+                var problematicStep = dto.ProblematicSteps.First();
+                
+                // Parse để lấy StageId từ format "Step X: StageName" hoặc "StageName"
+                var stageName = problematicStep.Contains(":") 
+                    ? problematicStep.Split(':').Last().Trim() 
+                    : problematicStep.Trim();
+                
+                // Tìm StageId từ tên stage
+                var stage = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    s => s.StageName.Contains(stageName) && s.MethodId == batch.MethodId && !s.IsDeleted
+                );
+                
+                if (stage.Any())
+                {
+                    var failedStage = stage.First();
+                    var failureDetails = dto.DetailedFeedback ?? "Không đạt tiêu chuẩn";
+                    var recommendations = dto.Recommendations ?? "Cần cải thiện";
+                    
+                    // Tạo format comments chuẩn cho failure
+                    detailedComments = StageFailureParser.CreateFailureComment(
+                        failedStage.StageId,
+                        failedStage.StageName,
+                        failureDetails,
+                        recommendations
+                    );
+                }
+                else
+                {
+                    // Fallback: tạo comments thông thường
+                    detailedComments = dto.Comments ?? "";
+                    if (!string.IsNullOrEmpty(dto.DetailedFeedback))
+                    {
+                        detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
+                    }
+                    if (dto.ProblematicSteps?.Any() == true)
+                    {
+                        detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
+                    }
+                    if (!string.IsNullOrEmpty(dto.Recommendations))
+                    {
+                        detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                    }
+                }
             }
-            if (!string.IsNullOrEmpty(dto.AdditionalNotes))
+            else
             {
-                detailedComments += $"\nGhi chú bổ sung: {dto.AdditionalNotes}";
-            }
-            
-            // Thêm thông tin đánh giá chi tiết nếu có
-            if (!string.IsNullOrEmpty(dto.DetailedFeedback))
-            {
-                detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
-            }
-            if (dto.ProblematicSteps?.Any() == true)
-            {
-                detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
-            }
-            if (!string.IsNullOrEmpty(dto.Recommendations))
-            {
-                detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                // Thêm thông tin đơn yêu cầu đánh giá nếu có
+                if (!string.IsNullOrEmpty(dto.RequestReason))
+                {
+                    detailedComments += $"\n\nLý do yêu cầu đánh giá: {dto.RequestReason}";
+                }
+                if (!string.IsNullOrEmpty(dto.AdditionalNotes))
+                {
+                    detailedComments += $"\nGhi chú bổ sung: {dto.AdditionalNotes}";
+                }
+                
+                // Thêm thông tin đánh giá chi tiết nếu có
+                if (!string.IsNullOrEmpty(dto.DetailedFeedback))
+                {
+                    detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
+                }
+                if (dto.ProblematicSteps?.Any() == true)
+                {
+                    detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
+                }
+                if (!string.IsNullOrEmpty(dto.Recommendations))
+                {
+                    detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                }
             }
 
             var entity = new ProcessingBatchEvaluation
