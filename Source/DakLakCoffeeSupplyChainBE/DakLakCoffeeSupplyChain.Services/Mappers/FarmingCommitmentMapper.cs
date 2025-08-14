@@ -16,6 +16,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentId = fm.CommitmentId,
                 CommitmentCode = fm.CommitmentCode,
                 CommitmentName = fm.CommitmentName,
+                RegistrationId = fm.RegistrationId,
                 FarmerName = fm.Farmer.User.Name,
                 CompanyName = fm.Plan.CreatedByNavigation.CompanyName,
                 PlanTitle = fm.Plan.Title,
@@ -97,7 +98,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        // Mapper FarmingCommitmentCreateDto
+        // Mapper FarmingCommitmentCreate
         public static FarmingCommitment MapToFarmingCommitment(this FarmingCommitmentCreateDto dto, string commitmentCode)
         {
             return new FarmingCommitment
@@ -125,6 +126,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ContractDeliveryItemId = detail?.ContractDeliveryItemId,
                 })]
             };
+        }
+
+        public static void MapToFarmingCommitmentUpdateAPI(this FarmingCommitmentUpdateDto dto, FarmingCommitment f)
+        {
+            f.CommitmentName = dto.CommitmentName.HasValue() ? dto.CommitmentName : f.CommitmentName;
+            f.Note = dto.Note;
+            f.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

@@ -41,6 +41,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 TotalWantedPrice = cultivation.TotalWantedPrice,
                 Note = cultivation.Note,
                 Status = EnumHelper.ParseEnumFromString(cultivation.Status, CultivationRegistrationStatus.Unknown),
+                CommitmentId = cultivation.FarmingCommitment != null ? cultivation.FarmingCommitment.CommitmentId : Guid.Empty,
                 CommitmentStatus = EnumHelper.ParseEnumFromString(cultivation.FarmingCommitment?.Status, FarmingCommitmentStatus.Unknown),
                 CultivationRegistrationDetails = [.. cultivation.CultivationRegistrationsDetails.Select(detail => new CultivationRegistrationViewDetailsDto
                 {
