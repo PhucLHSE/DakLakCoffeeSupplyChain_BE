@@ -173,12 +173,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
 
+            // Lấy ExpertId từ UserId nếu là expert
+            Guid? expertId = null;
+            if (isExpert)
+            {
+                var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
+                    predicate: e => e.UserId == userId && !e.IsDeleted,
+                    asNoTracking: true
+                );
+                expertId = expert?.ExpertId;
+            }
+
             var entity = new ProcessingBatchEvaluation
             {
                 EvaluationId = Guid.NewGuid(),
                 EvaluationCode = code,
                 BatchId = dto.BatchId,
-                EvaluatedBy = userId,
+                EvaluatedBy = expertId, // Lưu ExpertId thay vì UserId
                 EvaluationResult = dto.EvaluationResult,
                 Comments = detailedComments.Trim(),
                 EvaluatedAt = dto.EvaluatedAt ?? DateTime.UtcNow,
@@ -307,6 +318,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Lưu kết quả cũ để so sánh
             var oldResult = entity.EvaluationResult;
+            
+            // Debug log
+            Console.WriteLine($"DEBUG UPDATE EVALUATION: oldResult = '{oldResult}', dto.EvaluationResult = '{dto.EvaluationResult}'");
 
             // Tạo comments chi tiết bao gồm thông tin tiến trình
             var detailedComments = dto.Comments ?? "";
@@ -330,30 +344,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(entity);
 
-            // Xử lý logic workflow nếu kết quả thay đổi
-            if (!oldResult.Equals(dto.EvaluationResult, StringComparison.OrdinalIgnoreCase))
+            // Xử lý logic workflow khi evaluation result thay đổi
+            if (dto.EvaluationResult != null)
             {
+                Console.WriteLine($"DEBUG EVALUATION UPDATE: Result changed from '{oldResult}' to '{dto.EvaluationResult}'");
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(entity.BatchId);
+                Console.WriteLine($"DEBUG EVALUATION UPDATE: Current batch status: {batch?.Status}");
                 
                 if (batch != null)
                 {
                     if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
                     {
-                                                 // Nếu đánh giá Fail, chuyển batch về trạng thái InProgress
-                         if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
-                         {
-                             batch.Status = "InProgress";
-                             batch.UpdatedAt = DateTime.UtcNow;
-                             await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                         }
+                        Console.WriteLine($"DEBUG EVALUATION UPDATE: Processing Fail evaluation");
+                        // Nếu đánh giá Fail, chuyển batch về trạng thái InProgress
+                        if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
+                        {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: Changing status from {batch.Status} to InProgress");
+                            batch.Status = "InProgress";
+                            batch.UpdatedAt = DateTime.UtcNow;
+                            await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: Status changed successfully to InProgress");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: No status change needed for Fail. Current status: {batch.Status}");
+                        }
                     }
                     else if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine($"DEBUG EVALUATION UPDATE: Processing Pass evaluation");
                         bool statusChanged = false;
                         
                         // Nếu đánh giá Pass và batch đang AwaitingEvaluation, chuyển sang Completed
                         if (batch.Status == "AwaitingEvaluation")
                         {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: Changing status from AwaitingEvaluation to Completed");
                             batch.Status = "Completed";
                             batch.UpdatedAt = DateTime.UtcNow;
                             await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
@@ -362,22 +387,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         // Nếu đánh giá Pass và batch đang InProgress, chuyển sang Completed
                         else if (batch.Status == "InProgress")
                         {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: Changing status from InProgress to Completed");
                             batch.Status = "Completed";
                             batch.UpdatedAt = DateTime.UtcNow;
                             await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
                             statusChanged = true;
                         }
 
-                                                 // Nếu status đã chuyển sang Completed, chỉ cập nhật trạng thái
-                         if (statusChanged)
-                         {
-                             // Batch đã được chuyển sang Completed thành công
-                         }
+                        // Nếu status đã chuyển sang Completed, chỉ cập nhật trạng thái
+                        if (statusChanged)
+                        {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: Status changed successfully to Completed");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DEBUG EVALUATION UPDATE: No status change needed. Current status: {batch.Status}");
+                        }
                     }
                 }
             }
 
+            Console.WriteLine($"DEBUG EVALUATION UPDATE: About to save changes...");
             var saved = await _unitOfWork.SaveChangesAsync();
+            Console.WriteLine($"DEBUG EVALUATION UPDATE: Save result: {saved}");
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công.", entity.MapToViewDto())
@@ -503,12 +535,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted,
-                include: q => q.Include(e => e.Batch).ThenInclude(b => b.Farmer).ThenInclude(f => f.User),
+                include: q => q.Include(e => e.Batch)
+                    .ThenInclude(b => b.Farmer)
+                    .ThenInclude(f => f.User)
+                    .Include(e => e.Batch)
+                    .ThenInclude(b => b.Method),
                 orderBy: q => q.OrderByDescending(x => x.EvaluatedAt).ThenByDescending(x => x.CreatedAt),
                 asNoTracking: true
             );
 
             var dtos = list.Select(x => x.MapToViewDto()).ToList();
+            
+            // Lấy thông tin expert name cho từng evaluation
+            foreach (var dto in dtos)
+            {
+                if (dto.EvaluatedBy.HasValue)
+                {
+                    // Sử dụng EvaluatedBy field để lấy expert ID
+                    var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
+                        predicate: e => e.ExpertId == dto.EvaluatedBy.Value && !e.IsDeleted,
+                        include: q => q.Include(e => e.User),
+                        asNoTracking: true
+                    );
+                    dto.ExpertName = expert?.User?.Name;
+                }
+            }
+            
             return dtos.Any()
                 ? new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos)
                 : new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG, new List<EvaluationViewDto>());
@@ -523,12 +575,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted && e.BatchId == batchId,
-                include: q => q.Include(e => e.Batch).ThenInclude(b => b.Farmer).ThenInclude(f => f.User),
+                include: q => q.Include(e => e.Batch)
+                    .ThenInclude(b => b.Farmer)
+                    .ThenInclude(f => f.User),
                 orderBy: q => q.OrderByDescending(x => x.EvaluatedAt).ThenByDescending(x => x.CreatedAt),
                 asNoTracking: true
             );
 
             var dtos = list.Select(x => x.MapToViewDto()).ToList();
+            
+            // Lấy thông tin expert name cho từng evaluation
+            foreach (var dto in dtos)
+            {
+                if (dto.EvaluatedBy.HasValue)
+                {
+                    // Sử dụng EvaluatedBy field để lấy expert ID
+                    var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
+                        predicate: e => e.ExpertId == dto.EvaluatedBy.Value && !e.IsDeleted,
+                        include: q => q.Include(e => e.User),
+                        asNoTracking: true
+                    );
+                    dto.ExpertName = expert?.User?.Name;
+                }
+            }
+            
             return dtos.Any()
                 ? new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtos)
                 : new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG, new List<EvaluationViewDto>());

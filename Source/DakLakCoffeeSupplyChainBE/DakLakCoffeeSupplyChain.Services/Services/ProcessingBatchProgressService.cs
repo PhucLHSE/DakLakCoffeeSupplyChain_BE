@@ -322,12 +322,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         $"Còn lại: {remainingQuantity} {batch.InputUnit}");
                 }
 
-                // Kiểm tra nếu có OutputQuantity trong input thì phải <= remainingQuantity
-                if (input.OutputQuantity.HasValue && input.OutputQuantity.Value > remainingQuantity)
+                // 🔧 VALIDATION: Kiểm tra khối lượng output cơ bản
+                if (input.OutputQuantity.HasValue)
                 {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                        $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit ?? batch.InputUnit}) " +
-                        $"không thể lớn hơn khối lượng còn lại ({remainingQuantity} {batch.InputUnit})");
+                    // Kiểm tra khối lượng phải > 0
+                    if (input.OutputQuantity.Value <= 0)
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng đầu ra phải lớn hơn 0.");
+                    }
+
+                    // Kiểm tra khối lượng không được quá lớn (ví dụ: 100,000 kg)
+                    if (input.OutputQuantity.Value > 100000)
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng đầu ra không được vượt quá 100,000.");
+                    }
+
+                    // Kiểm tra đơn vị hợp lệ
+                    var validUnits = new[] { "kg", "g", "tấn", "lít", "ml", "bao", "thùng", "khác" };
+                    var outputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit.Trim().ToLower();
+                    
+                    if (!validUnits.Contains(outputUnit))
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                            $"Đơn vị '{input.OutputUnit}' không hợp lệ. Đơn vị hợp lệ: {string.Join(", ", validUnits)}");
+                    }
+
+                    // Kiểm tra không vượt quá khối lượng còn lại
+                    if (input.OutputQuantity.Value > remainingQuantity)
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                            $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit ?? batch.InputUnit}) " +
+                            $"không thể lớn hơn khối lượng còn lại ({remainingQuantity} {batch.InputUnit})");
+                    }
+
+                    // 🔧 VALIDATION: So sánh với progress trước đó (nếu có)
+                    if (existingProgresses.Any())
+                    {
+                        var latestProgress = existingProgresses.Last();
+                        if (latestProgress.OutputQuantity.HasValue)
+                        {
+                            var previousQuantity = latestProgress.OutputQuantity.Value;
+                            var currentQuantity = input.OutputQuantity.Value;
+
+                            Console.WriteLine($"DEBUG CREATE: Quantity comparison:");
+                            Console.WriteLine($"  - Previous quantity: {previousQuantity} {latestProgress.OutputUnit}");
+                            Console.WriteLine($"  - Current quantity: {currentQuantity} {input.OutputUnit ?? batch.InputUnit}");
+
+                            // 🔧 FIX: Không được nhập lớn hơn khối lượng progress trước đó
+                            if (currentQuantity > previousQuantity)
+                            {
+                                return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                                    $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit ?? batch.InputUnit}) " +
+                                    $"không được lớn hơn khối lượng progress trước đó ({previousQuantity} {latestProgress.OutputUnit}). " +
+                                    $"Trong quá trình chế biến, khối lượng chỉ có thể giảm do hao hụt.");
+                            }
+
+                            // Nếu khối lượng giảm quá nhiều (>70%), cảnh báo
+                            var changePercentage = ((currentQuantity - previousQuantity) / previousQuantity) * 100;
+                            if (changePercentage < -70)
+                            {
+                                return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                                    $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit ?? batch.InputUnit}) giảm quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
+                                    $"Vui lòng kiểm tra lại hoặc giải thích lý do hao hụt lớn.");
+                            }
+                        }
+                    }
                 }
 
                 // 4. Lấy danh sách công đoạn (stage) theo MethodId
@@ -345,6 +404,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 int nextStepIndex;
                 int nextStageId;
                 bool isLastStep = false;
+                bool isRetryScenario = false;
 
                 if (!existingProgresses.Any())
                 {
@@ -363,27 +423,46 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (currentStageIndex == -1)
                         return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
 
-                    // Nếu có failure info và đang ở stage bị fail, cho phép retry
+                    // 🔧 FIX: Kiểm tra retry scenario trước
                     if (failureInfo != null && latestProgress.StageId == failureInfo.FailedStageId)
                     {
-                        // Retry stage hiện tại
+                        // ✅ Retry stage hiện tại (stage bị fail)
                         nextStageId = latestProgress.StageId;
                         nextStepIndex = latestProgress.StepIndex + 1;
                         isLastStep = (currentStageIndex == stages.Count - 1);
+                        isRetryScenario = true;
+                        
+                        Console.WriteLine($"DEBUG: Retry scenario - StageId: {nextStageId}, StepIndex: {nextStepIndex}, isLastStep: {isLastStep}");
                     }
                     else if (currentStageIndex >= stages.Count - 1)
                     {
-                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không thể tạo bước tiếp theo. Công đoạn cuối cùng đã hoàn tất.");
+                        // 🔧 FIX: Chỉ chặn nếu không phải retry scenario
+                        if (!isRetryScenario) {
+                            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không thể tạo bước tiếp theo. Công đoạn cuối cùng đã hoàn tất.");
+                        }
+                        
+                        // Nếu là retry scenario, cho phép retry stage cuối
+                        nextStageId = latestProgress.StageId;
+                        nextStepIndex = latestProgress.StepIndex + 1;
+                        isLastStep = true;
+                        isRetryScenario = true;
+                        
+                        Console.WriteLine($"DEBUG: Retry scenario for last stage - StageId: {nextStageId}, StepIndex: {nextStepIndex}");
                     }
                     else
                     {
-                        // Chuyển sang stage tiếp theo
+                        // Bước tiếp theo bình thường
                         var nextStage = stages[currentStageIndex + 1];
                         nextStageId = nextStage.StageId;
-                        nextStepIndex = latestProgress.StepIndex + 1; // Tăng dần
+                        nextStepIndex = latestProgress.StepIndex + 1;
                         
-                        // Kiểm tra có phải bước cuối không
-                        isLastStep = (currentStageIndex + 1 == stages.Count - 1);
+                        // 🔧 FIX: Dùng OrderIndex để xác định stage cuối chính xác
+                        var maxOrderIndex = stages.Max(s => s.OrderIndex);
+                        isLastStep = (nextStage.OrderIndex >= maxOrderIndex);
+                        
+                        Console.WriteLine($"DEBUG: Normal next step - CurrentStageIndex: {currentStageIndex}, StagesCount: {stages.Count}, isLastStep: {isLastStep}");
+                        Console.WriteLine($"DEBUG: NextStageId: {nextStageId}, NextStepIndex: {nextStepIndex}");
+                        Console.WriteLine($"DEBUG: Next stage OrderIndex: {nextStage.OrderIndex}, Max OrderIndex: {maxOrderIndex}");
                     }
                 }
 
@@ -411,7 +490,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     BatchId = batchId,
                     StepIndex = nextStepIndex,
                     StageId = nextStageId,
-                    StageDescription = "",
+                    StageDescription = isRetryScenario ? $"Retry lần {nextStepIndex - existingProgresses.Count(p => p.StageId == nextStageId)}" : "",
                     ProgressDate = input.ProgressDate,
                     OutputQuantity = input.OutputQuantity,
                     OutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit,
@@ -502,6 +581,45 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
                     }
                 }
+                else if (isRetryScenario)
+                {
+                    // 🔧 FIX: Xử lý retry scenario
+                    Console.WriteLine($"DEBUG: Processing retry scenario for stage {nextStageId}");
+                    
+                    // Nếu đang ở AwaitingEvaluation, chuyển về InProgress
+                    if (batch.Status == "AwaitingEvaluation")
+                    {
+                        batch.Status = "InProgress";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                        Console.WriteLine($"DEBUG: Batch status changed from AwaitingEvaluation to InProgress for retry");
+                    }
+                    
+                    // Nếu retry stage cuối và hoàn thành, chuyển sang AwaitingEvaluation
+                    if (isLastStep)
+                    {
+                        batch.Status = "AwaitingEvaluation";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                        
+                        // Tạo evaluation mới cho expert
+                        var evaluation = new ProcessingBatchEvaluation
+                        {
+                            EvaluationId = Guid.NewGuid(),
+                            BatchId = batchId,
+                            EvaluatedBy = null,
+                            EvaluatedAt = null,
+                            EvaluationResult = null,
+                            Comments = $"Retry evaluation sau khi sửa lỗi: {stages.First(s => s.StageId == nextStageId).StageName}",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            IsDeleted = false
+                        };
+
+                        await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
+                        Console.WriteLine($"DEBUG: Created new evaluation for retry scenario");
+                    }
+                }
                 else if (isLastStep)
                 {
                     // Bước cuối cùng: Chuyển sang AwaitingEvaluation và tạo evaluation
@@ -528,9 +646,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var result = await _unitOfWork.SaveChangesAsync();
 
-                var responseMessage = isLastStep 
-                    ? "Đã tạo bước cuối cùng và chuyển sang chờ đánh giá từ chuyên gia." 
-                    : "Đã tạo bước tiến trình thành công.";
+                var responseMessage = isRetryScenario 
+                    ? $"Đã tạo bước retry cho stage {stages.First(s => s.StageId == nextStageId).StageName} thành công."
+                    : isLastStep 
+                        ? "Đã tạo bước cuối cùng và chuyển sang chờ đánh giá từ chuyên gia." 
+                        : "Đã tạo bước tiến trình thành công.";
 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage, progress.ProgressId);
 
@@ -727,16 +847,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không có quyền cập nhật batch này.");
                 }
 
-                // Kiểm tra nếu batch status là "AwaitingEvaluation" thì chuyển về "InProgress" (re-update scenario)
-                bool isReUpdateScenario = false;
-                if (batch.Status == "AwaitingEvaluation")
-                {
-                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Batch is in AwaitingEvaluation status, switching to InProgress for re-update");
-                    batch.Status = "InProgress";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                    isReUpdateScenario = true;
-                }
+                // 🔧 REMOVED: Logic chuyển status phức tạp - để UpdateAfterEvaluation xử lý
 
                 // Lấy danh sách các stage theo method → dùng để mapping StepIndex → StageId
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Getting stages for methodId: {batch.MethodId}");
@@ -766,99 +877,98 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Using stageId from input: {input.StageId}");
                 
-                // Sử dụng stageId từ input nếu có
-                if (!string.IsNullOrEmpty(input.StageId))
+                // 🔧 FIX: Đơn giản hóa logic - luôn tự động chọn stage tiếp theo
+                Console.WriteLine($"DEBUG SERVICE ADVANCE: Auto-calculating next stage...");
+                
+                if (latestProgress == null)
                 {
-                    if (!int.TryParse(input.StageId, out int selectedStageId))
-                    {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "StageId không hợp lệ.");
-                    }
-                    
-                    nextStage = stages.FirstOrDefault(s => s.StageId == selectedStageId);
-                    if (nextStage == null)
-                    {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Không tìm thấy stage với ID: {selectedStageId}");
-                    }
-                    
-                    // Tính toán stepIndex
-                    if (latestProgress == null)
-                    {
-                        nextStepIndex = 1;
-                    }
-                    else
-                    {
-                        nextStepIndex = latestProgress.StepIndex + 1;
-                    }
-                    
-                    // Kiểm tra có phải bước cuối không
-                    int stageIndex = stages.FindIndex(s => s.StageId == selectedStageId);
-                    isLastStep = (stageIndex == stages.Count - 1);
-                    
-                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Using selected stage - stepIndex: {nextStepIndex}, stageId: {nextStage.StageId}, isLastStep: {isLastStep}");
+                    // Chưa có bước nào → bắt đầu từ StepIndex 1 và Stage đầu tiên
+                    nextStepIndex = 1;
+                    nextStage = stages.FirstOrDefault();
+                    isLastStep = (stages.Count == 1);
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: No previous progress, starting with stepIndex: {nextStepIndex}, stageId: {nextStage?.StageId}, isLastStep: {isLastStep}");
                 }
                 else
                 {
-                    // Fallback: Tự động tính toán như cũ
-                    Console.WriteLine($"DEBUG SERVICE ADVANCE: No stageId provided, calculating automatically...");
-                    if (latestProgress == null)
+                    // Đã có bước → tìm stage hiện tại và chọn stage tiếp theo
+                    int currentStageIdx = stages.FindIndex(s => s.StageId == latestProgress.StageId);
+                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage index: {currentStageIdx}, total stages: {stages.Count}");
+                    
+                    if (currentStageIdx == -1)
                     {
-                        // Chưa có bước nào → bắt đầu từ StepIndex 1 và Stage đầu tiên
-                        nextStepIndex = 1;
-                        nextStage = stages.FirstOrDefault();
-                        // Kiểm tra nếu chỉ có 1 stage thì đó là bước cuối
-                        isLastStep = (stages.Count == 1);
-                        Console.WriteLine($"DEBUG SERVICE ADVANCE: No previous progress, starting with stepIndex: {nextStepIndex}, stageId: {nextStage?.StageId}, isLastStep: {isLastStep}");
+                        Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage not found in stages list");
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
+                    }
+
+                    if (currentStageIdx >= stages.Count - 1)
+                    {
+                        // Đã ở stage cuối cùng
+                        Console.WriteLine($"DEBUG SERVICE ADVANCE: Already at last stage, cannot advance further");
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Đã hoàn thành tất cả các bước. Không thể tiến thêm nữa.");
                     }
                     else
                     {
-                        // Đã có bước → tìm stage hiện tại
-                        int currentStageIdx = stages.FindIndex(s => s.StageId == latestProgress.StageId);
-                        Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage index: {currentStageIdx}, total stages: {stages.Count}");
-                        
-                        if (currentStageIdx == -1)
-                        {
-                            Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage not found in stages list");
-                            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
-                        }
-
-                        if (currentStageIdx >= stages.Count - 1)
-                        {
-                            Console.WriteLine($"DEBUG SERVICE ADVANCE: All stages completed, creating evaluation");
-                            // Đã hoàn thành tất cả stages - tạo evaluation và chuyển sang AwaitingEvaluation
-                            batch.Status = "AwaitingEvaluation";
-                            batch.UpdatedAt = DateTime.UtcNow;
-                            await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-
-                            // Tạo evaluation cho expert
-                            var evaluation = new ProcessingBatchEvaluation
-                            {
-                                EvaluationId = Guid.NewGuid(),
-                                BatchId = batchId,
-                                EvaluatedBy = null,
-                                EvaluatedAt = null,
-                                EvaluationResult = null,
-                                Comments = $"Tự động tạo evaluation khi hoàn thành bước cuối cùng: {stages.Last().StageName}",
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow,
-                                IsDeleted = false
-                            };
-
-                            await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
-                            await _unitOfWork.SaveChangesAsync();
-
-                            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã hoàn thành tất cả tiến trình và chuyển sang chờ đánh giá từ chuyên gia.");
-                        }
-
+                        // Chọn stage tiếp theo
                         nextStepIndex = latestProgress.StepIndex + 1;
                         nextStage = stages[currentStageIdx + 1];
-                        // Kiểm tra có phải bước cuối không - ĐẾM SỐ LƯỢNG STAGES
-                        isLastStep = (currentStageIdx + 1 == stages.Count - 1);
+                        
+                        // 🔧 FIX: Dùng OrderIndex để xác định stage cuối chính xác
+                        var maxOrderIndex = stages.Max(s => s.OrderIndex);
+                        isLastStep = (nextStage.OrderIndex >= maxOrderIndex);
+                        
                         Console.WriteLine($"DEBUG SERVICE ADVANCE: Next stepIndex: {nextStepIndex}, nextStageId: {nextStage?.StageId}, isLastStep: {isLastStep}");
+                        Console.WriteLine($"DEBUG SERVICE ADVANCE: Next stage OrderIndex: {nextStage.OrderIndex}, Max OrderIndex: {maxOrderIndex}");
                     }
                 }
 
                 if (nextStage == null)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy công đoạn kế tiếp.");
+
+                // 🔧 VALIDATION: Kiểm tra khối lượng output khi advance
+                if (input.OutputQuantity.HasValue)
+                {
+                    // Kiểm tra khối lượng phải > 0
+                    if (input.OutputQuantity.Value <= 0)
+                    {
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Khối lượng đầu ra phải lớn hơn 0.");
+                    }
+
+                    // 🔧 VALIDATION: So sánh với progress trước đó (nếu có)
+                    if (latestProgress != null && latestProgress.OutputQuantity.HasValue)
+                    {
+                        var previousQuantity = latestProgress.OutputQuantity.Value;
+                        var currentQuantity = input.OutputQuantity.Value;
+                        var changePercentage = ((currentQuantity - previousQuantity) / previousQuantity) * 100;
+
+                        Console.WriteLine($"DEBUG ADVANCE: Quantity comparison:");
+                        Console.WriteLine($"  - Previous quantity: {previousQuantity} {latestProgress.OutputUnit}");
+                        Console.WriteLine($"  - Current quantity: {currentQuantity} {input.OutputUnit}");
+                        Console.WriteLine($"  - Change: {changePercentage:F2}%");
+
+                        // Nếu khối lượng giảm quá nhiều (>70%), cảnh báo
+                        if (changePercentage < -70)
+                        {
+                            return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                                $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) giảm quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
+                                $"Vui lòng kiểm tra lại hoặc giải thích lý do giảm khối lượng.");
+                        }
+
+                        // Nếu khối lượng tăng quá nhiều (>150%), cảnh báo
+                        if (changePercentage > 150)
+                        {
+                            return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                                $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) tăng quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
+                                $"Vui lòng kiểm tra lại hoặc giải thích lý do tăng khối lượng.");
+                        }
+                    }
+
+                    // 🔧 VALIDATION: Kiểm tra không vượt quá input quantity của batch
+                    if (input.OutputQuantity.Value > batch.InputQuantity)
+                    {
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                            $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit}) không thể lớn hơn khối lượng đầu vào của batch ({batch.InputQuantity} {batch.InputUnit}).");
+                    }
+                }
 
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Creating new progress - stepIndex: {nextStepIndex}, stageId: {nextStage.StageId}");
                 var newProgress = new ProcessingBatchProgress
@@ -973,14 +1083,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else if (isLastStep)
                 {
                     // Bước cuối cùng: Chuyển sang AwaitingEvaluation và tạo evaluation
+                    Console.WriteLine($"DEBUG ADVANCE: Updating batch status from '{batch.Status}' to 'AwaitingEvaluation'");
                     batch.Status = "AwaitingEvaluation";
                     batch.UpdatedAt = DateTime.UtcNow;
                     await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    Console.WriteLine($"DEBUG ADVANCE: Batch status updated successfully");
 
-                    // Tạo evaluation cho expert
+                    // Tạo evaluation cho expert khi hoàn thành bước cuối
                     var evaluation = new ProcessingBatchEvaluation
                     {
                         EvaluationId = Guid.NewGuid(),
+                        EvaluationCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year),
                         BatchId = batchId,
                         EvaluatedBy = null,
                         EvaluatedAt = null,
@@ -993,44 +1106,384 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(evaluation);
                     hasChanges = true;
+                    Console.WriteLine($"DEBUG ADVANCE: Created new evaluation for batch with code: {evaluation.EvaluationCode}");
                 }
-                else if (isReUpdateScenario && batch.Status == "InProgress")
-                {
-                    // Nếu đây là re-update scenario và batch đang ở InProgress, chuyển về AwaitingEvaluation
-                    Console.WriteLine($"DEBUG SERVICE ADVANCE: Re-update scenario - changing status from InProgress to AwaitingEvaluation");
-                    batch.Status = "AwaitingEvaluation";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                    hasChanges = true;
-                }
+                // 🔧 REMOVED: Logic re-update scenario phức tạp - để UpdateAfterEvaluation xử lý
 
                 var responseMessage = isLastStep 
                     ? "Đã tạo bước cuối cùng và chuyển sang chờ đánh giá từ chuyên gia." 
-                    : isReUpdateScenario 
-                        ? "Đã cập nhật lại bước thành công và chuyển về chờ đánh giá." 
-                        : "Đã tạo bước tiến trình kế tiếp.";
+                    : "Đã tạo bước tiến trình kế tiếp.";
 
                 Console.WriteLine($"DEBUG ADVANCE: Response message: {responseMessage}");
                 Console.WriteLine($"DEBUG ADVANCE: Is last step: {isLastStep}");
-                Console.WriteLine($"DEBUG ADVANCE: Is re-update scenario: {isReUpdateScenario}");
                 Console.WriteLine($"DEBUG ADVANCE: Has changes: {hasChanges}");
 
                 // Chỉ save changes nếu có thay đổi
                 if (hasChanges)
                 {
                     Console.WriteLine($"DEBUG ADVANCE: Final save changes...");
-                    var saveResult = await _unitOfWork.SaveChangesAsync();
-                    Console.WriteLine($"DEBUG ADVANCE: Save result: {saveResult}");
-                    
-                    return saveResult > 0
-                        ? new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage)
-                        : new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước kế tiếp.");
+                    try
+                    {
+                        var saveResult = await _unitOfWork.SaveChangesAsync();
+                        Console.WriteLine($"DEBUG ADVANCE: Save result: {saveResult}");
+                        Console.WriteLine($"DEBUG ADVANCE: Save result > 0: {saveResult > 0}");
+                        
+                        if (saveResult > 0)
+                        {
+                            Console.WriteLine($"DEBUG ADVANCE: Returning success response");
+                            return new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DEBUG ADVANCE: Save failed - no changes saved");
+                            return new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước kế tiếp.");
+                        }
+                    }
+                    catch (Exception saveEx)
+                    {
+                        Console.WriteLine($"DEBUG ADVANCE: Exception during SaveChangesAsync: {saveEx.Message}");
+                        Console.WriteLine($"DEBUG ADVANCE: Exception stack trace: {saveEx.StackTrace}");
+                        
+                        // Log inner exception nếu có
+                        if (saveEx.InnerException != null)
+                        {
+                            Console.WriteLine($"DEBUG ADVANCE: Inner exception: {saveEx.InnerException.Message}");
+                            Console.WriteLine($"DEBUG ADVANCE: Inner exception stack trace: {saveEx.InnerException.StackTrace}");
+                        }
+                        
+                        return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi lưu thay đổi: {saveEx.Message}");
+                    }
                 }
                 else
                 {
                     Console.WriteLine($"DEBUG ADVANCE: No additional changes to save");
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, responseMessage);
                 }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+        // API mới: Cập nhật progress sau khi bị đánh giá fail
+        public async Task<IServiceResult> UpdateProgressAfterEvaluationAsync(
+            Guid batchId,
+            ProcessingBatchProgressCreateDto input,
+            Guid userId,
+            bool isAdmin,
+            bool isManager)
+        {
+            try
+            {
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Starting update for batchId: {batchId}, userId: {userId}");
+                
+                if (batchId == Guid.Empty)
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "BatchId không hợp lệ.");
+
+                // Lấy Farmer từ userId
+                var farmer = (await _unitOfWork.FarmerRepository.GetAllAsync(f => f.UserId == userId && !f.IsDeleted)).FirstOrDefault();
+                if (farmer == null)
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy nông hộ.");
+                }
+
+                // Lấy Batch
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null || batch.IsDeleted)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+                }
+
+                if (batch.FarmerId != farmer.FarmerId)
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Permission denied - batch farmer: {batch.FarmerId}, current farmer: {farmer.FarmerId}");
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không có quyền cập nhật batch này.");
+                }
+                
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Permission granted - using farmer: {farmer.FarmerId}");
+                
+                // Kiểm tra farmer có tồn tại trong database không
+                var farmerExists = await _unitOfWork.FarmerRepository.AnyAsync(f => f.FarmerId == farmer.FarmerId && !f.IsDeleted);
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Farmer exists in database: {farmerExists}");
+
+                // 🔧 KIỂM TRA: Chỉ cho phép cập nhật khi batch đang ở InProgress (sau khi bị fail)
+                if (batch.Status != "InProgress")
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Chỉ có thể cập nhật progress khi batch đang ở trạng thái InProgress (sau khi bị đánh giá fail).");
+                }
+
+                // Lấy evaluation fail cuối cùng
+                var latestEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                    e => e.BatchId == batchId && !e.IsDeleted,
+                    q => q.OrderByDescending(e => e.CreatedAt)
+                );
+
+                var evaluation = latestEvaluation.FirstOrDefault();
+                if (evaluation == null || evaluation.EvaluationResult != "Fail")
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy đánh giá fail cho batch này.");
+                }
+
+                // Parse failure info để biết stage nào bị fail
+                var failureInfo = await GetFailureInfoForBatch(batchId);
+                if (failureInfo == null)
+                {
+                    // Debug: Log comments để xem format thực tế
+                    if (evaluation != null)
+                    {
+                        Console.WriteLine($"DEBUG: Evaluation comments: {evaluation.Comments}");
+                    }
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không thể xác định stage nào cần cải thiện.");
+                }
+
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Failed stage - StageId: {failureInfo.FailedStageId}, StageName: {failureInfo.FailedStageName}");
+
+                // Lấy danh sách stages
+                var stages = (await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                    q => q.OrderBy(s => s.OrderIndex))).ToList();
+
+                if (stages.Count == 0)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có công đoạn nào cho phương pháp này.");
+                }
+
+                // Kiểm tra stage bị fail có tồn tại không
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Checking if stage {failureInfo.FailedStageId} exists in stages list");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Available stages: {string.Join(", ", stages.Select(s => $"{s.StageId}({s.StageName})"))}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Batch MethodId: {batch.MethodId}");
+                
+                var failedStage = stages.FirstOrDefault(s => s.StageId == failureInfo.FailedStageId);
+                if (failedStage == null)
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Stage {failureInfo.FailedStageId} not found in stages list!");
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Checking all stages in database for MethodId {batch.MethodId}...");
+                    
+                    // Kiểm tra tất cả stages trong database
+                    var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                        s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                        q => q.OrderBy(s => s.OrderIndex)
+                    );
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All stages for MethodId {batch.MethodId}: {string.Join(", ", allStages.Select(s => $"{s.StageId}({s.StageName})"))}");
+                    
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Không tìm thấy stage với ID: {failureInfo.FailedStageId} trong danh sách stages của method {batch.MethodId}");
+                }
+                
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Found failed stage: {failedStage.StageId} - {failedStage.StageName}");
+
+                // 🔧 VALIDATION: Kiểm tra khối lượng output khi stage bị fail
+                if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Khối lượng đầu ra phải lớn hơn 0 khi cải thiện stage bị fail.");
+                }
+
+                // Lấy progress cuối cùng để so sánh khối lượng
+                var progresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderByDescending(p => p.StepIndex))).ToList();
+
+                var latestProgress = progresses.FirstOrDefault();
+                int nextStepIndex = latestProgress != null ? latestProgress.StepIndex + 1 : 1;
+
+                // 🔧 VALIDATION: So sánh khối lượng với progress trước đó (nếu có)
+                if (latestProgress != null && latestProgress.OutputQuantity.HasValue)
+                {
+                    var previousQuantity = latestProgress.OutputQuantity.Value;
+                    var currentQuantity = input.OutputQuantity.Value;
+                    var improvementPercentage = ((currentQuantity - previousQuantity) / previousQuantity) * 100;
+
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Quantity comparison:");
+                    Console.WriteLine($"  - Previous quantity: {previousQuantity} {latestProgress.OutputUnit}");
+                    Console.WriteLine($"  - Current quantity: {currentQuantity} {input.OutputUnit}");
+                    Console.WriteLine($"  - Improvement: {improvementPercentage:F2}%");
+
+                    // Nếu khối lượng giảm quá nhiều (>20%), cảnh báo
+                    if (improvementPercentage < -20)
+                    {
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                            $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) giảm quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
+                            $"Vui lòng kiểm tra lại hoặc giải thích lý do giảm khối lượng.");
+                    }
+
+                    // Nếu khối lượng tăng quá nhiều (>50%), cảnh báo
+                    if (improvementPercentage > 50)
+                    {
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                            $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) tăng quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
+                            $"Vui lòng kiểm tra lại hoặc giải thích lý do tăng khối lượng.");
+                    }
+                }
+
+                // 🔧 VALIDATION: Kiểm tra khối lượng không vượt quá input quantity của batch
+                if (input.OutputQuantity.Value > batch.InputQuantity)
+                {
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                        $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit}) không thể lớn hơn khối lượng đầu vào của batch ({batch.InputQuantity} {batch.InputUnit}).");
+                }
+                
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Latest progress: {(latestProgress != null ? $"StepIndex: {latestProgress.StepIndex}, StageId: {latestProgress.StageId}" : "none")}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Next StepIndex: {nextStepIndex}");
+                
+                // Kiểm tra StepIndex có trùng lặp không
+                var existingStepIndex = await _unitOfWork.ProcessingBatchProgressRepository.AnyAsync(
+                    p => p.BatchId == batchId && p.StepIndex == nextStepIndex && !p.IsDeleted
+                );
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: StepIndex {nextStepIndex} already exists: {existingStepIndex}");
+
+                // Tạo progress mới cho stage bị fail
+                var progress = new ProcessingBatchProgress
+                {
+                    ProgressId = Guid.NewGuid(),
+                    BatchId = batchId,
+                    StepIndex = nextStepIndex,
+                    StageId = failureInfo.FailedStageId,
+                    StageDescription = $"Cải thiện sau đánh giá fail - {failureInfo.FailureDetails}",
+                    ProgressDate = input.ProgressDate,
+                    OutputQuantity = input.OutputQuantity,
+                    OutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit,
+                    PhotoUrl = input.PhotoUrl,
+                    VideoUrl = input.VideoUrl,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedBy = farmer.FarmerId,
+                    IsDeleted = false,
+                    ProcessingParameters = new List<ProcessingParameter>()
+                };
+
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating progress with:");
+                Console.WriteLine($"  - ProgressId: {progress.ProgressId}");
+                Console.WriteLine($"  - BatchId: {progress.BatchId}");
+                Console.WriteLine($"  - StepIndex: {progress.StepIndex}");
+                Console.WriteLine($"  - StageId: {progress.StageId}");
+                Console.WriteLine($"  - UpdatedBy: {progress.UpdatedBy}");
+                Console.WriteLine($"  - OutputQuantity: {progress.OutputQuantity}");
+                Console.WriteLine($"  - OutputUnit: {progress.OutputUnit}");
+
+                // Lưu progress
+                await _unitOfWork.ProcessingBatchProgressRepository.CreateAsync(progress);
+
+                // Tạo parameters nếu có
+                if (input.Parameters?.Any() == true)
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating {input.Parameters.Count} parameters");
+                    var parametersToCreate = input.Parameters.Select(p => new ProcessingParameter
+                    {
+                        ParameterId = Guid.NewGuid(),
+                        ProgressId = progress.ProgressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt ?? DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    }).ToList();
+
+                    foreach (var param in parametersToCreate)
+                    {
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating parameter: {param.ParameterName} = {param.ParameterValue} {param.Unit}");
+                        await _unitOfWork.ProcessingParameterRepository.CreateAsync(param);
+                    }
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All parameters created successfully");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: No parameters to create");
+                }
+
+                // 🔧 QUAN TRỌNG: Chuyển status từ InProgress về AwaitingEvaluation
+                batch.Status = "AwaitingEvaluation";
+                batch.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+
+                // Tạo evaluation mới cho expert đánh giá lại
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating new evaluation");
+                
+                // 🔧 FIX: Retry logic để tránh UNIQUE constraint violation
+                string evaluationCode = null;
+                int retryCount = 0;
+                const int maxRetries = 5;
+                
+                while (evaluationCode == null && retryCount < maxRetries)
+                {
+                    try
+                    {
+                        var generatedCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Generated evaluation code: {generatedCode} (attempt {retryCount + 1})");
+                        
+                        // Kiểm tra xem evaluation code đã tồn tại chưa
+                        var existingEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByPredicateAsync(
+                            predicate: e => e.EvaluationCode == generatedCode && !e.IsDeleted,
+                            selector: e => e.EvaluationCode,
+                            asNoTracking: true
+                        );
+                        
+                        if (string.IsNullOrEmpty(existingEvaluation))
+                        {
+                            evaluationCode = generatedCode;
+                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {evaluationCode} is unique");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {generatedCode} already exists, retrying...");
+                            retryCount++;
+                            await Task.Delay(100); // Đợi 100ms trước khi thử lại
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Error generating evaluation code: {ex.Message}");
+                        retryCount++;
+                        await Task.Delay(100);
+                    }
+                }
+                
+                if (evaluationCode == null)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Không thể tạo mã đánh giá duy nhất sau nhiều lần thử.");
+                }
+                
+                var newEvaluation = new ProcessingBatchEvaluation
+                {
+                    EvaluationId = Guid.NewGuid(),
+                    EvaluationCode = evaluationCode,
+                    BatchId = batchId,
+                    EvaluatedBy = null,
+                    EvaluatedAt = null,
+                    EvaluationResult = null,
+                    Comments = $"Đánh giá lại sau khi cải thiện stage: {failureInfo.FailedStageName}",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(newEvaluation);
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: New evaluation created successfully with code: {evaluationCode}");
+
+                // 🔧 QUAN TRỌNG: Lưu tất cả thay đổi một lần duy nhất
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: About to save changes...");
+                try
+                {
+                    var saveResult = await _unitOfWork.SaveChangesAsync();
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: SaveChangesAsync returned: {saveResult}");
+                }
+                catch (Exception saveEx)
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: SaveChangesAsync failed: {saveEx.Message}");
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Inner exception: {saveEx.InnerException?.Message}");
+                    throw; // Re-throw để service trả về lỗi
+                }
+
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Successfully updated progress and created new evaluation");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Final batch status: {batch.Status}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Progress created with ID: {progress.ProgressId}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation created with code: {evaluationCode}");
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, 
+                    $"Đã cập nhật progress cho stage {failureInfo.FailedStageName} và chuyển sang chờ đánh giá lại.", 
+                    progress.ProgressId);
+
             }
             catch (Exception ex)
             {
@@ -1331,25 +1784,154 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Lấy evaluation cuối cùng của batch
-                var evaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                var latestEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                     e => e.BatchId == batchId && !e.IsDeleted,
                     q => q.OrderByDescending(e => e.CreatedAt)
                 );
 
-                var latestEvaluation = evaluations.FirstOrDefault();
-                if (latestEvaluation == null) return null;
-
-                // Kiểm tra xem có phải là Fail không
-                if (!latestEvaluation.EvaluationResult?.Equals("Fail", StringComparison.OrdinalIgnoreCase) == true)
+                var evaluation = latestEvaluation.FirstOrDefault();
+                if (evaluation == null || evaluation.EvaluationResult != "Fail")
+                {
                     return null;
+                }
 
-                // Parse thông tin failure từ comments
-                return StageFailureParser.ParseFailureFromComments(latestEvaluation.Comments);
+                // Parse failure info từ comments
+                var failureInfo = ParseFailureComment(evaluation.Comments);
+                if (failureInfo != null)
+                {
+                    Console.WriteLine($"DEBUG: Found failure info - StageId: {failureInfo.FailedStageId}, StageName: {failureInfo.FailedStageName}, Details: {failureInfo.FailureDetails}");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG: ParseFailureComment returned null for comments: {evaluation.Comments}");
+                }
+
+                return failureInfo;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"DEBUG: Error getting failure info: {ex.Message}");
                 return null;
             }
+        }
+
+        // Helper class để parse failure info
+        private class StageFailureInfo
+        {
+            public int FailedStageId { get; set; }
+            public string FailedStageName { get; set; }
+            public string FailureDetails { get; set; }
+            public string Recommendations { get; set; }
+        }
+
+        // Helper method để parse failure comment
+        private static StageFailureInfo? ParseFailureComment(string comments)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(comments))
+                    return null;
+
+                Console.WriteLine($"DEBUG: Parsing failure comment: {comments}");
+
+                // Thử parse format mới trước (FAILED_STAGE_ID:4|FAILED_STAGE_NAME:Phơi|...)
+                if (comments.Contains("FAILED_STAGE_ID:"))
+                {
+                    var parts = comments.Split('|');
+                    
+                    var stageIdPart = parts.FirstOrDefault(p => p.StartsWith("FAILED_STAGE_ID:"));
+                    var stageNamePart = parts.FirstOrDefault(p => p.StartsWith("FAILED_STAGE_NAME:"));
+                    var detailsPart = parts.FirstOrDefault(p => p.StartsWith("DETAILS:"));
+                    var recommendationsPart = parts.FirstOrDefault(p => p.StartsWith("RECOMMENDATIONS:"));
+
+                    if (stageIdPart != null)
+                    {
+                        var stageIdStr = stageIdPart.Replace("FAILED_STAGE_ID:", "");
+                        if (int.TryParse(stageIdStr, out int stageId))
+                        {
+                            return new StageFailureInfo
+                            {
+                                FailedStageId = stageId,
+                                FailedStageName = stageNamePart?.Replace("FAILED_STAGE_NAME:", "") ?? "Unknown",
+                                FailureDetails = detailsPart?.Replace("DETAILS:", "") ?? "Không đạt tiêu chuẩn",
+                                Recommendations = recommendationsPart?.Replace("RECOMMENDATIONS:", "") ?? "Cần cải thiện"
+                            };
+                        }
+                    }
+                }
+
+                // Thử parse format "Bước X: StageName" (tiếng Việt)
+                Console.WriteLine($"DEBUG: Trying to match pattern 'Bu?c\\s*(\\d+):\\s*([^,\\n]+)' on: {comments}");
+                var stepMatch = System.Text.RegularExpressions.Regex.Match(comments, @"Bu?c\s*(\d+):\s*([^,\n]+)");
+                
+                // Thử pattern đơn giản hơn nếu pattern đầu không match
+                if (!stepMatch.Success)
+                {
+                    Console.WriteLine($"DEBUG: First pattern failed, trying simple pattern 'Bu?c\\s*(\\d+)'");
+                    var simpleMatch = System.Text.RegularExpressions.Regex.Match(comments, @"Bu?c\s*(\d+)");
+                    if (simpleMatch.Success)
+                    {
+                        Console.WriteLine($"DEBUG: Simple pattern matched: {simpleMatch.Groups[1].Value}");
+                        if (int.TryParse(simpleMatch.Groups[1].Value, out int stepId))
+                        {
+                            var result = new StageFailureInfo
+                            {
+                                FailedStageId = stepId,
+                                FailedStageName = "Thu hoạch", // Hardcode tạm thời
+                                FailureDetails = comments,
+                                Recommendations = "Cần cải thiện theo hướng dẫn"
+                            };
+                            Console.WriteLine($"DEBUG: Created StageFailureInfo with simple pattern: StageId={result.FailedStageId}, StageName={result.FailedStageName}");
+                            return result;
+                        }
+                    }
+                }
+                Console.WriteLine($"DEBUG: Regex match success: {stepMatch.Success}");
+                if (stepMatch.Success)
+                {
+                    Console.WriteLine($"DEBUG: Found step pattern: {stepMatch.Groups[1].Value} - {stepMatch.Groups[2].Value}");
+                    if (int.TryParse(stepMatch.Groups[1].Value, out int stepId))
+                    {
+                        var result = new StageFailureInfo
+                        {
+                            FailedStageId = stepId,
+                            FailedStageName = stepMatch.Groups[2].Value.Trim(),
+                            FailureDetails = comments,
+                            Recommendations = "Cần cải thiện theo hướng dẫn"
+                        };
+                        Console.WriteLine($"DEBUG: Created StageFailureInfo: StageId={result.FailedStageId}, StageName={result.FailedStageName}");
+                        return result;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG: Regex did not match the pattern");
+                }
+
+                // Fallback: Format cũ (StageId: X, StageName: Y, FailureDetails: Z, Recommendations: W)
+                var lines = comments.Split('\n');
+                var stageIdMatch = lines.FirstOrDefault(l => l.Contains("StageId:"))?.Split(':').LastOrDefault()?.Trim();
+                var stageNameMatch = lines.FirstOrDefault(l => l.Contains("StageName:"))?.Split(':').LastOrDefault()?.Trim();
+                var detailsMatch = lines.FirstOrDefault(l => l.Contains("FailureDetails:"))?.Split(':').LastOrDefault()?.Trim();
+                var recommendationsMatch = lines.FirstOrDefault(l => l.Contains("Recommendations:"))?.Split(':').LastOrDefault()?.Trim();
+
+                if (int.TryParse(stageIdMatch, out int fallbackStageId))
+                {
+                    return new StageFailureInfo
+                    {
+                        FailedStageId = fallbackStageId,
+                        FailedStageName = stageNameMatch ?? "Unknown",
+                        FailureDetails = detailsMatch ?? "Không đạt tiêu chuẩn",
+                        Recommendations = recommendationsMatch ?? "Cần cải thiện"
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Error parsing failure comment: {ex.Message}");
+            }
+
+            return null;
         }
     }
 }

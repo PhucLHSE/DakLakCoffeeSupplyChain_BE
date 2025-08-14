@@ -7,7 +7,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReq
     public class AdvanceProcessingBatchProgressRequest
     {
         public DateTime ProgressDate { get; set; }
-        public double OutputQuantity { get; set; }
+        public double? OutputQuantity { get; set; }
         public string OutputUnit { get; set; }
 
         public List<IFormFile>? PhotoFiles { get; set; }
@@ -23,5 +23,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReq
         public string? ParameterValue { get; set; }
         public string? Unit { get; set; }
         public DateTime? RecordedAt { get; set; }
+        
+        // Multiple parameters support
+        public string? ParametersJson { get; set; } // JSON array of parameters
     }
 }
