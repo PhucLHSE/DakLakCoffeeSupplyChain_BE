@@ -3032,12 +3032,12 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 INSERT INTO FarmingCommitments (
     CommitmentCode, RegistrationID, PlanID, FarmerID,
     CommitmentName, ApprovedBy, ApprovedAt, 
-	Note, TotalPrice
+	Note, TotalPrice, TotalTaxPrice
 )
 VALUES (
     'FC-2025-0001', @RegistrationID, @PlanID, @FarmerID,
     N'Bảng cam kết Kế hoạch thu mua cà phê 2025-2026', @ManagerID, GETDATE(),
-    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 960000
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 143325000, 6825000
 );
 
 GO
@@ -3060,12 +3060,12 @@ DECLARE @CommitmentID UNIQUEIDENTIFIER = (
 INSERT INTO FarmingCommitmentsDetails (
     CommitmentDetailCode, RegistrationDetailID, PlanDetailID, CommitmentID,
     ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
-    Note
+    Note, TaxPrice
 )
 VALUES (
     'FCD-2025-0001', @RegistrationDetailID, @PlanDetailID, @CommitmentID,
-    960000, 2100, '2026-01-20', '2026-01-30',
-    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
+    91000, 2100, '2026-01-20', '2026-01-30',
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 4550
 );
 
 GO
@@ -3886,7 +3886,7 @@ DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
 );
 
 DECLARE @ApprovedBy UNIQUEIDENTIFIER = (
-  SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+  SELECT UserID FROM UserAccounts WHERE Email = 'businessManager@gmail.com'
 );
 
 DECLARE @ProductID UNIQUEIDENTIFIER = NEWID();
@@ -3905,7 +3905,7 @@ VALUES (
   @CreatedBy, @BatchID, @InventoryID, @CoffeeTypeID,
   N'Đắk Lắk', N'Xã Ea Tu, TP. Buôn Ma Thuột', 'DLK-GI-0001',
   'https://certs.example.com/vietgap/arabica.pdf',
-  N'Specialty', 84.5, N'Approved', @ApprovedBy, N'Meets all cupping standards.',
+  N'Đặc sản', 84.5, N'Approved', @ApprovedBy, N'Đáp ứng đầy đủ tiêu chuẩn chấm điểm.',
   GETDATE(), GETDATE(), GETDATE(), 0
 );
 

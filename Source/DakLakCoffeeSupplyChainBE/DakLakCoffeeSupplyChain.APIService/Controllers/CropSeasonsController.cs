@@ -63,8 +63,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try { userId = User.GetUserId(); }
             catch { return Unauthorized("Không xác định được userId từ token."); }
 
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            bool isAdmin = role == "Admin";
+            bool isManager = role == "BusinessManager";
+
             var result = await _cropSeasonService
-                .GetById(cropSeasonId, userId);
+                .GetById(cropSeasonId, userId, isAdmin, isManager);
 
             if (result.Status == Const.SUCCESS_READ_CODE) 
                 return Ok(result.Data);

@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropSeasonEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -52,8 +53,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                var progresses = await _unitOfWork.CropProgressRepository
-                    .GetByCropSeasonDetailIdWithIncludesAsync(cropSeasonDetailId, userId);
+                List<CropProgress> progresses;
+                
+                if (isAdmin || isManager)
+                {
+                    // Admin và Manager có thể xem tất cả progress
+                    progresses = await _unitOfWork.CropProgressRepository
+                        .GetByCropSeasonDetailIdForManagerAsync(cropSeasonDetailId);
+                }
+                else
+                {
+                    // Farmer chỉ xem được progress của mình
+                    progresses = await _unitOfWork.CropProgressRepository
+                        .GetByCropSeasonDetailIdWithIncludesAsync(cropSeasonDetailId, userId);
+                }
 
                 var result = new CropProgressViewByDetailDto
                 {

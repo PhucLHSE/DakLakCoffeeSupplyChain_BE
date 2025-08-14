@@ -2,19 +2,20 @@
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommitmentsDetailsDTOs
 {
-    public class FarmingCommitmentsDetailsCreateDto
+    public class FarmingCommitmentsDetailsUpdateDto
     {
+        public Guid? CommitmentDetailId { get; set; }
         [Required(ErrorMessage = "Chi tiết đơn đăng ký không được để trống")]
         public Guid RegistrationDetailId { get; set; }
 
         //public Guid PlanDetailId { get; set; }
         [Required(ErrorMessage = "Giá cả cam kết không được phép bỏ trống")]
-        public double ConfirmedPrice { get; set; }
+        public double? ConfirmedPrice { get; set; }
 
         public double? AdvancePayment { get; set; }
 
         [Required(ErrorMessage = "Sản lượng cam kết không được phép để trống")]
-        public double CommittedQuantity { get; set; }
+        public double? CommittedQuantity { get; set; }
 
         public DateOnly? EstimatedDeliveryStart { get; set; }
 

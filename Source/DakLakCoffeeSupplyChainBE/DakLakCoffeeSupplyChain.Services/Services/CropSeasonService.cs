@@ -60,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (cropSeason == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
 
-            if (!isAdmin && cropSeason.Farmer?.UserId != userId)
+            if (!isAdmin && !isManager && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập mùa vụ này.");
 
             var registration = cropSeason.Commitment?.Registration;

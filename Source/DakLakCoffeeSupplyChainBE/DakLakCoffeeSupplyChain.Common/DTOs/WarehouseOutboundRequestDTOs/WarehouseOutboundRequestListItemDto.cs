@@ -16,6 +16,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public string? WarehouseName { get; set; }
 
         public Guid InventoryId { get; set; }         // ✅ thêm vào
+        public string? ProductName { get; set; }      // ✅ thêm tên sản phẩm
         public double RequestedQuantity { get; set; }
         public string Unit { get; set; }
 

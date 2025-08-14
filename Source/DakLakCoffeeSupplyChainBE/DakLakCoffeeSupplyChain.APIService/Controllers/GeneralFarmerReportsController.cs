@@ -5,12 +5,13 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System.Security.Claims;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Farmer,AgriculturalExpert,Admin")]
+    [Authorize(Roles = "Farmer,AgriculturalExpert,Admin,BusinessManager")]
     public class GeneralFarmerReportsController : ControllerBase
     {
         private readonly IGeneralFarmerReportService _reportService;
@@ -34,6 +35,54 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
+        }
+
+        // ✅ Thêm endpoint cho BusinessManager xem tất cả báo cáo
+        [HttpGet("manager/all")]
+        [Authorize(Roles = "BusinessManager,Admin")]
+        public async Task<IActionResult> GetAllForManager()
+        {
+            // Kiểm tra role của user hiện tại
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (string.IsNullOrEmpty(role))
+            {
+                return Unauthorized("Không xác định được role của user.");
+            }
+
+            // Chỉ cho phép BusinessManager và Admin
+            if (role != "BusinessManager" && role != "Admin")
+            {
+                return Forbid("Bạn không có quyền truy cập endpoint này.");
+            }
+
+            var result = await _reportService
+                .GetAllForManagerAsync();
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // ✅ Endpoint test để kiểm tra role của user
+        [HttpGet("test-role")]
+        [Authorize]
+        public IActionResult TestRole()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            
+            return Ok(new
+            {
+                Role = role,
+                UserId = userId,
+                Email = email,
+                AllClaims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
+            });
         }
 
         [HttpGet("{reportId}")]

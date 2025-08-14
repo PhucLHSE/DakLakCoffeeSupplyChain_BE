@@ -290,8 +290,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                         confirmedPriceAfterTax += detail.TaxPrice;
                     }
-
                     newCommitment.TotalPrice += confirmedPriceAfterTax;
+                    if (detail.AdvancePayment > newCommitment.TotalPrice)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Số tiền tạm ứng không được lớn hơn tổng số tiền cam kết."
+                        );
                     newCommitment.TotalAdvancePayment += detail.AdvancePayment;
                     newCommitment.TotalTaxPrice += detail.TaxPrice;
                 }
@@ -426,6 +430,179 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
                         Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> Update(FarmingCommitmentUpdateDto dto, Guid userId, Guid commitmentId)
+        {
+            try
+            {
+                //Lấy commitment
+                var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                    predicate: p => p.CommitmentId == commitmentId && !p.IsDeleted,
+                    include: p => p.
+                        Include(p => p.Plan).
+                            ThenInclude(p => p.CreatedByNavigation).
+                        Include(p => p.FarmingCommitmentsDetails)
+                        );
+
+                if (commitment == null || commitment.Plan.CreatedByNavigation.UserId != userId)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
+                    );
+
+                // Map dto to model
+                dto.MapToFarmingCommitmentUpdateAPI(commitment);
+
+                // Đồng bộ dữ liệu
+                var commitmentDetailsIds = dto.FarmingCommitmentsDetailsUpdateDtos.Select(i => i.CommitmentDetailId).ToHashSet();
+                var now = DateHelper.NowVietnamTime();
+
+                // Lấy giá trị thuế được set mềm ở bảng systemConfiguration
+                var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                    predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
+                    asNoTracking: true
+                    );
+
+                // Xóa mềm Details
+                foreach (var oldItem in commitment.FarmingCommitmentsDetails)
+                {
+                    if (!commitmentDetailsIds.Contains(oldItem.CommitmentDetailId) && !oldItem.IsDeleted)
+                    {
+                        commitment.TotalPrice -= ((oldItem.ConfirmedPrice + oldItem.TaxPrice)*oldItem.CommittedQuantity);
+                        commitment.TotalAdvancePayment -= oldItem.AdvancePayment;
+                        commitment.TotalTaxPrice -= (oldItem.TaxPrice*oldItem.CommittedQuantity);
+                        oldItem.IsDeleted = true;
+                        oldItem.UpdatedAt = now;
+                        await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(oldItem);
+                    }
+                }
+
+                // Cập nhật plan detail đang tồn tại
+                foreach (var itemDto in dto.FarmingCommitmentsDetailsUpdateDtos)
+                {
+                    var existingCommitmentDetails = commitment.FarmingCommitmentsDetails.
+                        FirstOrDefault(p => p.CommitmentDetailId == itemDto.CommitmentDetailId && itemDto.CommitmentDetailId != Guid.Empty);
+
+                    var confirmedPriceAfterTax = itemDto.ConfirmedPrice;
+                    var taxPrice = 0.0;
+
+                    if (taxCode != null)
+                    {
+                        if (itemDto.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                            taxPrice = itemDto.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                        confirmedPriceAfterTax += taxPrice;
+                    }
+
+                    if (existingCommitmentDetails != null)
+                    {
+                        commitment.TotalPrice = commitment.TotalPrice - ((existingCommitmentDetails.ConfirmedPrice + existingCommitmentDetails.TaxPrice)* existingCommitmentDetails.CommittedQuantity) + (confirmedPriceAfterTax * itemDto.CommittedQuantity);
+                        commitment.TotalTaxPrice = commitment.TotalTaxPrice - existingCommitmentDetails.TaxPrice + taxPrice;
+                        if (itemDto.AdvancePayment > commitment.TotalPrice)
+                            return new ServiceResult(
+                                Const.FAIL_UPDATE_CODE,
+                                "Số tiền tạm ứng không được lớn hơn tổng số tiền cam kết."
+                            );
+                        existingCommitmentDetails.TaxPrice = taxPrice != 0 ? taxPrice : existingCommitmentDetails.TaxPrice;
+                        commitment.TotalAdvancePayment = commitment.TotalAdvancePayment - existingCommitmentDetails.AdvancePayment + itemDto.AdvancePayment;
+                        existingCommitmentDetails.AdvancePayment = itemDto.AdvancePayment;
+                        existingCommitmentDetails.RegistrationDetailId = itemDto.RegistrationDetailId != Guid.Empty ? itemDto.RegistrationDetailId : existingCommitmentDetails.RegistrationDetailId;
+                        existingCommitmentDetails.ConfirmedPrice = itemDto.ConfirmedPrice != 0 ? itemDto.ConfirmedPrice : existingCommitmentDetails.ConfirmedPrice;
+                        existingCommitmentDetails.CommittedQuantity = itemDto.CommittedQuantity.HasValue ? itemDto.CommittedQuantity : existingCommitmentDetails.CommittedQuantity;
+                        existingCommitmentDetails.EstimatedDeliveryStart = itemDto.EstimatedDeliveryStart.HasValue ? itemDto.EstimatedDeliveryStart : existingCommitmentDetails.EstimatedDeliveryStart;
+                        existingCommitmentDetails.EstimatedDeliveryEnd = itemDto.EstimatedDeliveryEnd.HasValue ? itemDto.EstimatedDeliveryEnd : existingCommitmentDetails.EstimatedDeliveryEnd;
+                        existingCommitmentDetails.Note = itemDto.Note.HasValue() ? itemDto.Note : existingCommitmentDetails.Note;
+                        existingCommitmentDetails.ContractDeliveryItemId = itemDto.ContractDeliveryItemId != Guid.Empty ? itemDto.ContractDeliveryItemId : existingCommitmentDetails.ContractDeliveryItemId;
+                        existingCommitmentDetails.UpdatedAt = now;
+
+                        await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(existingCommitmentDetails);
+                    }
+
+                    // Thêm mới các detail chưa có id
+                    if (itemDto.CommitmentDetailId == Guid.Empty || !itemDto.CommitmentDetailId.HasValue)
+                    {
+                        string commitmentDetailCode = await _codeGenerator.GenerateFarmingCommitmenstDetailCodeAsync();
+                        var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(commitmentDetailCode);
+                        var newDetail = new FarmingCommitmentsDetail
+                        {
+                            CommitmentDetailId = Guid.NewGuid(),
+                            CommitmentDetailCode = $"FCD-{now.Year}-{count:D4}",
+                            RegistrationDetailId = itemDto.RegistrationDetailId,
+                            ConfirmedPrice = itemDto.ConfirmedPrice,
+                            AdvancePayment =  itemDto.AdvancePayment,
+                            TaxPrice = 0,
+                            CommittedQuantity = itemDto.CommittedQuantity,
+                            EstimatedDeliveryStart = itemDto.EstimatedDeliveryStart,
+                            EstimatedDeliveryEnd = itemDto.EstimatedDeliveryEnd,
+                            Note = itemDto.Note,
+                            ContractDeliveryItemId = itemDto.ContractDeliveryItemId,
+                        };
+                        if (taxCode != null)
+                            if (newDetail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                                newDetail.TaxPrice = newDetail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                        count++;
+                        commitment.TotalTaxPrice += newDetail.TaxPrice;
+                        commitment.TotalPrice += (newDetail.ConfirmedPrice + newDetail.TaxPrice)*newDetail.CommittedQuantity;
+                        if (newDetail.AdvancePayment > commitment.TotalPrice)
+                            return new ServiceResult(
+                                Const.FAIL_UPDATE_CODE,
+                                "Số tiền tạm ứng không được lớn hơn tổng số tiền cam kết."
+                            );
+                        commitment.TotalAdvancePayment += newDetail.AdvancePayment;
+                        commitment.FarmingCommitmentsDetails.Add(newDetail);
+                    }
+                }
+
+                // Save data to database
+                await _unitOfWork.FarmingCommitmentRepository.UpdateAsync(commitment);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var updatedCommitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                        predicate: p => p.CommitmentId == p.CommitmentId,
+                        include: p => p.
+                        Include(fm => fm.Plan).
+                            ThenInclude(fm => fm.CreatedByNavigation).
+                        Include(fm => fm.Farmer).
+                            ThenInclude(fm => fm.User).
+                        Include(fm => fm.ApprovedByNavigation).
+                            ThenInclude(fm => fm.User).
+                        Include(p => p.FarmingCommitmentsDetails).
+                            ThenInclude(fm => fm.PlanDetail).
+                        ThenInclude(fm => fm.CoffeeType),
+                        asNoTracking: true
+                        );
+
+                    if (updatedCommitment == null)
+                        return new ServiceResult(
+                                Const.WARNING_NO_DATA_CODE,
+                                Const.WARNING_NO_DATA_MSG,
+                                new FarmingCommitmentViewDetailsDto() //Trả về DTO rỗng
+                            );
+                    var responseDto = updatedCommitment.MapToFarmingCommitmentViewDetailsDto();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                    responseDto
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
                     );
                 }
             }

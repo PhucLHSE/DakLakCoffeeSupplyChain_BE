@@ -55,6 +55,26 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<CropProgress>> GetByCropSeasonDetailIdForManagerAsync(
+            Guid cropSeasonDetailId)
+        {
+            return await _context.CropProgresses
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted &&
+                            p.CropSeasonDetailId == cropSeasonDetailId)
+                .Include(p => p.Stage)
+                .Include(p => p.UpdatedByNavigation)
+                   .ThenInclude(f => f.User)
+                .Include(p => p.CropSeasonDetail)
+                    .ThenInclude(d => d.CropSeason)
+                        .ThenInclude(cs => cs.Farmer)
+                            .ThenInclude(f => f.User)
+                .OrderBy(p => p.StageId)
+                .ThenBy(p => p.StepIndex ?? 0)
+                .ThenBy(p => p.ProgressDate)
+                .ToListAsync();
+        }
+
         public async Task<List<CropProgress>> FindAsync(
             Expression<Func<CropProgress, bool>> predicate)
         {

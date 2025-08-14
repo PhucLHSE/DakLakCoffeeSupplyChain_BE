@@ -133,7 +133,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Create(BusinessBuyerCreateDto businessBuyerDto, Guid userId)
+        public async Task<IServiceResult> Create(
+            BusinessBuyerCreateDto businessBuyerDto, Guid userId)
         {
             try
             {
@@ -191,13 +192,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Sinh mã định danh cho BusinessBuyer
-                string buyerCode = await _codeGenerator.GenerateBuyerCodeAsync(managerId);
+                string buyerCode = await _codeGenerator
+                    .GenerateBuyerCodeAsync(managerId);
 
                 // Ánh xạ dữ liệu từ DTO vào entity
-                var newBusinessBuyer = businessBuyerDto.MapToNewBusinessBuyer(managerId, buyerCode);
+                var newBusinessBuyer = businessBuyerDto
+                    .MapToNewBusinessBuyer(managerId, buyerCode);
 
                 // Tạo Business Buyer ở repository
-                await _unitOfWork.BusinessBuyerRepository.CreateAsync(newBusinessBuyer);
+                await _unitOfWork.BusinessBuyerRepository
+                    .CreateAsync(newBusinessBuyer);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -232,7 +236,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> Update(BusinessBuyerUpdateDto businessBuyerDto, Guid userId)
+        public async Task<IServiceResult> Update(
+            BusinessBuyerUpdateDto businessBuyerDto, Guid userId, string userRole)
         {
             try
             {
@@ -257,8 +262,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Kiểm tra role
                 if (businessManager.User.IsDeleted ||
-                    businessManager.User.Role == null ||
-                    businessManager.User.Role.RoleName != "BusinessManager")
+                    userRole == null ||
+                    userRole != "BusinessManager")
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -321,7 +326,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 businessBuyerDto.MapToUpdateBusinessBuyer(businessBuyer);
 
                 // Cập nhật buyer ở repository
-                await _unitOfWork.BusinessBuyerRepository.UpdateAsync(businessBuyer);
+                await _unitOfWork.BusinessBuyerRepository
+                    .UpdateAsync(businessBuyer);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -398,7 +404,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else
                 {
                     // Xóa buyer khỏi repository
-                    await _unitOfWork.BusinessBuyerRepository.RemoveAsync(businessBuyer);
+                    await _unitOfWork.BusinessBuyerRepository
+                        .RemoveAsync(businessBuyer);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -474,7 +481,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     businessBuyer.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm buyer ở repository
-                    await _unitOfWork.BusinessBuyerRepository.UpdateAsync(businessBuyer);
+                    await _unitOfWork.BusinessBuyerRepository
+                        .UpdateAsync(businessBuyer);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
