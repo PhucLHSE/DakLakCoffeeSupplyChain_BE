@@ -31,6 +31,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public FarmingCommitmentStatus CommitmentStatus { get; set; } = FarmingCommitmentStatus.Unknown;
 
+        public Guid? CommitmentId { get; set; }
+
         public ICollection<CultivationRegistrationViewDetailsDto> CultivationRegistrationDetails { get; set; } = [];
     }
 }
