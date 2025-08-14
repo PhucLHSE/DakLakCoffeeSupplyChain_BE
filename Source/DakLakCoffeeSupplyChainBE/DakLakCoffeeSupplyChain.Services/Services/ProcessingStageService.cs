@@ -69,6 +69,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dto
             );
         }
+
+        public async Task<IServiceResult> GetByMethodIdAsync(int methodId)
+        {
+            var stages = await _unitOfWork.ProcessingStageRepository
+                .GetAllQueryable()
+                .Include(x => x.Method)
+                .Where(x => x.MethodId == methodId && !x.IsDeleted)
+                .OrderBy(x => x.OrderIndex)
+                .ToListAsync();
+
+            if (stages == null || !stages.Any())
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new List<ProcessingStageViewAllDto>()
+                );
+            }
+
+            var result = stages
+                .Select(stage => stage.MapToProcessingStageViewAllDto())
+                .ToList();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                result
+            );
+        }
         public async Task<IServiceResult> CreateAsync(CreateProcessingStageDto dto)
         {
             try

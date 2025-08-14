@@ -13,6 +13,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReq
         public List<IFormFile>? PhotoFiles { get; set; }
         public List<IFormFile>? VideoFiles { get; set; }
         
+        // Stage selection fields
+        public string? StageId { get; set; }
+        public string? CurrentStageId { get; set; }
+        public string? StageDescription { get; set; }
+        
         // Single parameter fields
         public string? ParameterName { get; set; }
         public string? ParameterValue { get; set; }

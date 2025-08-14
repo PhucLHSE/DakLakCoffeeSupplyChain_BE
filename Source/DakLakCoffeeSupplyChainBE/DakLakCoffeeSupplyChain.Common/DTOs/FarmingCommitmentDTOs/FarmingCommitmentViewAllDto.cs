@@ -10,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
 
         public string CommitmentCode { get; set; } = string.Empty;
         public string CommitmentName { get; set; } = string.Empty;
+
+        public Guid FarmerId { get; set; } 
         public Guid RegistrationId { get; set; }
         public string FarmerName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;

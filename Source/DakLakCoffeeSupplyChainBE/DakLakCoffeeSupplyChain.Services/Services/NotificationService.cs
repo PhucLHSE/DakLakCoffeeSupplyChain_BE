@@ -130,7 +130,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR 
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
