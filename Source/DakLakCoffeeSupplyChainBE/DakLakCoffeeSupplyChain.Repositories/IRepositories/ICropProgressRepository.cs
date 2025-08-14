@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<List<CropProgress>> GetAllWithIncludesAsync();
 
         Task<List<CropProgress>> GetByCropSeasonDetailIdWithIncludesAsync(Guid cropSeasonDetailId, Guid userId);
+        Task<List<CropProgress>> GetByCropSeasonDetailIdForManagerAsync(Guid cropSeasonDetailId);
 
         Task<CropProgress?> GetByIdWithDetailAsync(Guid progressId);
 
