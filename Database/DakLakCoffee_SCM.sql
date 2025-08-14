@@ -3032,12 +3032,12 @@ DECLARE @ManagerID UNIQUEIDENTIFIER = (
 INSERT INTO FarmingCommitments (
     CommitmentCode, RegistrationID, PlanID, FarmerID,
     CommitmentName, ApprovedBy, ApprovedAt, 
-	Note, TotalPrice, TotalTaxPrice
+	Note, TotalPrice
 )
 VALUES (
     'FC-2025-0001', @RegistrationID, @PlanID, @FarmerID,
     N'Bảng cam kết Kế hoạch thu mua cà phê 2025-2026', @ManagerID, GETDATE(),
-    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 143325000, 6825000
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 960000
 );
 
 GO
@@ -3060,12 +3060,12 @@ DECLARE @CommitmentID UNIQUEIDENTIFIER = (
 INSERT INTO FarmingCommitmentsDetails (
     CommitmentDetailCode, RegistrationDetailID, PlanDetailID, CommitmentID,
     ConfirmedPrice, CommittedQuantity, EstimatedDeliveryStart, EstimatedDeliveryEnd,
-    Note, TaxPrice
+    Note
 )
 VALUES (
     'FCD-2025-0001', @RegistrationDetailID, @PlanDetailID, @CommitmentID,
-    91000, 2100, '2026-01-20', '2026-01-30',
-    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ', 4550
+    960000, 2100, '2026-01-20', '2026-01-30',
+    N'Cam kết cung ứng đúng chuẩn và đúng hạn, đã qua thẩm định nội bộ'
 );
 
 GO
@@ -3601,8 +3601,8 @@ INSERT INTO Warehouses (
    WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
 )
 VALUES (
-   'WH-2025-DL001', @BM_ManagerID, N'Kho Cư M’gar', N'Thôn 3, 
-   Xã Cư M’gar, Đắk Lắk', 50000, GETDATE(), GETDATE(), 0
+   'WH-2025-DL001', @BM_ManagerID, N'Kho Cư M’gar', N'Thôn 3, Xã Cư M’gar, Đắk Lắk', 
+   50000, GETDATE(), GETDATE(), 0
 );
 
 -- Thêm kho 2: Kho Buôn Hồ
@@ -3610,8 +3610,8 @@ INSERT INTO Warehouses (
    WarehouseCode, ManagerID, Name, Location, Capacity, CreatedAt, UpdatedAt, IsDeleted
 )
 VALUES (
-   'WH-2025-DL002', @BM_ManagerID, N'Kho Buôn Hồ', N'Đường Nguyễn Huệ, 
-   Phường An Bình, TX. Buôn Hồ', 35000, GETDATE(), GETDATE(), 0
+   'WH-2025-DL002', @BM_ManagerID, N'Kho Buôn Hồ', N'Đường Nguyễn Huệ, Phường An Bình, TX. Buôn Hồ', 
+   35000, GETDATE(), GETDATE(), 0
 );
 
 -- Lấy ManagerID từ BusinessManager thứ 2
