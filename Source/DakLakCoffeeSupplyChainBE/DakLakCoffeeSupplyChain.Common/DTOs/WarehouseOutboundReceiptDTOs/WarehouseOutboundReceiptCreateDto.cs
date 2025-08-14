@@ -14,6 +14,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundReceiptDTOs
             public Guid InventoryId { get; set; }       // thêm
             public double ExportedQuantity { get; set; }
             public string Note { get; set; }
+            public string Destination { get; set; }     // thêm field này
         }
     }
 

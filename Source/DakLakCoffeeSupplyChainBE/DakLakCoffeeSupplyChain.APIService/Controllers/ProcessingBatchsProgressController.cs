@@ -13,6 +13,7 @@ using System;
 using System.Security.Claims;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
@@ -346,11 +347,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
                 var isManager = User.IsInRole("BusinessManager");
 
-                // Tạo parameters - chỉ sử dụng single parameter
+                // Tạo parameters - hỗ trợ nhiều parameter
                 var parameters = new List<ProcessingParameterInProgressDto>();
                 
                 Console.WriteLine($"DEBUG CONTROLLER CREATE: Single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
                 
+                // Single parameter
                 if (!string.IsNullOrEmpty(request.ParameterName))
                 {
                     Console.WriteLine($"DEBUG CONTROLLER CREATE: Adding single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
@@ -362,7 +364,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         RecordedAt = request.RecordedAt
                     });
                 }
-                else
+                
+                // Multiple parameters từ JSON array
+                if (!string.IsNullOrEmpty(request.ParametersJson))
+                {
+                    try
+                    {
+                        var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                        if (multipleParams != null)
+                        {
+                            Console.WriteLine($"DEBUG CONTROLLER CREATE: Adding {multipleParams.Count} parameters from JSON");
+                            parameters.AddRange(multipleParams);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                    }
+                }
+                
+                if (parameters.Count == 0)
                 {
                     Console.WriteLine("DEBUG CONTROLLER CREATE: No parameter found in request");
                 }
@@ -531,11 +552,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 List<string> photoUrls = new List<string>();
                 List<string> videoUrls = new List<string>();
 
-                // Tạo parameters - chỉ sử dụng single parameter
+                // Tạo parameters - hỗ trợ nhiều parameter
                 var parameters = new List<ProcessingParameterInProgressDto>();
                 
                 Console.WriteLine($"DEBUG CONTROLLER ADVANCE: Single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
                 
+                // Single parameter
                 if (!string.IsNullOrEmpty(request.ParameterName))
                 {
                     Console.WriteLine($"DEBUG CONTROLLER ADVANCE: Adding single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
@@ -547,7 +569,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         RecordedAt = request.RecordedAt
                     });
                 }
-                else
+                
+                // Multiple parameters từ JSON array
+                if (!string.IsNullOrEmpty(request.ParametersJson))
+                {
+                    try
+                    {
+                        var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                        if (multipleParams != null)
+                        {
+                            Console.WriteLine($"DEBUG CONTROLLER ADVANCE: Adding {multipleParams.Count} parameters from JSON");
+                            parameters.AddRange(multipleParams);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                    }
+                }
+                
+                if (parameters.Count == 0)
                 {
                     Console.WriteLine("DEBUG CONTROLLER ADVANCE: No parameter found in request");
                 }
@@ -616,6 +657,168 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     {
                         // Progress đã tạo thành công, chỉ có media bị lỗi
                         return StatusCode(500, new { message = $"Progress đã tạo thành công nhưng lỗi upload media: {mediaEx.Message}" });
+                    }
+                }
+
+                // Lấy parameters của progress vừa tạo
+                var latestProgressResult = await _processingBatchProgressService.GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                var responseParameters = new List<ProcessingParameterViewAllDto>();
+                var actualProgressId = Guid.Empty;
+                
+                if (latestProgressResult.Status == Const.SUCCESS_READ_CODE && latestProgressResult.Data is List<ProcessingBatchProgressViewAllDto> progressesList)
+                {
+                    var latestProgressDto = progressesList.LastOrDefault();
+                    if (latestProgressDto != null)
+                    {
+                        actualProgressId = latestProgressDto.ProgressId;
+                        responseParameters = latestProgressDto.Parameters ?? new List<ProcessingParameterViewAllDto>();
+                    }
+                }
+
+                return Ok(new ProcessingBatchProgressMediaResponse
+                {
+                    Message = result.Message,
+                    ProgressId = actualProgressId,
+                    PhotoUrl = photoUrl,
+                    VideoUrl = videoUrl,
+                    MediaCount = allMediaFiles.Count,
+                    AllPhotoUrls = photoUrls,
+                    AllVideoUrls = videoUrls,
+                    Parameters = responseParameters
+                });
+            }
+            catch (Exception ex)
+            {
+                // Trả lỗi rõ ràng về FE
+                return StatusCode(500, new { message = $"Đã xảy ra lỗi hệ thống: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("{batchId}/update-after-evaluation")]
+        [Consumes("multipart/form-data")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> UpdateProgressAfterEvaluation(
+            Guid batchId,
+            [FromForm] ProcessingBatchProgressCreateRequest request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst("userId")?.Value 
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest(new { message = "Không thể lấy userId từ token." });
+
+                var isAdmin = User.IsInRole("Admin");
+                var isManager = User.IsInRole("BusinessManager");
+
+                // Tạo parameters - hỗ trợ nhiều parameter
+                var parameters = new List<ProcessingParameterInProgressDto>();
+                
+                Console.WriteLine($"DEBUG CONTROLLER UPDATE: Single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                
+                // Single parameter
+                if (!string.IsNullOrEmpty(request.ParameterName))
+                {
+                    Console.WriteLine($"DEBUG CONTROLLER UPDATE: Adding single parameter: {request.ParameterName} = {request.ParameterValue} {request.Unit}");
+                    parameters.Add(new ProcessingParameterInProgressDto
+                    {
+                        ParameterName = request.ParameterName,
+                        ParameterValue = request.ParameterValue,
+                        Unit = request.Unit,
+                        RecordedAt = request.RecordedAt
+                    });
+                }
+                
+                // Multiple parameters từ JSON array
+                if (!string.IsNullOrEmpty(request.ParametersJson))
+                {
+                    try
+                    {
+                        var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                        if (multipleParams != null)
+                        {
+                            Console.WriteLine($"DEBUG CONTROLLER UPDATE: Adding {multipleParams.Count} parameters from JSON");
+                            parameters.AddRange(multipleParams);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                    }
+                }
+                
+                if (parameters.Count == 0)
+                {
+                    Console.WriteLine("DEBUG CONTROLLER UPDATE: No parameter found in request");
+                }
+
+                // Tạo progress trước
+                var dto = new ProcessingBatchProgressCreateDto
+                {
+                    ProgressDate = request.ProgressDate,
+                    OutputQuantity = request.OutputQuantity,
+                    OutputUnit = request.OutputUnit,
+                    PhotoUrl = null, // Sẽ được cập nhật sau
+                    VideoUrl = null, // Sẽ được cập nhật sau
+                    Parameters = parameters.Any() ? parameters : null
+                };
+
+                var result = await _processingBatchProgressService
+                    .UpdateProgressAfterEvaluationAsync(batchId, dto, userId, isAdmin, isManager);
+
+                if (result.Status != Const.SUCCESS_CREATE_CODE)
+                {
+                    if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                        return BadRequest(new { message = result.Message });
+                    return StatusCode(500, new { message = result.Message });
+                }
+
+                string? photoUrl = null;
+                string? videoUrl = null;
+                List<string> photoUrls = new List<string>();
+                List<string> videoUrls = new List<string>();
+
+                // Upload media sau khi tạo progress thành công
+                var allMediaFiles = new List<IFormFile>();
+                if (request.PhotoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.PhotoFiles);
+                if (request.VideoFiles?.Any() == true)
+                    allMediaFiles.AddRange(request.VideoFiles);
+
+                if (allMediaFiles.Any())
+                {
+                    try
+                    {
+                        // Lấy progressId từ result nếu có thể
+                        var latestProgressForMedia = await _processingBatchProgressService.GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                        if (latestProgressForMedia.Status == Const.SUCCESS_READ_CODE && latestProgressForMedia.Data is List<ProcessingBatchProgressViewAllDto> progressesForMedia)
+                        {
+                            var latestProgressId = progressesForMedia.LastOrDefault()?.ProgressId;
+                            if (latestProgressId.HasValue)
+                            {
+                                var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                                    allMediaFiles,
+                                    relatedEntity: "ProcessingProgress",
+                                    relatedId: latestProgressId.Value,
+                                    uploadedBy: userId.ToString()
+                                );
+
+                                // Lấy tất cả URLs của mỗi loại media
+                                photoUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                                videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                                
+                                photoUrl = photoUrls.FirstOrDefault();
+                                videoUrl = videoUrls.FirstOrDefault();
+                            }
+                        }
+                    }
+                    catch (Exception mediaEx)
+                    {
+                        // 🔧 FIX: Không fail toàn bộ request nếu media upload lỗi
+                        // Chỉ log lỗi và tiếp tục
+                        Console.WriteLine($"WARNING: Media upload failed but progress was created successfully: {mediaEx.Message}");
+                        // Không return error, tiếp tục với response không có media
                     }
                 }
 

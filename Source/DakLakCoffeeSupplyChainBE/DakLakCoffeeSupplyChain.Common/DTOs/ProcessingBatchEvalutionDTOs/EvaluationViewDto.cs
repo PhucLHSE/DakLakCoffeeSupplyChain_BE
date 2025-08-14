@@ -33,6 +33,17 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
         /// Khuyến nghị cải thiện (nếu có)
         /// </summary>
         public string? Recommendations { get; set; }
+        
+        // Thông tin batch để FE hiển thị
+        public string? BatchCode { get; set; }
+        public string? FarmerName { get; set; }
+        public string? MethodName { get; set; }
+        public double? InputQuantity { get; set; }
+        public string? InputUnit { get; set; }
+        public string? BatchStatus { get; set; }
+        
+        // Thông tin expert (người đánh giá)
+        public string? ExpertName { get; set; }
     }
 
 }

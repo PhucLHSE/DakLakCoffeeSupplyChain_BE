@@ -23,7 +23,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             UpdatedAt = e.UpdatedAt,
             DetailedFeedback = ParseDetailedFeedback(e.Comments),
             ProblematicSteps = ParseProblematicSteps(e.Comments),
-            Recommendations = ParseRecommendations(e.Comments)
+            Recommendations = ParseRecommendations(e.Comments),
+            
+            // Thông tin batch để hiển thị trong bảng
+            BatchCode = e.Batch?.BatchCode,
+            FarmerName = e.Batch?.Farmer?.User?.Name,
+            MethodName = e.Batch?.Method?.Name,
+            InputQuantity = e.Batch?.InputQuantity,
+            InputUnit = e.Batch?.InputUnit,
+            BatchStatus = e.Batch?.Status,
+            
+            // Thông tin expert (người đánh giá) - sẽ được set từ service
+            ExpertName = null
         };
 
         private static string? ParseDetailedFeedback(string? comments)
