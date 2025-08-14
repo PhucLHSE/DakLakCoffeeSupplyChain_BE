@@ -3886,7 +3886,7 @@ DECLARE @CoffeeTypeID UNIQUEIDENTIFIER = (
 );
 
 DECLARE @ApprovedBy UNIQUEIDENTIFIER = (
-  SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+  SELECT UserID FROM UserAccounts WHERE Email = 'businessManager@gmail.com'
 );
 
 DECLARE @ProductID UNIQUEIDENTIFIER = NEWID();
@@ -3905,7 +3905,7 @@ VALUES (
   @CreatedBy, @BatchID, @InventoryID, @CoffeeTypeID,
   N'Đắk Lắk', N'Xã Ea Tu, TP. Buôn Ma Thuột', 'DLK-GI-0001',
   'https://certs.example.com/vietgap/arabica.pdf',
-  N'Specialty', 84.5, N'Approved', @ApprovedBy, N'Meets all cupping standards.',
+  N'Đặc sản', 84.5, N'Approved', @ApprovedBy, N'Đáp ứng đầy đủ tiêu chuẩn chấm điểm.',
   GETDATE(), GETDATE(), GETDATE(), 0
 );
 
