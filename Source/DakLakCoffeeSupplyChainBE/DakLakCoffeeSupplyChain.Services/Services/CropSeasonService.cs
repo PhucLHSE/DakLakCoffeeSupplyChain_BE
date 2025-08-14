@@ -98,6 +98,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.StartDate >= dto.EndDate)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
 
+            // === THÊM VALIDATION THỜI GIAN THU HOẠCH ===
+            var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
+                predicate: cd => cd.CommitmentId == commitment.CommitmentId && !cd.IsDeleted,
+                include: q => q.Include(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType),
+                asNoTracking: true
+            );
+
+            if (commitmentDetails.Any())
+            {
+                var latestHarvestEnd = commitmentDetails
+                    .Where(cd => cd.EstimatedDeliveryEnd.HasValue)
+                    .Max(cd => cd.EstimatedDeliveryEnd.Value);
+                
+                if (latestHarvestEnd > dto.EndDate)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                        $"Thời gian mùa vụ phải bao gồm thời gian thu hoạch. " +
+                        $"Vui lòng kéo dài mùa vụ đến ít nhất {latestHarvestEnd:dd/MM/yyyy}");
+                }
+            }
+            // === HẾT VALIDATION ===
+
             bool overlaps = existingSeasons.Any(cs =>
                 (dto.StartDate < cs.EndDate) && (dto.EndDate > cs.StartDate) && 
                 (dto.StartDate != cs.EndDate) && (dto.EndDate != cs.StartDate));
@@ -120,11 +142,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             await _unitOfWork.CropSeasonRepository.CreateAsync(cropSeason);
 
-            var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
-                predicate: cd => cd.CommitmentId == commitment.CommitmentId && !cd.IsDeleted,
-                include: q => q.Include(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType),
-                asNoTracking: true
-            );
+            // Sử dụng lại biến commitmentDetails đã khai báo ở trên
             if (!commitmentDetails.Any())
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Không có chi tiết cam kết để tạo vùng trồng.");
 
@@ -135,8 +153,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     DetailId = Guid.NewGuid(),
                     CropSeasonId = cropSeason.CropSeasonId,
                     CommitmentDetailId = detail.CommitmentDetailId,
-                    ExpectedHarvestStart = detail.EstimatedDeliveryStart ?? dto.StartDate,
-                    ExpectedHarvestEnd = detail.EstimatedDeliveryEnd ?? dto.EndDate,
+                    ExpectedHarvestStart = detail.EstimatedDeliveryStart ?? dto.StartDate,  
+                    ExpectedHarvestEnd = detail.EstimatedDeliveryEnd ?? dto.EndDate,     
                     AreaAllocated = 0,
                     EstimatedYield = 0,
                     PlannedQuality = null,
