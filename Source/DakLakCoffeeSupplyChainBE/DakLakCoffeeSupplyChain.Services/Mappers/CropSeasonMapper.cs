@@ -55,13 +55,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             Enum.TryParse(detail.Status, true, out CropDetailStatus status);
 
+            // Tìm RegistrationDetail tương ứng để lấy ExpectedYield
+            var registrationDetail = parent.Commitment?.Registration?.CultivationRegistrationsDetails?
+                .FirstOrDefault(rd => rd.PlanDetailId == detail.CommitmentDetail?.PlanDetailId);
+
             return new CropSeasonDetailViewDto
             {
                 DetailId = detail.DetailId,
                 AreaAllocated = detail.AreaAllocated ?? 0,
                 ExpectedHarvestStart = detail.ExpectedHarvestStart,
                 ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
-                EstimatedYield = detail.EstimatedYield,
+                EstimatedYield = registrationDetail?.EstimatedYield ?? 0,
                 ActualYield = detail.ActualYield ?? 0, 
                 FarmerId = parent.FarmerId,
                 FarmerName = parent.Farmer?.User?.Name ?? "Không rõ",

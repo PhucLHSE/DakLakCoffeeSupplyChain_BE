@@ -95,6 +95,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, $"Tổng diện tích phân bổ ({newTotal} ha) vượt quá {maxArea} ha.");
 
             var entity = dto.MapToNewCropSeasonDetail();
+            
+            // Lấy ExpectedYield từ RegistrationDetail thay vì để mặc định = 0
+            var registrationDetail = await _uow.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                rd => rd.PlanDetailId == cdetail.PlanDetailId && !rd.IsDeleted,
+                asNoTracking: true
+            );
+            
+            // Cập nhật EstimatedYield từ RegistrationDetail.ExpectedYield
+            if (registrationDetail?.EstimatedYield.HasValue == true)
+            {
+                entity.EstimatedYield = registrationDetail.EstimatedYield.Value;
+            }
+            
             entity.CreatedAt = DateHelper.NowVietnamTime();
             entity.UpdatedAt = entity.CreatedAt;
             await _uow.CropSeasonDetailRepository.CreateAsync(entity);
@@ -152,14 +165,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Khoảng thu hoạch dự kiến nằm ngoài thời gian mùa vụ.");
             }
 
-            // map & recalc EstimatedYield by CoffeeType.DefaultYieldPerHectare
+            // map dữ liệu từ DTO
             dto.MapToExistingEntity(existing);
-            var coffeeType = await _uow.CoffeeTypeRepository.GetByIdAsync(
-                ct => ct.CoffeeTypeId == existing.CommitmentDetail.PlanDetail.CoffeeTypeId && !ct.IsDeleted,
+            
+            // Lấy ExpectedYield từ RegistrationDetail thay vì tính toán
+            var registrationDetail = await _uow.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                rd => rd.PlanDetailId == existing.CommitmentDetail.PlanDetailId && !rd.IsDeleted,
                 asNoTracking: true
             );
-            double defaultYieldPerHa = coffeeType?.DefaultYieldPerHectare ?? 0;
-            existing.EstimatedYield = (existing.AreaAllocated ?? 0) * defaultYieldPerHa;
+            
+            // Cập nhật EstimatedYield từ RegistrationDetail.ExpectedYield
+            if (registrationDetail?.EstimatedYield.HasValue == true)
+            {
+                existing.EstimatedYield = registrationDetail.EstimatedYield.Value;
+            }
+            
             existing.UpdatedAt = DateHelper.NowVietnamTime();
 
             await _uow.CropSeasonDetailRepository.UpdateAsync(existing);

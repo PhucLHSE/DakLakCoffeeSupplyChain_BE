@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -110,7 +111,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return CreatedAtAction(
                     nameof(GetById),                                  // action
                     new { cropSeasonId = response.CropSeasonId },    // route values
-                    response                                          // response body
+                    new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, response)  // wrap trong ServiceResult
                 );
             }
 
