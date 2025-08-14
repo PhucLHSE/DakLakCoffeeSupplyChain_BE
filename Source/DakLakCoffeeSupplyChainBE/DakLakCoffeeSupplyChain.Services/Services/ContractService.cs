@@ -220,9 +220,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 double totalItemQuantity = contractDto.ContractItems
                     .Sum(i => i.Quantity ?? 0);
 
-                // Tính tổng trị giá = Quantity * UnitPrice - DiscountAmount (đều là nullable)
-                double totalItemValue = contractDto.ContractItems
-                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
+                // Tính tổng trị giá = qty * price * (1 - pct/100) (đều là nullable)
+                double totalItemValue = contractDto.ContractItems.Sum(i =>
+                {
+                    double q = i.Quantity ?? 0d;
+                    double p = i.UnitPrice ?? 0d;
+                    double pct = i.DiscountAmount ?? 0d; // % giảm
+                    if (pct < 0) pct = 0;
+                    if (pct > 100) pct = 100;
+                    return q * p * (1 - pct / 100d);
+                });
 
                 // So sánh với tổng của hợp đồng (nếu được nhập)
                 if (contractDto.TotalQuantity.HasValue && 
@@ -360,8 +367,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 double totalItemQuantity = contractDto.ContractItems
                     .Sum(i => i.Quantity ?? 0);
 
-                double totalItemValue = contractDto.ContractItems
-                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
+                // Tính tổng trị giá = qty * price * (1 - pct/100) (đều là nullable)
+                double totalItemValue = contractDto.ContractItems.Sum(i =>
+                {
+                    double q = i.Quantity ?? 0d;
+                    double p = i.UnitPrice ?? 0d;
+                    double pct = i.DiscountAmount ?? 0d; // % giảm
+                    if (pct < 0) pct = 0;
+                    if (pct > 100) pct = 100;
+                    return q * p * (1 - pct / 100d);
+                });
 
                 if (contractDto.TotalQuantity.HasValue && 
                     totalItemQuantity > contractDto.TotalQuantity.Value)
