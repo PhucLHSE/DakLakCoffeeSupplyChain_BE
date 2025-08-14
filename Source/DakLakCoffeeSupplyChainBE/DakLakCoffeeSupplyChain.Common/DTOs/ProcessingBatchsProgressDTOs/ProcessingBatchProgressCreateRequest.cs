@@ -20,5 +20,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string? ParameterValue { get; set; }
         public string? Unit { get; set; }
         public DateTime? RecordedAt { get; set; }
+        
+        // Multiple parameters support
+        public string? ParametersJson { get; set; } // JSON array of parameters
     }
 }

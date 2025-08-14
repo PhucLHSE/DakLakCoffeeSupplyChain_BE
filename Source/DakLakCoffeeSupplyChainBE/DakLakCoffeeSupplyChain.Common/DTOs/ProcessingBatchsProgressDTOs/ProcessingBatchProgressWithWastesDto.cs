@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
     {
         public Guid Id { get; set; }
         public DateTime ProgressDate { get; set; }
-        public double OutputQuantity { get; set; }
+        public double? OutputQuantity { get; set; }
         public string OutputUnit { get; set; } = string.Empty;
         public string? PhotoUrl { get; set; }
         public string? VideoUrl { get; set; }
