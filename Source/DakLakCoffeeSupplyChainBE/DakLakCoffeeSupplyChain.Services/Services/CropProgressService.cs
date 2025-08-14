@@ -127,7 +127,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (farmer == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin nông dân.");
 
-                // Handle harvesting stage validation
+                // Handle harvesting stage validation and auto-update status
                 if (stage.StageCode == HARVESTING_STAGE_CODE)
                 {
                     if (!dto.ActualYield.HasValue || dto.ActualYield.Value <= 0)
@@ -136,6 +136,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Update actual yield in crop season detail
                     detail.ActualYield = dto.ActualYield.Value;
                     detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    
+                    // Tự động cập nhật status thành Completed nếu đang ở InProgress
+                    if (detail.Status == CropDetailStatus.InProgress.ToString())
+                    {
+                        detail.Status = CropDetailStatus.Completed.ToString();
+                    }
+                    
                     await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
                 }
 
@@ -151,7 +158,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    // Tự động cập nhật StepIndex từ Stage.OrderIndex (sử dụng biến stage đã có)
+                    // Tự động cập nhật StepIndex từ Stage.OrderIndex
                     if (stage?.OrderIndex.HasValue == true && stage.OrderIndex.Value != entity.StepIndex)
                     {
                         entity.StepIndex = stage.OrderIndex.Value;
@@ -207,6 +214,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     detail.ActualYield = dto.ActualYield.Value;
                     detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    
+                    // Tự động cập nhật status thành Completed nếu đang ở InProgress
+                    if (detail.Status == CropDetailStatus.InProgress.ToString())
+                    {
+                        detail.Status = CropDetailStatus.Completed.ToString();
+                    }
+                    
                     await _unitOfWork.CropSeasonDetailRepository.UpdateAsync(detail);
                 }
 
@@ -244,6 +258,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (saveResult > 0)
                 {
+                    // Auto update status của CropSeasonDetail
+                    await UpdateCropSeasonDetailStatusAsync(dto.CropSeasonDetailId);
+                    
                     var updated = await _unitOfWork.CropProgressRepository.GetByIdWithIncludesAsync(entity.ProgressId);
                     return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG,
                         updated?.MapToCropProgressViewDetailsDto());
@@ -373,7 +390,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             catch (Exception ex)
             {
                 // Log error but don't throw to avoid affecting progress creation
-                // TODO: Replace with proper logging framework
                 Console.WriteLine($"Error updating CropSeasonDetail status: {ex.Message}");
             }
         }

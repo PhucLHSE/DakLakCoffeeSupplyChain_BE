@@ -46,7 +46,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ExpectedHarvestStart = dto.ExpectedHarvestStart,
                 ExpectedHarvestEnd = dto.ExpectedHarvestEnd,
                 AreaAllocated = dto.AreaAllocated ?? 0,
-                EstimatedYield = 0, 
+                EstimatedYield = null, // Sẽ được set từ RegistrationDetail.ExpectedYield trong Service
                 PlannedQuality = dto.PlannedQuality,
                 Status = CropDetailStatus.Planned.ToString(),
                 CreatedAt = DateHelper.NowVietnamTime(),

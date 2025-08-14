@@ -19,6 +19,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommi
         public double? ProgressPercentage { get; set; }
         public DateOnly? EstimatedDeliveryStart { get; set; }
         public DateOnly? EstimatedDeliveryEnd { get; set; }
+        
+        // Thông tin thời gian thu hoạch từ đăng ký canh tác
+        public DateOnly? ExpectedHarvestStart { get; set; }
+        public DateOnly? ExpectedHarvestEnd { get; set; }
+        
         public string Note { get; set; } = string.Empty;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
