@@ -60,6 +60,51 @@
                 }
             }
 
+            // ✅ Thêm method cho BusinessManager xem tất cả báo cáo
+            public async Task<IServiceResult> GetAllForManagerAsync()
+            {
+                try
+                {
+                    var reports = await _unitOfWork.GeneralFarmerReportRepository.GetAllWithIncludesAsync();
+
+                    if (reports == null || !reports.Any())
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Không có báo cáo nào."
+                        );
+
+                    var dtoList = reports.Select(r => new GeneralFarmerReportViewForManagerDto
+                    {
+                        ReportId = r.ReportId,
+                        ReportCode = r.ReportCode,
+                        Title = r.Title,
+                        Description = r.Description,
+                        ReportType = r.ReportType,
+                        SeverityLevel = r.SeverityLevel,
+                        ReportedAt = r.ReportedAt,
+                        UpdatedAt = r.UpdatedAt,
+                        ResolvedAt = r.ResolvedAt,
+                        IsResolved = r.IsResolved,
+                        ReportedByName = r.ReportedByNavigation?.Name ?? "Không xác định",
+                        ReportedByEmail = r.ReportedByNavigation?.Email ?? "Không xác định",
+                        ReportedByPhone = r.ReportedByNavigation?.PhoneNumber ?? "Không xác định",
+                        ImageUrl = r.ImageUrl,
+                        VideoUrl = r.VideoUrl,
+                        ExpertAdviceCount = r.ExpertAdvices?.Where(a => !a.IsDeleted).Count() ?? 0
+                    }).ToList();
+
+                    return new ServiceResult(
+                        Const.SUCCESS_READ_CODE,
+                        Const.SUCCESS_READ_MSG,
+                        dtoList
+                    );
+                }
+                catch (Exception ex)
+                {
+                    return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+                }
+            }
+
             public async Task<IServiceResult> GetById(Guid reportId)
             {
                 try

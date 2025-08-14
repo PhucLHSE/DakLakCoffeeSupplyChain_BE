@@ -20,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.GeneralFarmerReports
                 .Where(r => !r.IsDeleted)
                 .Include(r => r.ReportedByNavigation)
+                .Include(r => r.ExpertAdvices)  // ✅ Thêm include ExpertAdvices
                 .OrderByDescending(r => r.ReportedAt)
                 .ToListAsync();
         }
