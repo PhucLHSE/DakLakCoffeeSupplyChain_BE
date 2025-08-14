@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ShipmentEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -40,6 +41,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
         // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            var now = DateHelper.NowVietnamTime();
+            const int MaxShipFutureDays = 15;
+            const int MaxReceiveFutureDays = 25;
+
             // Kiểm tra danh sách chi tiết chuyến giao
             if (ShipmentDetails == null || 
                 !ShipmentDetails.Any())
@@ -67,19 +72,19 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
 
             // Validate ShippedAt và ReceivedAt
             if (ShippedAt.HasValue && 
-                ShippedAt > DateTime.UtcNow.AddDays(1))
+                ShippedAt > now.AddDays(MaxShipFutureDays))
             {
                 yield return new ValidationResult(
-                    "Ngày bắt đầu giao không được vượt quá hiện tại.",
+                    "Ngày bắt đầu giao không được vượt quá hiện tại 15 ngày.",
                     new[] { nameof(ShippedAt) }
                 );
             }
 
             if (ReceivedAt.HasValue && 
-                ReceivedAt > DateTime.UtcNow.AddDays(1))
+                ReceivedAt > now.AddDays(MaxReceiveFutureDays))
             {
                 yield return new ValidationResult(
-                    "Ngày nhận hàng không được vượt quá hiện tại.",
+                    "Ngày nhận hàng không được vượt quá hiện tại 25 ngày.",
                     new[] { nameof(ReceivedAt) }
                 );
             }
