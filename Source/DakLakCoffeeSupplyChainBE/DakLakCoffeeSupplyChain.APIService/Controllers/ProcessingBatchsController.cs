@@ -202,5 +202,51 @@
 
                 return StatusCode(500, result.Message);
             }
+
+            // GET: api/ProcessingBatch/business-manager/farmer/{farmerId}
+            [HttpGet("business-manager/farmer/{farmerId}")]
+            [Authorize(Roles = "BusinessManager")]
+            public async Task<IActionResult> GetBatchesByFarmerForBusinessManager(Guid farmerId)
+            {
+                var userIdStr = User.FindFirst("userId")?.Value
+                             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest("Không thể lấy userId từ token.");
+
+                var result = await _processingbatchservice
+                   .GetBatchesByFarmerForBusinessManagerAsync(userId, farmerId);
+
+                if (result.Status == Const.SUCCESS_READ_CODE)
+                    return Ok(result.Data);
+
+                if (result.Status == Const.WARNING_NO_DATA_CODE)
+                    return NotFound(result.Message);
+
+                return StatusCode(500, result.Message);
+            }
+
+            // GET: api/ProcessingBatch/business-manager/farmers
+            [HttpGet("business-manager/farmers")]
+            [Authorize(Roles = "BusinessManager")]
+            public async Task<IActionResult> GetFarmersWithBatchesForBusinessManager()
+            {
+                var userIdStr = User.FindFirst("userId")?.Value
+                             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest("Không thể lấy userId từ token.");
+
+                var result = await _processingbatchservice
+                   .GetFarmersWithBatchesForBusinessManagerAsync(userId);
+
+                if (result.Status == Const.SUCCESS_READ_CODE)
+                    return Ok(result.Data);
+
+                if (result.Status == Const.WARNING_NO_DATA_CODE)
+                    return NotFound(result.Message);
+
+                return StatusCode(500, result.Message);
+            }
         }
     }

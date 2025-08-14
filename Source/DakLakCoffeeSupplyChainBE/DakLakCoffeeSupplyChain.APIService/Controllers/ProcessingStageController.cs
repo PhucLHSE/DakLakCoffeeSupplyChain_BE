@@ -54,6 +54,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message); 
         }
 
+        [HttpGet("method/{methodId}")]
+        //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff,Farmer")]
+        public async Task<IActionResult> GetByMethodId(int methodId)
+        {
+            var result = await _processingStageService
+                .GetByMethodIdAsync(methodId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message); 
+
+            return StatusCode(500, result.Message); 
+        }
+
         [HttpPost]
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff")]
         public async Task<IActionResult> Create(

@@ -14,5 +14,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string? PhotoUrl { get; set; }
         public string? VideoUrl { get; set; }
         public List<ProcessingParameterInProgressDto>? Parameters { get; set; }
+        
+        // Stage selection fields
+        public string? StageId { get; set; }
+        public string? CurrentStageId { get; set; }
+        public string? StageDescription { get; set; }
     }
 }

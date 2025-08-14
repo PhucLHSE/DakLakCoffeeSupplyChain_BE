@@ -541,5 +541,180 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> GetFarmersWithBatchesForBusinessManagerAsync(Guid managerUserId)
+        {
+            try
+            {
+                // Kiểm tra Business Manager có tồn tại không
+                var manager = await _unitOfWork.BusinessManagerRepository
+                    .GetByIdAsync(m => m.UserId == managerUserId && !m.IsDeleted);
+
+                if (manager == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                }
+
+                // Lấy tất cả FarmingCommitment được approved bởi manager này (chỉ đọc dữ liệu)
+                var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                    predicate: fc => !fc.IsDeleted && fc.ApprovedBy == manager.ManagerId,
+                    include: q => q.Include(fc => fc.CropSeasons)
+                );
+
+                // Debug: Log số lượng commitment và farmer
+                Console.WriteLine($"🔍 Business Manager {manager.ManagerId} có {commitments.Count} commitment được approved");
+                foreach (var commitment in commitments)
+                {
+                    Console.WriteLine($"📋 Commitment {commitment.CommitmentId}: Farmer {commitment.FarmerId}");
+                }
+
+                if (!commitments.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Không có cam kết nào được approved bởi Business Manager này.");
+                }
+
+                // Lấy tất cả CropSeasonId từ các commitment
+                var cropSeasonIds = commitments
+                    .SelectMany(fc => fc.CropSeasons)
+                    .Where(cs => !cs.IsDeleted)
+                    .Select(cs => cs.CropSeasonId)
+                    .ToList();
+
+                // Debug: Log crop seasons
+                Console.WriteLine($"🌾 Có {cropSeasonIds.Count} crop seasons từ commitments:");
+                foreach (var cropSeasonId in cropSeasonIds)
+                {
+                    Console.WriteLine($"   - CropSeason: {cropSeasonId}");
+                }
+
+                if (!cropSeasonIds.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Không có mùa vụ nào từ các cam kết.");
+                }
+
+                // Lấy tất cả ProcessingBatch trong các crop season này
+                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: pb => !pb.IsDeleted && cropSeasonIds.Contains(pb.CropSeasonId),
+                    include: query => query
+                        .Include(x => x.Farmer).ThenInclude(f => f.User),
+                    asNoTracking: true
+                );
+
+                // Debug: Log batches
+                Console.WriteLine($"📦 Có {batches.Count} batches trong các crop seasons:");
+                foreach (var batch in batches)
+                {
+                    Console.WriteLine($"   - Batch {batch.BatchId}: Farmer {batch.FarmerId} ({batch.Farmer?.User?.Name}) - CropSeason {batch.CropSeasonId}");
+                }
+
+                if (!batches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Chưa có lô sơ chế nào trong các mùa vụ đã cam kết.");
+                }
+
+                // Lấy danh sách unique farmers có batches (chỉ từ các commitment được approved)
+                var farmers = batches
+                    .GroupBy(b => b.FarmerId)
+                    .Select(g => new
+                    {
+                        FarmerId = g.Key,
+                        FarmerName = g.First().Farmer.User?.Name ?? g.First().Farmer.FarmerCode,
+                        BatchCount = g.Count()
+                    })
+                    .OrderBy(f => f.FarmerName)
+                    .ToList();
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, 
+                    $"Đã tìm thấy {farmers.Count} nông dân có lô sơ chế", 
+                    farmers);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+            }
+        }
+
+        public async Task<IServiceResult> GetBatchesByFarmerForBusinessManagerAsync(Guid managerUserId, Guid farmerId)
+        {
+            try
+            {
+                // Kiểm tra Business Manager có tồn tại không
+                var manager = await _unitOfWork.BusinessManagerRepository
+                    .GetByIdAsync(m => m.UserId == managerUserId && !m.IsDeleted);
+
+                if (manager == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                }
+
+                // Kiểm tra Farmer có tồn tại không
+                var farmer = await _unitOfWork.FarmerRepository
+                    .GetByIdAsync(f => f.FarmerId == farmerId && !f.IsDeleted);
+
+                if (farmer == null)
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Farmer tương ứng.");
+                }
+
+                // Lấy tất cả FarmingCommitment của farmer này được approved bởi manager này (chỉ đọc dữ liệu)
+                var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                    predicate: fc => !fc.IsDeleted && 
+                                   fc.FarmerId == farmerId && 
+                                   fc.ApprovedBy == manager.ManagerId,
+                    include: q => q.Include(fc => fc.CropSeasons)
+                );
+
+                if (!commitments.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        $"Không có cam kết nào của farmer {farmer.User?.Name ?? farmer.FarmerCode} được approved bởi Business Manager này.");
+                }
+
+                // Lấy tất cả CropSeasonId từ các commitment
+                var cropSeasonIds = commitments
+                    .SelectMany(fc => fc.CropSeasons)
+                    .Where(cs => !cs.IsDeleted)
+                    .Select(cs => cs.CropSeasonId)
+                    .ToList();
+
+                if (!cropSeasonIds.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Không có mùa vụ nào từ các cam kết của farmer này.");
+                }
+
+                // Lấy tất cả ProcessingBatch của farmer trong các crop season này
+                var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: pb => !pb.IsDeleted && 
+                                   pb.FarmerId == farmerId && 
+                                   cropSeasonIds.Contains(pb.CropSeasonId),
+                    include: query => query
+                        .Include(x => x.Method)
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer).ThenInclude(f => f.User)
+                        .Include(x => x.CoffeeType),
+                    orderBy: q => q.OrderByDescending(x => x.CreatedAt),
+                    asNoTracking: true
+                );
+
+                if (!batches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        $"Farmer {farmer.User?.Name ?? farmer.FarmerCode} chưa có lô sơ chế nào trong các mùa vụ đã cam kết.");
+                }
+
+                var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+                return new ServiceResult(Const.SUCCESS_READ_CODE, 
+                    $"Đã tìm thấy {dtoList.Count} lô sơ chế của farmer {farmer.User?.Name ?? farmer.FarmerCode}", 
+                    dtoList);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+            }
+        }
+
     }
 }
