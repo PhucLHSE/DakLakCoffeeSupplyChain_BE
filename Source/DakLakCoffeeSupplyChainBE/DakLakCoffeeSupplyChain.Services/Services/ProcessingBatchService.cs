@@ -796,5 +796,85 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> GetAvailableBatchesForWarehouseRequestAsync(Guid userId)
+        {
+            try
+            {
+                // Lấy thông tin farmer
+                var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông dân.");
+
+                // Lấy tất cả batch đã hoàn tất của farmer này
+                var completedBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                    predicate: b => !b.IsDeleted && 
+                                   b.FarmerId == farmer.FarmerId &&
+                                   b.Status == ProcessingStatus.Completed.ToString(),
+                    include: q => q
+                        .Include(b => b.CoffeeType)
+                        .Include(b => b.CropSeason)
+                        .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted)),
+                    orderBy: q => q.OrderByDescending(b => b.CreatedAt),
+                    asNoTracking: true
+                );
+
+                if (!completedBatches.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Không có lô sơ chế nào đã hoàn tất để tạo yêu cầu nhập kho.", 
+                        new List<object>());
+                }
+
+                // Tính toán available quantity cho mỗi batch
+                var result = new List<object>();
+                foreach (var batch in completedBatches)
+                {
+                    // Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                    var finalProgress = batch.ProcessingBatchProgresses
+                        .Where(p => p.OutputQuantity.HasValue)
+                        .OrderByDescending(p => p.StepIndex)
+                        .FirstOrDefault();
+                    var maxOutputQuantity = finalProgress?.OutputQuantity ?? 0;
+
+                    // Lấy tất cả inbound requests đã được xử lý
+                    var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
+                        r => r.BatchId == batch.BatchId && !r.IsDeleted
+                    );
+
+                    // Tính tổng đã yêu cầu
+                    double totalRequested = allRequests
+                        .Where(r => r.Status == "Completed" || r.Status == "Pending" || r.Status == "Approved")
+                        .Sum(r => r.RequestedQuantity ?? 0);
+
+                    // Tính available quantity
+                    double availableQuantity = Math.Max(0, maxOutputQuantity - totalRequested);
+
+                    // Chỉ trả về batch có available quantity > 0
+                    if (availableQuantity > 0)
+                    {
+                        result.Add(new
+                        {
+                            batchId = batch.BatchId,
+                            batchCode = batch.BatchCode,
+                            coffeeTypeName = batch.CoffeeType?.TypeName ?? "N/A",
+                            cropSeasonName = batch.CropSeason?.SeasonName ?? "N/A",
+                            maxOutputQuantity = maxOutputQuantity,
+                            totalRequested = totalRequested,
+                            availableQuantity = availableQuantity,
+                            availableQuantityText = $"{availableQuantity} kg"
+                        });
+                    }
+                }
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, 
+                    $"Đã tìm thấy {result.Count} lô sơ chế có thể tạo yêu cầu nhập kho", 
+                    result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+            }
+        }
+
     }
 }

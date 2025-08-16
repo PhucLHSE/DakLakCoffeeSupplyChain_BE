@@ -24,6 +24,15 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BusinessStaffName = request.BusinessStaff?.User?.Name?? "N/A",
                 BatchId = request.BatchId,
                 BatchCode = request.Batch?.BatchCode,
+                
+                // Cho cà phê tươi
+                DetailId = request.DetailId,
+                DetailCode = request.Detail?.CropSeason?.CropSeasonCode,
+                CoffeeType = request.BatchId != null 
+                    ? request.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : request.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                CropSeasonName = request.Detail?.CropSeason?.SeasonName,
+                
                 RequestedQuantity = request.RequestedQuantity ?? 0
             };
         }
@@ -50,8 +59,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
                 BatchId = r.BatchId,
                 BatchCode = r.Batch?.BatchCode ?? "N/A",
-                CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
-                SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                CoffeeType = r.BatchId != null 
+                    ? r.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                SeasonCode = r.BatchId != null 
+                    ? r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                    : r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                
+                // Thông tin cho cà phê tươi
+                DetailId = r.DetailId,
+                DetailCode = r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                CropSeasonName = r.Detail?.CropSeason?.SeasonName ?? "N/A",
+                CoffeeTypeDetail = r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"
             };
         }
         public static WarehouseInboundRequest ToEntityFromCreateDto(
@@ -64,7 +83,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InboundRequestId = Guid.NewGuid(),
                 InboundRequestCode = inboundCode,
                 FarmerId = farmerId,
-                BatchId = dto.BatchId ?? Guid.Empty,
+                BatchId = dto.BatchId,
+                DetailId = dto.DetailId,  // Thêm DetailId cho cà phê tươi
                 RequestedQuantity = dto.RequestedQuantity,
                 PreferredDeliveryDate = dto.PreferredDeliveryDate,
                 Status = InboundRequestStatus.Pending.ToString(),

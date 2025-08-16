@@ -34,7 +34,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy nhân viên.");
 
             var request = await _unitOfWork.WarehouseInboundRequests
-                .GetByIdWithBatchAsync(dto.InboundRequestId);
+                .GetDetailByIdAsync(dto.InboundRequestId);
 
             if (request == null || request.Status != InboundRequestStatus.Approved.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu nhập kho không hợp lệ hoặc chưa được duyệt.");
@@ -59,11 +59,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var receiptCode = await _codeGenerator.GenerateWarehouseReceiptCodeAsync();
             var receiptId = Guid.NewGuid();
 
+            // Debug logging
+            Console.WriteLine($"DEBUG CreateReceiptAsync: RequestId={dto.InboundRequestId}");
+            Console.WriteLine($"DEBUG CreateReceiptAsync: BatchId={request.BatchId}, DetailId={request.DetailId}");
+            Console.WriteLine($"DEBUG CreateReceiptAsync: CoffeeType={(request.BatchId != null ? "Processed" : request.DetailId != null ? "Fresh" : "Unknown")}");
+
             var receipt = dto.ToEntityFromCreateDto(
                 receiptId,
                 receiptCode,
                 staff.StaffId,
-                request.BatchId ?? new Guid()
+                request.BatchId,
+                request.DetailId  // Thêm DetailId cho cà phê tươi
             );
 
             // Để trống số lượng đến khi xác nhận
@@ -152,8 +158,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Cập nhật tồn kho (find-or-create theo WarehouseId + BatchId)
-            Inventory inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId ?? new Guid());
+            // Cập nhật tồn kho (find-or-create theo WarehouseId + BatchId/DetailId)
+            Inventory inventory = null;
+            
+            if (receipt.BatchId != null)
+            {
+                // Cà phê sơ chế: tìm theo BatchId
+                inventory = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(receipt.WarehouseId, receipt.BatchId.Value);
+            }
+            else if (receipt.DetailId != null)
+            {
+                // Cà phê tươi: tìm theo DetailId
+                inventory = await _unitOfWork.Inventories.FindByWarehouseAndDetailAsync(receipt.WarehouseId, receipt.DetailId.Value);
+            }
+            
             if (inventory != null)
             {
                 inventory.Quantity += dto.ConfirmedQuantity;
@@ -165,7 +183,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
                 inventory = WarehouseReceiptMapper.ToNewInventory(
                     receipt.WarehouseId,
-                    receipt.BatchId ?? new Guid(),
+                    receipt.BatchId,
+                    receipt.DetailId,
                     dto.ConfirmedQuantity,
                     inventoryCode
                 );
@@ -228,17 +247,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var filtered = receipts
                 .Where(r => r.Warehouse?.ManagerId == managerId)
-                .Select(r => new WarehouseReceiptListItemDto
-                {
-                    ReceiptId = r.ReceiptId,
-                    ReceiptCode = r.ReceiptCode,
-                    WarehouseName = r.Warehouse?.Name,
-                    BatchCode = r.Batch?.BatchCode,
-                    ReceivedQuantity = (double)(r.ReceivedQuantity ?? 0), // tránh null
-                    ReceivedAt = r.ReceivedAt,
-                    StaffName = r.ReceivedByNavigation?.User?.Name,
-                    Note = r.Note
-                }).ToList();
+                .Select(r => r.ToListItemDto())
+                .ToList();
+
+            // Debug logging
+            Console.WriteLine($"DEBUG GetAllAsync: Total receipts found: {filtered.Count}");
+            var freshCoffeeCount = filtered.Count(r => r.DetailId != null && r.BatchId == null);
+            var processedCoffeeCount = filtered.Count(r => r.BatchId != null && r.DetailId == null);
+            var unknownCount = filtered.Count(r => (r.BatchId == null && r.DetailId == null) || (r.BatchId != null && r.DetailId != null));
+            
+            Console.WriteLine($"DEBUG GetAllAsync: Fresh coffee: {freshCoffeeCount}, Processed coffee: {processedCoffeeCount}, Unknown: {unknownCount}");
+            
+            foreach (var receipt in filtered.Take(5)) // Log first 5 receipts
+            {
+                Console.WriteLine($"DEBUG GetAllAsync: Receipt {receipt.ReceiptCode} - BatchId: {receipt.BatchId}, DetailId: {receipt.DetailId}, CoffeeType: {receipt.CoffeeType}");
+            }
 
             return new ServiceResult(
                 Const.SUCCESS_READ_CODE, 
@@ -263,6 +286,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 WarehouseName = receipt.Warehouse?.Name,
                 BatchId = receipt.BatchId ?? new Guid(),
                 BatchCode = receipt.Batch?.BatchCode,
+                
+                // Thông tin cho cà phê tươi
+                DetailId = receipt.DetailId,
+                DetailCode = receipt.Detail?.CropSeason?.SeasonName,
+                CoffeeType = receipt.BatchId != null 
+                    ? receipt.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : receipt.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                CropSeasonName = receipt.Detail?.CropSeason?.SeasonName,
+                
                 ReceivedQuantity = (double)(receipt.ReceivedQuantity ?? 0),
                 ReceivedAt = receipt.ReceivedAt,
                 StaffName = receipt.ReceivedByNavigation?.User?.Name,

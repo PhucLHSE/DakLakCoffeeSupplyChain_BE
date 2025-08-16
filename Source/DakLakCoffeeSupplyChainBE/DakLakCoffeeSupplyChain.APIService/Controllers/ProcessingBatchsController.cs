@@ -248,5 +248,21 @@
 
                 return StatusCode(500, result.Message);
             }
+
+            [HttpGet("warehouse-request/available")]
+            [Authorize(Roles = "Farmer")]
+            public async Task<IActionResult> GetAvailableBatchesForWarehouseRequest()
+            {
+                var userIdStr = User.FindFirst("userId")?.Value
+                             ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                {
+                    return BadRequest("Không thể lấy userId từ token.");
+                }
+
+                var result = await _processingbatchservice.GetAvailableBatchesForWarehouseRequestAsync(userId);
+                return Ok(result);
+            }
         }
     }

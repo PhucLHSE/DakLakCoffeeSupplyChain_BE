@@ -62,6 +62,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(b => b.CropSeason)
                         .ThenInclude(cs => cs.Commitment)
                             .ThenInclude(c => c.Plan)
+                .Include(r => r.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .Where(r => !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -74,7 +80,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
                 .Include(r => r.Batch).ThenInclude(b => b.CoffeeType)
                 .Include(r => r.Batch).ThenInclude(b => b.CropSeason)
-                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted); // <-- đã có
+                .Include(r => r.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
+                .FirstOrDefaultAsync(r => r.InboundRequestId == id && !r.IsDeleted);
         }
 
         public void Update(WarehouseInboundRequest entity)

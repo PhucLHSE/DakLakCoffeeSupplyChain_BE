@@ -33,6 +33,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Where(r => !r.IsDeleted)
                 .Include(r => r.Warehouse)
                 .Include(r => r.Batch)
+                    .ThenInclude(b => b.CoffeeType)
+                .Include(r => r.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .Include(r => r.ReceivedByNavigation)
                    .ThenInclude(s => s.User)
                 .ToListAsync();
@@ -46,6 +53,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseReceipts
                 .Include(r => r.Warehouse)
                 .Include(r => r.Batch)
+                    .ThenInclude(b => b.CoffeeType)
+                .Include(r => r.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .Include(r => r.InboundRequest) // ✅ Thêm để lấy số lượng yêu cầu nhập
                 .Include(r => r.ReceivedByNavigation)
                    .ThenInclude(s => s.User)

@@ -169,5 +169,37 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        // GET: api/WarehouseReceipts/debug
+        [HttpGet("debug")]
+        [Authorize(Roles = "Admin,BusinessStaff,BusinessManager")]
+        public async Task<IActionResult> GetDebugInfo()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _receiptService.GetAllAsync(userId);
+            
+            if (result.Status == Const.SUCCESS_READ_CODE && result.Data is List<object> receipts)
+            {
+                var debugInfo = new
+                {
+                    TotalReceipts = receipts.Count,
+                    FreshCoffee = receipts.Count(r => 
+                        ((dynamic)r).DetailId != null && ((dynamic)r).BatchId == null),
+                    ProcessedCoffee = receipts.Count(r => 
+                        ((dynamic)r).BatchId != null && ((dynamic)r).DetailId == null),
+                    Unknown = receipts.Count(r => 
+                        (((dynamic)r).BatchId == null && ((dynamic)r).DetailId == null) || 
+                        (((dynamic)r).BatchId != null && ((dynamic)r).DetailId != null))
+                };
+                
+                return Ok(new { status = 1, message = "Debug info", data = debugInfo });
+            }
+            
+            return Ok(result);
+        }
     }
 }

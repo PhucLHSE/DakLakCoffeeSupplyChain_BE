@@ -16,6 +16,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs
         public string BatchCode { get; set; } = default!;
         public string ProductName { get; set; } = default!;
         public string CoffeeTypeName { get; set; } = default!;
+        
+        // Thông tin cho cà phê tươi
+        public Guid? DetailId { get; set; }
+        public string? DetailCode { get; set; }
+        public string? CropSeasonName { get; set; }
+        public string? CoffeeTypeNameDetail { get; set; }
         public double Quantity { get; set; }
         public string Unit { get; set; } = "kg";
     }

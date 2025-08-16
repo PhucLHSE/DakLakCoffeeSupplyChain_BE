@@ -357,5 +357,78 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 _ => false
             };
         }
+
+        public async Task<IServiceResult> GetAvailableForWarehouseRequestAsync(Guid userId)
+        {
+            try
+            {
+                // Lấy thông tin farmer
+                var farmer = await _uow.FarmerRepository.FindByUserIdAsync(userId);
+                if (farmer == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông dân.");
+
+                // Lấy tất cả crop season details đã hoàn thành của farmer này
+                var completedDetails = await _uow.CropSeasonDetailRepository.GetAllAsync(
+                    predicate: d => !d.IsDeleted && 
+                                   d.CropSeason.FarmerId == farmer.FarmerId &&
+                                   d.Status == "Completed" &&
+                                   d.ActualYield.HasValue &&
+                                   d.ActualYield.Value > 0,
+                    include: q => q
+                        .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
+                        .Include(d => d.CropSeason),
+                    asNoTracking: true
+                );
+
+                if (!completedDetails.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Không có vùng trồng nào đã hoàn thành để tạo yêu cầu nhập kho.", 
+                        new List<object>());
+                }
+
+                // Tính toán available quantity cho mỗi detail
+                var result = new List<object>();
+                foreach (var detail in completedDetails)
+                {
+                    // Lấy tất cả inbound requests đã được xử lý cho detail này
+                    var allRequests = await _uow.WarehouseInboundRequests.GetAllAsync(
+                        r => r.DetailId == detail.DetailId && !r.IsDeleted
+                    );
+
+                    // Tính tổng đã yêu cầu
+                    double totalRequested = allRequests
+                        .Where(r => r.Status == "Completed" || r.Status == "Pending" || r.Status == "Approved")
+                        .Sum(r => r.RequestedQuantity ?? 0);
+
+                    // Tính available quantity
+                    double availableQuantity = Math.Max(0, (detail.ActualYield ?? 0) - totalRequested);
+
+                    // Chỉ trả về detail có available quantity > 0
+                    if (availableQuantity > 0)
+                    {
+                        result.Add(new
+                        {
+                            detailId = detail.DetailId,
+                            detailCode = detail.CropSeason?.SeasonName ?? "N/A",
+                            coffeeTypeName = detail.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                            cropSeasonName = detail.CropSeason?.SeasonName ?? "N/A",
+                            actualYield = detail.ActualYield ?? 0,
+                            totalRequested = totalRequested,
+                            availableQuantity = availableQuantity,
+                            availableQuantityText = $"{availableQuantity} kg"
+                        });
+                    }
+                }
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, 
+                    $"Đã tìm thấy {result.Count} vùng trồng có thể tạo yêu cầu nhập kho", 
+                    result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+            }
+        }
     }
 }

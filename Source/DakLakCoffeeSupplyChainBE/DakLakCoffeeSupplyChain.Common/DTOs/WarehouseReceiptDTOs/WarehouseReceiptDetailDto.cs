@@ -14,6 +14,13 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseReceiptDTOs
         public string? WarehouseName { get; set; }
         public Guid BatchId { get; set; }
         public string? BatchCode { get; set; }
+        
+        // Thông tin cho cà phê tươi
+        public Guid? DetailId { get; set; }
+        public string? DetailCode { get; set; }
+        public string? CoffeeType { get; set; }
+        public string? CropSeasonName { get; set; }
+        
         public double? ReceivedQuantity { get; set; }
         public DateTime? ReceivedAt { get; set; }
         public string? StaffName { get; set; }
