@@ -15,7 +15,7 @@ public partial class ProcurementPlansDetail
 
     public Guid CoffeeTypeId { get; set; }
 
-    public int ProcessMethodId { get; set; }
+    public int? ProcessMethodId { get; set; }
 
     public double? TargetQuantity { get; set; }
 

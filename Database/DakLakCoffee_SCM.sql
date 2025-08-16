@@ -397,7 +397,7 @@ CREATE TABLE ProcurementPlansDetails (
 	PlanDetailCode VARCHAR(20) UNIQUE,                                                 -- PLD-2025-0001
     PlanID UNIQUEIDENTIFIER NOT NULL,                                                  -- FK đến bảng ProcurementPlans
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
-	ProcessMethodID INT NOT NULL,													   -- Phương thức sơ chế
+	ProcessMethodID INT,													           -- Phương thức sơ chế
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (Kg hoặc tấn)
     TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (Kg)
