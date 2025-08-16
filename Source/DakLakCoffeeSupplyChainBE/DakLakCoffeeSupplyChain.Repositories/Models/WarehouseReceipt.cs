@@ -17,7 +17,9 @@ public partial class WarehouseReceipt
 
     public Guid WarehouseId { get; set; }
 
-    public Guid BatchId { get; set; }
+    public Guid? BatchId { get; set; }
+
+    public Guid? DetailId { get; set; }
 
     public Guid ReceivedBy { get; set; }
 
@@ -34,6 +36,8 @@ public partial class WarehouseReceipt
     public bool IsDeleted { get; set; }
 
     public virtual ProcessingBatch Batch { get; set; }
+
+    public virtual CropSeasonDetail Detail { get; set; }
 
     public virtual WarehouseInboundRequest InboundRequest { get; set; }
 

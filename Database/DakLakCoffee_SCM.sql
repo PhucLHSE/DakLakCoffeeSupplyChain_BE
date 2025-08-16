@@ -1031,7 +1031,8 @@ CREATE TABLE WarehouseReceipts (
   ReceiptCode VARCHAR(20) UNIQUE,                              -- RECEIPT-2025-0001
   InboundRequestID UNIQUEIDENTIFIER NOT NULL,                  -- Gắn với yêu cầu nhập kho
   WarehouseID UNIQUEIDENTIFIER NOT NULL,                       -- Kho tiếp nhận
-  BatchID UNIQUEIDENTIFIER NOT NULL,                           -- Mẻ cà phê
+  BatchID UNIQUEIDENTIFIER,                                    -- Mẻ cà phê
+  DetailID UNIQUEIDENTIFIER,
   ReceivedBy UNIQUEIDENTIFIER NOT NULL,                        -- Nhân viên kho tiếp nhận
   LotCode NVARCHAR(100),                                       -- Mã lô nội bộ (nếu cần)
   ReceivedQuantity FLOAT,                                      -- Sản lượng thực nhận
@@ -1042,16 +1043,19 @@ CREATE TABLE WarehouseReceipts (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseReceipts_Request 
-    FOREIGN KEY (InboundRequestID) REFERENCES WarehouseInboundRequests(InboundRequestID),
+      FOREIGN KEY (InboundRequestID) REFERENCES WarehouseInboundRequests(InboundRequestID),
 
   CONSTRAINT FK_WarehouseReceipts_Warehouse 
-    FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
+      FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
 
   CONSTRAINT FK_WarehouseReceipts_Batch 
-    FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
+      FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
 
   CONSTRAINT FK_WarehouseReceipts_Receiver 
-    FOREIGN KEY (ReceivedBy) REFERENCES BusinessStaffs(StaffID)
+      FOREIGN KEY (ReceivedBy) REFERENCES BusinessStaffs(StaffID),
+
+   CONSTRAINT FK_WarehouseReceipts_CropSeasonDetails
+      FOREIGN KEY (DetailID) REFERENCES CropSeasonDetails(DetailID)
 );
 
 GO

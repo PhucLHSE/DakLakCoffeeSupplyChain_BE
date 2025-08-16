@@ -46,4 +46,6 @@ public partial class CropSeasonDetail
     public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
 
     public virtual ICollection<WarehouseInboundRequest> WarehouseInboundRequests { get; set; } = new List<WarehouseInboundRequest>();
+
+    public virtual ICollection<WarehouseReceipt> WarehouseReceipts { get; set; } = new List<WarehouseReceipt>();
 }
