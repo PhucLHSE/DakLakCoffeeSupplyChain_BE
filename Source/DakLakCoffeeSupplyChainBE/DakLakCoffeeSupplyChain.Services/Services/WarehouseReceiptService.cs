@@ -213,7 +213,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ReceivedQuantity = (double)(receipt.ReceivedQuantity ?? 0),
                 ReceivedAt = receipt.ReceivedAt,
                 StaffName = receipt.ReceivedByNavigation?.User?.Name,
-                Note = receipt.Note
+                Note = receipt.Note,
+                // ✅ Thêm số lượng yêu cầu nhập từ inbound request
+                RequestedQuantity = receipt.InboundRequest?.RequestedQuantity ?? 0
             };
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu nhập thành công", dto);
