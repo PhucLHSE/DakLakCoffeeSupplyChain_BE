@@ -15,11 +15,15 @@ public partial class Inventory
 
     public Guid WarehouseId { get; set; }
 
-    public Guid BatchId { get; set; }
+    public Guid? BatchId { get; set; }
+
+    public Guid? DetailId { get; set; }
 
     public double Quantity { get; set; }
 
     public string Unit { get; set; }
+
+    public bool? IsGreen { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -28,6 +32,8 @@ public partial class Inventory
     public bool IsDeleted { get; set; }
 
     public virtual ProcessingBatch Batch { get; set; }
+
+    public virtual CropSeasonDetail Detail { get; set; }
 
     public virtual ICollection<InventoryLog> InventoryLogs { get; set; } = new List<InventoryLog>();
 

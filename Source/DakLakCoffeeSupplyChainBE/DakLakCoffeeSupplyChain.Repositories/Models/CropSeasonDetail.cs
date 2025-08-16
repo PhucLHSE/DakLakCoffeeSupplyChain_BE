@@ -42,4 +42,8 @@ public partial class CropSeasonDetail
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 
     public virtual CropSeason CropSeason { get; set; }
+
+    public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
+
+    public virtual ICollection<WarehouseInboundRequest> WarehouseInboundRequests { get; set; } = new List<WarehouseInboundRequest>();
 }

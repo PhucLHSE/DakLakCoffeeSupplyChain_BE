@@ -25,7 +25,7 @@ public partial class Product
 
     public Guid CreatedBy { get; set; }
 
-    public Guid BatchId { get; set; }
+    public Guid? BatchId { get; set; }
 
     public Guid InventoryId { get; set; }
 

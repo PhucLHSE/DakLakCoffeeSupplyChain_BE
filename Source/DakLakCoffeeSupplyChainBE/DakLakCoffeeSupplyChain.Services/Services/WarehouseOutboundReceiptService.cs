@@ -105,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var outboundReceiptId = Guid.NewGuid();
             var receiptCode = "WOR-" + outboundReceiptId.ToString("N")[..8];
-            var receipt = dto.MapFromCreateDto(outboundReceiptId, receiptCode, staff.StaffId, inventory.BatchId);
+            var receipt = dto.MapFromCreateDto(outboundReceiptId, receiptCode, staff.StaffId, inventory.BatchId ?? new Guid());
 
             await _unitOfWork.WarehouseOutboundReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
