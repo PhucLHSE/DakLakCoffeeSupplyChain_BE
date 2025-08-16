@@ -948,9 +948,14 @@ CREATE TABLE Inventories (
     InventoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- Mã dòng tồn kho
 	InventoryCode VARCHAR(20) UNIQUE,                               -- INV-2025-0001
     WarehouseID UNIQUEIDENTIFIER NOT NULL,                          -- Gắn với kho cụ thể
-    BatchID UNIQUEIDENTIFIER NOT NULL,                              -- Gắn với mẻ sơ chế (Batch)
+    BatchID UNIQUEIDENTIFIER,                                       -- Gắn với mẻ sơ chế (Batch)
+	DetailID UNIQUEIDENTIFIER,
     Quantity FLOAT NOT NULL,                                        -- Số lượng hiện tại trong kho
     Unit NVARCHAR(20) DEFAULT 'Kg',                                 -- Đơn vị tính (Kg, Tấn...)
+	-- Cột trạng thái computed: 1 = Xanh, 0 = Thô (tự tính từ BatchID)
+	IsGreen AS (
+      CASE WHEN BatchID IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END
+    ) PERSISTED,
 	CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
     UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Thời điểm cập nhật
 	IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
@@ -960,7 +965,10 @@ CREATE TABLE Inventories (
         FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID),
 
     CONSTRAINT FK_Inventories_Batch 
-        FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID)
+        FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
+
+	CONSTRAINT FK_Inventories_CropSeasonDetails
+        FOREIGN KEY (DetailID) REFERENCES CropSeasonDetails(DetailID)
 );
 
 GO
@@ -988,10 +996,11 @@ GO
 CREATE TABLE WarehouseInboundRequests (
   InboundRequestID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),    -- Mã yêu cầu nhập kho,
   InboundRequestCode VARCHAR(20) UNIQUE,                            -- INREQ-2025-0001
-  BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Gắn với mẻ sơ chế
+  BatchID UNIQUEIDENTIFIER,                                         -- Gắn với mẻ sơ chế
+  DetailID UNIQUEIDENTIFIER,
   FarmerID UNIQUEIDENTIFIER NOT NULL,                               -- Người gửi yêu cầu (Farmer)
   BusinessStaffID UNIQUEIDENTIFIER NULL,							-- Người đại diện doanh nghiệp nhận
-  RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao (sau sơ chế)
+  RequestedQuantity FLOAT,                                          -- Sản lượng yêu cầu giao
   PreferredDeliveryDate DATE,                                       -- Ngày giao hàng mong muốn
   ActualDeliveryDate DATE,                                          -- Ngày giao thực tế (khi nhận thành công)
   Status NVARCHAR(50) DEFAULT 'Pending',                            -- Trạng thái: Pending, Approved, Rejected, Completed
@@ -1002,13 +1011,16 @@ CREATE TABLE WarehouseInboundRequests (
 
   -- FOREIGN KEYS
   CONSTRAINT FK_WarehouseInboundRequests_Batch 
-    FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
+      FOREIGN KEY (BatchID) REFERENCES ProcessingBatches(BatchID),
 
   CONSTRAINT FK_WarehouseInboundRequests_Farmer 
-    FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
+      FOREIGN KEY (FarmerID) REFERENCES Farmers(FarmerID),
 
   CONSTRAINT FK_WarehouseInboundRequests_Manager 
-    FOREIGN KEY (BusinessStaffID) REFERENCES BusinessStaffs(StaffID)
+      FOREIGN KEY (BusinessStaffID) REFERENCES BusinessStaffs(StaffID),
+
+  CONSTRAINT FK_WarehouseInboundRequests_CropSeasonDetails
+      FOREIGN KEY (DetailID) REFERENCES CropSeasonDetails(DetailID)
 );
 
 GO
@@ -1054,7 +1066,7 @@ CREATE TABLE Products (
   QuantityAvailable FLOAT,                                          -- Số lượng còn lại (Kg)
   Unit NVARCHAR(20) DEFAULT 'Kg',                                   -- Đơn vị tính
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                              -- Người tạo sản phẩm
-  BatchID UNIQUEIDENTIFIER NOT NULL,                                -- Mẻ sơ chế gốc
+  BatchID UNIQUEIDENTIFIER,                                         -- Mẻ sơ chế gốc
   InventoryID UNIQUEIDENTIFIER NOT NULL,                            -- Gắn với kho để lấy hàng
   CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                           -- Loại cà phê của sản phẩm
   OriginRegion NVARCHAR(100),                                       -- Vùng sản xuất
@@ -1102,6 +1114,29 @@ CREATE TABLE Orders (
   Note NVARCHAR(MAX),                                             -- Ghi chú giao hàng
   Status NVARCHAR(50) DEFAULT 'Pending',                          -- Trạng thái đơn: Preparing, Shipped, Delivered,...
   CancelReason NVARCHAR(MAX),                                     -- Lý do hủy (nếu có)
+  InvoiceNumber NVARCHAR(100) NULL,                               -- Số hóa đơn/VAT
+  PaymentProgressJSON NVARCHAR(MAX) NULL,                         -- Tiến độ thanh toán (JSON)
+  InvoiceFileURL NVARCHAR(255) NULL,                              -- File hóa đơn (scan/PDF)
+  PaidAmount DECIMAL(19,2) NOT NULL DEFAULT(0),                   -- đã thanh toán bao nhiêu
+  LastPaidAt DATETIME NULL,                                       -- lần thanh toán gần nhất
+  PaidPercent AS (                                                -- % đã thanh toán (0–100), dựa vào TotalAmount (FLOAT)
+      CASE 
+        WHEN ISNULL(TotalAmount,0)=0 
+          THEN CAST(0.00 AS DECIMAL(5,2))
+        ELSE CAST(ROUND(
+               (CAST(PaidAmount AS DECIMAL(19,2)) 
+               / NULLIF(CAST(TotalAmount AS DECIMAL(19,2)),0)) * 100.0
+             , 2) AS DECIMAL(5,2))
+      END
+  ),
+  PaymentStatus AS (                               -- Trạng thái: Unpriced/Unpaid/PartiallyPaid/Paid
+      CASE 
+        WHEN ISNULL(TotalAmount,0)=0 THEN N'Unpriced'
+        WHEN PaidAmount <= 0 THEN N'Unpaid'
+        WHEN CAST(PaidAmount AS DECIMAL(19,2)) < CAST(TotalAmount AS DECIMAL(19,2)) THEN N'PartiallyPaid'
+        ELSE N'Paid'
+      END
+  ),
   CreatedBy UNIQUEIDENTIFIER NOT NULL,                            -- Ai tạo đơn hàng
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày tạo
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,          -- Ngày cập nhật
@@ -1113,6 +1148,8 @@ CREATE TABLE Orders (
 
   CONSTRAINT FK_Orders_CreatedBy
       FOREIGN KEY (CreatedBy) REFERENCES UserAccounts(UserID),
+
+  CONSTRAINT CK_Orders_PaidAmount_NonNegative CHECK (PaidAmount >= 0)
 );
 
 GO
