@@ -5,11 +5,39 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
 {
     public class StageFailureInfo
     {
-        public int? FailedStageId { get; set; } // 🔧 FIX: Thực ra đây là OrderIndex, không phải StageId
+        /// <summary>
+        /// OrderIndex của stage bị fail (thứ tự trong method)
+        /// </summary>
+        public int FailedOrderIndex { get; set; }
+        
+        /// <summary>
+        /// StageId thực tế của stage bị fail (từ database)
+        /// </summary>
+        public int? FailedStageId { get; set; }
+        
+        /// <summary>
+        /// Tên stage bị fail
+        /// </summary>
         public string FailedStageName { get; set; } = string.Empty;
-        public string Details { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Chi tiết vấn đề
+        /// </summary>
+        public string FailureDetails { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Khuyến nghị cải thiện
+        /// </summary>
         public string Recommendations { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Xác định đây có phải là failure comment không
+        /// </summary>
         public bool IsFailure { get; set; }
+        
+        // 🔧 DEPRECATED: Giữ lại để backward compatibility
+        [Obsolete("Sử dụng FailedOrderIndex thay thế")]
+        public int? FailedStageId_Old => FailedOrderIndex;
     }
 
     public static class StageFailureParser
@@ -24,9 +52,6 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         /// </summary>
         /// <param name="comments">Comments từ evaluation</param>
         /// <returns>StageFailureInfo hoặc null nếu không phải failure</returns>
-        /// <remarks>
-        /// FailedStageId trong StageFailureInfo thực ra là OrderIndex, không phải StageId
-        /// </remarks>
         public static StageFailureInfo? ParseFailureFromComments(string? comments)
         {
             if (string.IsNullOrEmpty(comments) || !comments.Contains(FAILED_STAGE_ID_PREFIX))
@@ -44,20 +69,22 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                 if (stageIdPart == null) return null;
 
                 var stageIdStr = stageIdPart.Replace(FAILED_STAGE_ID_PREFIX, "");
-                if (!int.TryParse(stageIdStr, out int stageId))
+                if (!int.TryParse(stageIdStr, out int orderIndex))
                     return null;
 
                 return new StageFailureInfo
                 {
-                    FailedStageId = stageId,
+                    FailedOrderIndex = orderIndex,
+                    FailedStageId = null, // Sẽ được set từ service
                     FailedStageName = stageNamePart?.Replace(FAILED_STAGE_NAME_PREFIX, "") ?? "",
-                    Details = detailsPart?.Replace(DETAILS_PREFIX, "") ?? "",
+                    FailureDetails = detailsPart?.Replace(DETAILS_PREFIX, "") ?? "",
                     Recommendations = recommendationsPart?.Replace(RECOMMENDATIONS_PREFIX, "") ?? "",
                     IsFailure = true
                 };
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"DEBUG: Error parsing failure comment: {ex.Message}");
                 return null;
             }
         }
