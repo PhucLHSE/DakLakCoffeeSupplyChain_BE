@@ -18,5 +18,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> SoftDeleteAsync(Guid receiptId, Guid userId);
         Task<IServiceResult> HardDeleteAsync(Guid receiptId);
 
+        // ✅ THÊM: Method để lấy thông tin summary của inbound request
+        Task<IServiceResult> GetInboundRequestSummaryAsync(Guid inboundRequestId);
     }
 }
