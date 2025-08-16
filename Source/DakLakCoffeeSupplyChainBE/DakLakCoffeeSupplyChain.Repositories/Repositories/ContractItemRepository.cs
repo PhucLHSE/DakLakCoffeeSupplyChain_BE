@@ -22,8 +22,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountByContractIdAsync(Guid contractId)
         {
             return await _context.ContractItems
-                .Where(item => item.ContractId == contractId && 
-                               !item.IsDeleted)
+                .Where(item => item.ContractId == contractId)
                 .CountAsync();
         }
     }

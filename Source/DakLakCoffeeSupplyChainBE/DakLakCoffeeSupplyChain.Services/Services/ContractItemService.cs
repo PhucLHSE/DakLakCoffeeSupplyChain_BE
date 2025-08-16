@@ -81,11 +81,86 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Lấy danh sách item hiện có của contract
+                var existingItems = await _unitOfWork.ContractItemRepository.GetAllAsync(
+                    predicate: ci => 
+                       ci.ContractId == contractItemDto.ContractId && 
+                       !ci.IsDeleted,
+                    asNoTracking: true
+                );
+
+                // Giới hạn SỐ LƯỢNG theo Contracts.TotalQuantity
+                double contractQtyCap = contract.TotalQuantity.HasValue 
+                    ? Convert.ToDouble(contract.TotalQuantity.Value) : 0d;
+
+                if (contractQtyCap > 0d)
+                {
+                    double existingTotalQty = existingItems?.Sum(ci => Convert.ToDouble(ci.Quantity)) ?? 0d;
+                    double requestedQty = Convert.ToDouble(contractItemDto.Quantity ?? 0);
+                    const double epsQty = 1e-6;
+
+                    if ((existingTotalQty + requestedQty) - contractQtyCap > epsQty)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            $"Tổng số lượng vượt giới hạn hợp đồng: hiện có {existingTotalQty:0.##} kg + thêm {requestedQty:0.##} kg > {contractQtyCap:0.##} kg."
+                        );
+                    }
+                }
+
+                // Giới hạn GIÁ TRỊ theo Contracts.TotalValue
+                decimal contractValueCap = contract.TotalValue.HasValue
+                    ? Convert.ToDecimal(contract.TotalValue.Value) : 0m;
+
+                if (contractValueCap > 0m)
+                {
+                    // helper tính giá trị dòng (làm tròn 2 số)
+                    static decimal LineNet(decimal qty, decimal unitPrice, decimal discountPct)
+                    {
+                        if (discountPct < 0m) discountPct = 0m;
+                        if (discountPct > 100m) discountPct = 100m;
+                        var net = qty * unitPrice * (1 - discountPct / 100m);
+
+                        return Math.Round(net, 2, MidpointRounding.AwayFromZero);
+                    }
+
+                    decimal existingTotalValue = 0m;
+
+                    if (existingItems != null)
+                    {
+                        foreach (var ci in existingItems)
+                        {
+                            decimal q = Convert.ToDecimal(ci.Quantity);
+                            decimal p = Convert.ToDecimal(ci.UnitPrice);
+                            decimal d = Convert.ToDecimal(ci.DiscountAmount ?? 0); // percent
+                            existingTotalValue += LineNet(q, p, d);
+                        }
+                    }
+
+                    decimal reqQty = Convert.ToDecimal(contractItemDto.Quantity ?? 0);
+                    decimal reqPrice = Convert.ToDecimal(contractItemDto.UnitPrice ?? 0);
+                    decimal reqDisc = Convert.ToDecimal(contractItemDto.DiscountAmount ?? 0);
+                    decimal newLineValue = LineNet(reqQty, reqPrice, reqDisc);
+
+                    decimal totalWithNew = existingTotalValue + newLineValue;
+
+                    // epsilon cho tiền tệ (0.01 ~ 1 xu)
+                    const decimal epsMoney = 0.01m;
+
+                    if (totalWithNew - contractValueCap > epsMoney)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            $"Tổng giá trị các mặt hàng vượt Tổng giá trị hợp đồng: hiện có {existingTotalValue:N0} + thêm {newLineValue:N0} = {totalWithNew:N0} VND > {contractValueCap:N0} VND."
+                        );
+                    }
+                }
+
                 // Sinh mã định danh cho ContractItem
                 string contractItemCode = await _codeGenerator
                     .GenerateContractItemCodeAsync(contractItemDto.ContractId ?? Guid.NewGuid());
 
-                // Map DTO to Entity
+                // Ánh xạ dữ liệu từ DTO vào entity
                 var newContractItem = contractItemDto
                     .MapToNewContractItem(contractItemCode);
 
@@ -178,6 +253,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Xác định Contract đích (giữ nguyên nếu DTO null)
+                var targetContractId = contractItemDto.ContractId != Guid.Empty
+                    ? contractItemDto.ContractId
+                    : contractItem.ContractId;
+
+                // Validate Contract tồn tại
+                var contract = await _unitOfWork.ContractRepository.GetByIdAsync(
+                    predicate: c => 
+                       c.ContractId == targetContractId && 
+                       !c.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (contract == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy hợp đồng tương ứng."
+                    );
+                }
+
                 // Kiểm tra loại cà phê có bị trùng trong hợp đồng không (trừ chính nó)
                 var isDuplicated = await _unitOfWork.ContractItemRepository.AnyAsync(
                     predicate: ci =>
@@ -195,8 +291,83 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                //Map DTO to Entity
+                // Lấy danh sách item khác (exclude chính nó) để tính tổng
+                var otherItems = await _unitOfWork.ContractItemRepository.GetAllAsync(
+                    predicate: ci =>
+                       ci.ContractId == targetContractId &&
+                       ci.ContractItemId != contractItemDto.ContractItemId &&
+                       !ci.IsDeleted,
+                    asNoTracking: true
+                );
+
+                // Giới hạn SỐ LƯỢNG theo Contracts.TotalQuantity
+                double qtyCap = contract.TotalQuantity.HasValue 
+                    ? Convert.ToDouble(contract.TotalQuantity.Value) : 0d;
+
+                if (qtyCap > 0d)
+                {
+                    double othersQty = otherItems?.Sum(ci => Convert.ToDouble(ci.Quantity)) ?? 0d;
+                    double reqQty = Convert.ToDouble(contractItemDto.Quantity ?? 0);
+                    const double epsQty = 1e-6;
+
+                    if ((othersQty + reqQty) - qtyCap > epsQty)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Tổng số lượng vượt giới hạn hợp đồng: hiện có {othersQty:0.##} kg + cập nhật {reqQty:0.##} kg > {qtyCap:0.##} kg."
+                        );
+                    }
+                }
+
+                // Giới hạn GIÁ TRỊ theo Contracts.TotalValue
+                decimal valueCap = contract.TotalValue.HasValue
+                    ? Convert.ToDecimal(contract.TotalValue.Value) : 0m;
+
+                if (valueCap > 0m)
+                {
+                    static decimal LineNet(decimal qty, decimal unitPrice, decimal discountPct)
+                    {
+                        if (discountPct < 0m) discountPct = 0m;
+                        if (discountPct > 100m) discountPct = 100m;
+                        var net = qty * unitPrice * (1 - discountPct / 100m);
+                        return Math.Round(net, 2, MidpointRounding.AwayFromZero);
+                    }
+
+                    decimal othersValue = 0m;
+
+                    if (otherItems != null)
+                    {
+                        foreach (var ci in otherItems)
+                        {
+                            decimal q = Convert.ToDecimal(ci.Quantity);
+                            decimal p = Convert.ToDecimal(ci.UnitPrice);
+                            decimal d = Convert.ToDecimal(ci.DiscountAmount ?? 0); // %
+                            othersValue += LineNet(q, p, d);
+                        }
+                    }
+
+                    decimal rq = Convert.ToDecimal(contractItemDto.Quantity ?? 0);
+                    decimal rp = Convert.ToDecimal(contractItemDto.UnitPrice ?? 0);
+                    decimal rd = Convert.ToDecimal(contractItemDto.DiscountAmount ?? 0);
+                    decimal newLine = LineNet(rq, rp, rd);
+
+                    decimal totalWithUpdate = othersValue + newLine;
+                    const decimal epsMoney = 0.01m;
+
+                    if (totalWithUpdate - valueCap > epsMoney)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Tổng giá trị các mặt hàng vượt Tổng giá trị hợp đồng: hiện có {othersValue:N0} + dòng cập nhật {newLine:N0} = {totalWithUpdate:N0} VND > {valueCap:N0} VND."
+                        );
+                    }
+                }
+
+                // Ánh xạ dữ liệu từ DTO vào entity
                 contractItemDto.MapToUpdateContractItem(contractItem);
+
+                // Bảo đảm ContractId đích (phòng trường hợp DTO để null)
+                contractItem.ContractId = targetContractId;
 
                 // Cập nhật contractItem ở repository
                 await _unitOfWork.ContractItemRepository
