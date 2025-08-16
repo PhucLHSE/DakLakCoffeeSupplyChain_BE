@@ -13,7 +13,9 @@ public partial class WarehouseInboundRequest
 
     public string InboundRequestCode { get; set; }
 
-    public Guid BatchId { get; set; }
+    public Guid? BatchId { get; set; }
+
+    public Guid? DetailId { get; set; }
 
     public Guid FarmerId { get; set; }
 
@@ -38,6 +40,8 @@ public partial class WarehouseInboundRequest
     public virtual ProcessingBatch Batch { get; set; }
 
     public virtual BusinessStaff BusinessStaff { get; set; }
+
+    public virtual CropSeasonDetail Detail { get; set; }
 
     public virtual Farmer Farmer { get; set; }
 

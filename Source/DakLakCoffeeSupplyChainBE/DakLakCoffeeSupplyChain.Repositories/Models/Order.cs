@@ -29,6 +29,20 @@ public partial class Order
 
     public string CancelReason { get; set; }
 
+    public string InvoiceNumber { get; set; }
+
+    public string PaymentProgressJson { get; set; }
+
+    public string InvoiceFileUrl { get; set; }
+
+    public decimal PaidAmount { get; set; }
+
+    public DateTime? LastPaidAt { get; set; }
+
+    public decimal? PaidPercent { get; set; }
+
+    public string PaymentStatus { get; set; }
+
     public Guid CreatedBy { get; set; }
 
     public DateTime CreatedAt { get; set; }

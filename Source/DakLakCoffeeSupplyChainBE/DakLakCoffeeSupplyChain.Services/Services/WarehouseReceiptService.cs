@@ -56,7 +56,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 receiptId,
                 receiptCode,
                 staff.StaffId,
-                request.BatchId
+                request.BatchId ?? new Guid()
             );
 
             // ✅ Để trống số lượng đến khi xác nhận

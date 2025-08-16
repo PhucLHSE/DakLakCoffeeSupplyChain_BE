@@ -35,7 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InventoryCode = inv.InventoryCode,
                 WarehouseId = inv.WarehouseId,
                 WarehouseName = inv.Warehouse?.Name ?? "N/A",
-                BatchId = inv.BatchId,
+                BatchId = inv.BatchId ?? new Guid(),
                 BatchCode = inv.Batch?.BatchCode ?? "N/A",
                 ProductName = inv.Batch?.Products?.FirstOrDefault()?.ProductName ?? "N/A",
                 CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "N/A",

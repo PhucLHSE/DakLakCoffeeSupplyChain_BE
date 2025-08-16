@@ -131,8 +131,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên xử lý.");
 
             // Re-check khối lượng còn lại để chống over-commit
-            double remaining = await CalcRemainingForBatchAsync(request.BatchId, request.InboundRequestId);
+            double remaining = await CalcRemainingForBatchAsync(request.BatchId ?? new Guid(), request.InboundRequestId);
             double qty = request.RequestedQuantity ?? 0;
+
             if (qty <= 0)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Khối lượng yêu cầu không hợp lệ.");
 
@@ -164,6 +165,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             Guid? managerId = null;
 
             var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+
             if (manager != null && !manager.IsDeleted)
             {
                 managerId = manager.ManagerId;
@@ -171,6 +173,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted && staff.SupervisorId != null)
                     managerId = staff.SupervisorId;
                 else
@@ -193,20 +196,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetByIdAsync(Guid requestId)
         {
             var request = await _unitOfWork.WarehouseInboundRequests.GetDetailByIdAsync(requestId);
+
             if (request == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy yêu cầu.", null);
 
             var dto = request.ToDetailDto();
+
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", dto);
         }
 
         public async Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId)
         {
             var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+
             if (request == null || request.Status != InboundRequestStatus.Pending.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc không thể huỷ.");
 
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(farmerUserId);
+
             if (farmer == null || request.FarmerId != farmer.FarmerId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không có quyền huỷ yêu cầu này.");
 

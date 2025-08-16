@@ -105,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RequestedQuantity = r.RequestedQuantity ?? 0,
                 Note = r.Note,
 
-                BatchId = r.BatchId,
+                BatchId = r.BatchId ?? new Guid(),
                 BatchCode = r.Batch?.BatchCode ?? "N/A",
                 CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
                 SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
