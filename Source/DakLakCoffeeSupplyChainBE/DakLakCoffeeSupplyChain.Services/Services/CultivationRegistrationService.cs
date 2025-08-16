@@ -300,6 +300,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         );
                     }
 
+                    // Kiểm tra xem sản lượng dự kiến có vượt quá kế hoạch hoặc ít hơn mức tối thiểu không
+                    var planDetail = selectedProcurementPlan.ProcurementPlansDetails.FirstOrDefault(d => d.PlanDetailsId == detail.PlanDetailId);
+                    if (planDetail == null)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Chi tiết kế hoạch thu mua không tồn tại trong kế hoạch chính đã chọn."
+                        );
+                    }
+                    if (detail.EstimatedYield < planDetail.MinimumRegistrationQuantity || detail.EstimatedYield > planDetail.TargetQuantity)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Sản lượng dự kiến phải nằm trong phạm vi tối thiểu và mục tiêu của chi tiết kế hoạch."
+                        );
+                    }
+
+                    // Kiểm tra xem mức giá mong muốn có vượt quá kế hoạch hoặc ít hơn mức tối thiểu không
+                    if (detail.WantedPrice < planDetail.MinPriceRange || detail.WantedPrice > planDetail.MaxPriceRange)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Mức giá mong muốn phải nằm trong phạm vi tối thiểu và mục tiêu của chi tiết kế hoạch."
+                        );
+                    }
+
                     // Tổng hợp lại toàn bộ các mức giá mong muốn của từng chi tiết đơn
                     newCultivationRegistration.TotalWantedPrice += detail.WantedPrice;
                 }

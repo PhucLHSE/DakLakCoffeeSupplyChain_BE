@@ -308,23 +308,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     p => p.BatchId == batchId && !p.IsDeleted,
                     q => q.OrderBy(p => p.StepIndex))).ToList();
 
-                // Tính tổng khối lượng đã chế biến
-                var totalProcessedQuantity = existingProgresses
-                    .Where(p => p.OutputQuantity.HasValue)
-                    .Sum(p => p.OutputQuantity.Value);
-
-                // Khối lượng còn lại = InputQuantity - totalProcessedQuantity
-                var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
-
-                if (remainingQuantity <= 0)
-                {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                        $"Không thể tạo tiến độ mới. Khối lượng cà phê đã được chế biến hết. " +
-                        $"Tổng đầu vào: {batch.InputQuantity} {batch.InputUnit}, " +
-                        $"Đã chế biến: {totalProcessedQuantity} {batch.InputUnit}, " +
-                        $"Còn lại: {remainingQuantity} {batch.InputUnit}");
-                }
-
+                // 🔧 FIX: Bỏ logic tính remainingQuantity sai - không thể trừ InputQuantity với OutputQuantity
+                // Vì InputQuantity = cà phê tươi, OutputQuantity = cà phê đã chế biến (đơn vị khác nhau)
+                
                 // 🔧 VALIDATION: Kiểm tra khối lượng output cơ bản
                 if (input.OutputQuantity.HasValue)
                 {
@@ -348,14 +334,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         return new ServiceResult(Const.FAIL_CREATE_CODE, 
                             $"Đơn vị '{input.OutputUnit}' không hợp lệ. Đơn vị hợp lệ: {string.Join(", ", validUnits)}");
-                    }
-
-                    // Kiểm tra không vượt quá khối lượng còn lại
-                    if (input.OutputQuantity.Value > remainingQuantity)
-                    {
-                        return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                            $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit ?? batch.InputUnit}) " +
-                            $"không thể lớn hơn khối lượng còn lại ({remainingQuantity} {batch.InputUnit})");
                     }
 
                     // 🔧 VALIDATION: So sánh với progress trước đó (nếu có)
@@ -986,12 +964,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         }
                     }
 
-                    // 🔧 VALIDATION: Kiểm tra không vượt quá input quantity của batch
-                    if (input.OutputQuantity.Value > batch.InputQuantity)
-                    {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                            $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit}) không thể lớn hơn khối lượng đầu vào của batch ({batch.InputQuantity} {batch.InputUnit}).");
-                    }
+                    // 🔧 FIX: Bỏ validation sai - không thể so sánh InputQuantity với OutputQuantity
+                    // Vì InputQuantity = cà phê tươi, OutputQuantity = cà phê đã chế biến
+                    // Có thể có hao hụt hoặc thay đổi khối lượng trong quá trình chế biến
                 }
 
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Creating new progress - stepIndex: {nextStepIndex}, stageId: {nextStage.StageId}");
@@ -1364,12 +1339,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                // 🔧 VALIDATION: Kiểm tra khối lượng không vượt quá input quantity của batch
-                if (input.OutputQuantity.Value > batch.InputQuantity)
-                {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                        $"Khối lượng đầu ra ({input.OutputQuantity.Value} {input.OutputUnit}) không thể lớn hơn khối lượng đầu vào của batch ({batch.InputQuantity} {batch.InputUnit}).");
-                }
+                // 🔧 FIX: Bỏ validation sai - không thể so sánh InputQuantity với OutputQuantity
+                // Vì InputQuantity = cà phê tươi, OutputQuantity = cà phê đã chế biến
+                // Có thể có hao hụt hoặc thay đổi khối lượng trong quá trình chế biến
                 
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Latest progress: {(latestProgress != null ? $"StepIndex: {latestProgress.StepIndex}, StageId: {latestProgress.StageId}" : "none")}");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Next StepIndex: {nextStepIndex}");
