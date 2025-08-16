@@ -34,7 +34,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             BatchStatus = e.Batch?.Status,
             
             // Thông tin expert (người đánh giá) - sẽ được set từ service
-            ExpertName = null
+            ExpertName = null // Sẽ được set trong service khi cần
         };
 
         private static string? ParseDetailedFeedback(string? comments)

@@ -97,40 +97,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tạo comments chi tiết bao gồm thông tin đơn yêu cầu đánh giá và tiến trình
             var detailedComments = dto.Comments ?? "";
             
-            // Nếu là Fail và có thông tin stage cụ thể, tạo format chuẩn
+            // 🔧 CẢI THIỆN: Logic tạo comments thông minh cho evaluation
             if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase) && 
                 dto.ProblematicSteps?.Any() == true)
             {
-                // Lấy thông tin stage đầu tiên có vấn đề
+                // Nếu là Fail và có problematic steps, tạo format chuẩn
                 var problematicStep = dto.ProblematicSteps.First();
                 
-                // Parse để lấy StageId từ format "Step X: StageName" hoặc "StageName"
-                var stageName = problematicStep.Contains(":") 
-                    ? problematicStep.Split(':').Last().Trim() 
-                    : problematicStep.Trim();
+                // Parse để lấy thông tin stage từ format "Bước X: StageName"
+                var stepMatch = System.Text.RegularExpressions.Regex.Match(problematicStep, @"Bước\s*(\d+):\s*(.+)");
                 
-                // Tìm StageId từ tên stage
-                var stage = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
-                    s => s.StageName.Contains(stageName) && s.MethodId == batch.MethodId && !s.IsDeleted
-                );
-                
-                if (stage.Any())
+                if (stepMatch.Success)
                 {
-                    var failedStage = stage.First();
-                    var failureDetails = dto.DetailedFeedback ?? "Không đạt tiêu chuẩn";
-                    var recommendations = dto.Recommendations ?? "Cần cải thiện";
+                    var orderIndex = int.Parse(stepMatch.Groups[1].Value);
+                    var stageName = stepMatch.Groups[2].Value.Trim();
+                    var failureDetails = dto.DetailedFeedback ?? dto.Comments ?? "Tiến trình có vấn đề";
+                    var recommendations = dto.Recommendations ?? "Cần cải thiện theo hướng dẫn";
                     
-                    // Tạo format comments chuẩn cho failure
+                    // Tạo format chuẩn theo StageFailureParser
                     detailedComments = StageFailureParser.CreateFailureComment(
-                        failedStage.StageId,
-                        failedStage.StageName,
+                        orderIndex,
+                        stageName,
                         failureDetails,
                         recommendations
                     );
                 }
                 else
                 {
-                    // Fallback: tạo comments thông thường
+                    // Fallback nếu không parse được format chuẩn
                     detailedComments = dto.Comments ?? "";
                     if (!string.IsNullOrEmpty(dto.DetailedFeedback))
                     {
@@ -148,17 +142,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             else
             {
-                // Thêm thông tin đơn yêu cầu đánh giá nếu có
-                if (!string.IsNullOrEmpty(dto.RequestReason))
-                {
-                    detailedComments += $"\n\nLý do yêu cầu đánh giá: {dto.RequestReason}";
-                }
-                if (!string.IsNullOrEmpty(dto.AdditionalNotes))
-                {
-                    detailedComments += $"\nGhi chú bổ sung: {dto.AdditionalNotes}";
-                }
-                
-                // Thêm thông tin đánh giá chi tiết nếu có
+                // Tạo comments thông thường cho các trường hợp khác
+                detailedComments = dto.Comments ?? "";
                 if (!string.IsNullOrEmpty(dto.DetailedFeedback))
                 {
                     detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
@@ -171,6 +156,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
                 }
+            }
+            
+            // Thêm thông tin đơn yêu cầu đánh giá nếu có
+            if (!string.IsNullOrEmpty(dto.RequestReason))
+            {
+                detailedComments += $"\n\nLý do yêu cầu đánh giá: {dto.RequestReason}";
+            }
+            if (!string.IsNullOrEmpty(dto.AdditionalNotes))
+            {
+                detailedComments += $"\nGhi chú bổ sung: {dto.AdditionalNotes}";
             }
 
             // Lấy ExpertId từ UserId nếu là expert
@@ -311,10 +306,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!canAccess)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật đánh giá này.");
 
+            // 🔧 FIX: Thêm validation cho EvaluationResult
+            if (string.IsNullOrWhiteSpace(dto.EvaluationResult))
+            {
+                Console.WriteLine($"DEBUG UPDATE EVALUATION: EvaluationResult is null or empty: '{dto.EvaluationResult}'");
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Kết quả đánh giá không được để trống.");
+            }
+            
             // Validate EvaluationResult
             var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary" };
             if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Kết quả đánh giá không hợp lệ. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary.");
+            {
+                Console.WriteLine($"DEBUG UPDATE EVALUATION: Invalid EvaluationResult: '{dto.EvaluationResult}'");
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Kết quả đánh giá không hợp lệ: '{dto.EvaluationResult}'. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary.");
+            }
 
             // Lưu kết quả cũ để so sánh
             var oldResult = entity.EvaluationResult;
@@ -322,21 +327,82 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Debug log
             Console.WriteLine($"DEBUG UPDATE EVALUATION: oldResult = '{oldResult}', dto.EvaluationResult = '{dto.EvaluationResult}'");
 
-            // Tạo comments chi tiết bao gồm thông tin tiến trình
-            var detailedComments = dto.Comments ?? "";
-            if (!string.IsNullOrEmpty(dto.DetailedFeedback))
+            // 🔧 CẢI THIỆN: Logic tạo comments thông minh cho update
+            string detailedComments;
+            if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase) && 
+                dto.ProblematicSteps?.Any() == true)
             {
-                detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
+                // Nếu là Fail và có problematic steps, tạo format chuẩn
+                var problematicStep = dto.ProblematicSteps.First();
+                
+                // Parse để lấy thông tin stage từ format "Bước X: StageName"
+                var stepMatch = System.Text.RegularExpressions.Regex.Match(problematicStep, @"Bước\s*(\d+):\s*(.+)");
+                
+                if (stepMatch.Success)
+                {
+                    var orderIndex = int.Parse(stepMatch.Groups[1].Value);
+                    var stageName = stepMatch.Groups[2].Value.Trim();
+                    var failureDetails = dto.DetailedFeedback ?? dto.Comments ?? "Tiến trình có vấn đề";
+                    var recommendations = dto.Recommendations ?? "Cần cải thiện theo hướng dẫn";
+                    
+                    // Tạo format chuẩn theo StageFailureParser
+                    detailedComments = StageFailureParser.CreateFailureComment(
+                        orderIndex,
+                        stageName,
+                        failureDetails,
+                        recommendations
+                    );
+                }
+                else
+                {
+                    // Fallback nếu không parse được format chuẩn
+                    detailedComments = dto.Comments ?? "";
+                    if (!string.IsNullOrEmpty(dto.DetailedFeedback))
+                    {
+                        detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
+                    }
+                    if (dto.ProblematicSteps?.Any() == true)
+                    {
+                        detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
+                    }
+                    if (!string.IsNullOrEmpty(dto.Recommendations))
+                    {
+                        detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                    }
+                }
             }
-            if (dto.ProblematicSteps?.Any() == true)
+            else
             {
-                detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
-            }
-            if (!string.IsNullOrEmpty(dto.Recommendations))
-            {
-                detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                // Tạo comments thông thường cho các trường hợp khác
+                detailedComments = dto.Comments ?? "";
+                if (!string.IsNullOrEmpty(dto.DetailedFeedback))
+                {
+                    detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
+                }
+                if (dto.ProblematicSteps?.Any() == true)
+                {
+                    detailedComments += $"\nTiến trình có vấn đề: {string.Join(", ", dto.ProblematicSteps)}";
+                }
+                if (!string.IsNullOrEmpty(dto.Recommendations))
+                {
+                    detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
+                }
             }
 
+            // 🔧 CẢI THIỆN: Cập nhật EvaluatedBy nếu là expert và chưa có
+            if (isExpert && entity.EvaluatedBy == null)
+            {
+                var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
+                    predicate: e => e.UserId == userId && !e.IsDeleted,
+                    asNoTracking: true
+                );
+                if (expert != null)
+                {
+                    entity.EvaluatedBy = expert.ExpertId;
+                    Console.WriteLine($"DEBUG EVALUATION UPDATE: Set EvaluatedBy to expertId: {expert.ExpertId}");
+                }
+            }
+            
             entity.EvaluationResult = dto.EvaluationResult;
             entity.Comments = detailedComments.Trim();
             if (dto.EvaluatedAt.HasValue) entity.EvaluatedAt = dto.EvaluatedAt.Value;
@@ -410,6 +476,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             Console.WriteLine($"DEBUG EVALUATION UPDATE: About to save changes...");
             var saved = await _unitOfWork.SaveChangesAsync();
             Console.WriteLine($"DEBUG EVALUATION UPDATE: Save result: {saved}");
+            
+            // 🔧 FIX: Kiểm tra xem evaluation có thực sự được lưu không
+            if (saved > 0)
+            {
+                var savedEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByIdAsync(
+                    e => e.EvaluationId == id && !e.IsDeleted
+                );
+                if (savedEvaluation != null)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION UPDATE: Verification - Saved EvaluationResult: '{savedEvaluation.EvaluationResult}', Comments: '{savedEvaluation.Comments}'");
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG EVALUATION UPDATE: ERROR - Could not find saved evaluation after save!");
+                }
+            }
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công.", entity.MapToViewDto())
