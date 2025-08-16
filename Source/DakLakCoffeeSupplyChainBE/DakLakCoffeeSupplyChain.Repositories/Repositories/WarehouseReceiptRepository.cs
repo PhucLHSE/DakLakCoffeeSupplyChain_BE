@@ -17,22 +17,28 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
         }
 
-        public async Task<WarehouseReceipt?> GetByInboundRequestIdAsync(Guid inboundRequestId)
+        public async Task<List<WarehouseReceipt>> GetByInboundRequestIdAsync(Guid inboundRequestId)
         {
-            return await _context.WarehouseReceipts
-                .FirstOrDefaultAsync(r => r.InboundRequestId == inboundRequestId);
+            var receipts = await _context.WarehouseReceipts
+                .Where(r => r.InboundRequestId == inboundRequestId && !r.IsDeleted)
+                .ToListAsync();
+            
+            // ✅ Sử dụng helper method để xử lý an toàn
+            return receipts.OrderBy(r => GetSafeDateTime(r.ReceivedAt, DateTime.MaxValue)).ToList();
         }
 
         public async Task<List<WarehouseReceipt>> GetAllWithIncludesAsync()
         {
-            return await _context.WarehouseReceipts
+            var receipts = await _context.WarehouseReceipts
                 .Where(r => !r.IsDeleted)
                 .Include(r => r.Warehouse)
                 .Include(r => r.Batch)
                 .Include(r => r.ReceivedByNavigation)
                    .ThenInclude(s => s.User)
-                .OrderByDescending(r => r.ReceivedAt)
                 .ToListAsync();
+            
+            // ✅ Sử dụng helper method để xử lý an toàn
+            return receipts.OrderByDescending(r => GetSafeDateTime(r.ReceivedAt, DateTime.MinValue)).ToList();
         }
 
         public async Task<WarehouseReceipt?> GetDetailByIdAsync(Guid id)
@@ -51,12 +57,36 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
         public async Task<int> CountCreatedInYearAsync(int year)
         {
-            return await _context.WarehouseReceipts
-                .CountAsync(r => 
-                   r.ReceivedAt.HasValue && 
-                   r.ReceivedAt.Value.Year == year && 
-                   !r.IsDeleted
-                );
+            var receipts = await _context.WarehouseReceipts
+                .Where(r => !r.IsDeleted)
+                .ToListAsync();
+            
+            // ✅ Sử dụng helper method để xử lý an toàn
+            return receipts.Count(r => {
+                var safeDate = GetSafeDateTime(r.ReceivedAt, DateTime.MinValue);
+                return safeDate.Year == year;
+            });
+        }
+
+        // ✅ HELPER METHOD: Xử lý DateTime an toàn
+        private DateTime GetSafeDateTime(DateTime? dateTime, DateTime defaultValue)
+        {
+            try
+            {
+                if (dateTime.HasValue && 
+                    dateTime.Value > DateTime.MinValue && 
+                    dateTime.Value < DateTime.MaxValue &&
+                    dateTime.Value.Year > 1900 && 
+                    dateTime.Value.Year < 2100)
+                {
+                    return dateTime.Value;
+                }
+                return defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
+            }
         }
 
         public IQueryable<WarehouseReceipt> GetQuery()

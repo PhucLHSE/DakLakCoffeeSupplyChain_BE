@@ -7,7 +7,8 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using System;
 using System.Threading.Tasks;
-using System.Linq; // cần cho .Sum()
+using System.Linq; // ✅ Cần cho .Sum() và .Select()
+using System.Collections.Generic; // ✅ Cần cho List<object>
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 
@@ -34,12 +35,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null || request.Status != InboundRequestStatus.Approved.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu nhập kho không hợp lệ hoặc chưa được duyệt.");
 
-            var existing = await _unitOfWork.WarehouseReceipts.GetByInboundRequestIdAsync(dto.InboundRequestId);
-            if (existing != null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Yêu cầu này đã có phiếu nhập.");
+            // ✅ KIỂM TRA: Số lượng còn lại trước khi cho phép tạo receipt mới
+            var existingReceipts = await _unitOfWork.WarehouseReceipts.GetByInboundRequestIdAsync(dto.InboundRequestId);
+            double totalReceivedSoFar = existingReceipts?.Sum(r => r.ReceivedQuantity ?? 0) ?? 0;
+            double remainingQuantity = (request.RequestedQuantity ?? 0) - totalReceivedSoFar;
 
-            // ❌ KHÔNG kiểm tra số lượng/ sức chứa ở bước tạo (DB chỉ có 1 cột số lượng dùng cho thực nhận)
-            // -> Chỉ chọn kho, tạo phiếu rỗng về số lượng.
+            // ✅ Nếu đã nhập đủ số lượng yêu cầu thì không cho tạo thêm
+            if (remainingQuantity <= 0)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                    $"Yêu cầu này đã được nhập đủ số lượng ({request.RequestedQuantity}kg).");
 
             var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
             if (warehouse == null)
@@ -62,7 +66,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo phiếu nhập kho thành công", receipt.ReceiptId);
+            return new ServiceResult(Const.SUCCESS_CREATE_CODE, 
+                $"Tạo phiếu nhập kho thành công. Đã nhập: {totalReceivedSoFar}kg, Còn lại: {remainingQuantity}kg", receipt.ReceiptId);
         }
 
         public async Task<IServiceResult> ConfirmReceiptAsync(Guid receiptId, WarehouseReceiptConfirmDto dto)
@@ -78,10 +83,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (request == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu nhập kho tương ứng.");
 
-            // ✅ Chỉ giới hạn bởi số lượng đã YÊU CẦU
-            if (dto.ConfirmedQuantity > request.RequestedQuantity)
+            // ✅ SỬA LẠI: Kiểm tra số lượng còn lại của request (giống hệt outbound)
+            var existingReceipts = await _unitOfWork.WarehouseReceipts.GetByInboundRequestIdAsync(receipt.InboundRequestId);
+            double totalReceivedSoFar = existingReceipts?.Sum(r => r.ReceivedQuantity ?? 0) ?? 0;
+            double remainingQuantity = (request.RequestedQuantity ?? 0) - totalReceivedSoFar;
+
+            if (dto.ConfirmedQuantity > remainingQuantity)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá yêu cầu ({request.RequestedQuantity}kg).");
+                    $"Số lượng xác nhận ({dto.ConfirmedQuantity}kg) vượt quá số lượng còn lại của yêu cầu ({remainingQuantity}kg).");
+
+            // ✅ SỬA LẠI: Chuyển status về Completed khi đủ số lượng
+            double totalReceivedAfterThis = totalReceivedSoFar + dto.ConfirmedQuantity;
+            
+            if (totalReceivedAfterThis >= (request.RequestedQuantity ?? 0))
+            {
+                // Đã nhập đủ số lượng yêu cầu → CHUYỂN VỀ COMPLETED
+                request.Status = InboundRequestStatus.Completed.ToString();
+                request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                request.UpdatedAt = DateTime.UtcNow;
+                
+                // Cập nhật cả request
+                _unitOfWork.WarehouseInboundRequests.UpdateAsync(request);
+            }
+            // Nếu chưa đủ → GIỮ NGUYÊN STATUS (vẫn có thể tạo thêm receipts)
 
             // Ghi chú xác nhận
             var confirmNote = WarehouseReceiptMapper.BuildConfirmationNote(
@@ -141,13 +165,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
             await _unitOfWork.InventoryLogs.CreateAsync(log);
 
-            // Hoàn tất yêu cầu
-            request.Status = InboundRequestStatus.Completed.ToString();
-            request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
-            request.UpdatedAt = DateTime.UtcNow;
+            // ✅ KHÔNG thay đổi status của request - giữ nguyên để vẫn hiển thị
+            // request.Status = InboundRequestStatus.Completed.ToString();
+            // request.ActualDeliveryDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            // request.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.WarehouseReceipts.UpdateAsync(receipt);
-            await _unitOfWork.WarehouseInboundRequests.UpdateAsync(request);
+            // await _unitOfWork.WarehouseInboundRequests.UpdateAsync(request); // Bỏ dòng này
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Xác nhận phiếu nhập thành công", receipt.ReceiptId);
@@ -259,6 +283,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.SaveChangesAsync();
 
             return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn phiếu nhập kho.");
+        }
+
+        // ✅ THÊM: Method để lấy thông tin summary của inbound request (giống outbound)
+        public async Task<IServiceResult> GetInboundRequestSummaryAsync(Guid inboundRequestId)
+        {
+            try
+            {
+                var request = await _unitOfWork.WarehouseInboundRequests.GetByIdWithBatchAsync(inboundRequestId);
+                if (request == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy yêu cầu nhập kho");
+
+                // Lấy tất cả receipts của request này
+                var receipts = await _unitOfWork.WarehouseReceipts.GetByInboundRequestIdAsync(inboundRequestId);
+                
+                // Tính toán thống kê
+                var totalReceivedQuantity = receipts?.Sum(r => r.ReceivedQuantity ?? 0) ?? 0;
+                var remainingQuantity = (request.RequestedQuantity ?? 0) - totalReceivedQuantity;
+                
+                // Xác định status
+                string status;
+                if (totalReceivedQuantity == 0) status = "Pending";
+                else if (remainingQuantity <= 0) status = "Completed";
+                else status = "Partial";
+
+                // Tạo response object (giống outbound)
+                var result = new
+                {
+                    InboundRequestId = request.InboundRequestId,
+                    RequestCode = request.InboundRequestCode,
+                    RequestedQuantity = request.RequestedQuantity,
+                    TotalReceivedQuantity = totalReceivedQuantity,
+                    RemainingQuantity = remainingQuantity,
+                    Status = status,
+                    Unit = "kg", // Đơn vị mặc định
+                    ReceiptsCount = receipts?.Count ?? 0
+                };
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy thông tin summary yêu cầu thành công", result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.FAIL_READ_CODE, $"Lỗi: {ex.Message}");
+            }
         }
     }
 }
