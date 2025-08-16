@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public Guid PlanDetailsId { get; set; }
         public Guid CoffeeTypeId { get; set; }
 
-        public int ProcessMethodId { get; set; }
+        public int? ProcessMethodId { get; set; }
 
         public double? TargetQuantity { get; set; }
 

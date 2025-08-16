@@ -418,15 +418,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         plan.TotalQuantity = plan.TotalQuantity - existingPlanDetail.TargetQuantity + (itemDto.TargetQuantity ?? 0);
                         existingPlanDetail.CoffeeTypeId = itemDto.CoffeeTypeId != Guid.Empty ? itemDto.CoffeeTypeId : existingPlanDetail.CoffeeTypeId;
-                        existingPlanDetail.ProcessMethodId = itemDto.ProcessMethodId != 0 ? itemDto.ProcessMethodId : existingPlanDetail.ProcessMethodId;
+                        existingPlanDetail.ProcessMethodId = itemDto.ProcessMethodId;
                         existingPlanDetail.TargetQuantity = itemDto.TargetQuantity.HasValue ? itemDto.TargetQuantity : existingPlanDetail.TargetQuantity;
                         existingPlanDetail.TargetRegion = itemDto.TargetRegion.HasValue() ? itemDto.TargetRegion : existingPlanDetail.TargetRegion;
                         existingPlanDetail.MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity.HasValue ? itemDto.MinimumRegistrationQuantity : existingPlanDetail.MinimumRegistrationQuantity;
                         existingPlanDetail.MinPriceRange = itemDto.MinPriceRange.HasValue ? itemDto.MinPriceRange : existingPlanDetail.MinPriceRange;
                         existingPlanDetail.MaxPriceRange = itemDto.MaxPriceRange.HasValue ? itemDto.MaxPriceRange : existingPlanDetail.MaxPriceRange;
-                        existingPlanDetail.ExpectedYieldPerHectare = itemDto.ExpectedYieldPerHectare.HasValue ? itemDto.ExpectedYieldPerHectare : existingPlanDetail.ExpectedYieldPerHectare;
-                        existingPlanDetail.Note = itemDto.Note.HasValue() ? itemDto.Note : existingPlanDetail.Note;
-                        existingPlanDetail.ContractItemId = itemDto.ContractItemId.HasValue ? itemDto.ContractItemId : existingPlanDetail.ContractItemId;
+                        existingPlanDetail.ExpectedYieldPerHectare = itemDto.ExpectedYieldPerHectare;
+                        existingPlanDetail.Note = itemDto.Note;
+                        existingPlanDetail.ContractItemId = itemDto.ContractItemId != Guid.Empty ? itemDto.ContractItemId : existingPlanDetail.ContractItemId;
                         existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
                         existingPlanDetail.UpdatedAt = now;
 
