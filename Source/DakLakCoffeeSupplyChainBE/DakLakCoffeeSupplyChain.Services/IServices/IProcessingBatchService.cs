@@ -16,11 +16,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
-        Task<IServiceResult> GetAvailableCoffeeTypesAsync(Guid userId, Guid cropSeasonId);
-        //Task<IServiceResult> GetFullDetailsAsync(Guid id, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> GetAvailableProcessingDataAsync(Guid userId, Guid? cropSeasonId = null);
         Task<IServiceResult> GetFullDetailsAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert = false);
         Task<IServiceResult> GetBatchesByFarmerForBusinessManagerAsync(Guid managerUserId, Guid farmerId);
         Task<IServiceResult> GetFarmersWithBatchesForBusinessManagerAsync(Guid managerUserId);
-
     }
 }

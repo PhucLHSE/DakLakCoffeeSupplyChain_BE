@@ -154,10 +154,10 @@
                 return BadRequest(result.Message);
             }
       
-            [HttpGet("available-coffee-types")]
+            [HttpGet("available-processing-data")]
             [Authorize(Roles = "Farmer,Admin, BusinessManager, AgriculturalExpert")]
-            public async Task<IActionResult> GetAvailableCoffeeTypes(
-                [FromQuery] Guid cropSeasonId)
+            public async Task<IActionResult> GetAvailableProcessingData(
+                [FromQuery] Guid? cropSeasonId = null)
             {
                 var userIdStr = User.FindFirst("userId")?.Value
                              ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -166,7 +166,7 @@
                     return BadRequest("Không thể lấy userId từ token.");
 
                 var result = await _processingbatchservice
-                   .GetAvailableCoffeeTypesAsync(userId, cropSeasonId);
+                   .GetAvailableProcessingDataAsync(userId, cropSeasonId);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);

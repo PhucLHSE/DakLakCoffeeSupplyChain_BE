@@ -5,7 +5,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
 {
     public class StageFailureInfo
     {
-        public int? FailedStageId { get; set; }
+        public int? FailedStageId { get; set; } // 🔧 FIX: Thực ra đây là OrderIndex, không phải StageId
         public string FailedStageName { get; set; } = string.Empty;
         public string Details { get; set; } = string.Empty;
         public string Recommendations { get; set; } = string.Empty;
@@ -24,6 +24,9 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         /// </summary>
         /// <param name="comments">Comments từ evaluation</param>
         /// <returns>StageFailureInfo hoặc null nếu không phải failure</returns>
+        /// <remarks>
+        /// FailedStageId trong StageFailureInfo thực ra là OrderIndex, không phải StageId
+        /// </remarks>
         public static StageFailureInfo? ParseFailureFromComments(string? comments)
         {
             if (string.IsNullOrEmpty(comments) || !comments.Contains(FAILED_STAGE_ID_PREFIX))
@@ -62,14 +65,14 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         /// <summary>
         /// Tạo format comments chuẩn cho failure
         /// </summary>
-        /// <param name="stageId">ID của stage bị fail</param>
+        /// <param name="orderIndex">OrderIndex của stage bị fail</param>
         /// <param name="stageName">Tên stage bị fail</param>
         /// <param name="details">Chi tiết vấn đề</param>
         /// <param name="recommendations">Khuyến nghị</param>
         /// <returns>Comments format chuẩn</returns>
-        public static string CreateFailureComment(int stageId, string stageName, string details, string recommendations)
+        public static string CreateFailureComment(int orderIndex, string stageName, string details, string recommendations)
         {
-            return $"{FAILED_STAGE_ID_PREFIX}{stageId}|{FAILED_STAGE_NAME_PREFIX}{stageName}|{DETAILS_PREFIX}{details}|{RECOMMENDATIONS_PREFIX}{recommendations}";
+            return $"{FAILED_STAGE_ID_PREFIX}{orderIndex}|{FAILED_STAGE_NAME_PREFIX}{stageName}|{DETAILS_PREFIX}{details}|{RECOMMENDATIONS_PREFIX}{recommendations}";
         }
 
         /// <summary>
