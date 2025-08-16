@@ -1,6 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDtos
 {
@@ -9,8 +7,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         [Required(ErrorMessage = "Loại cà phê không được để trống.")]
         public Guid CoffeeTypeId { get; set; }
 
-        [Required(ErrorMessage = "Phương pháp sơ chế không được để trống")]
-        public int ProcessMethodId { get; set; }
+        public int? ProcessMethodId { get; set; }
 
         [Required(ErrorMessage = "Sản lượng mong muốn không được để trống.")]
         public double TargetQuantity { get; set; }
