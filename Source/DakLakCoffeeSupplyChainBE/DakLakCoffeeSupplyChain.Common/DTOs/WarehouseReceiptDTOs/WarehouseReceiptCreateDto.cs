@@ -10,6 +10,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseReceiptDTOs
     {
         public Guid InboundRequestId { get; set; }
         public Guid WarehouseId { get; set; }
+        public Guid? BatchId { get; set; }  // Cho cà phê sơ chế
+        public Guid? DetailId { get; set; }  // Cho cà phê tươi
         public double ReceivedQuantity { get; set; }
         public string? Note { get; set; }
     }

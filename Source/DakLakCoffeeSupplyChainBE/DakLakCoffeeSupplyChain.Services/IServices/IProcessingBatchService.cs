@@ -20,5 +20,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetFullDetailsAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert = false);
         Task<IServiceResult> GetBatchesByFarmerForBusinessManagerAsync(Guid managerUserId, Guid farmerId);
         Task<IServiceResult> GetFarmersWithBatchesForBusinessManagerAsync(Guid managerUserId);
+        Task<IServiceResult> GetAvailableBatchesForWarehouseRequestAsync(Guid userId);
     }
 }

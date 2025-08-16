@@ -210,5 +210,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        [HttpGet("warehouse-request/available")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetAvailableForWarehouseRequest()
+        {
+            Guid userId;
+            try 
+            { 
+                userId = User.GetUserId();
+            }
+            catch { return Unauthorized("Không xác thực được người dùng."); }
+
+            var result = await _cropSeasonDetailService
+                .GetAvailableForWarehouseRequestAsync(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE) 
+                return Ok(result);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE) 
+                return NotFound(result);
+
+            return StatusCode(500, result);
+        }
     }
 }

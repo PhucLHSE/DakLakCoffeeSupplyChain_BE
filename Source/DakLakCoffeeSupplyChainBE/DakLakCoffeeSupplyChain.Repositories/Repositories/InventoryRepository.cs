@@ -28,6 +28,16 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     !inv.IsDeleted);
         }
 
+        public async Task<Inventory?> FindByWarehouseAndDetailAsync(
+            Guid warehouseId, Guid detailId)
+        {
+            return await _context.Inventories
+                .FirstOrDefaultAsync(inv =>
+                    inv.WarehouseId == warehouseId &&
+                    inv.DetailId == detailId &&
+                    !inv.IsDeleted);
+        }
+
         public async Task<Inventory?> FindByIdAsync(Guid id)
         {
             return await _context.Inventories
@@ -44,6 +54,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(b => b.CoffeeType) // Lấy loại cà phê
                 .Include(i => i.Batch)
                     .ThenInclude(b => b.Products)   //  Nếu vẫn cần productName
+                .Include(i => i.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(i => i.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .ToListAsync();
         }
 
@@ -55,6 +71,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                    .ThenInclude(b => b.CoffeeType) // Bắt buộc để lấy CoffeeTypeName
                 .Include(i => i.Batch)
                    .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
+                .Include(i => i.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(i => i.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .FirstOrDefaultAsync(i => 
                    i.InventoryId == id && 
                    !i.IsDeleted

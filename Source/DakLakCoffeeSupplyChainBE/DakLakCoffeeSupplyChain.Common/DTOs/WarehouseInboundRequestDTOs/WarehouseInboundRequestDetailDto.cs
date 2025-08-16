@@ -30,5 +30,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseInboundRequestDTOs
         public string? BatchCode { get; set; }
         public string? CoffeeType { get; set; }
         public string? SeasonCode { get; set; }
+        
+        // Thông tin cho cà phê tươi
+        public Guid? DetailId { get; set; }
+        public string? DetailCode { get; set; }
+        public string? CropSeasonName { get; set; }
+        public string? CoffeeTypeDetail { get; set; }
     }
 }

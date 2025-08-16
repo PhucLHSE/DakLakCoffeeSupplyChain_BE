@@ -36,7 +36,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         /// </summary>
         private async Task<double> CalcRemainingForBatchAsync(Guid batchId, Guid? excludeRequestId = null)
         {
-            // 1. Lấy output của bước chế biến CUỐI CÙNG (StepIndex cao nhất)
+            // 1. Lấy tất cả progress của batch này
             var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                 p => p.BatchId == batchId && !p.IsDeleted && p.OutputQuantity != null
             );
@@ -44,9 +44,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!progresses.Any())
                 return 0; // Không có progress nào
 
-            // Lấy bước cuối cùng (StepIndex cao nhất) - đây là output cuối cùng
+            // Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
             var finalProgress = progresses.OrderByDescending(p => p.StepIndex).First();
-            double finalOutput = finalProgress.OutputQuantity ?? 0;
+            double totalOutput = finalProgress.OutputQuantity ?? 0;
 
             // 2. Tổng tất cả InboundRequest đã được xử lý (trừ request hiện tại)
             var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
@@ -64,9 +64,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                            r.Status == InboundRequestStatus.Approved.ToString())
                 .Sum(r => r.RequestedQuantity ?? 0);
 
-            // 4. Tính khối lượng còn lại = Output cuối cùng - (Đã nhập + Đang xử lý)
-            double remaining = finalOutput - (totalCompleted + totalPendingApproved);
+            // 4. Tính khối lượng còn lại = Output lớn nhất - (Đã nhập + Đang xử lý)
+            double remaining = totalOutput - (totalCompleted + totalPendingApproved);
+            
+            // Debug logging
+            Console.WriteLine($"DEBUG CalcRemainingForBatchAsync for BatchId: {batchId}");
+            Console.WriteLine($"  - Total Output: {totalOutput}");
+            Console.WriteLine($"  - Total Completed Requests: {totalCompleted}");
+            Console.WriteLine($"  - Total Pending/Approved Requests: {totalPendingApproved}");
+            Console.WriteLine($"  - Remaining: {remaining}");
+            
             return remaining < 0 ? 0 : remaining;
+        }
+
+        /// <summary>
+        /// Tính khối lượng còn lại có thể yêu cầu nhập kho cho một mùa vụ (cà phê tươi)
+        /// </summary>
+        private async Task<double> CalcRemainingForDetailAsync(Guid detailId, Guid? excludeRequestId = null)
+        {
+            var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(detailId);
+            if (detail == null) return 0;
+
+            // Lấy tất cả yêu cầu nhập kho đã được duyệt cho detail này
+            var approvedRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(r =>
+                r.DetailId == detailId &&
+                r.Status == InboundRequestStatus.Approved.ToString() &&
+                !r.IsDeleted &&
+                (excludeRequestId == null || r.InboundRequestId != excludeRequestId)
+            );
+
+            double totalRequested = approvedRequests.Sum(r => r.RequestedQuantity ?? 0);
+
+            // Lấy tất cả phiếu nhập kho đã xác nhận cho detail này
+            var receipts = await _unitOfWork.WarehouseReceipts.GetAllAsync(r =>
+                r.DetailId == detailId &&
+                r.ReceivedQuantity.HasValue &&
+                !r.IsDeleted
+            );
+
+            double totalReceived = receipts.Sum(r => r.ReceivedQuantity ?? 0);
+
+            // Khối lượng còn lại = Sản lượng thực tế - Tổng đã yêu cầu + Tổng đã nhập
+            return Math.Max(0, (detail.ActualYield ?? 0) - totalRequested + totalReceived);
         }
 
         public async Task<IServiceResult> CreateRequestAsync(Guid userId, WarehouseInboundRequestCreateDto dto)
@@ -75,35 +114,62 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (farmer == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng với User.");
 
-            if (dto.BatchId == null || dto.BatchId == Guid.Empty)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Thiếu thông tin lô chế biến.");
+            // Kiểm tra validation: phải có BatchId HOẶC DetailId, không được có cả hai
+            if (dto.BatchId.HasValue && dto.DetailId.HasValue)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được chọn một loại sản phẩm (lô sản xuất hoặc mùa vụ).");
+
+            if (!dto.BatchId.HasValue && !dto.DetailId.HasValue)
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Phải chọn một loại sản phẩm (lô sản xuất hoặc mùa vụ).");
 
             if (dto.RequestedQuantity <= 0)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng yêu cầu phải lớn hơn 0.");
 
-            var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId.Value);
-            if (batch == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô chế biến.");
+            double remaining = 0;
 
-            if (batch.FarmerId != farmer.FarmerId)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu cho lô chế biến này.");
+            if (dto.BatchId.HasValue)
+            {
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId.Value);
+                if (batch == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô chế biến.");
 
-            // Lô phải hoàn tất
-            if (!string.Equals(batch.Status, ProcessingStatus.Completed.ToString(), StringComparison.OrdinalIgnoreCase))
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho lô đã hoàn tất sơ chế.");
+                if (batch.FarmerId != farmer.FarmerId)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu cho lô chế biến này.");
+
+                // Lô phải hoàn tất
+                if (!string.Equals(batch.Status, ProcessingStatus.Completed.ToString(), StringComparison.OrdinalIgnoreCase))
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho lô đã hoàn tất sơ chế.");
+
+                // Kiểm tra khối lượng còn lại
+                remaining = await CalcRemainingForBatchAsync(batch.BatchId);
+            }
+            else if (dto.DetailId.HasValue)
+            {
+                var detail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(dto.DetailId.Value);
+                if (detail == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy mùa vụ.");
+
+                var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(detail.CropSeasonId);
+                if (cropSeason == null || cropSeason.FarmerId != farmer.FarmerId)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu cho mùa vụ này.");
+
+                // Mùa vụ phải hoàn tất
+                if (!string.Equals(detail.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho mùa vụ đã hoàn tất.");
+
+                // Kiểm tra khối lượng còn lại
+                remaining = await CalcRemainingForDetailAsync(detail.DetailId);
+            }
 
             // Ngày giao dự kiến không nằm quá khứ
             if (dto.PreferredDeliveryDate < DateOnly.FromDateTime(DateTime.UtcNow))
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày giao dự kiến không được nằm trong quá khứ.");
 
-            // Kiểm tra khối lượng còn lại
-            double remaining = await CalcRemainingForBatchAsync(batch.BatchId);
             if (remaining <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Lô này đã hết khối lượng có thể yêu cầu nhập kho.");
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Sản phẩm này đã hết khối lượng có thể yêu cầu nhập kho.");
 
             if (dto.RequestedQuantity > remaining)
                 return new ServiceResult(Const.FAIL_CREATE_CODE,
-                    $"Khối lượng yêu cầu vượt quá lượng còn lại của lô. Hiện còn {remaining} kg có thể yêu cầu nhập kho.");
+                    $"Khối lượng yêu cầu vượt quá lượng còn lại. Hiện còn {remaining} kg có thể yêu cầu nhập kho.");
 
             // Sinh mã và lưu
             var inboundCode = await _codeGenerator.GenerateInboundRequestCodeAsync();
@@ -131,15 +197,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên xử lý.");
 
             // Re-check khối lượng còn lại để chống over-commit
-            double remaining = await CalcRemainingForBatchAsync(request.BatchId ?? new Guid(), request.InboundRequestId);
+            double remaining = 0;
             double qty = request.RequestedQuantity ?? 0;
+
+            if (request.BatchId != null)
+            {
+                remaining = await CalcRemainingForBatchAsync(request.BatchId.Value, request.InboundRequestId);
+            }
+            else if (request.DetailId != null)
+            {
+                remaining = await CalcRemainingForDetailAsync(request.DetailId.Value, request.InboundRequestId);
+            }
 
             if (qty <= 0)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Khối lượng yêu cầu không hợp lệ.");
 
             if (qty > remaining)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE,
-                    $"Không thể duyệt vì khối lượng còn lại của lô chỉ còn {remaining} kg.");
+                    $"Không thể duyệt vì khối lượng còn lại chỉ còn {remaining} kg.");
 
             request.Status = InboundRequestStatus.Approved.ToString();
             request.BusinessStaffId = staff.StaffId;
@@ -181,13 +256,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllWithIncludesAsync();
+            
+            Console.WriteLine($"DEBUG GetAllAsync: Total requests: {allRequests.Count}");
+            Console.WriteLine($"DEBUG GetAllAsync: ManagerId: {managerId}");
 
+            // Tạm thời bỏ filter để xem tất cả requests
             var filtered = allRequests
-                .Where(r =>
-                    !r.IsDeleted &&
-                    r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy == managerId
-                )
-                .Select(r => r.ToViewDto())
+                .Where(r => !r.IsDeleted)
+                .Select(r => {
+                    Console.WriteLine($"DEBUG Request {r.InboundRequestId}: BatchId={r.BatchId}, DetailId={r.DetailId}, " +
+                                    $"Status={r.Status}, FarmerId={r.FarmerId}");
+                    return r.ToViewDto();
+                })
                 .ToList();
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu theo công ty thành công", filtered);

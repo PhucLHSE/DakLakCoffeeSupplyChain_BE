@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.Enum.InventoryLogEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
+using System.Collections.Generic;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
@@ -12,7 +13,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             Guid receiptId,
             string receiptCode,
             Guid staffId,
-            Guid batchId)
+            Guid? batchId = null,
+            Guid? detailId = null)
         {
             return new WarehouseReceipt
             {
@@ -21,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InboundRequestId = dto.InboundRequestId,
                 WarehouseId = dto.WarehouseId,
                 BatchId = batchId,
+                DetailId = detailId,  // Thêm DetailId cho cà phê tươi
                 ReceivedBy = staffId,
                 ReceivedQuantity = dto.ReceivedQuantity,
                 ReceivedAt = DateTime.UtcNow,
@@ -71,9 +74,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
         public static Inventory ToNewInventory(
             Guid warehouseId,
-            Guid batchId,
-            double quantity,
-            string inventoryCode)
+            Guid? batchId = null,
+            Guid? detailId = null,
+            double quantity = 0,
+            string inventoryCode = "")
         {
             return new Inventory
             {
@@ -81,11 +85,39 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InventoryCode = inventoryCode,
                 WarehouseId = warehouseId,
                 BatchId = batchId,
+                DetailId = detailId,  // Thêm DetailId cho cà phê tươi
                 Quantity = quantity,
                 Unit = "kg",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
+            };
+        }
+
+        public static WarehouseReceiptListItemDto ToListItemDto(this WarehouseReceipt receipt)
+        {
+            return new WarehouseReceiptListItemDto
+            {
+                ReceiptId = receipt.ReceiptId,
+                ReceiptCode = receipt.ReceiptCode,
+                WarehouseName = receipt.Warehouse?.Name,
+                
+                // Thông tin cho cà phê sơ chế
+                BatchId = receipt.BatchId,
+                BatchCode = receipt.Batch?.BatchCode,
+                
+                // Thông tin cho cà phê tươi
+                DetailId = receipt.DetailId,
+                DetailCode = receipt.Detail?.CropSeason?.SeasonName,
+                CoffeeType = receipt.BatchId != null 
+                    ? receipt.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : receipt.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                CropSeasonName = receipt.Detail?.CropSeason?.SeasonName,
+                
+                ReceivedQuantity = receipt.ReceivedQuantity,
+                ReceivedAt = receipt.ReceivedAt,
+                StaffName = receipt.ReceivedByNavigation?.User?.Name,
+                Note = receipt.Note
             };
         }
     }
