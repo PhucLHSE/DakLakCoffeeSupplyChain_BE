@@ -18,5 +18,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseReceiptDTOs
         public DateTime? ReceivedAt { get; set; }
         public string? StaffName { get; set; }
         public string? Note { get; set; }
+        
+        // ✅ Thêm số lượng yêu cầu nhập từ inbound request
+        public double RequestedQuantity { get; set; }
     }
 }

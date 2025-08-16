@@ -31,15 +31,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
-        /// Tính khối lượng còn lại có thể yêu cầu nhập kho cho một batch
+        /// Tính khối lượng còn lại có thể yêu cầu nhập kho cho một lô
         /// </summary>
         private async Task<double> CalcRemainingForBatchAsync(Guid batchId, Guid? excludeRequestId = null)
         {
-            // 1. Tổng output của lô (từ ProcessingBatchProgress)
+            // 1. Lấy output của bước chế biến CUỐI CÙNG (StepIndex cao nhất)
             var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                 p => p.BatchId == batchId && !p.IsDeleted && p.OutputQuantity != null
             );
-            double totalOutput = progresses.Sum(p => p.OutputQuantity ?? 0);
+            
+            if (!progresses.Any())
+                return 0; // Không có progress nào
+
+            // Lấy bước cuối cùng (StepIndex cao nhất) - đây là output cuối cùng
+            var finalProgress = progresses.OrderByDescending(p => p.StepIndex).First();
+            double finalOutput = finalProgress.OutputQuantity ?? 0;
 
             // 2. Tổng tất cả InboundRequest đã được xử lý (trừ request hiện tại)
             var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
@@ -57,8 +63,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                            r.Status == InboundRequestStatus.Approved.ToString())
                 .Sum(r => r.RequestedQuantity ?? 0);
 
-            // 4. Tính khối lượng còn lại
-            double remaining = totalOutput - (totalCompleted + totalPendingApproved);
+            // 4. Tính khối lượng còn lại = Output cuối cùng - (Đã nhập + Đang xử lý)
+            double remaining = finalOutput - (totalCompleted + totalPendingApproved);
             return remaining < 0 ? 0 : remaining;
         }
 

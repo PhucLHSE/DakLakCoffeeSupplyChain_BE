@@ -40,6 +40,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
             return await _context.WarehouseReceipts
                 .Include(r => r.Warehouse)
                 .Include(r => r.Batch)
+                .Include(r => r.InboundRequest) // ✅ Thêm để lấy số lượng yêu cầu nhập
                 .Include(r => r.ReceivedByNavigation)
                    .ThenInclude(s => s.User)
                 .FirstOrDefaultAsync(r => 
