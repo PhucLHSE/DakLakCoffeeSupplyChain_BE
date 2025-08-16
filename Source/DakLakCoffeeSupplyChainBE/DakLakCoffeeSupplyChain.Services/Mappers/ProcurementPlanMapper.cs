@@ -161,7 +161,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                         SpecialtyLevel = p.CoffeeType.SpecialtyLevel
                     },
                     ProcessMethodId = p.ProcessMethodId,
-                    ProcessingMethodName = p.ProcessMethod.Name,
+                    ProcessingMethodName = p.ProcessMethod?.Name,
                     TargetQuantity = p.TargetQuantity,
                     TargetRegion = p.TargetRegion,
                     MinimumRegistrationQuantity = p.MinimumRegistrationQuantity,
