@@ -47,5 +47,33 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                                !item.IsDeleted)
                 .CountAsync();
         }
+
+        // NEW: Tổng PlannedQuantity theo từng ContractItemId của một hợp đồng
+        public async Task<Dictionary<Guid, double>> SumPlannedByContractGroupedAsync(Guid contractId)
+        {
+            // Join sang bảng batch để lọc theo ContractId và loại bỏ batch bị xóa mềm
+            var rows = await _context.ContractDeliveryItems
+                .AsNoTracking()
+                .Join(
+                    _context.ContractDeliveryBatches.AsNoTracking(),
+                    item => item.DeliveryBatchId,
+                    batch => batch.DeliveryBatchId,
+                    (item, batch) => new { item, batch }
+                )
+                .Where(x =>
+                    !x.item.IsDeleted &&
+                    !x.batch.IsDeleted &&
+                    x.batch.ContractId == contractId
+                )
+                .GroupBy(x => x.item.ContractItemId)
+                .Select(g => new
+                {
+                    ContractItemId = g.Key,
+                    Qty = g.Sum(x => (double?)(x.item.PlannedQuantity)) ?? 0
+                })
+                .ToListAsync();
+
+            return rows.ToDictionary(x => x.ContractItemId, x => x.Qty);
+        }
     }
 }

@@ -18,5 +18,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 
         // Đếm số item trong danh mục giao của hợp đồng
         Task<int> CountByDeliveryBatchIdAsync(Guid deliveryBatchId);
+
+        // tổng PlannedQuantity theo từng ContractItemId của 1 hợp đồng (gộp tất cả đợt, bỏ soft-delete)
+        Task<Dictionary<Guid, double>> SumPlannedByContractGroupedAsync(Guid contractId);
     }
 }
