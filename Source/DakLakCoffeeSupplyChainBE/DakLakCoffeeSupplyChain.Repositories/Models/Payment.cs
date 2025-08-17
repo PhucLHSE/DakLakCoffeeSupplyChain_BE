@@ -2,16 +2,18 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class Payment
 {
+    [Key]
     public Guid PaymentId { get; set; }
 
     public string Email { get; set; }
 
-    public int RoleId { get; set; }
+    public Guid ConfigId { get; set; }
 
     public Guid? UserId { get; set; }
 
@@ -41,7 +43,7 @@ public partial class Payment
 
     public bool IsDeleted { get; set; }
 
-    public virtual Role Role { get; set; }
+    public virtual PaymentConfiguration Config { get; set; }
 
     public virtual UserAccount User { get; set; }
 

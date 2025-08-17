@@ -84,13 +84,13 @@ GO
 CREATE TABLE Payments (
   PaymentID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),       -- ID thanh toán (tự sinh UUID) 
   Email NVARCHAR(255) NOT NULL,                                 -- Email người đăng ký (dùng để xác định tạm khi chưa tạo tài khoản)
-  RoleID INT NOT NULL,                                          -- Vai trò người dùng muốn đăng ký (liên kết tới bảng Roles)
+  ConfigID UNIQUEIDENTIFIER NOT NULL,                           -- FK tới PaymentConfigurations
   UserID UNIQUEIDENTIFIER NULL,                                 -- Liên kết tới UserAccounts sau khi được duyệt (NULL lúc đầu)
   PaymentCode VARCHAR(20) UNIQUE,                               -- Mã thanh toán duy nhất, ví dụ: PAY-2025-0001
   PaymentAmount FLOAT NOT NULL,                                 -- Số tiền thanh toán
   PaymentMethod NVARCHAR(50),                                   -- Phương thức thanh toán (VNPay, Momo, Banking, ...)
-  PaymentPurpose NVARCHAR(100) NOT NULL,                        -- Registration, MonthlyFee,...
-  PaymentStatus NVARCHAR(50) DEFAULT 'Pending',                 -- Trạng thái: Pending, success, failed, refunded
+  PaymentPurpose NVARCHAR(100),                                 -- Registration, MonthlyFee,...
+  PaymentStatus NVARCHAR(50) DEFAULT 'Pending',                 -- Trạng thái: Pending, Success, Failed, Refunded
   PaymentTime DATETIME,                                         -- Thời điểm thanh toán thành công
   AdminVerified BIT DEFAULT 0,                                  -- Được admin duyệt chưa: 0 = chưa, 1 = đã duyệt
   RefundReason NVARCHAR(MAX),                                   -- Lý do hoàn tiền (nếu bị từ chối)
@@ -101,8 +101,8 @@ CREATE TABLE Payments (
   IsDeleted BIT NOT NULL DEFAULT 0,                             -- Xoá mềm: 0 = còn hoạt động, 1 = đã xoá
 
   -- Foreign Keys
-  CONSTRAINT FK_RegistrationPayments_RoleID 
-      FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),              -- FK tới bảng Roles
+  CONSTRAINT FK_Payments_Config 
+      FOREIGN KEY (ConfigID) REFERENCES PaymentConfigurations(ConfigID), -- FK tới bảng PaymentConfigurations
   
   CONSTRAINT FK_RegistrationPayments_UserID 
       FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)        -- FK tới bảng UserAccounts (nếu đã tạo tài khoản)
@@ -1577,37 +1577,98 @@ GO
 
 -- Insert vào bảng Payments
 -- Business Manager đăng ký
+DECLARE @PayTime1 DATETIME = '2025-06-01 08:00:00';
+
 INSERT INTO Payments (
-   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
-   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+  Email, UserID, PaymentCode, ConfigID, PaymentAmount,
+  PaymentMethod, PaymentStatus, PaymentTime, AdminVerified,
+  CreatedAt, RelatedEntityID
 )
-VALUES (
-  'businessmanager@gmail.com', 2, 
-  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
-  'PAY-2025-0001', 1000000, 'VNPay', 'Registration', 'success', '2025-06-01 08:00:00', 1, CURRENT_TIMESTAMP, NULL
-);
+SELECT
+  'businessmanager@gmail.com',
+  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'),
+  'PAY-2025-0001',
+  pc.ConfigID,
+  pc.Amount,                               -- lấy số tiền từ cấu hình
+  'VNPay',
+  'success',
+  @PayTime1,
+  1,
+  CURRENT_TIMESTAMP,
+  NULL
+FROM (
+  SELECT TOP (1) pc.*
+  FROM PaymentConfigurations pc
+  JOIN Roles r ON r.RoleID = pc.RoleID
+  WHERE r.RoleName = 'BusinessManager'
+    AND pc.FeeType = 'Registration'
+    AND pc.EffectiveFrom <= @PayTime1
+    AND (pc.EffectiveTo IS NULL OR pc.EffectiveTo >= @PayTime1)
+  ORDER BY pc.EffectiveFrom DESC
+) pc;
+
 
 -- Business Manager đóng phí tháng 6
+DECLARE @PayTime2 DATETIME = '2025-06-03 09:30:00';
+
 INSERT INTO Payments (
-   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
-   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+  Email, UserID, PaymentCode, ConfigID, PaymentAmount,
+  PaymentMethod, PaymentStatus, PaymentTime, AdminVerified,
+  CreatedAt, RelatedEntityID
 )
-VALUES (
-  'businessmanager@gmail.com', 2, 
-  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'), 
-  'PAY-2025-0002', 400000, 'VNPay', 'MonthlyFee', 'success', '2025-06-03 09:30:00', 1, CURRENT_TIMESTAMP, NULL
-);
+SELECT
+  'businessmanager@gmail.com',
+  (SELECT UserID FROM UserAccounts WHERE Email = 'businessmanager@gmail.com'),
+  'PAY-2025-0002',
+  pc.ConfigID,
+  pc.Amount,
+  'VNPay',
+  'success',
+  @PayTime2,
+  1,
+  CURRENT_TIMESTAMP,
+  NULL
+FROM (
+  SELECT TOP (1) pc.*
+  FROM PaymentConfigurations pc
+  JOIN Roles r ON r.RoleID = pc.RoleID
+  WHERE r.RoleName = 'BusinessManager'
+    AND pc.FeeType = 'MonthlyFee'
+    AND pc.EffectiveFrom <= @PayTime2
+    AND (pc.EffectiveTo IS NULL OR pc.EffectiveTo >= @PayTime2)
+  ORDER BY pc.EffectiveFrom DESC
+) pc;
 
 -- Farmer đăng ký
+DECLARE @PayTime3 DATETIME = '2025-06-05 10:15:00';
+
 INSERT INTO Payments (
-   Email, RoleID, UserID, PaymentCode, PaymentAmount, PaymentMethod, 
-   PaymentPurpose, PaymentStatus, PaymentTime, AdminVerified, CreatedAt, RelatedEntityID
+  Email, UserID, PaymentCode, ConfigID, PaymentAmount,
+  PaymentMethod, PaymentStatus, PaymentTime, AdminVerified,
+  CreatedAt, RelatedEntityID
 )
-VALUES (
-  'farmer@gmail.com', 4, 
-  (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'), 
-  'PAY-2025-0003', 200000, 'VNPay', 'Registration', 'success', '2025-06-05 10:15:00', 1, CURRENT_TIMESTAMP, NULL
-);
+SELECT
+  'farmer@gmail.com',
+  (SELECT UserID FROM UserAccounts WHERE Email = 'farmer@gmail.com'),
+  'PAY-2025-0003',
+  pc.ConfigID,
+  pc.Amount,
+  'VNPay',
+  'success',
+  @PayTime3,
+  1,
+  CURRENT_TIMESTAMP,
+  NULL
+FROM (
+  SELECT TOP (1) pc.*
+  FROM PaymentConfigurations pc
+  JOIN Roles r ON r.RoleID = pc.RoleID
+  WHERE r.RoleName = 'Farmer'
+    AND pc.FeeType = 'Registration'
+    AND pc.EffectiveFrom <= @PayTime3
+    AND (pc.EffectiveTo IS NULL OR pc.EffectiveTo >= @PayTime3)
+  ORDER BY pc.EffectiveFrom DESC
+) pc;
 
 GO
 
