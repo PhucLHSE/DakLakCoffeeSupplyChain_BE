@@ -2,11 +2,13 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
 public partial class PaymentConfiguration
 {
+    [Key]
     public Guid ConfigId { get; set; }
 
     public int RoleId { get; set; }
@@ -26,6 +28,8 @@ public partial class PaymentConfiguration
     public DateTime UpdatedAt { get; set; }
 
     public bool? IsActive { get; set; }
+
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual Role Role { get; set; }
 }

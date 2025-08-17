@@ -25,7 +25,5 @@ public partial class Role
 
     public virtual ICollection<PaymentConfiguration> PaymentConfigurations { get; set; } = new List<PaymentConfiguration>();
 
-    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
-
     public virtual ICollection<UserAccount> UserAccounts { get; set; } = new List<UserAccount>();
 }
