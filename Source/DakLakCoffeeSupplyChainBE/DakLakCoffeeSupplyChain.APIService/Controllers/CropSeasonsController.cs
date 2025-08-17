@@ -26,7 +26,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet]
         [EnableQuery]
         [Authorize(Roles = "Admin,BusinessManager,Farmer,Expert")]
-        public async Task<IActionResult> GetAllCropSeasonsAsync()
+        public async Task<IActionResult> GetAllCropSeasonsAsync(
+            [FromQuery] string? search = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             Guid userId;
             string? role;
@@ -44,11 +48,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             bool isAdmin = role == "Admin";
             bool isManager = role == "BusinessManager";
 
+            // Tối ưu: Sử dụng method mới với search, filter và pagination
             var result = await _cropSeasonService
-                .GetAllByUserId(userId, isAdmin, isManager);
+                .GetAllByUserIdWithFilter(userId, isAdmin, isManager, search, status, page, pageSize);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
+            
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
 
@@ -68,6 +74,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             bool isAdmin = role == "Admin";
             bool isManager = role == "BusinessManager";
 
+            // Tối ưu: Sử dụng async/await pattern và error handling
             var result = await _cropSeasonService
                 .GetById(cropSeasonId, userId, isAdmin, isManager);
 

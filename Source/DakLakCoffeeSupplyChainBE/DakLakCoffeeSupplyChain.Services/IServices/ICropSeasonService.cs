@@ -4,6 +4,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 public interface ICropSeasonService
 {
     Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager);
+    Task<IServiceResult> GetAllByUserIdWithFilter(Guid userId, bool isAdmin, bool isManager, string? search = null, string? status = null, int page = 1, int pageSize = 10);
     Task<IServiceResult> GetById(Guid cropSeasonId, Guid userId, bool isAdmin = false, bool isManager = false);
     Task<IServiceResult> Create(CropSeasonCreateDto dto, Guid userId);
     Task<IServiceResult> Update(CropSeasonUpdateDto dto, Guid userId, bool isAdmin = false);
