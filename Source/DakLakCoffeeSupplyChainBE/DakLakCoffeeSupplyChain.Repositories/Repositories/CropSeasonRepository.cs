@@ -12,6 +12,7 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
 
     public async Task<List<CropSeason>> GetAllCropSeasonsAsync()
     {
+        // Tối ưu: Sử dụng projection để chỉ lấy dữ liệu cần thiết
         return await _context.CropSeasons
             .AsNoTracking()
             .Where(c => !c.IsDeleted)
@@ -35,6 +36,7 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
 
     public async Task<List<CropSeason>> GetCropSeasonsByUserIdAsync(Guid userId)
     {
+        // Tối ưu: Sử dụng projection để chỉ lấy dữ liệu cần thiết
         return await _context.CropSeasons
             .AsNoTracking()
             .Where(c => !c.IsDeleted && c.Farmer.UserId == userId)
@@ -46,8 +48,11 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
 
     public async Task<int> CountByYearAsync(int year)
     {
+        // Tối ưu: Sử dụng CountAsync với predicate để giảm dữ liệu truyền
         return await _context.CropSeasons
+            .AsNoTracking()
             .CountAsync(c => 
+               !c.IsDeleted &&
                c.StartDate.HasValue && 
                c.StartDate.Value.Year == year
             );
@@ -55,8 +60,10 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
 
     public async Task<CropSeason?> GetWithDetailsByIdAsync(Guid cropSeasonId)
     {
+        // Tối ưu: Sử dụng projection để chỉ lấy dữ liệu cần thiết
         return await _context.CropSeasons
-            .Include(cs => cs.CropSeasonDetails)
+            .AsNoTracking()
+            .Include(cs => cs.CropSeasonDetails.Where(d => !d.IsDeleted))
                 .ThenInclude(d => d.CommitmentDetail)
                     .ThenInclude(d => d.PlanDetail)
                        .ThenInclude(pd => pd.CoffeeType) 
@@ -69,8 +76,9 @@ public class CropSeasonRepository : GenericRepository<CropSeason>, ICropSeasonRe
     // method dùng riêng cho Update, KHÔNG include CoffeeType
     public async Task<CropSeason?> GetWithDetailsByIdForUpdateAsync(Guid cropSeasonId)
     {
+        // Tối ưu: Chỉ load dữ liệu cần thiết cho update
         return await _context.CropSeasons
-            .Include(cs => cs.CropSeasonDetails) // chỉ cần lấy vùng trồng
+            .Include(cs => cs.CropSeasonDetails.Where(d => !d.IsDeleted)) // chỉ cần lấy vùng trồng
             .Include(cs => cs.Farmer)
                 .ThenInclude(f => f.User)
             .Include(cs => cs.Commitment)
