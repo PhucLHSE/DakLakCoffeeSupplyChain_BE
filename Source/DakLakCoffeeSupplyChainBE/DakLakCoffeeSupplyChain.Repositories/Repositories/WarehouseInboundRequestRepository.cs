@@ -114,6 +114,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(b => b.CoffeeType)
                 .Include(r => r.Batch)
                     .ThenInclude(b => b.CropSeason)
+                .Include(r => r.Detail)  // Thêm Detail cho cà phê tươi
+                    .ThenInclude(d => d.CropSeason)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.CoffeeType)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }

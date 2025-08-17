@@ -107,8 +107,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
                 BatchId = r.BatchId,
                 BatchCode = r.Batch?.BatchCode ?? "N/A",
-                CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
-                SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                CoffeeType = r.BatchId != null 
+                    ? r.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                SeasonCode = r.BatchId != null 
+                    ? r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                    : r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                
+                // Cho cà phê tươi
+                DetailId = r.DetailId,
+                DetailCode = r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                CropSeasonName = r.Detail?.CropSeason?.SeasonName ?? "N/A",
+                TypeName = r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"
             };
         }
         public static WarehouseInboundRequestFarmerDetailDto ToFarmerDetailDto(this WarehouseInboundRequest r)
@@ -125,10 +135,22 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RequestedQuantity = r.RequestedQuantity ?? 0,
                 Note = r.Note,
 
-                BatchId = r.BatchId ?? new Guid(),
-                BatchCode = r.Batch?.BatchCode ?? "N/A",
-                CoffeeType = r.Batch?.CoffeeType?.TypeName ?? "N/A",
-                SeasonCode = r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                BatchId = r.BatchId,
+                BatchCode = r.BatchId != null 
+                    ? r.Batch?.BatchCode ?? "N/A"
+                    : r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                CoffeeType = r.BatchId != null 
+                    ? r.Batch?.CoffeeType?.TypeName ?? "N/A"
+                    : r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                SeasonCode = r.BatchId != null 
+                    ? r.Batch?.CropSeason?.CropSeasonCode ?? "N/A"
+                    : r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                
+                // Cho cà phê tươi
+                DetailId = r.DetailId,
+                DetailCode = r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
+                CropSeasonName = r.Detail?.CropSeason?.SeasonName ?? "N/A",
+                TypeName = r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"
             };
         }
 
