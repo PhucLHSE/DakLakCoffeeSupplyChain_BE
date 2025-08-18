@@ -391,7 +391,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: c => !c.IsDeleted && c.CultivationRegistrationDetailId == registrationDetailId,
                 include: c => c.
                     Include(c => c.Registration).
-                        ThenInclude(c => c.Farmer)
+                        ThenInclude(c => c.Farmer).
+                    Include(c => c.PlanDetail)
                 );
                 if (registrationDetail == null)
                     return new ServiceResult(
@@ -422,7 +423,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Bạn không có quyền hạn này."
                     );
                 }
-
+                // Kiểm tra sản lượng đăng ký có vượt sản lượng của kế hoạch đã đề ra không
+                if (registrationDetail.Status == "Approved" && registrationDetail.EstimatedYield > registrationDetail.PlanDetail.TargetQuantity)
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Sản lượng dự kiến của chi tiết đơn đăng ký này đã vượt sản lượng đăng ký rồi"
+                    );
                 registrationDetail.Status = dto.Status.ToString();
                 registrationDetail.UpdatedAt = DateHelper.NowVietnamTime();
                 registrationDetail.ApprovedAt = DateHelper.NowVietnamTime();

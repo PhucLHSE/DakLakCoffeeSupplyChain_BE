@@ -9,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommi
 
         //public Guid PlanDetailId { get; set; }
         [Required(ErrorMessage = "Giá cả cam kết không được phép bỏ trống")]
+        [Range(1000, double.MaxValue, ErrorMessage = "Giá cả tối thiểu phải từ 1000 VNĐ trở lên")]
         public double ConfirmedPrice { get; set; }
 
         public double? AdvancePayment { get; set; }
@@ -27,10 +28,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommi
 
         //public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         //{
-        //    if (AdvancePayment.HasValue && AdvancePayment.Value > ConfirmedPrice)
+        //    if (AdvancePayment.HasValue && AdvancePayment.Value < 1000)
         //    {
         //        yield return new ValidationResult(
-        //            "Số tiền tạm ứng không được lớn hơn giá cam kết.",
+        //            "Số tiền tạm ứng không được bé hơn 1000 VNĐ",
         //            [nameof(AdvancePayment)]
         //        );
         //    }
