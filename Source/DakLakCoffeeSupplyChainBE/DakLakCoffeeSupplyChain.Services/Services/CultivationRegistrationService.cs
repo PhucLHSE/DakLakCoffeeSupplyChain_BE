@@ -269,11 +269,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                     );
 
-                // Kiểm tra xem plan được chọn có tồn tại không
-                if (selectedProcurementPlan == null)
+                // Kiểm tra xem plan được chọn có tồn tại và còn mở không
+                if (selectedProcurementPlan == null || selectedProcurementPlan.Status != "Open")
                     return new ServiceResult(
                             Const.WARNING_NO_DATA_CODE,
-                            "Kế hoạch thu mua được chọn không tồn tại"
+                            "Kế hoạch thu mua được chọn không tồn tại hoặc không còn mở"
                         );
 
                 // Lấy các plan detail id từ plan mẹ được chọn trong hệ thống
