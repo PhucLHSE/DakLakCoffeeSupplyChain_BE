@@ -20,14 +20,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
+        private readonly IUploadService _uploadService;
 
-        public ContractService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
+        public ContractService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator, IUploadService uploadService)
         {
             _unitOfWork = unitOfWork 
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
 
             _codeGenerator = codeGenerator
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
+                
+            _uploadService = uploadService
+                ?? throw new ArgumentNullException(nameof(uploadService));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -250,11 +254,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Upload file nếu có
+                string? contractFileUrl = contractDto.ContractFileUrl;
+
+                if (contractDto.ContractFile is { Length: > 0 })
+                {
+                    var upload = await _uploadService.UploadContractFileAsync(contractDto.ContractFile);
+                    contractFileUrl = upload.Url;
+                }
+                else if (!string.IsNullOrWhiteSpace(contractDto.ContractFileUrl) && IsHttpUrl(contractDto.ContractFileUrl))
+                {
+                    try
+                    {
+                        var up = await _uploadService.UploadFromUrlAsync(contractDto.ContractFileUrl);
+                        contractFileUrl = up.Url;
+                    }
+                    catch (Exception ex)
+                    {
+                        // log lỗi thật ra (ex.Message) để soi nguyên nhân (hotlink, 403, sai URL...)
+                        contractFileUrl = contractDto.ContractFileUrl; // fallback: lưu nguyên URL
+                    }
+                }
+
+                contractDto.ContractFileUrl = contractFileUrl;
+
                 // Sinh mã định danh cho Contract
                 string contractCode = await _codeGenerator
                     .GenerateContractCodeAsync();
 
-                // Ánh xạ dữ liệu từ DTO vào entity
+                // Cập nhật ContractFileUrl nếu có upload file TRƯỚC KHI map
+                if (contractFileUrl != null)
+                {
+                    contractDto.ContractFileUrl = contractFileUrl;
+                }
+
+                // Ánh xạ dữ liệu từ DTO vào entity (sau khi đã cập nhật ContractFileUrl)
                 var newContract = contractDto
                     .MapToNewContract(sellerId, contractCode);
 
@@ -308,9 +342,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             catch (Exception ex)
             {
                 // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                var errorMessage = $"Lỗi khi tạo hợp đồng: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+                
+                // Log chi tiết hơn
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $"\n\nInner Exception: {ex.InnerException.Message}";
+                }
+                
                 return new ServiceResult(
                     Const.ERROR_EXCEPTION,
-                    ex.ToString()
+                    errorMessage
                 );
             }
         }
@@ -659,6 +701,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ex.ToString()
                 );
             }
+        }
+
+        private static bool IsHttpUrl(string? u)
+        {
+            return Uri.TryCreate(u, UriKind.Absolute, out var uri) &&
+                   (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
         }
     }
 }

@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.AspNetCore.Http;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -81,8 +82,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<ContractsController>
         [HttpPost]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateContractAsync(
-            [FromBody] ContractCreateDto contractCreateDto)
+            [FromForm] ContractCreateDto contractCreateDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

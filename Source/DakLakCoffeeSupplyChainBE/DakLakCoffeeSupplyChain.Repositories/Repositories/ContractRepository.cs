@@ -23,10 +23,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.Contracts
                 .AsNoTracking()
-                .CountAsync(c =>
-                    !c.IsDeleted &&
-                    c.CreatedAt.Year == year
-                );
+                .CountAsync(c => c.CreatedAt.Year == year);
         }
     }
 }

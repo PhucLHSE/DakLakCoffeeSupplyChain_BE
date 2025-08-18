@@ -3,6 +3,7 @@ using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -23,8 +24,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         [MaxLength(255, ErrorMessage = "Tiêu đề không được vượt quá 255 ký tự.")]
         public string ContractTitle { get; set; } = string.Empty;
 
-        [MaxLength(255, ErrorMessage = "URL file hợp đồng không được vượt quá 255 ký tự.")]
-        [Url(ErrorMessage = "ContractFileUrl phải là một URL hợp lệ.")]
+        [Display(Name = "File hợp đồng")]
+        public IFormFile? ContractFile { get; set; }
+
+        [StringLength(500, ErrorMessage = "URL file hợp đồng không được vượt quá 500 ký tự.")]
         public string? ContractFileUrl { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số đợt giao hàng phải lớn hơn 0.")]
@@ -49,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         public ContractStatus Status { get; set; } = ContractStatus.NotStarted;
 
         [MaxLength(1000, ErrorMessage = "Lý do hủy không được vượt quá 1000 ký tự.")]
-        public string CancelReason { get; set; } = string.Empty;
+        public string? CancelReason { get; set; }
 
         public List<ContractItemCreateDto> ContractItems { get; set; } = new();
 
