@@ -1,5 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
-//using DakLakCoffeeSupplyChain.Common.DTOs.UploadImageResultDR;
+﻿//using DakLakCoffeeSupplyChain.Common.DTOs.UploadImageResultDR;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -14,5 +13,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
     public interface IUploadService
     {
         Task<UploadImageResult> UploadAsync(IFormFile file);
+
+        Task<UploadImageResult> UploadContractFileAsync(IFormFile file);
+
+        Task<UploadImageResult> UploadFromUrlAsync(string fileUrl);
     }
 }
