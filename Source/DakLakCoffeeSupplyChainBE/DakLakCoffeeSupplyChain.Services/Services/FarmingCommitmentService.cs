@@ -212,7 +212,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // Tạm thời chưa có validation
 
                 //Generate code
                 string commitmentCode = await _codeGenerator.GenerateFarmingCommitmentCodeAsync();
@@ -253,7 +252,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Tạo Commitment Detail
                 foreach (var detail in newCommitment.FarmingCommitmentsDetails)
                 {
-                    //Kiểm tra đồng bộ dữ liệu, không cho phép lấy registration detail mà không thuộc registration chính
+                    // Kiểm tra đồng bộ dữ liệu, không cho phép lấy registration detail mà không thuộc registration chính
                     var RegistrationDetailsIds = selectedRegistration.CultivationRegistrationsDetails.Select(i => i.CultivationRegistrationDetailId).ToHashSet();
                     if (!RegistrationDetailsIds.Contains(detail.RegistrationDetailId))
                         return new ServiceResult(
@@ -262,44 +261,64 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         );
 
                     // Lấy planDetailId từ registration detail đã chọn để tự động map vào commitment detail
-                    var selectedPlanDetailId = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByPredicateAsync(
+                    var selectedRegistrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
                         predicate: f => f.CultivationRegistrationDetailId == detail.RegistrationDetailId,
-                        selector: f => f.PlanDetailId,
+                        include: f => f.
+                            Include(f => f.PlanDetail),
                         asNoTracking: true
                         );
-                    if (selectedPlanDetailId == Guid.Empty)
+                    if (selectedRegistrationDetail == null)
                         return new ServiceResult(
                             Const.FAIL_CREATE_CODE,
-                            "PlanDetailId được chọn bị rỗng"
+                            "selectedRegistrationDetail được chọn bị rỗng"
                         );
+
+                    // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
+                    if (detail.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity || detail.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
+                            $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
+                        );
+
+                    // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
+                    if (detail.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
+                        return new ServiceResult (Const.FAIL_CREATE_CODE,
+                            "Ngày dự kiến bắt đầu giao hàng phải sau ngày dự kiến kết thúc thu hoạch. Cụ thể là từ " +
+                            $"{selectedRegistrationDetail.ExpectedHarvestEnd}"
+                            );
+
 
                     detail.CommitmentDetailCode = $"FCD-{DateHelper.NowVietnamTime().Year}-{(count):D4}";
                     count++;
-                    detail.PlanDetailId = selectedPlanDetailId;
+                    detail.PlanDetailId = selectedRegistrationDetail.PlanDetailId;
 
-                    var confirmedPriceAfterTax = detail.ConfirmedPrice;
+                    //var confirmedPriceAfterTax = detail.ConfirmedPrice;
 
+                    //Thuế tạm thời bị bỏ qua
                     // Lấy giá trị thuế được set mềm ở bảng systemConfiguration
-                    var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
-                        predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
-                        asNoTracking: true
-                        );
-                    if (taxCode != null)
-                    {
-                        if (detail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
-                            detail.TaxPrice = detail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
-                        else detail.TaxPrice = 0;
+                    //var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                    //    predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
+                    //    asNoTracking: true
+                    //    );
+                    //if (taxCode != null)
+                    //{
+                    //    if (detail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                    //        detail.TaxPrice = detail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                    //    else detail.TaxPrice = 0;
 
-                        confirmedPriceAfterTax += detail.TaxPrice;
-                    }
-                    newCommitment.TotalPrice += confirmedPriceAfterTax;
+                    //    confirmedPriceAfterTax += detail.TaxPrice;
+                    //}
+
+
+                    newCommitment.TotalPrice += detail.ConfirmedPrice*detail.CommittedQuantity;
                     if (detail.AdvancePayment > newCommitment.TotalPrice)
                         return new ServiceResult(
                             Const.FAIL_CREATE_CODE,
                             "Số tiền tạm ứng không được lớn hơn tổng số tiền cam kết."
                         );
                     newCommitment.TotalAdvancePayment += detail.AdvancePayment;
-                    newCommitment.TotalTaxPrice += detail.TaxPrice;
+                    //newCommitment.TotalTaxPrice += detail.TaxPrice;
                 }
 
                 // Cập nhật lại status của các chi tiết đơn đăng ký không được chọn
@@ -471,19 +490,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var now = DateHelper.NowVietnamTime();
 
                 // Lấy giá trị thuế được set mềm ở bảng systemConfiguration
-                var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
-                    predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
-                    asNoTracking: true
-                    );
+                //var taxCode = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                //    predicate: t => t.Name == "TAX_RATE_FOR_COMMITMENT" && !t.IsDeleted,
+                //    asNoTracking: true
+                //    );
 
                 // Xóa mềm Details
                 foreach (var oldItem in commitment.FarmingCommitmentsDetails)
                 {
                     if (!commitmentDetailsIds.Contains(oldItem.CommitmentDetailId) && !oldItem.IsDeleted)
                     {
-                        commitment.TotalPrice -= ((oldItem.ConfirmedPrice + oldItem.TaxPrice)*oldItem.CommittedQuantity);
+                        //commitment.TotalPrice -= ((oldItem.ConfirmedPrice + oldItem.TaxPrice)*oldItem.CommittedQuantity);
+                        commitment.TotalPrice -= oldItem.ConfirmedPrice*oldItem.CommittedQuantity;
                         commitment.TotalAdvancePayment -= oldItem.AdvancePayment;
-                        commitment.TotalTaxPrice -= (oldItem.TaxPrice*oldItem.CommittedQuantity);
+                       //commitment.TotalTaxPrice -= (oldItem.TaxPrice*oldItem.CommittedQuantity);
                         oldItem.IsDeleted = true;
                         oldItem.UpdatedAt = now;
                         await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(oldItem);
@@ -496,26 +516,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var existingCommitmentDetails = commitment.FarmingCommitmentsDetails.
                         FirstOrDefault(p => p.CommitmentDetailId == itemDto.CommitmentDetailId && itemDto.CommitmentDetailId != Guid.Empty);
 
-                    var confirmedPriceAfterTax = itemDto.ConfirmedPrice;
-                    var taxPrice = 0.0;
+                    //var confirmedPriceAfterTax = itemDto.ConfirmedPrice;
+                    //var taxPrice = 0.0;
 
-                    if (taxCode != null)
-                    {
-                        if (itemDto.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
-                            taxPrice = itemDto.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
-                        confirmedPriceAfterTax += taxPrice;
-                    }
+                    //if (taxCode != null)
+                    //{
+                    //    if (itemDto.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                    //        taxPrice = itemDto.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                    //    confirmedPriceAfterTax += taxPrice;
+                    //}
+
+                    // Lấy planDetailId từ registration detail đã chọn để tự động map vào commitment detail
+                    var selectedRegistrationDetail = await _unitOfWork.CultivationRegistrationsDetailRepository.GetByIdAsync(
+                        predicate: f => f.CultivationRegistrationDetailId == itemDto.RegistrationDetailId,
+                        include: f => f.
+                            Include(f => f.PlanDetail),
+                        asNoTracking: true
+                        );
+                    if (selectedRegistrationDetail == null)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "selectedRegistrationDetail được chọn bị rỗng"
+                        );
+
+                    // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
+                    if (itemDto.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity || itemDto.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
+                            $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
+                        );
+
+                    // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
+                    if (itemDto.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
+                        return new ServiceResult(Const.FAIL_CREATE_CODE,
+                            "Ngày dự kiến bắt đầu giao hàng phải sau ngày dự kiến kết thúc thu hoạch. Cụ thể là từ " +
+                            $"{selectedRegistrationDetail.ExpectedHarvestEnd}"
+                            );
 
                     if (existingCommitmentDetails != null)
                     {
-                        commitment.TotalPrice = commitment.TotalPrice - ((existingCommitmentDetails.ConfirmedPrice + existingCommitmentDetails.TaxPrice)* existingCommitmentDetails.CommittedQuantity) + (confirmedPriceAfterTax * itemDto.CommittedQuantity);
-                        commitment.TotalTaxPrice = commitment.TotalTaxPrice - existingCommitmentDetails.TaxPrice + taxPrice;
+                        //commitment.TotalPrice = commitment.TotalPrice - ((existingCommitmentDetails.ConfirmedPrice + existingCommitmentDetails.TaxPrice)* existingCommitmentDetails.CommittedQuantity) + (confirmedPriceAfterTax * itemDto.CommittedQuantity);
+                        commitment.TotalPrice = commitment.TotalPrice - (existingCommitmentDetails.ConfirmedPrice* existingCommitmentDetails.CommittedQuantity) + (itemDto.ConfirmedPrice * itemDto.CommittedQuantity);
+                        //commitment.TotalTaxPrice = commitment.TotalTaxPrice - existingCommitmentDetails.TaxPrice + taxPrice;
                         if (itemDto.AdvancePayment > commitment.TotalPrice)
                             return new ServiceResult(
                                 Const.FAIL_UPDATE_CODE,
                                 "Số tiền tạm ứng không được lớn hơn tổng số tiền cam kết."
                             );
-                        existingCommitmentDetails.TaxPrice = taxPrice != 0 ? taxPrice : existingCommitmentDetails.TaxPrice;
+                        //existingCommitmentDetails.TaxPrice = taxPrice != 0 ? taxPrice : existingCommitmentDetails.TaxPrice;
                         commitment.TotalAdvancePayment = commitment.TotalAdvancePayment - existingCommitmentDetails.AdvancePayment + itemDto.AdvancePayment;
                         existingCommitmentDetails.AdvancePayment = itemDto.AdvancePayment;
                         existingCommitmentDetails.RegistrationDetailId = itemDto.RegistrationDetailId != Guid.Empty ? itemDto.RegistrationDetailId : existingCommitmentDetails.RegistrationDetailId;
@@ -549,12 +598,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             Note = itemDto.Note,
                             ContractDeliveryItemId = itemDto.ContractDeliveryItemId,
                         };
-                        if (taxCode != null)
-                            if (newDetail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
-                                newDetail.TaxPrice = newDetail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
+                        //if (taxCode != null)
+                        //    if (newDetail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
+                        //        newDetail.TaxPrice = newDetail.ConfirmedPrice.Value * (double)taxCode.MinValue.Value;
                         count++;
-                        commitment.TotalTaxPrice += newDetail.TaxPrice;
-                        commitment.TotalPrice += (newDetail.ConfirmedPrice + newDetail.TaxPrice)*newDetail.CommittedQuantity;
+                        //commitment.TotalTaxPrice += newDetail.TaxPrice;
+                        //commitment.TotalPrice += (newDetail.ConfirmedPrice + newDetail.TaxPrice)*newDetail.CommittedQuantity;
+                        commitment.TotalPrice += newDetail.ConfirmedPrice * newDetail.CommittedQuantity;
                         if (newDetail.AdvancePayment > commitment.TotalPrice)
                             return new ServiceResult(
                                 Const.FAIL_UPDATE_CODE,
