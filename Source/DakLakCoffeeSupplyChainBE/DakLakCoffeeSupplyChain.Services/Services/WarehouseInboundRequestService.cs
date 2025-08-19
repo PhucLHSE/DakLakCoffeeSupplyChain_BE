@@ -156,6 +156,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!string.Equals(detail.Status, "Completed", StringComparison.OrdinalIgnoreCase))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho mùa vụ đã hoàn tất.");
 
+                // ✅ THÊM: Kiểm tra ràng buộc hợp đồng - ProcessMethodId
+                var planDetail = detail.CommitmentDetail?.PlanDetail;
+                if (planDetail == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin kế hoạch từ hợp đồng.");
+
+                        // Nếu ProcessMethodId có giá trị → Yêu cầu sơ chế → Không được giao tươi
+        if (planDetail.ProcessMethodId.HasValue && planDetail.ProcessMethodId.Value > 0)
+        {
+            return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                "Cam kết sơ chế, vui lòng gửi hàng sơ chế hoặc nếu chưa có hãy tạo lô sơ chế trước khi gửi yêu cầu nhập kho.");
+        }
+
                 // Kiểm tra khối lượng còn lại
                 remaining = await CalcRemainingForDetailAsync(detail.DetailId);
             }
