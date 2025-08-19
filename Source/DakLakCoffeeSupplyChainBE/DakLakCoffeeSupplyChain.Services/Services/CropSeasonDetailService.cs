@@ -380,6 +380,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
+                // ✅ DEBUG: Log thông tin để kiểm tra
+                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Total completed details: {completedDetails.Count}");
+                foreach (var detail in completedDetails.Take(5))
+                {
+                    Console.WriteLine($"DEBUG Detail {detail.DetailId}: " +
+                        $"Status={detail.Status}, " +
+                        $"ActualYield={detail.ActualYield}, " +
+                        $"ProcessMethodId={detail.CommitmentDetail?.PlanDetail?.ProcessMethodId}, " +
+                        $"CoffeeType={detail.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName}");
+                }
+
+                // ✅ THÊM: Phân loại theo ràng buộc hợp đồng
+                var freshCoffeeDetails = completedDetails.Where(d => 
+                    d.CommitmentDetail?.PlanDetail?.ProcessMethodId == null || 
+                    d.CommitmentDetail.PlanDetail.ProcessMethodId.Value <= 0
+                ).ToList();
+
+                var processedCoffeeDetails = completedDetails.Where(d => 
+                    d.CommitmentDetail?.PlanDetail?.ProcessMethodId.HasValue == true && 
+                    d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
+                ).ToList();
+
+                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Fresh coffee details: {freshCoffeeDetails.Count}");
+                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Processed coffee details: {processedCoffeeDetails.Count}");
+
+                // ✅ THÊM: Thông báo rõ ràng cho từng trường hợp
                 if (!completedDetails.Any())
                 {
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
@@ -387,9 +413,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         new List<object>());
                 }
 
+                if (!freshCoffeeDetails.Any() && processedCoffeeDetails.Any())
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
+                        "Cam kết sơ chế, vui lòng gửi hàng sơ chế hoặc nếu chưa có hãy tạo lô sơ chế trước khi gửi yêu cầu nhập kho.", 
+                        new List<object>());
+                }
+
                 // Tính toán available quantity cho mỗi detail
                 var result = new List<object>();
-                foreach (var detail in completedDetails)
+                foreach (var detail in freshCoffeeDetails)
                 {
                     // Lấy tất cả inbound requests đã được xử lý cho detail này
                     var allRequests = await _uow.WarehouseInboundRequests.GetAllAsync(
@@ -422,7 +455,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 return new ServiceResult(Const.SUCCESS_READ_CODE, 
-                    $"Đã tìm thấy {result.Count} vùng trồng có thể tạo yêu cầu nhập kho", 
+                    $"Đã tìm thấy {result.Count} vùng trồng cà phê tươi có thể tạo yêu cầu nhập kho", 
                     result);
             }
             catch (Exception ex)

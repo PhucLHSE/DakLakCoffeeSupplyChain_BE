@@ -195,7 +195,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             
             // Plan phải có định nghĩa phương pháp sơ chế (đã được filter ở GetAvailableCoffeeTypesAsync)
             if (!planDetail.ProcessMethodId.HasValue || planDetail.ProcessMethodId.Value <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Kế hoạch không có yêu cầu sơ chế cho loại cà phê này.");
+                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết với doanh nghiệp yêu cầu giao hàng tươi. Hãy thực hiện giao hàng tươi.");
             
             var methodId = planDetail.ProcessMethodId.Value;
             
