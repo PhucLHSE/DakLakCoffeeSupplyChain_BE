@@ -70,6 +70,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 );
             }
 
+            // Validation ngày ký hợp đồng phải ≤ ngày bắt đầu
+            if (SignedAt.HasValue && 
+                StartDate.HasValue)
+            {
+                var signedDate = DateOnly.FromDateTime(SignedAt.Value);
+
+                if (signedDate > StartDate.Value)
+                {
+                    yield return new ValidationResult(
+                        "Ngày ký hợp đồng không được sau ngày bắt đầu.",
+                        new[] { nameof(SignedAt), nameof(StartDate) }
+                    );
+                }
+            }
+
             if (TotalQuantity.HasValue && 
                 TotalQuantity < 0)
             {
@@ -100,10 +115,14 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                     );
                 }
 
-                var allowedExtensions = new[] { ".pdf", ".doc", ".docx", ".txt", ".rtf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm" };
+                var allowedExtensions = new[] { 
+                    ".pdf", ".doc", ".docx", ".txt", ".rtf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"
+                };
+
                 var fileExtension = Path.GetExtension(ContractFile.FileName)?.ToLowerInvariant();
                 
-                if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
+                if (string.IsNullOrEmpty(fileExtension) ||
+                    !allowedExtensions.Contains(fileExtension))
                 {
                     yield return new ValidationResult(
                         "File hợp đồng phải có định dạng: PDF, DOC, DOCX, TXT, RTF, JPG, JPEG, PNG, GIF, BMP, WEBP, MP4, AVI, MOV, WMV, FLV, WEBM.",

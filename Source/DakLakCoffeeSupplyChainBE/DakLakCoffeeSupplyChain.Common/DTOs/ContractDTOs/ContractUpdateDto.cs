@@ -73,6 +73,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 );
             }
 
+            // Validation ngày ký hợp đồng phải ≤ ngày bắt đầu
+            if (SignedAt.HasValue &&
+                StartDate.HasValue)
+            {
+                var signedDate = DateOnly.FromDateTime(SignedAt.Value);
+
+                if (signedDate > StartDate.Value)
+                {
+                    yield return new ValidationResult(
+                        "Ngày ký hợp đồng không được sau ngày bắt đầu.",
+                        new[] { nameof(SignedAt), nameof(StartDate) }
+                    );
+                }
+            }
+
             if (TotalQuantity.HasValue && 
                 TotalQuantity < 0)
             {
