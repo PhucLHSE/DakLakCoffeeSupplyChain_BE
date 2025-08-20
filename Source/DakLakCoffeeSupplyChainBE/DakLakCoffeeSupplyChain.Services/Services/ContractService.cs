@@ -535,7 +535,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ContractId = contract.ContractId
                         };
 
-                        await _unitOfWork.ContractItemRepository.CreateAsync(newItem);
+                        await _unitOfWork.ContractItemRepository
+                            .CreateAsync(newItem);
                     }
                 }
 
