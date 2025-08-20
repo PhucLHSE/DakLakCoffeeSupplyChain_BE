@@ -860,5 +860,113 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> UpdateStatus(Guid shipmentId, ShipmentStatusUpdateDto statusUpdateDto, Guid userId)
+        {
+            try
+            {
+                // Kiểm tra xem user có phải là DeliveryStaff không
+                var deliveryStaff = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: ds => 
+                       ds.UserId == userId && 
+                       !ds.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (deliveryStaff == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không phải DeliveryStaff nên không có quyền cập nhật trạng thái shipment."
+                    );
+                }
+
+                // Tìm shipment theo ID và kiểm tra quyền sở hữu
+                var shipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                    predicate: s =>
+                        s.ShipmentId == shipmentId &&
+                        !s.IsDeleted &&
+                        s.DeliveryStaffId == userId, // Chỉ DeliveryStaff được phân công mới có quyền update
+                    include: query => query
+                        .Include(s => s.Order)
+                            .ThenInclude(o => o.DeliveryBatch)
+                                .ThenInclude(db => db.Contract)
+                        .Include(s => s.DeliveryStaff)
+                        .Include(s => s.ShipmentDetails.Where(sd => !sd.IsDeleted)),
+                    asNoTracking: false
+                );
+
+                if (shipment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy chuyến giao hoặc bạn không có quyền cập nhật."
+                    );
+                }
+
+                // Cập nhật trạng thái
+                shipment.DeliveryStatus = statusUpdateDto.DeliveryStatus.ToString();
+                shipment.UpdatedAt = DateHelper.NowVietnamTime();
+
+                // Nếu status là Delivered, cập nhật ReceivedAt
+                if (statusUpdateDto.DeliveryStatus == Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Delivered)
+                {
+                    shipment.ReceivedAt = statusUpdateDto.ReceivedAt ?? DateHelper.NowVietnamTime();
+                }
+
+                // Cập nhật ghi chú nếu có
+                if (!string.IsNullOrEmpty(statusUpdateDto.Note))
+                {
+                    // Có thể lưu note vào một field riêng hoặc log
+                    // Tạm thời bỏ qua note vì model Shipment chưa có field này
+                }
+
+                // Lưu thay đổi
+                await _unitOfWork.ShipmentRepository.UpdateAsync(shipment);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Trả về thông tin shipment đã cập nhật
+                    var updatedShipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
+                        predicate: s => s.ShipmentId == shipmentId && !s.IsDeleted,
+                        include: query => query
+                            .Include(s => s.Order)
+                            .Include(s => s.DeliveryStaff)
+                            .Include(s => s.ShipmentDetails.Where(sd => !sd.IsDeleted)),
+                        asNoTracking: true
+                    );
+
+                    if (updatedShipment != null)
+                    {
+                        var shipmentDto = updatedShipment.MapToShipmentViewDetailsDto();
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            "Cập nhật trạng thái thành công.",
+                            shipmentDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        "Cập nhật trạng thái thành công."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật trạng thái thất bại."
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }
