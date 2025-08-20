@@ -381,6 +381,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Check: tất cả ContractItemId trong DTO phải thuộc hợp đồng
                     var invalidItem = contractDeliveryBatchDto.ContractDeliveryItems
                         .FirstOrDefault(i => !contractItemMap.ContainsKey(i.ContractItemId));
+
                     if (invalidItem != null)
                     {
                         return new ServiceResult(
@@ -590,12 +591,184 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
+                // Không cho vượt quá số vòng giao đã khai báo trên hợp đồng
+                if (contract.DeliveryRounds.HasValue)
+                {
+                    // Đếm số đợt giao hiện có (không tính soft-deleted và không tính đợt đang update)
+                    var currentBatchCount = await _unitOfWork.ContractDeliveryBatchRepository.CountAsync(
+                        predicate: b => 
+                           !b.IsDeleted && 
+                           b.ContractId == contract.ContractId &&
+                           b.DeliveryBatchId != contractDeliveryBatchDto.DeliveryBatchId
+                    );
+
+                    // Nếu đã đủ số vòng giao -> không cho tạo thêm
+                    if (currentBatchCount >= contract.DeliveryRounds.Value)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Hợp đồng đã có đủ {currentBatchCount}/{contract.DeliveryRounds.Value} đợt giao. Không thể tạo thêm."
+                        );
+                    }
+
+                    // Nếu người dùng nhập số thứ tự đợt giao vượt quá số vòng giao -> chặn
+                    if (contractDeliveryBatchDto.DeliveryRound <= 0 ||
+                        contractDeliveryBatchDto.DeliveryRound > contract.DeliveryRounds.Value)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Số đợt giao #{contractDeliveryBatchDto.DeliveryRound} không hợp lệ. " +
+                            $"Phải nằm trong khoảng 1–{contract.DeliveryRounds.Value}."
+                        );
+                    }
+                }
+
+                // Tổng sản lượng các đợt không vượt quá tổng hợp đồng
+                if (contract.TotalQuantity.HasValue)
+                {
+                    // Tính tổng sản lượng dự kiến của các đợt hiện có (không tính đợt đang update)
+                    var sumPlanned = await _unitOfWork.ContractDeliveryBatchRepository.SumAsync(
+                        selector: b => (double?)(b.TotalPlannedQuantity ?? 0),
+                        predicate: b => 
+                           !b.IsDeleted &&
+                           b.ContractId == contract.ContractId &&
+                           b.DeliveryBatchId != contractDeliveryBatchDto.DeliveryBatchId
+                    ) ?? 0;
+
+                    var newPlanned = contractDeliveryBatchDto.TotalPlannedQuantity;
+
+                    if (sumPlanned + newPlanned > contract.TotalQuantity.Value)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Tổng sản lượng dự kiến của các đợt ({sumPlanned + newPlanned} kg) vượt quá " +
+                            $"tổng khối lượng hợp đồng ({contract.TotalQuantity.Value} kg)."
+                        );
+                    }
+                }
+
+                // Tổng khối lượng các dòng đợt giao (items) <= TotalPlannedQuantity của đợt
+                if (contractDeliveryBatchDto.ContractDeliveryItems != null
+                    && contractDeliveryBatchDto.ContractDeliveryItems.Count > 0)
+                {
+                    // Nếu Quantity của item là nullable, thay (i.Quantity ?? 0)
+                    var itemsTotal = contractDeliveryBatchDto.ContractDeliveryItems
+                        .Sum(i => i.PlannedQuantity ?? 0);
+
+                    var batchPlanned = contractDeliveryBatchDto.TotalPlannedQuantity;
+
+                    if (itemsTotal > batchPlanned)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Tổng khối lượng từ các dòng đợt giao ({itemsTotal} kg) " +
+                            $"vượt quá sản lượng dự kiến của đợt ({batchPlanned} kg)."
+                        );
+                    }
+                }
+
+                // Cộng dồn theo từng ContractItem: Sum(planned của mọi đợt) + planned mới ≤ Quantity của ContractItem
+                if (contractDeliveryBatchDto.ContractDeliveryItems != null
+                    && contractDeliveryBatchDto.ContractDeliveryItems.Count > 0)
+                {
+                    // Lấy map ContractItemId -> MaxQty từ chính hợp đồng (đảm bảo item thuộc hợp đồng)
+                    var contractItems = await _unitOfWork.ContractRepository.GetByIdAsync(
+                        predicate: c => 
+                           c.ContractId == contract.ContractId && 
+                           !c.IsDeleted,
+                        include: q => q
+                           .Include(c => c.ContractItems.Where(ci => !ci.IsDeleted))
+                              .ThenInclude(ci => ci.CoffeeType),
+                        asNoTracking: true
+                    );
+
+                    if (contractItems == null)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            "Không thể truy xuất thông tin hợp đồng để kiểm tra."
+                        );
+                    }
+
+                    var contractItemMap = contractItems.ContractItems.ToDictionary(
+                        ci => ci.ContractItemId,
+                        ci => new {
+                            MaxQty = (double?)(ci.Quantity ?? 0),
+                            CoffeeTypeName = ci.CoffeeType?.TypeName,
+                            Item = ci
+                        }
+                    );
+
+                    // Check: tất cả ContractItemId trong DTO phải thuộc hợp đồng
+                    var invalidItem = contractDeliveryBatchDto.ContractDeliveryItems
+                        .FirstOrDefault(i => !contractItemMap.ContainsKey(i.ContractItemId));
+
+                    if (invalidItem != null)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Mặt hàng trong đợt giao không thuộc hợp đồng hiện tại (ContractItemId={invalidItem.ContractItemId})."
+                        );
+                    }
+
+                    // Lấy tổng đã giao (planned) của các đợt KHÁC (đã tồn tại) theo từng ContractItemId
+                    var existedSumByItem = await _unitOfWork.ContractDeliveryItemRepository
+                        .SumPlannedByContractGroupedAsync(contract.ContractId);
+
+                    // Tổng planned trong CHÍNH đợt đang tạo, gom theo ContractItemId
+                    var newSumByItem = contractDeliveryBatchDto.ContractDeliveryItems
+                        .GroupBy(i => i.ContractItemId)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.Sum(x => (double)(x.PlannedQuantity ?? 0)) // decimal? -> đổi kiểu tương ứng
+                        );
+
+                    // Tổng planned trong CHÍNH đợt đang update, gom theo ContractItemId
+                    var currentBatchSumByItem = deliveryBatch.ContractDeliveryItems
+                        .Where(i => !i.IsDeleted)
+                        .GroupBy(i => i.ContractItemId)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.Sum(x => (double)(x.PlannedQuantity))
+                        );
+
+                    // So sánh cho từng ContractItem
+                    foreach (var kv in newSumByItem)
+                    {
+                        var contractItemId = kv.Key;
+                        var newQty = kv.Value;
+
+                        var currentQty = currentBatchSumByItem.TryGetValue(contractItemId, out var c) ? c : 0;
+                        var existedQty = existedSumByItem.TryGetValue(contractItemId, out var s) ? s : 0;
+
+                        var meta = contractItemMap[contractItemId];
+                        var max = meta.MaxQty ?? 0;
+
+                        // Tổng tất cả - Đợt hiện tại + Đợt mới
+                        var totalQty = existedQty - currentQty + newQty;
+
+                        if (totalQty > max)
+                        {
+                            var label = meta.CoffeeTypeName 
+                                ?? meta.Item.ContractItemCode 
+                                ?? contractItemId.ToString();
+
+                            return new ServiceResult(
+                                Const.FAIL_UPDATE_CODE,
+                                $"Khối lượng giao cho mặt hàng '{label}' ({totalQty} kg) " +
+                                $"vượt quá khối lượng theo dòng hợp đồng ({max} kg)."
+                            );
+                        }
+                    }
+                }
+
                 // Ánh xạ dữ liệu từ DTO vào entity
                 contractDeliveryBatchDto.MapToUpdatedContractDeliveryBatch(deliveryBatch);
 
                 // Đồng bộ ContractDeliveryItems
                 var dtoItemIds = contractDeliveryBatchDto.ContractDeliveryItems
                     .Select(i => i.DeliveryItemId).ToHashSet();
+
                 var now = DateHelper.NowVietnamTime();
 
                 foreach (var oldItem in deliveryBatch.ContractDeliveryItems)
@@ -612,28 +785,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 foreach (var itemDto in contractDeliveryBatchDto.ContractDeliveryItems)
                 {
-                    var existingItem = deliveryBatch.ContractDeliveryItems
-                        .FirstOrDefault(i => i.DeliveryItemId == itemDto.DeliveryItemId);
-
-                    if (existingItem != null)
+                    // Pattern giống ContractService - kiểm tra Guid.Empty
+                    if (itemDto.DeliveryItemId != Guid.Empty)
                     {
-                        existingItem.ContractItemId = itemDto.ContractItemId;
-                        existingItem.PlannedQuantity = itemDto.PlannedQuantity ?? 0;
-                        existingItem.FulfilledQuantity = itemDto.FulfilledQuantity;
-                        existingItem.Note = itemDto.Note;
-                        existingItem.IsDeleted = false;
-                        existingItem.UpdatedAt = now;
+                        var existingItem = deliveryBatch.ContractDeliveryItems
+                            .FirstOrDefault(i => i.DeliveryItemId == itemDto.DeliveryItemId && !i.IsDeleted);
 
-                        await _unitOfWork.ContractDeliveryItemRepository
-                            .UpdateAsync(existingItem);
+                        if (existingItem != null)
+                        {
+                            // Cập nhật item hiện có
+                            existingItem.ContractItemId = itemDto.ContractItemId;
+                            existingItem.PlannedQuantity = itemDto.PlannedQuantity ?? 0;
+                            existingItem.FulfilledQuantity = itemDto.FulfilledQuantity;
+                            existingItem.Note = itemDto.Note;
+                            existingItem.IsDeleted = false;
+                            existingItem.UpdatedAt = now;
+
+                            await _unitOfWork.ContractDeliveryItemRepository
+                                .UpdateAsync(existingItem);
+                        }
                     }
                     else
                     {
-                        // Trường hợp cần tạo mới item (nếu hỗ trợ)
                         var newItem = new ContractDeliveryItem
                         {
-                            DeliveryItemId = itemDto.DeliveryItemId,
-                            DeliveryItemCode = $"DLI-{deliveryBatch.ContractDeliveryItems.Count + 1:D3}-{deliveryBatch.DeliveryBatchCode}",
+                            DeliveryItemId = Guid.NewGuid(),
+                            DeliveryItemCode = $"DLI-{(contractDeliveryBatchDto.ContractDeliveryItems.Count + 1):D3}-{deliveryBatch.DeliveryBatchCode}",
                             DeliveryBatchId = deliveryBatch.DeliveryBatchId,
                             ContractItemId = itemDto.ContractItemId,
                             PlannedQuantity = itemDto.PlannedQuantity ?? 0,
@@ -646,7 +823,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                         await _unitOfWork.ContractDeliveryItemRepository
                             .CreateAsync(newItem);
-                        deliveryBatch.ContractDeliveryItems.Add(newItem);
                     }
                 }
 
