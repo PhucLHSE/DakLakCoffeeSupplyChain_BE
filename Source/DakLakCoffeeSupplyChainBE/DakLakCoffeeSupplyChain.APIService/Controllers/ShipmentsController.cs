@@ -219,6 +219,43 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PATCH: api/<ShipmentsController>/update-status/{shipmentId}
+        [HttpPatch("update-status/{shipmentId}")]
+        [Authorize(Roles = "DeliveryStaff")]
+        public async Task<IActionResult> UpdateShipmentStatusAsync(
+            Guid shipmentId,
+            [FromBody] ShipmentStatusUpdateDto statusUpdateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _shipmentService
+                .UpdateStatus(shipmentId, statusUpdateDto, userId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy đơn giao hàng.");
+
+            return StatusCode(500, result.Message);
+        }
+
         private async Task<bool> ShipmentExistsAsync(Guid shipmentId)
         {
             Guid userId;

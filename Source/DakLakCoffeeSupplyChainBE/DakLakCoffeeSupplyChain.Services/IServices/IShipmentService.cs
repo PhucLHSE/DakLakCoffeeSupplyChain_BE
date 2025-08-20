@@ -21,5 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteShipmentById(Guid shipmentId, Guid userId);
 
         Task<IServiceResult> SoftDeleteShipmentById(Guid shipmentId, Guid userId);
+
+        Task<IServiceResult> UpdateStatus(Guid shipmentId, ShipmentStatusUpdateDto statusUpdateDto, Guid userId);
     }
 }
