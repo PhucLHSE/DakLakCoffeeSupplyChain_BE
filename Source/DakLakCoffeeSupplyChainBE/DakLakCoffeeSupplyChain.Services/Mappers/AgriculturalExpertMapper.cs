@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.AgriculturalExpertDTOs;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
@@ -42,6 +43,45 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = expert.CreatedAt,
                 UpdatedAt = expert.UpdatedAt
             };
+        }
+
+        // Mapper cho tạo mới chuyên gia
+        public static AgriculturalExpert MapToNewAgriculturalExpert(
+            this AgriculturalExpertCreateDto dto, 
+            Guid userId, 
+            string expertCode)
+        {
+            return new AgriculturalExpert
+            {
+                ExpertId = Guid.NewGuid(),
+                UserId = userId,
+                ExpertCode = expertCode,
+                ExpertiseArea = dto.ExpertiseArea,
+                Qualifications = dto.Qualifications,
+                YearsOfExperience = dto.YearsOfExperience,
+                AffiliatedOrganization = dto.AffiliatedOrganization,
+                Bio = dto.Bio,
+                Rating = dto.Rating,
+                IsVerified = false,                    // Mặc định khi đăng ký là false
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsDeleted = false
+            };
+        }
+
+        // Mapper cho cập nhật chuyên gia
+        public static void MapToUpdateAgriculturalExpert(
+            this AgriculturalExpertUpdateDto dto, 
+            AgriculturalExpert agriculturalExpert)
+        {
+            agriculturalExpert.ExpertiseArea = dto.ExpertiseArea;
+            agriculturalExpert.Qualifications = dto.Qualifications;
+            agriculturalExpert.YearsOfExperience = dto.YearsOfExperience;
+            agriculturalExpert.AffiliatedOrganization = dto.AffiliatedOrganization;
+            agriculturalExpert.Bio = dto.Bio;
+            agriculturalExpert.Rating = dto.Rating;
+            agriculturalExpert.IsVerified = dto.IsVerified;
+            agriculturalExpert.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }
 }

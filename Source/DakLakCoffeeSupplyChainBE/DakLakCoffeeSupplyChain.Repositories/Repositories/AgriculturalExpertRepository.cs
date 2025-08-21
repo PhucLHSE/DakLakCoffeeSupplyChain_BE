@@ -58,5 +58,27 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                    !e.IsDeleted
                 );
         }
+
+        // Thêm method để kiểm tra trùng lặp theo lĩnh vực chuyên môn
+        public async Task<AgriculturalExpert?> GetByExpertiseAreaAsync(string expertiseArea)
+        {
+            return await _context.AgriculturalExperts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => 
+                   e.ExpertiseArea == expertiseArea && 
+                   !e.IsDeleted
+                );
+        }
+
+        // Đếm số chuyên gia đã đăng ký trong một năm
+        public async Task<int> CountExpertsRegisteredInYearAsync(int year)
+        {
+            return await _context.AgriculturalExperts
+                .AsNoTracking()
+                .CountAsync(e => 
+                   e.CreatedAt.Year == year && 
+                   !e.IsDeleted
+                );
+        }
     }
 }

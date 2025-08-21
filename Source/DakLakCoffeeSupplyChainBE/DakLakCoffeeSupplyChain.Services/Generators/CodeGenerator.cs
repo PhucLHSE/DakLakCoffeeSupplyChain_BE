@@ -471,5 +471,14 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             }
             return $"{prefix}{next:0000}";
         }
+
+        public async Task<string> GenerateExpertCodeAsync()
+        {
+            // Đếm số chuyên gia tạo trong năm
+            var count = await _unitOfWork.AgriculturalExpertRepository
+                .CountExpertsRegisteredInYearAsync(CurrentYear);
+
+            return $"EXP-{CurrentYear}-{(count + 1):D4}";
+        }
     }
 }

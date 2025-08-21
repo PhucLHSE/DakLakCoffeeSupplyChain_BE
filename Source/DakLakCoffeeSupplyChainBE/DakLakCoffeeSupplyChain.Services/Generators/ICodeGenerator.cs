@@ -26,6 +26,8 @@
       
         Task<string> GenerateFarmerCodeAsync();
 
+        Task<string> GenerateExpertCodeAsync();
+
         Task<string> GenerateGeneralFarmerReportCodeAsync();
 
         Task<string> GenerateCultivationRegistrationCodeAsync();
