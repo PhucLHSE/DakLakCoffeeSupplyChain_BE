@@ -41,5 +41,6 @@ jobs:
           script: |
             set -e
             cd /srv/docker-compose/
-            docker compose up --build --no-deps --force-recreate --no-cache -d daklak-coffee-scm
+            docker compose build --no-cache daklak-coffee-scm
+            docker compose up --no-deps --force-recreate -d daklak-coffee-scm
             docker image prune -a -f
