@@ -57,9 +57,9 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           # Khuyên dùng key thay vì password:
-          key: ${{ secrets.PASSWORD }}
+          # key: ${{ secrets.PASSWORD }}
           # Nếu vẫn muốn dùng password thì:
-          # password: ${{ secrets.PASSWORD }}
+          password: ${{ secrets.PASSWORD }}
           script: |
             set -e
             cd /srv/docker-compose/
