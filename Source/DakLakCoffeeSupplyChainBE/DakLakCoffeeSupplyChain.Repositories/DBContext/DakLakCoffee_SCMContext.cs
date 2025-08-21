@@ -132,7 +132,7 @@ public partial class DakLakCoffee_SCMContext : DbContext
         var config = new ConfigurationBuilder()
             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.Development.json")
+            //.AddJsonFile("appsettings.Development.json")
             .Build();
 
         string connectionString = config.GetConnectionString(connectionStringName);
