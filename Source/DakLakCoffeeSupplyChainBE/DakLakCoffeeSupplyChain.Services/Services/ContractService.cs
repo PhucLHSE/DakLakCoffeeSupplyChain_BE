@@ -224,19 +224,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 double totalItemQuantity = contractDto.ContractItems
                     .Sum(i => i.Quantity ?? 0);
 
-                // Tính tổng trị giá = qty * price * (1 - discountPercent/100) (đều là nullable)
+                // Tính tổng trị giá = qty * price * (1 - pct/100) (đều là nullable)
                 double totalItemValue = contractDto.ContractItems.Sum(i =>
                 {
                     double q = i.Quantity ?? 0d;
                     double p = i.UnitPrice ?? 0d;
-                    double discountPercent = i.DiscountAmount ?? 0d; // % giảm giá
-                    
-                    // Validation: % giảm giá từ 0-100%
-                    if (discountPercent < 0) discountPercent = 0;
-                    if (discountPercent > 100) discountPercent = 100;
-                    
-                    // Business logic: qty * price * (1 - discount%)
-                    return q * p * (1 - discountPercent / 100d);
+                    double pct = i.DiscountAmount ?? 0d; // % giảm
+                    if (pct < 0) pct = 0;
+                    if (pct > 100) pct = 100;
+                    return q * p * (1 - pct / 100d);
                 });
 
                 // So sánh với tổng của hợp đồng (nếu được nhập)
@@ -441,19 +437,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 double totalItemQuantity = contractDto.ContractItems
                     .Sum(i => i.Quantity ?? 0);
 
-                // Tính tổng trị giá = qty * price * (1 - discountPercent/100) (đều là nullable)
+                // Tính tổng trị giá = qty * price * (1 - pct/100) (đều là nullable)
                 double totalItemValue = contractDto.ContractItems.Sum(i =>
                 {
                     double q = i.Quantity ?? 0d;
                     double p = i.UnitPrice ?? 0d;
-                    double discountPercent = i.DiscountAmount ?? 0d; // % giảm giá
-                    
-                    // Validation: % giảm giá từ 0-100%
-                    if (discountPercent < 0) discountPercent = 0;
-                    if (discountPercent > 100) discountPercent = 100;
-                    
-                    // Business logic: qty * price * (1 - discount%)
-                    return q * p * (1 - discountPercent / 100d);
+                    double pct = i.DiscountAmount ?? 0d; // % giảm
+                    if (pct < 0) pct = 0;
+                    if (pct > 100) pct = 100;
+                    return q * p * (1 - pct / 100d);
                 });
 
                 if (contractDto.TotalQuantity.HasValue && 
@@ -535,8 +527,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ContractId = contract.ContractId
                         };
 
-                        await _unitOfWork.ContractItemRepository
-                            .CreateAsync(newItem);
+                        await _unitOfWork.ContractItemRepository.CreateAsync(newItem);
                     }
                 }
 

@@ -25,12 +25,35 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.Contract
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            // Planned > 0
             if (PlannedQuantity is null || 
                 PlannedQuantity <= 0)
             {
                 yield return new ValidationResult(
                     "Số lượng dự kiến phải lớn hơn 0.",
                     new[] { nameof(PlannedQuantity) }
+                );
+            }
+
+            // Fulfilled >= 0 (nếu có nhập)
+            if (FulfilledQuantity is not null 
+                && FulfilledQuantity < 0)
+            {
+                yield return new ValidationResult(
+                    "Khối lượng đã giao không được âm.",
+                    new[] { nameof(FulfilledQuantity) }
+                );
+            }
+
+            // Fulfilled <= Planned (khi cả hai đều có giá trị hợp lệ)
+            if (PlannedQuantity is not null 
+                && PlannedQuantity > 0
+                && FulfilledQuantity is not null
+                && FulfilledQuantity > PlannedQuantity)
+            {
+                yield return new ValidationResult(
+                    "Khối lượng đã giao phải nhỏ hơn hoặc bằng khối lượng cần giao.",
+                    new[] { nameof(FulfilledQuantity), nameof(PlannedQuantity) }
                 );
             }
         }

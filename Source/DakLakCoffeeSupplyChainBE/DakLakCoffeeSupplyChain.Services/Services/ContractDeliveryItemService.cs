@@ -120,6 +120,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Kiểm tra tổng PlannedQuantity của toàn bộ batch không vượt quá khối lượng tổng của batch
+                double totalBatchPlanned = await _unitOfWork.ContractDeliveryItemRepository
+                    .SumPlannedQuantityByBatchAsync(contractDeliveryItemDto.DeliveryBatchId);
+
+                double newTotalBatchPlanned = totalBatchPlanned + (contractDeliveryItemDto.PlannedQuantity ?? 0);
+
+                // Lấy thông tin batch để kiểm tra khối lượng tổng
+                var batch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: b => 
+                       b.DeliveryBatchId == contractDeliveryItemDto.DeliveryBatchId && 
+                       !b.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (batch != null && 
+                    newTotalBatchPlanned > batch.TotalPlannedQuantity)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Tổng khối lượng sau khi thêm ({newTotalBatchPlanned} kg) vượt quá khối lượng tổng của đợt giao ({batch.TotalPlannedQuantity} kg)."
+                    );
+                }
+
                 // Kiểm tra trùng trong cùng đợt giao (same DeliveryBatchId + ContractItemId)
                 bool isDuplicate = await _unitOfWork.ContractDeliveryItemRepository.AnyAsync(
                     predicate: dli => 
@@ -153,6 +176,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Kiểm tra và cập nhật status của batch nếu cần
+                    await CheckAndUpdateBatchStatusAsync(contractDeliveryItemDto.DeliveryBatchId);
+
                     // Truy xuất lại dữ liệu để trả về
                     var createdDeliveryItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                         predicate: ci => ci.DeliveryItemId == newContractDeliveryItem.DeliveryItemId,
@@ -247,8 +273,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                        !cdi.IsDeleted,
                     include: query => query
                            .Include(cdi => cdi.ContractItem)
-                              .ThenInclude(ci => ci.Contract)
-                           .Include(cdi => cdi.DeliveryBatch),
+                              .ThenInclude(ci => ci.Contract),
                     asNoTracking: false
                 );
 
@@ -258,6 +283,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         "Không tìm thấy mục giao hàng cần cập nhật."
+                    );
+                }
+                
+                // Lấy ContractId từ DeliveryBatch riêng biệt để tránh tracking
+                var deliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: b => 
+                       b.DeliveryBatchId == contractDeliveryItem.DeliveryBatchId && 
+                       !b.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (deliveryBatch == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Không tìm thấy đợt giao hàng tương ứng."
                     );
                 }
 
@@ -272,7 +313,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (contractItem == null || 
-                    contractItem.ContractId != contractDeliveryItem.DeliveryBatch?.ContractId)
+                    contractItem.ContractId != deliveryBatch.ContractId)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -291,6 +332,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         $"Tổng số lượng sau cập nhật vượt quá giới hạn trong hợp đồng ({contractItem.Quantity} kg)."
+                    );
+                }
+
+                // Kiểm tra tổng PlannedQuantity của toàn bộ batch không vượt quá khối lượng tổng của batch
+                double totalBatchPlanned = await _unitOfWork.ContractDeliveryItemRepository
+                    .SumPlannedQuantityByBatchAsync(contractDeliveryItem.DeliveryBatchId, excludeDeliveryItemId: contractDeliveryItem.DeliveryItemId);
+
+                double newTotalBatchPlanned = totalBatchPlanned + newPlannedQuantity;
+
+                if (newTotalBatchPlanned > deliveryBatch.TotalPlannedQuantity)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        $"Tổng khối lượng sau cập nhật ({newTotalBatchPlanned} kg) vượt quá khối lượng tổng của đợt giao ({deliveryBatch.TotalPlannedQuantity} kg)."
                     );
                 }
 
@@ -323,6 +378,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
+                    // Kiểm tra và cập nhật status của batch nếu cần
+                    await CheckAndUpdateBatchStatusAsync(contractDeliveryItem.DeliveryBatchId);
+
                     // Lấy lại dữ liệu sau khi cập nhật
                     var updatedItem = await _unitOfWork.ContractDeliveryItemRepository.GetByIdAsync(
                         predicate: cdi => 
@@ -330,8 +388,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                            !cdi.IsDeleted,
                         include: query => query
                             .Include(cdi => cdi.ContractItem)
-                                .ThenInclude(ci => ci.CoffeeType)
-                            .Include(cdi => cdi.DeliveryBatch),
+                                .ThenInclude(ci => ci.CoffeeType),
                         asNoTracking: true
                     );
 
@@ -561,6 +618,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
                 );
+            }
+        }
+
+        private async Task CheckAndUpdateBatchStatusAsync(Guid deliveryBatchId)
+        {
+            // Tính tổng FulfilledQuantity và PlannedQuantity của tất cả các mục trong đợt giao
+            double totalFulfilled = await _unitOfWork.ContractDeliveryItemRepository
+                .SumFulfilledQuantityByBatchAsync(deliveryBatchId);
+
+            double totalPlanned = await _unitOfWork.ContractDeliveryItemRepository
+                .SumPlannedQuantityByBatchAsync(deliveryBatchId);
+
+            // Chỉ cập nhật status thành Fulfilled khi đã hoàn thành 100%
+            if (totalPlanned > 0 &&
+                totalFulfilled >= totalPlanned)
+            {
+                // Fetch batch với tracking để có thể update
+                var batchToUpdate = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: b => 
+                       b.DeliveryBatchId == deliveryBatchId && 
+                       !b.IsDeleted,
+                    asNoTracking: false  // Fetch với tracking để update
+                );
+
+                if (batchToUpdate != null && 
+                    batchToUpdate.Status != "Fulfilled")
+                {
+                    batchToUpdate.Status = "Fulfilled";
+                    batchToUpdate.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    await _unitOfWork.ContractDeliveryBatchRepository
+                        .UpdateAsync(batchToUpdate);
+
+                    await _unitOfWork.SaveChangesAsync();
+                }
             }
         }
     }
