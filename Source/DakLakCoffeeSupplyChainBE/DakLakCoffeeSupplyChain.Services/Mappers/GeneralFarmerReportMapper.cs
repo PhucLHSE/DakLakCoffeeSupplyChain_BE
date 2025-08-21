@@ -56,8 +56,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Title = dto.Title,
                 Description = dto.Description,
                 SeverityLevel = (int)dto.SeverityLevel, // ✅ Enum → int
-                ImageUrl = dto.ImageUrl ?? string.Empty,
-                VideoUrl = dto.VideoUrl ?? string.Empty,
+                ImageUrl = string.Empty, // Sẽ được cập nhật sau khi upload media
+                VideoUrl = string.Empty, // Sẽ được cập nhật sau khi upload media
                 IsResolved = false,
                 ReportedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
