@@ -39,5 +39,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           script: |
-            echo "Code uploaded. Do something here if needed."
-            # ví dụ: cd và restart dịch vụ hoặc in log gì đó
+            set -e
+            cd /srv/docker-compose/
+            docker compose up --build --no-deps --force-recreate --no-cache -d daklak-coffee-scm
+            docker image prune -a -f
