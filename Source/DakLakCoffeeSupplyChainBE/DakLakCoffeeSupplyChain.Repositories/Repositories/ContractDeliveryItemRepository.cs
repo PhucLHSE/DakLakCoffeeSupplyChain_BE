@@ -43,12 +43,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountByDeliveryBatchIdAsync(Guid deliveryBatchId)
         {
             return await _context.ContractDeliveryItems
-                .Where(item => item.DeliveryBatchId == deliveryBatchId &&
-                               !item.IsDeleted)
+                .Where(item => item.DeliveryBatchId == deliveryBatchId)
                 .CountAsync();
         }
 
-        // NEW: Tổng PlannedQuantity theo từng ContractItemId của một hợp đồng
+        // Tổng PlannedQuantity theo từng ContractItemId của một hợp đồng
         public async Task<Dictionary<Guid, double>> SumPlannedByContractGroupedAsync(Guid contractId)
         {
             // Join sang bảng batch để lọc theo ContractId và loại bỏ batch bị xóa mềm
@@ -74,6 +73,37 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .ToListAsync();
 
             return rows.ToDictionary(x => x.ContractItemId, x => x.Qty);
+        }
+
+        // Tính tổng FulfilledQuantity của tất cả DeliveryItem thuộc một DeliveryBatch cụ thể
+        public async Task<double> SumPlannedQuantityByBatchAsync(Guid deliveryBatchId)
+        {
+            return await _context.ContractDeliveryItems
+                .Where(x => 
+                   x.DeliveryBatchId == deliveryBatchId && 
+                   !x.IsDeleted)
+                .SumAsync(x => x.PlannedQuantity);
+        }
+
+        // Tính tổng PlannedQuantity của tất cả DeliveryItem thuộc một DeliveryBatch cụ thể
+        public async Task<double> SumFulfilledQuantityByBatchAsync(Guid deliveryBatchId)
+        {
+            return await _context.ContractDeliveryItems
+                .Where(x => 
+                   x.DeliveryBatchId == deliveryBatchId && 
+                   !x.IsDeleted)
+                .SumAsync(x => x.FulfilledQuantity ?? 0);
+        }
+
+        // Tính tổng PlannedQuantity của tất cả DeliveryItem thuộc một DeliveryBatch cụ thể (trừ một item)
+        public async Task<double> SumPlannedQuantityByBatchAsync(Guid deliveryBatchId, Guid excludeDeliveryItemId)
+        {
+            return await _context.ContractDeliveryItems
+                .Where(x => 
+                   x.DeliveryBatchId == deliveryBatchId && 
+                   x.DeliveryItemId != excludeDeliveryItemId &&
+                   !x.IsDeleted)
+                .SumAsync(x => x.PlannedQuantity);
         }
     }
 }
