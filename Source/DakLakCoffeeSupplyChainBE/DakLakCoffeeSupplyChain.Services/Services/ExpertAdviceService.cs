@@ -109,7 +109,7 @@ public class ExpertAdviceService : IExpertAdviceService
             AdviceId = Guid.NewGuid(),
             ReportId = dto.ReportId,
             ResponseType = dto.ResponseType,
-            AdviceSource = dto.AdviceSource,
+            AdviceSource = dto.AdviceSource ?? "Kinh nghiệm chuyên môn",  // ✅ Sửa: Xử lý null
             AdviceText = dto.AdviceText,
             AttachedFileUrl = dto.AttachedFileUrl,
             ExpertId = expert.ExpertId, // ✅ CẦN THIẾT: tránh lỗi khóa ngoại
