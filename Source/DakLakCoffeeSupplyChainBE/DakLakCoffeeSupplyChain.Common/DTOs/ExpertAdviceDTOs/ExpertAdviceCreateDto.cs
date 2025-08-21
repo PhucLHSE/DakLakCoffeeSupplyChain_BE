@@ -10,7 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs
     {
         public Guid ReportId { get; set; }
         public string ResponseType { get; set; } = string.Empty;
-        public string AdviceSource { get; set; } = string.Empty;
+        public string? AdviceSource { get; set; }
         public string AdviceText { get; set; } = string.Empty;
         public string? AttachedFileUrl { get; set; }
     }
