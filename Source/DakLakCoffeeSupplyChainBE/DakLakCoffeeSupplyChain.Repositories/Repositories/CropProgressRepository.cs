@@ -22,6 +22,10 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         {
             return await _context.CropProgresses
                 .AsNoTracking()
+                .Where(p => !p.IsDeleted &&
+                            p.CropSeasonDetail != null && !p.CropSeasonDetail.IsDeleted &&
+                            p.CropSeasonDetail.CropSeason != null && !p.CropSeasonDetail.CropSeason.IsDeleted &&
+                            p.CropSeasonDetail.CropSeason.Farmer != null && !p.CropSeasonDetail.CropSeason.Farmer.IsDeleted)
                 .Include(p => p.Stage)
                 .Include(p => p.UpdatedByNavigation)
                     .ThenInclude(f => f.User)

@@ -16,10 +16,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StepIndex = entity.StepIndex,
                 StageCode = entity.Stage?.StageCode ?? string.Empty,
                 StageName = entity.Stage?.StageName ?? string.Empty,
+                StageDescription = entity.Stage?.Description ?? string.Empty,
                 ProgressDate = entity.ProgressDate,
                 Note = entity.Note ?? string.Empty,
                 PhotoUrl = entity.PhotoUrl ?? string.Empty,
-                VideoUrl = entity.VideoUrl ?? string.Empty
+                VideoUrl = entity.VideoUrl ?? string.Empty,
+                ActualYield = entity.CropSeasonDetail?.ActualYield,
+                UpdatedBy = entity.UpdatedBy,
+                UpdatedByName = entity.UpdatedByNavigation?.User?.Name ?? string.Empty,
+                CreatedAt = entity.CreatedAt,
+                UpdatedAt = entity.UpdatedAt,
+                CropSeasonName = entity.CropSeasonDetail?.CropSeason?.SeasonName ?? string.Empty,
+                CropSeasonDetailName = entity.CropSeasonDetail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? string.Empty
             };
         }
 
