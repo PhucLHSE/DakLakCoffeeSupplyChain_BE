@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -101,9 +103,63 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateAsync(
-            [FromBody] GeneralFarmerReportCreateDto dto)
+        public async Task<IActionResult> CreateAsync()
         {
+            GeneralFarmerReportCreateDto dto;
+            
+            // Kiểm tra content type để xử lý phù hợp
+            if (Request.ContentType?.Contains("multipart/form-data") == true)
+            {
+                // Xử lý FormData (có file upload)
+                dto = new GeneralFarmerReportCreateDto();
+                
+                // Parse các trường cơ bản từ FormData
+                if (Request.Form.ContainsKey("reportType"))
+                    dto.ReportType = Enum.Parse<DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums.ReportTypeEnum>(Request.Form["reportType"].ToString());
+                
+                if (Request.Form.ContainsKey("title"))
+                    dto.Title = Request.Form["title"].ToString();
+                
+                if (Request.Form.ContainsKey("description"))
+                    dto.Description = Request.Form["description"].ToString();
+                
+                if (Request.Form.ContainsKey("severityLevel"))
+                    dto.SeverityLevel = Enum.Parse<DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums.SeverityLevel>(Request.Form["severityLevel"].ToString());
+                
+                if (Request.Form.ContainsKey("cropProgressId") && Guid.TryParse(Request.Form["cropProgressId"], out var cropId))
+                    dto.CropProgressId = cropId;
+                
+                if (Request.Form.ContainsKey("processingProgressId") && Guid.TryParse(Request.Form["processingProgressId"], out var procId))
+                    dto.ProcessingProgressId = procId;
+                
+                // Xử lý files
+                if (Request.Form.Files.Any(f => f.Name == "photoFiles"))
+                    dto.PhotoFiles = Request.Form.Files.Where(f => f.Name == "photoFiles").ToList();
+                
+                if (Request.Form.Files.Any(f => f.Name == "videoFiles"))
+                    dto.VideoFiles = Request.Form.Files.Where(f => f.Name == "videoFiles").ToList();
+            }
+            else
+            {
+                // Xử lý JSON (không có file)
+                try
+                {
+                    using var reader = new StreamReader(Request.Body);
+                    var jsonBody = await reader.ReadToEndAsync();
+                    dto = JsonSerializer.Deserialize<GeneralFarmerReportCreateDto>(jsonBody, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch
+                {
+                    return BadRequest("Dữ liệu JSON không hợp lệ.");
+                }
+            }
+            
+            if (dto == null)
+                return BadRequest("Dữ liệu không hợp lệ.");
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
@@ -126,6 +182,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+
 
         [HttpPut("{reportId}")]
         public async Task<IActionResult> UpdateAsync(

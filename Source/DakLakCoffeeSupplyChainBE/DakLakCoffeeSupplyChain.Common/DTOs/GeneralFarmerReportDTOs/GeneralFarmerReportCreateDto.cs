@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -29,11 +30,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
         public SeverityLevel SeverityLevel { get; set; }
 
 
-        [MaxLength(1000, ErrorMessage = "Đường dẫn hình ảnh không được vượt quá 1000 ký tự.")]
-        public string? ImageUrl { get; set; }
-
-        [MaxLength(1000, ErrorMessage = "Đường dẫn video không được vượt quá 1000 ký tự.")]
-        public string? VideoUrl { get; set; }
+        // Media files for upload
+        public List<IFormFile>? PhotoFiles { get; set; }
+        public List<IFormFile>? VideoFiles { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -52,21 +51,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
                     new[] { nameof(ProcessingProgressId) }
                 );
             }
-            if (!string.IsNullOrEmpty(ImageUrl) && !Uri.IsWellFormedUriString(ImageUrl, UriKind.RelativeOrAbsolute))
-            {
-                yield return new ValidationResult(
-                    "Đường dẫn hình ảnh không hợp lệ.",
-                    new[] { nameof(ImageUrl) }
-                );
-            }
 
-            if (!string.IsNullOrEmpty(VideoUrl) && !Uri.IsWellFormedUriString(VideoUrl, UriKind.RelativeOrAbsolute))
-            {
-                yield return new ValidationResult(
-                    "Đường dẫn video không hợp lệ.",
-                    new[] { nameof(VideoUrl) }
-                );
-            }
         }
     }
 }
