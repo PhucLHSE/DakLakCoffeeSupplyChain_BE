@@ -27,28 +27,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             foreach (var file in files)
             {
-                var uploadResult = await _uploadService.UploadAsync(file);
-
-                var media = new MediaFile
+                try
                 {
-                    MediaId = Guid.NewGuid(),
-                    RelatedEntity = relatedEntity,
-                    RelatedId = relatedId,
-                    MediaType = file.ContentType.StartsWith("video") ? "video" : "image",
-                    MediaUrl = uploadResult.Url,
-                    Caption = null,
-                    UploadedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                };
+                    var uploadResult = await _uploadService.UploadAsync(file);
 
-                await _unitOfWork.MediaFileRepository.CreateAsync(media);
-                resultList.Add(new MediaFile
+                    var media = new MediaFile
+                    {
+                        MediaId = Guid.NewGuid(),
+                        RelatedEntity = relatedEntity,
+                        RelatedId = relatedId,
+                        MediaType = file.ContentType.StartsWith("video") ? "video" : "image",
+                        MediaUrl = uploadResult.Url,
+                        Caption = null,
+                        UploadedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.MediaFileRepository.CreateAsync(media);
+                    resultList.Add(new MediaFile
+                    {
+                        MediaUrl = media.MediaUrl,
+                        MediaType = media.MediaType
+                    });
+                }
+                catch (Exception ex)
                 {
-                    MediaUrl = media.MediaUrl,
-                    MediaType = media.MediaType
-                });
+                    // Log lỗi và tiếp tục với file tiếp theo
+                    Console.WriteLine($"WARNING: Failed to upload file {file.FileName}: {ex.Message}");
+                    // Có thể throw exception để dừng toàn bộ quá trình nếu cần
+                    throw new InvalidOperationException($"Failed to upload file {file.FileName}: {ex.Message}", ex);
+                }
             }
 
             await _unitOfWork.SaveChangesAsync();
