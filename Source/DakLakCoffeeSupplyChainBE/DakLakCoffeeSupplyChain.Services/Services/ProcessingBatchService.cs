@@ -829,12 +829,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var result = new List<object>();
                 foreach (var batch in completedBatches)
                 {
-                    // Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                    // 🔧 FIX: Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                    // Vì bước cuối mới là sản lượng thực tế cuối cùng
                     var finalProgress = batch.ProcessingBatchProgresses
-                        .Where(p => p.OutputQuantity.HasValue)
-                        .OrderByDescending(p => p.StepIndex)
+                        .Where(p => p.OutputQuantity.HasValue && p.OutputQuantity.Value > 0)
+                        .OrderByDescending(p => p.StepIndex)  // Tìm StepIndex cao nhất
                         .FirstOrDefault();
                     var maxOutputQuantity = finalProgress?.OutputQuantity ?? 0;
+
+                    // 🔍 DEBUG: Log thông tin để kiểm tra
+                    Console.WriteLine($"DEBUG GetAvailableBatchesForWarehouseRequest: Batch {batch.BatchCode}");
+                    Console.WriteLine($"  - Total progresses: {batch.ProcessingBatchProgresses.Count}");
+                    Console.WriteLine($"  - Final progress: StepIndex={finalProgress?.StepIndex}, OutputQuantity={finalProgress?.OutputQuantity}");
+                    Console.WriteLine($"  - MaxOutputQuantity: {maxOutputQuantity}");
 
                     // Lấy tất cả inbound requests đã được xử lý
                     var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
@@ -845,6 +852,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     double totalRequested = allRequests
                         .Where(r => r.Status == "Completed" || r.Status == "Pending" || r.Status == "Approved")
                         .Sum(r => r.RequestedQuantity ?? 0);
+
+                    // 🔍 DEBUG: Log thông tin requests
+                    Console.WriteLine($"  - Total requests: {allRequests.Count}");
+                    Console.WriteLine($"  - Total requested quantity: {totalRequested}");
+                    Console.WriteLine($"  - Available quantity: {maxOutputQuantity - totalRequested}");
 
                     // Tính available quantity
                     double availableQuantity = Math.Max(0, maxOutputQuantity - totalRequested);
@@ -863,6 +875,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             availableQuantity = availableQuantity,
                             availableQuantityText = $"{availableQuantity} kg"
                         });
+                        
+                        Console.WriteLine($"  ✅ Added to result: {availableQuantity}kg available");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  ❌ Skipped: {availableQuantity}kg available (<= 0)");
                     }
                 }
 
