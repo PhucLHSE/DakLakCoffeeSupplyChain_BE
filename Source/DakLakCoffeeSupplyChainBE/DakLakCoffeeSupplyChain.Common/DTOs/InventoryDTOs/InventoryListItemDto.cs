@@ -24,5 +24,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs
         public string? CoffeeTypeNameDetail { get; set; }
         public double Quantity { get; set; }
         public string Unit { get; set; } = "kg";
+        
+        // Thông tin FIFO
+        public DateTime CreatedAt { get; set; }
+        public int FifoPriority { get; set; } // Thứ tự ưu tiên FIFO (1 = cao nhất)
+        public bool IsRecommended { get; set; } // Có được khuyến nghị xuất trước không
+        public string FifoRecommendation { get; set; } = ""; // Lý do khuyến nghị
     }
 }

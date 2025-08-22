@@ -39,6 +39,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.FAIL_READ_CODE)
                 return NotFound(result);
 
+            if (result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result);
+
             return StatusCode(500, result);
         }
 
@@ -121,6 +127,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_UPDATE_CODE)
                 return Conflict(result);
+
+            return StatusCode(500, result);
+        }
+
+        // GET: api/WarehouseOutboundRequests/order/{orderId}/items
+        [HttpGet("order/{orderId}/items")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> GetOrderItemsWithRemainingQuantity(Guid orderId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _requestService.GetOrderItemsWithRemainingQuantityAsync(orderId, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result);
 
             return StatusCode(500, result);
         }

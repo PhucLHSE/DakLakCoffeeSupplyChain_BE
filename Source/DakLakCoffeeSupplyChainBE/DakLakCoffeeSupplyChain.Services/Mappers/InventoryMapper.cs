@@ -34,7 +34,47 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 
                 WarehouseName = inv.Warehouse?.Name ?? "Không có",
                 Quantity = inv.Quantity,
-                Unit = inv.Unit
+                Unit = inv.Unit,
+                
+                // Thông tin FIFO (mặc định)
+                CreatedAt = inv.CreatedAt,
+                FifoPriority = 0,
+                IsRecommended = false,
+                FifoRecommendation = ""
+            };
+        }
+
+        public static InventoryListItemDto ToListItemDto(this Inventory inv, int fifoPriority = 0, bool isRecommended = false, string fifoRecommendation = "")
+        {
+            return new InventoryListItemDto
+            {
+                InventoryId = inv.InventoryId,
+                InventoryCode = inv.InventoryCode,
+                WarehouseId = inv.WarehouseId,
+                
+                // Thông tin cho cà phê sơ chế
+                BatchId = inv.BatchId,
+                BatchCode = inv.Batch?.BatchCode ?? "Không có",
+                ProductName = inv.BatchId != null 
+                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " (Sơ chế)" + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
+                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " (Tươi)" + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A"),
+                CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "Không xác định",
+                
+                // Thông tin cho cà phê tươi
+                DetailId = inv.DetailId,
+                DetailCode = inv.Detail?.CropSeason?.SeasonName ?? "Không có",
+                CropSeasonName = inv.Detail?.CropSeason?.SeasonName ?? "Không có",
+                CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Không có",
+                
+                WarehouseName = inv.Warehouse?.Name ?? "Không có",
+                Quantity = inv.Quantity,
+                Unit = inv.Unit,
+                
+                // Thông tin FIFO
+                CreatedAt = inv.CreatedAt,
+                FifoPriority = fifoPriority,
+                IsRecommended = isRecommended,
+                FifoRecommendation = fifoRecommendation
             };
         }
 

@@ -100,6 +100,78 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu xuất kho thành công", request.OutboundRequestId);
         }
 
+        // ✅ Method mới để tính toán số lượng còn lại cho order items
+        private async Task<double> CalculateRemainingQuantityForOrderItemAsync(Guid orderItemId)
+        {
+            var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
+                predicate: oi => oi.OrderItemId == orderItemId && !oi.IsDeleted,
+                asNoTracking: true
+            );
+            
+            if (orderItem == null) return 0;
+
+            var totalQuantity = orderItem.Quantity ?? 0.0;
+            
+            // Lấy tất cả receipts đã xác nhận cho order item này
+            var receiptsByOrderItem = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItemId);
+            double totalConfirmedQuantity = receiptsByOrderItem
+                .SelectMany(r => ParseConfirmedFromNote(r.Note))
+                .Sum();
+
+            // Số lượng còn lại = Tổng số lượng - Đã xác nhận
+            return Math.Max(0, totalQuantity - totalConfirmedQuantity);
+        }
+
+        // ✅ Method mới để lấy order items với thông tin số lượng còn lại
+        public async Task<IServiceResult> GetOrderItemsWithRemainingQuantityAsync(Guid orderId, Guid userId)
+        {
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy người dùng yêu cầu.");
+
+            // Tìm order với kiểm tra quyền truy cập theo công ty
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(
+                predicate: o => o.OrderId == orderId && !o.IsDeleted,
+                include: query => query
+                    .Include(o => o.DeliveryBatch)
+                        .ThenInclude(db => db.Contract),
+                asNoTracking: true
+            );
+            
+            if (order == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy đơn hàng.");
+
+            // Kiểm tra quyền truy cập: order phải thuộc về công ty của manager
+            if (order.DeliveryBatch?.Contract?.SellerId != manager.ManagerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập đơn hàng này.");
+
+            var orderItems = await _unitOfWork.OrderItemRepository.GetAllAsync(
+                predicate: oi => oi.OrderId == orderId && !oi.IsDeleted,
+                include: query => query.Include(oi => oi.Product).ThenInclude(p => p.CoffeeType),
+                asNoTracking: true
+            );
+
+            var result = new List<object>();
+            foreach (var item in orderItems)
+            {
+                var remainingQuantity = await CalculateRemainingQuantityForOrderItemAsync(item.OrderItemId);
+                var totalQuantity = item.Quantity ?? 0.0;
+                var confirmedQuantity = totalQuantity - remainingQuantity;
+
+                result.Add(new
+                {
+                    orderItemId = item.OrderItemId,
+                    productName = item.Product?.ProductName ?? "Không xác định",
+                    totalQuantity = totalQuantity,
+                    confirmedQuantity = confirmedQuantity,
+                    remainingQuantity = remainingQuantity,
+                    coffeeTypeName = item.Product?.CoffeeType?.TypeName ?? "Không xác định"
+                });
+            }
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách mục hàng với số lượng còn lại thành công", result);
+        }
+
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.Mappers; // ✅ Thêm dòng này
+using System.Collections.Generic; // ✅ Thêm dòng này
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -210,6 +211,98 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var result = inventories.Select(inv => inv.ToListItemDto()).ToList();
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho theo kho thành công.", result);
+        }
+
+        // ✅ Method mới để lấy inventory với thông tin FIFO chi tiết cho việc tạo yêu cầu xuất kho
+        public async Task<IServiceResult> GetInventoriesWithFifoRecommendationAsync(Guid warehouseId, Guid userId, double? requestedQuantity = null)
+        {
+            Guid? targetManagerId = null;
+
+            // Xác định ManagerId hoặc SupervisorId
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
+                targetManagerId = manager.ManagerId;
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                    targetManagerId = staff.SupervisorId;
+            }
+
+            if (targetManagerId == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+
+            // Kiểm tra kho có thuộc quyền quản lý của người dùng không
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            if (warehouse == null || warehouse.ManagerId != targetManagerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
+
+            // Lấy tồn kho trong kho này - CHỈ lấy cà phê sơ chế (có BatchId), KHÔNG lấy cà phê tươi
+            var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
+                !i.IsDeleted && i.WarehouseId == warehouseId && i.BatchId != null);
+
+            if (inventories == null || !inventories.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tồn kho trong kho này.", []);
+
+            // Sắp xếp theo FIFO (First In, First Out) - nhập trước xuất trước
+            var sortedInventories = inventories
+                .OrderBy(i => i.CreatedAt)
+                .ToList();
+
+            // Tạo danh sách kết quả với thông tin FIFO chi tiết
+            var result = new List<InventoryListItemDto>();
+            double remainingQuantity = requestedQuantity ?? 0;
+            
+            for (int i = 0; i < sortedInventories.Count; i++)
+            {
+                var inv = sortedInventories[i];
+                var fifoPriority = i + 1; // Thứ tự ưu tiên (1 = cao nhất)
+                var daysInWarehouse = (DateTime.UtcNow - inv.CreatedAt).Days;
+                
+                // Xác định inventory được khuyến nghị
+                bool isRecommended = false;
+                string fifoRecommendation = "";
+                
+                if (requestedQuantity.HasValue && requestedQuantity > 0)
+                {
+                    // Nếu có yêu cầu số lượng cụ thể, tính toán khuyến nghị
+                    if (remainingQuantity > 0 && inv.Quantity > 0)
+                    {
+                        isRecommended = true;
+                        var recommendedQuantity = Math.Min(remainingQuantity, inv.Quantity);
+                        remainingQuantity -= recommendedQuantity;
+                        
+                        if (daysInWarehouse > 30)
+                        {
+                            fifoRecommendation = $"Khuyến nghị xuất {recommendedQuantity:n0}kg: Đã nhập kho {daysInWarehouse} ngày trước (FIFO)";
+                        }
+                        else
+                        {
+                            fifoRecommendation = $"Khuyến nghị xuất {recommendedQuantity:n0}kg: Nhập kho sớm nhất (FIFO)";
+                        }
+                    }
+                }
+                else
+                {
+                    // Nếu không có yêu cầu số lượng cụ thể, khuyến nghị inventory đầu tiên
+                    isRecommended = i == 0;
+                    if (isRecommended)
+                    {
+                        if (daysInWarehouse > 30)
+                        {
+                            fifoRecommendation = $"Khuyến nghị xuất trước: Đã nhập kho {daysInWarehouse} ngày trước (FIFO)";
+                        }
+                        else
+                        {
+                            fifoRecommendation = "Khuyến nghị xuất trước: Nhập kho sớm nhất (FIFO)";
+                        }
+                    }
+                }
+
+                result.Add(inv.ToListItemDto(fifoPriority, isRecommended, fifoRecommendation));
+            }
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho với khuyến nghị FIFO thành công.", result);
         }
 
     }
