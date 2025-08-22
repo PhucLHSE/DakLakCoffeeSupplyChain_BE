@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // GET: api/processingwaste
         [HttpGet]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> GetAll()
         {
             // Lấy userId từ token
@@ -48,7 +48,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -72,7 +72,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Create(
             [FromBody] ProcessingWasteCreateDto dto)
         {
@@ -98,7 +98,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT: api/processingwaste/{id}
         [HttpPut("{id}")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> Update(
             Guid id, 
             [FromBody] ProcessingWasteUpdateDto dto)
@@ -127,7 +127,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPatch("{id}/soft-delete")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
@@ -151,7 +151,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpDelete("hard/{id}")]
-        [Authorize(Roles = "Farmer,Admin")]
+        [Authorize(Roles = "Admin,BusinessManager,Farmer")]
         public async Task<IActionResult> HardDelete(Guid id)
         {
             var userIdStr = User.FindFirst("userId")?.Value
