@@ -31,19 +31,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     var uploadResult = await _uploadService.UploadAsync(file);
 
-                    var media = new MediaFile
-                    {
-                        MediaId = Guid.NewGuid(),
-                        RelatedEntity = relatedEntity,
-                        RelatedId = relatedId,
-                        MediaType = file.ContentType.StartsWith("video") ? "video" : "image",
-                        MediaUrl = uploadResult.Url,
-                        Caption = null,
-                        UploadedAt = DateTime.UtcNow,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        IsDeleted = false
-                    };
+                                    // Xác định MediaType dựa trên file type từ UploadService
+                // Sử dụng logic giống như Contract để xử lý document files
+                string mediaType;
+                if (uploadResult.FileType == "video")
+                    mediaType = "video";
+                else if (uploadResult.FileType == "image")
+                    mediaType = "image";
+                else if (uploadResult.FileType == "document")
+                    mediaType = "image"; // Database chỉ cho phép 'image' và 'video', document files sẽ được xử lý như 'image'
+                else
+                    mediaType = "image"; // Fallback
+
+                var media = new MediaFile
+                {
+                    MediaId = Guid.NewGuid(),
+                    RelatedEntity = relatedEntity,
+                    RelatedId = relatedId,
+                    MediaType = mediaType,
+                    MediaUrl = uploadResult.Url,
+                    Caption = null,
+                    UploadedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
 
                     await _unitOfWork.MediaFileRepository.CreateAsync(media);
                     resultList.Add(new MediaFile

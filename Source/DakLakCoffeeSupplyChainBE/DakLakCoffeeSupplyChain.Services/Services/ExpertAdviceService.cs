@@ -150,7 +150,17 @@ public class ExpertAdviceService : IExpertAdviceService
             }
             catch (Exception mediaEx)
             {
-                Console.WriteLine($"WARNING: File upload failed but advice was created successfully: {mediaEx.Message}");
+                Console.WriteLine($"ERROR: File upload failed for ExpertAdvice {advice.AdviceId}: {mediaEx.Message}");
+                Console.WriteLine($"Stack trace: {mediaEx.StackTrace}");
+                
+                // Nếu file upload thất bại, có thể rollback hoặc throw exception
+                // Tùy theo business logic, có thể:
+                // 1. Rollback toàn bộ transaction
+                // 2. Tiếp tục với advice không có file
+                // 3. Throw exception để frontend biết
+                
+                // Hiện tại: tiếp tục với advice không có file
+                // Nhưng log chi tiết để debug
             }
         }
 
