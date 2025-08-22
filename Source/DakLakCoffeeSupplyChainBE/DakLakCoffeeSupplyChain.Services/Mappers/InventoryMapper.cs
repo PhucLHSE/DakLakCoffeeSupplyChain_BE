@@ -20,19 +20,19 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 
                 // Thông tin cho cà phê sơ chế
                 BatchId = inv.BatchId,
-                BatchCode = inv.Batch?.BatchCode ?? "N/A",
+                BatchCode = inv.Batch?.BatchCode ?? "Không có",
                 ProductName = inv.BatchId != null 
-                    ? (inv.Batch?.Products?.FirstOrDefault()?.ProductName ?? "N/A")
-                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"),
-                CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "N/A",
+                    ? (inv.Batch?.Products?.FirstOrDefault()?.ProductName ?? "Không có")
+                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Không có"),
+                CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "Không xác định",
                 
                 // Thông tin cho cà phê tươi
                 DetailId = inv.DetailId,
-                DetailCode = inv.Detail?.CropSeason?.SeasonName ?? "N/A",
-                CropSeasonName = inv.Detail?.CropSeason?.SeasonName ?? "N/A",
-                CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                DetailCode = inv.Detail?.CropSeason?.SeasonName ?? "Không có",
+                CropSeasonName = inv.Detail?.CropSeason?.SeasonName ?? "Không có",
+                CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Không có",
                 
-                WarehouseName = inv.Warehouse?.Name ?? "N/A",
+                WarehouseName = inv.Warehouse?.Name ?? "Không có",
                 Quantity = inv.Quantity,
                 Unit = inv.Unit
             };
@@ -40,26 +40,44 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 
         public static InventoryDetailDto ToDetailDto(this Inventory inv)
         {
+            // Xác định loại cà phê dựa trên BatchId và DetailId
+            bool isProcessedCoffee = inv.BatchId.HasValue && inv.BatchId != Guid.Empty;
+            bool isFreshCoffee = inv.DetailId.HasValue && inv.DetailId != Guid.Empty;
+
             return new InventoryDetailDto
             {
                 InventoryId = inv.InventoryId,
                 InventoryCode = inv.InventoryCode,
                 WarehouseId = inv.WarehouseId,
-                WarehouseName = inv.Warehouse?.Name ?? "N/A",
+                WarehouseName = inv.Warehouse?.Name ?? "Không có",
                 
                 // Thông tin cho cà phê sơ chế
-                BatchId = inv.BatchId ?? new Guid(),
-                BatchCode = inv.Batch?.BatchCode ?? "N/A",
-                ProductName = inv.BatchId != null 
-                    ? (inv.Batch?.Products?.FirstOrDefault()?.ProductName ?? "N/A")
-                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"),
-                CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "N/A",
+                BatchId = inv.BatchId ?? Guid.Empty,
+                BatchCode = isProcessedCoffee 
+                    ? (inv.Batch?.BatchCode ?? "Không có mã lô")
+                    : "Không áp dụng",
+                ProductName = isProcessedCoffee
+                    ? (inv.Batch?.Products?.FirstOrDefault()?.ProductName ?? "Không có tên sản phẩm")
+                    : (isFreshCoffee 
+                        ? (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi")
+                        : "Không xác định"),
+                CoffeeTypeName = isProcessedCoffee
+                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Không xác định loại cà phê")
+                    : (isFreshCoffee
+                        ? (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi")
+                        : "Không xác định"),
                 
                 // Thông tin cho cà phê tươi
                 DetailId = inv.DetailId,
-                DetailCode = inv.Detail?.CropSeason?.SeasonName ?? "N/A",
-                CropSeasonName = inv.Detail?.CropSeason?.SeasonName ?? "N/A",
-                CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
+                DetailCode = isFreshCoffee 
+                    ? (inv.Detail?.CropSeason?.SeasonName ?? "Không có tên mùa vụ")
+                    : "Không áp dụng",
+                CropSeasonName = isFreshCoffee 
+                    ? (inv.Detail?.CropSeason?.SeasonName ?? "Không có tên mùa vụ")
+                    : "Không áp dụng",
+                CoffeeTypeNameDetail = isFreshCoffee
+                    ? (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi")
+                    : "Không áp dụng",
                 
                 Quantity = inv.Quantity,
                 Unit = inv.Unit,

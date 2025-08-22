@@ -74,7 +74,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Để trống số lượng đến khi xác nhận
             receipt.ReceivedQuantity = null;
-            receipt.ReceivedAt = null;
+            receipt.ReceivedAt = null; // Chỉ set khi xác nhận
 
             await _unitOfWork.WarehouseReceipts.CreateAsync(receipt);
             await _unitOfWork.SaveChangesAsync();
@@ -278,13 +278,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (receipt == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu nhập kho.");
 
+            // Tính toán số lượng còn lại thực tế
+            double totalReceivedSoFar = 0;
+            double remainingQuantity = 0;
+            
+            if (receipt.InboundRequest != null)
+            {
+                var existingReceipts = await _unitOfWork.WarehouseReceipts.GetByInboundRequestIdAsync(receipt.InboundRequestId);
+                totalReceivedSoFar = existingReceipts?.Sum(r => r.ReceivedQuantity ?? 0) ?? 0;
+                remainingQuantity = (receipt.InboundRequest.RequestedQuantity ?? 0) - totalReceivedSoFar;
+            }
+
+
             var dto = new WarehouseReceiptDetailDto
             {
                 ReceiptId = receipt.ReceiptId,
                 ReceiptCode = receipt.ReceiptCode,
                 WarehouseId = receipt.WarehouseId,
                 WarehouseName = receipt.Warehouse?.Name,
-                BatchId = receipt.BatchId ?? new Guid(),
+                BatchId = receipt.BatchId ?? Guid.Empty,
                 BatchCode = receipt.Batch?.BatchCode,
                 
                 // Thông tin cho cà phê tươi
@@ -300,8 +312,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 StaffName = receipt.ReceivedByNavigation?.User?.Name,
                 Note = receipt.Note,
                 // Thêm số lượng yêu cầu nhập từ inbound request
-                RequestedQuantity = receipt.InboundRequest?.RequestedQuantity ?? 0
+                RequestedQuantity = receipt.InboundRequest?.RequestedQuantity ?? 0,
+                // Thêm thông tin số lượng còn lại thực tế
+                RemainingQuantity = remainingQuantity,
+                TotalReceivedSoFar = totalReceivedSoFar
             };
+
+            
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết phiếu nhập thành công", dto);
         }
@@ -410,6 +427,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Lỗi: {ex.Message}"
                 );
             }
+        }
+
+        /// <summary>
+        /// Hủy phiếu nhập kho (chỉ cho phép hủy phiếu chưa xác nhận)
+        /// </summary>
+        public async Task<IServiceResult> CancelReceiptAsync(Guid receiptId, Guid userId)
+        {
+            var receipt = await _unitOfWork.WarehouseReceipts.GetDetailByIdAsync(receiptId);
+
+            if (receipt == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy phiếu nhập kho.");
+
+            // Chỉ cho phép hủy phiếu chưa xác nhận
+            if (receipt.ReceivedQuantity.HasValue)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không thể hủy phiếu đã xác nhận số lượng.");
+
+            // Kiểm tra quyền: chỉ nhân viên tạo phiếu hoặc quản lý kho mới được hủy
+            var staff = await _unitOfWork.BusinessStaffRepository
+                .FindByUserIdAsync(userId);
+
+            if (staff == null)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy thông tin nhân viên.");
+
+            // Kiểm tra quyền: nhân viên chỉ được hủy phiếu của mình, quản lý được hủy tất cả
+            if (receipt.ReceivedBy != staff.StaffId)
+            {
+                // Nếu không phải nhân viên tạo phiếu, kiểm tra xem có phải quản lý kho không
+                var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(receipt.WarehouseId);
+                if (warehouse?.ManagerId != staff.StaffId)
+                {
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền hủy phiếu này.");
+                }
+            }
+
+            // Xóa mềm phiếu
+            receipt.IsDeleted = true;
+            await _unitOfWork.WarehouseReceipts.UpdateAsync(receipt);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(
+                Const.SUCCESS_DELETE_CODE, 
+                "Hủy phiếu nhập kho thành công."
+            );
         }
     }
 }

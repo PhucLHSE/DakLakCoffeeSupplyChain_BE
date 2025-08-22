@@ -43,8 +43,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (targetManagerId == null)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được quyền công ty");
 
-            // Lấy tất cả inventory log liên quan đến các inventory thuộc kho do công ty này quản lý
-            var logs = await _unitOfWork.InventoryLogs.GetAllAsync();
+            // ✅ Tối ưu hóa: Sử dụng pagination để chỉ lấy 20 log gần nhất
+            var logs = await _unitOfWork.InventoryLogs.GetAllWithPaginationAsync(1, 20);
 
             var filteredLogs = logs
                 .Where(log => log.Inventory?.Warehouse?.ManagerId == targetManagerId)

@@ -13,7 +13,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<IEnumerable<InventoryLog>> GetByInventoryIdAsync(Guid inventoryId);
 
         Task<IEnumerable<InventoryLog>> GetAllAsync();
-
+        Task<IEnumerable<InventoryLog>> GetAllWithPaginationAsync(int page = 1, int pageSize = 20);
+        Task<int> GetTotalCountAsync();
         Task<InventoryLog?> GetByIdWithAllRelationsAsync(Guid logId);
     }
 }

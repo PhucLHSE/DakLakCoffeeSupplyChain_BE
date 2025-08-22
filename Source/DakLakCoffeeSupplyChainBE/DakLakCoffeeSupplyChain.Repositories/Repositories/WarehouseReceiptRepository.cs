@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
         public async Task<WarehouseReceipt?> GetDetailByIdAsync(Guid id)
         {
-            return await _context.WarehouseReceipts
+            var receipt = await _context.WarehouseReceipts
                 .Include(r => r.Warehouse)
                 .Include(r => r.Batch)
                     .ThenInclude(b => b.CoffeeType)
@@ -67,6 +67,22 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                    r.ReceiptId == id && 
                    !r.IsDeleted
                 );
+
+            if (receipt != null && receipt.InboundRequest != null)
+            {
+                // Tính toán số lượng còn lại thực tế
+                var existingReceipts = await _context.WarehouseReceipts
+                    .Where(r => r.InboundRequestId == receipt.InboundRequestId && !r.IsDeleted)
+                    .ToListAsync();
+                
+                double totalReceivedSoFar = existingReceipts.Sum(r => r.ReceivedQuantity ?? 0);
+                double remainingQuantity = (receipt.InboundRequest.RequestedQuantity ?? 0) - totalReceivedSoFar;
+                
+                // Thêm thông tin vào receipt object (sử dụng dynamic hoặc anonymous object)
+                // Vì WarehouseReceipt là entity, ta sẽ sử dụng cách khác
+            }
+
+            return receipt;
         }
 
         public async Task<int> CountCreatedInYearAsync(int year)
