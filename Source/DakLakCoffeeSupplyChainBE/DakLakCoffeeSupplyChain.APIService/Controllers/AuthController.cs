@@ -114,13 +114,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> ForgotPassword(
             [FromBody] ForgotPasswordRequestDto request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var result = await _authService
                 .ForgotPasswordAsync(request);
 
             if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
-                return Ok(result.Message);
+                return Ok(new { success = true, message = result.Message });
 
-            return Conflict(result.Message); // Trả về thông báo lỗi nếu có
+            if (result.Status == Const.FAIL_READ_CODE)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return StatusCode(500, new { success = false, message = result.Message });
         }
 
         // Phương thức để reset mật khẩu sau khi nhập mã OTP
@@ -130,13 +136,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             [FromQuery] string token, 
             [FromBody] ResetPasswordRequestDto request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var result = await _authService
                 .ResetPasswordAsync(userId, token, request);
 
             if (result.Status == Const.SUCCESS_RESET_PASSWORD_CODE)
-                return Ok(result.Message);
+                return Ok(new { success = true, message = result.Message });
 
-            return Conflict(result.Message); // Trả về lỗi nếu mã không hợp lệ
+            if (result.Status == Const.FAIL_RESET_PASSWORD_CODE)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return StatusCode(500, new { success = false, message = result.Message });
         }
 
         // Phương thức xác minh mã OTP qua GET

@@ -12,8 +12,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public Guid InventoryId { get; set; }
         public double RequestedQuantity { get; set; }
         public string Unit { get; set; } = "kg";
-        public string Purpose { get; set; }
-        public string Reason { get; set; }
+        public string? Purpose { get; set; }
+        public string? Reason { get; set; }
         public Guid? OrderItemId { get; set; }
     }
 

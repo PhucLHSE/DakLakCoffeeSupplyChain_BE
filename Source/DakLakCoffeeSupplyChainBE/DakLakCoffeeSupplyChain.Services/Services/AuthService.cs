@@ -114,7 +114,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Tạo mã verify email, lưu trong ram của server, thời hạn 30 phút, nếu như hệ thống bị tắt thì sẽ xóa hết trong ram
                 string verificationCode = GenerateVerificationCode(6);
                 _cache.Set($"email-verify:{newUser.UserId}", verificationCode, TimeSpan.FromMinutes(30));
-                var verifyUrl = $"https://localhost:7163/api/Auth/verify-email/userId={newUser.UserId}&code={verificationCode}";
+                var verifyUrl = $"{_config["Jwt:Issuer"]}/api/Auth/verify-email/userId={newUser.UserId}&code={verificationCode}";
 
                 // Tạo người dùng ở repository
                 await _unitOfWork.UserAccountRepository.CreateAsync(newUser);
@@ -238,7 +238,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (businessManager != null && businessManager.User.Role.RoleName == "BusinessManager")
                 {
-                    var businessURL = $"https://localhost:7163/api/BusinessManagers/{businessManager.ManagerId}";
+                    var businessURL = $"{_config["Jwt:Issuer"]}/api/BusinessManagers/{businessManager.ManagerId}";
                     _emailService.SendEmailAsync("xuandang854@gmail.com", $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>");
                 }
 
@@ -270,7 +270,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var cacheKey = $"email-verify:{user.UserId}";
                 if (_cache.TryGetValue(cacheKey, out string existingCode))
                 {
-                    var verifyUrlExisting = $"https://localhost:7163/api/Auth/verify-email/userId={user.UserId}&code={existingCode}";
+                    var verifyUrlExisting = $"{_config["Jwt:Issuer"]}/api/Auth/verify-email/userId={user.UserId}&code={existingCode}";
 
                     // Gửi lại email xác minh với mã cũ
                     _emailService.SendEmailAsync(
@@ -286,7 +286,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 string newVerificationCode = GenerateVerificationCode(6);
                 _cache.Set(cacheKey, newVerificationCode, TimeSpan.FromMinutes(30));
 
-                var verifyUrlNew = $"https://localhost:7163/api/Auth/verify-email/userId={user.UserId}&code={newVerificationCode}";
+                var verifyUrlNew = $"{_config["Jwt:Issuer"]}/api/Auth/verify-email/userId={user.UserId}&code={newVerificationCode}";
 
                 // 5. Gửi email xác minh mới
                 await _emailService.SendEmailAsync(
@@ -313,9 +313,58 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var resetToken = GenerateResetToken(); // Tạo mã reset
             _cache.Set($"password-reset:{user.UserId}", resetToken, TimeSpan.FromMinutes(30)); // Lưu mã trong cache
 
-            var resetUrl = $"https://localhost:7163/api/Auth/reset-password/userId={user.UserId}&token={resetToken}"; // Đường dẫn reset mật khẩu
+            var resetUrl = $"{_config["AppSettings:FrontendUrl"]}/auth/reset-password?userId={user.UserId}&token={resetToken}"; // Đường dẫn reset mật khẩu
 
-            await _emailService.SendEmailAsync(user.Email, "Reset mật khẩu", $"Click vào đường link này để thay đổi mật khẩu của bạn: <b>{resetUrl}</b>");
+            var emailBody = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+                    <div style='background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 20px; border-radius: 10px; text-align: center;'>
+                        <h1 style='margin: 0; font-size: 24px;'>🔄 Đặt lại mật khẩu</h1>
+                        <p style='margin: 10px 0 0 0; opacity: 0.9;'>DakLak Coffee Supply Chain</p>
+                    </div>
+                    
+                    <div style='background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                        <h2 style='color: #374151; margin-bottom: 20px;'>Xin chào!</h2>
+                        
+                        <p style='color: #6b7280; line-height: 1.6; margin-bottom: 20px;'>
+                            Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. 
+                            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
+                        </p>
+                        
+                        <div style='text-align: center; margin: 30px 0;'>
+                            <a href='{resetUrl}' 
+                               style='background: linear-gradient(135deg, #f97316, #ea580c); 
+                                      color: white; 
+                                      padding: 15px 30px; 
+                                      text-decoration: none; 
+                                      border-radius: 8px; 
+                                      font-weight: bold; 
+                                      display: inline-block;
+                                      box-shadow: 0 4px 6px rgba(249, 115, 22, 0.3);'>
+                                🔐 Đặt lại mật khẩu
+                            </a>
+                        </div>
+                        
+                        <div style='background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                            <p style='margin: 0; color: #92400e; font-size: 14px;'>
+                                <strong>⚠️ Lưu ý:</strong> Link này sẽ hết hạn sau 30 phút để đảm bảo an toàn.
+                            </p>
+                        </div>
+                        
+                        <p style='color: #6b7280; font-size: 14px; margin-top: 30px;'>
+                            Nếu nút không hoạt động, bạn có thể copy và paste link sau vào trình duyệt:
+                        </p>
+                        <p style='background: #f3f4f6; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px; color: #374151;'>
+                            {resetUrl}
+                        </p>
+                    </div>
+                    
+                    <div style='text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;'>
+                        <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+                        <p>© 2024 DakLak Coffee Supply Chain. All rights reserved.</p>
+                    </div>
+                </div>";
+
+            await _emailService.SendEmailAsync(user.Email, "🔄 Đặt lại mật khẩu - DakLak Coffee", emailBody);
 
             return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE, "Mã OTP đã được gửi qua email.");
         }
