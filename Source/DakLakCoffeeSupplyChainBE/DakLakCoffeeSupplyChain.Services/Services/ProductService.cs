@@ -281,6 +281,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
+                // Kiểm tra kho
+                var inventory = await _unitOfWork.Inventories.GetByIdAsync(
+                    predicate: i => 
+                       i.InventoryId == productCreateDto.InventoryId && 
+                       !i.IsDeleted,
+                    include: q => q
+                       .Include(i => i.Batch)
+                          .ThenInclude(b => b.CoffeeType),
+                    asNoTracking: true
+                );
+
+                if (inventory == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Kho không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra batch
+                var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
+                    b => b.BatchId == productCreateDto.BatchId &&
+                         !b.IsDeleted
+                );
+
+                if (!batchExists)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Mẻ sơ chế không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
                 // Kiểm tra loại cà phê
                 var coffeeTypeExists = await _unitOfWork.CoffeeTypeRepository.AnyAsync(
                     c => c.CoffeeTypeId == productCreateDto.CoffeeTypeId && 
@@ -295,42 +328,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Kiểm tra batch
-                var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
-                    b => b.BatchId == productCreateDto.BatchId && 
-                         !b.IsDeleted
-                );
-
-                if (!batchExists)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Mẻ sơ chế không tồn tại hoặc đã bị xoá."
-                    );
-                }
-
-                // Kiểm tra kho
-                var inventoryExists = await _unitOfWork.Inventories.AnyAsync(
-                    i => i.InventoryId == productCreateDto.InventoryId && 
-                         !i.IsDeleted
-                );
-
-                if (!inventoryExists)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Kho không tồn tại hoặc đã bị xoá."
-                    );
-                }
-
                 // Sinh mã sản phẩm tự động
-                var productCode = await _codeGenerator.GenerateProductCodeAsync(managerId.Value);
+                var productCode = await _codeGenerator
+                    .GenerateProductCodeAsync(managerId.Value);
 
                 // Ánh xạ dữ liệu từ DTO vào entity
-                var newProduct = productCreateDto.MapToNewProduct(productCode, userId);
+                var newProduct = productCreateDto
+                    .MapToNewProduct(productCode, userId);
+
+                newProduct.CoffeeTypeId = inventory.Batch.CoffeeTypeId;   // luôn lấy theo kho
 
                 // Lưu vào DB
-                await _unitOfWork.ProductRepository.CreateAsync(newProduct);
+                await _unitOfWork.ProductRepository
+                    .CreateAsync(newProduct);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -516,7 +526,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 productUpdateDto.MapToUpdateProduct(product);
 
                 // Cập nhật product ở repository
-                await _unitOfWork.ProductRepository.UpdateAsync(product);
+                await _unitOfWork.ProductRepository
+                    .UpdateAsync(product);
 
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -635,7 +646,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
 
                     // Xóa sản phẩm khỏi repository
-                    await _unitOfWork.ProductRepository.RemoveAsync(product);
+                    await _unitOfWork.ProductRepository
+                        .RemoveAsync(product);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
@@ -730,7 +742,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     product.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm vai trò ở repository
-                    await _unitOfWork.ProductRepository.UpdateAsync(product);
+                    await _unitOfWork.ProductRepository
+                        .UpdateAsync(product);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();

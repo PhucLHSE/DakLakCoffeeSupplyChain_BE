@@ -83,15 +83,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
                     new[] { nameof(EvaluatedQuality) }
                 );
             }
-
-            // Không cho phép tạo với trạng thái Approved
-            if (Status == ProductStatus.Approved)
-            {
-                yield return new ValidationResult(
-                    "Không thể tạo sản phẩm với trạng thái 'Approved'. Vui lòng tạo với trạng thái 'Draft' hoặc 'Pending' và chờ phê duyệt.",
-                    new[] { nameof(Status) }
-                );
-            }
         }
     }
 }
