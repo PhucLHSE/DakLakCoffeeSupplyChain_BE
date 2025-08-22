@@ -40,8 +40,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(fm => fm.CreatedByNavigation).
                 Include(fm => fm.Farmer).
                     ThenInclude(fm => fm.User).
-                Include(fm => fm.ApprovedByNavigation).
-                    ThenInclude(fm => fm.User).
                 Include(fm => fm.FarmingCommitmentsDetails).
                     ThenInclude(fm => fm.PlanDetail).
                         ThenInclude(fm => fm.CoffeeType),
@@ -683,6 +681,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không tìm thấy cam kết tương ứng."
                     );
                 }
+
                 // Cập nhật trạng thái và lý do từ DTO
                 commitment.Status = dto.Status.ToString();
                 commitment.RejectionReason = dto.RejectReason;
@@ -701,11 +700,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không tìm thấy chi tiết cam kết tương ứng."
                     );
                 }
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
+                            predicate: p => p.PlanId == commitment.PlanId && !p.IsDeleted,
+                            include: p => p.Include(p => p.ProcurementPlansDetails)
+                        );
+                if (plan == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy kế hoạch tương ứng."
+                    );
                 foreach (var detail in commitmentDetails)
                 {
                     // Nếu trạng thái là Approved thì cập nhật thông tin phê duyệt
                     if (dto.Status == FarmingCommitmentStatus.Active)
+                    {
                         detail.Status = FarmingCommitmentStatus.Active.ToString();
+                        var planDetail = plan.ProcurementPlansDetails.FirstOrDefault(pd => pd.PlanDetailsId == detail.PlanDetailId);
+                        if (planDetail == null)
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            "Không tìm thấy chi tiết kế hoạch tương ứng."
+                        );
+                        // Cập nhật tiến độ sản lượng đăng ký của chi tiết kế hoạch
+                        // Tính sản lượng đã đăng ký hiện tại dựa trên ProgressPercentage
+                        var oldRegistered = (planDetail.ProgressPercentage / 100f) * planDetail.TargetQuantity;
+                        // Cộng confirmedQuantity để có sản lượng đăng ký mới
+                        var newRegistered = oldRegistered + detail.CommittedQuantity;
+                        // Tính ProgressPercentage mới
+                        planDetail.ProgressPercentage = planDetail.TargetQuantity > 0
+                            ? newRegistered / planDetail.TargetQuantity * 100
+                            : 0;
+                        planDetail.UpdatedAt = DateHelper.NowVietnamTime();
+                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(planDetail);
+                    }
                     else if (dto.Status == FarmingCommitmentStatus.Rejected)
                     {
                         detail.Status = FarmingCommitmentStatus.Rejected.ToString();
@@ -716,6 +743,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     detail.UpdatedAt = DateHelper.NowVietnamTime();
                     await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(detail);
                 }
+
+                // Cập nhật tổng sản lượng đăng ký của kế hoạch
+                var activeDetails = plan.ProcurementPlansDetails.Where(pd => !pd.IsDeleted).ToList();
+                double? weightedProgressSum = 0;
+                foreach (var pd in activeDetails)
+                {
+                    weightedProgressSum += (pd.TargetQuantity / plan.TotalQuantity) * pd.ProgressPercentage;
+                }
+                plan.ProgressPercentage = plan.TotalQuantity > 0 ? weightedProgressSum : 0;
+                plan.UpdatedAt = DateHelper.NowVietnamTime();
+                await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
 
                 commitment.UpdatedAt = DateHelper.NowVietnamTime();
 
@@ -769,6 +807,5 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
-
     }
 }
