@@ -9,7 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDeliveryBatchDTOs.Contract
 {
     public class ContractDeliveryItemCreateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "DeliveryBatchId là bắt buộc.")]
+        //[Required(ErrorMessage = "DeliveryBatchId là bắt buộc.")]
         public Guid DeliveryBatchId { get; set; }
 
         [Required(ErrorMessage = "ContractItemId là bắt buộc.")]
