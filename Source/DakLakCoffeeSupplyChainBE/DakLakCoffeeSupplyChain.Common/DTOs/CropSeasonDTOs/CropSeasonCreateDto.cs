@@ -29,22 +29,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
                     "Ngày bắt đầu phải trước ngày kết thúc.",
                     new[] { nameof(StartDate), nameof(EndDate) });
             }
-
-            // Kiểm tra năm mùa vụ hợp lệ
-            var currentYear = DateOnly.FromDateTime(DateTime.Now).Year;
-            if (StartDate.Year < currentYear || StartDate.Year > currentYear + 5)
-            {
-                yield return new ValidationResult(
-                    "Năm mùa vụ phải từ năm hiện tại đến 5 năm sau.",
-                    new[] { nameof(StartDate) });
-            }
-
-            if (EndDate.Year < currentYear || EndDate.Year > currentYear + 5)
-            {
-                yield return new ValidationResult(
-                    "Năm mùa vụ phải từ năm hiện tại đến 5 năm sau.",
-                    new[] { nameof(EndDate) });
-            }
         }
     }
 }
