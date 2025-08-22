@@ -1,0 +1,46 @@
+name: auto-upload-src
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  check-allow:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checking allow to upload
+        run: |
+          if [ "${{ secrets.BUILD }}" = "ACTIVE" ]; then
+            echo '------------------- ready to upload --------------------'
+          else
+            echo 'not ready'
+            exit 1
+          fi
+
+  upload-src:
+    needs: check-allow
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Upload source to server via SSH
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}  # hoặc dùng key
+          source: './Source/DakLakCoffeeSupplyChainBE/*'
+          target: '/srv/docker-compose/projects/BE/daklak-coffee-scm/'
+
+      - name: Optional remote command (e.g., restart service)
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            set -e
+            cd /srv/docker-compose/
+            docker compose build --no-cache daklak-coffee-scm
+            docker compose up --no-deps --force-recreate -d daklak-coffee-scm
+            docker image prune -a -f

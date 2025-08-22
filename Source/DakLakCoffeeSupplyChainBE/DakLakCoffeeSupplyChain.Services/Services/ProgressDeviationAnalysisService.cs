@@ -103,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                                 .ThenInclude(p => p.Stage),
                     asNoTracking: true
                 );
-                
+
                 if (!cropSeasons.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có mùa vụ nào để phân tích.");
 
@@ -140,7 +140,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                                 .ThenInclude(p => p.Stage),
                     asNoTracking: true
                 );
-                
+
                 if (!cropSeasons.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có mùa vụ nào để phân tích.");
 
@@ -164,9 +164,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                var predicate = isAdmin || isManager
-                    ? (Expression<Func<CropSeason, bool>>)(cs => !cs.IsDeleted && cs.StartDate >= DateOnly.FromDateTime(fromDate) && cs.StartDate <= DateOnly.FromDateTime(toDate))
-                    : (cs => !cs.IsDeleted && cs.StartDate >= DateOnly.FromDateTime(fromDate) && cs.StartDate <= DateOnly.FromDateTime(toDate) && cs.Farmer.UserId == farmerId);
+                var from = DateOnly.FromDateTime(fromDate);
+                var to = DateOnly.FromDateTime(toDate);
+
+                Expression<Func<CropSeason, bool>> predicate;
+                if (isAdmin || isManager)
+                {
+                    predicate = cs => !cs.IsDeleted && cs.StartDate >= from && cs.StartDate <= to;
+                }
+                else
+                {
+                    if (farmerId == null)
+                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Thiếu userId người gọi (farmerId).");
+
+                    var callerUserId = farmerId.Value;
+                    predicate = cs => !cs.IsDeleted && cs.StartDate >= from && cs.StartDate <= to
+                                      && cs.Farmer.UserId == callerUserId;
+                }
 
                 var cropSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
                     predicate: predicate,
@@ -202,6 +216,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         private async Task<ProgressDeviationAnalysisDto> AnalyzeCropSeasonDeviationInternalAsync(CropSeason cropSeason)
         {
+            var now = DateHelper.NowVietnamTime();
+
             var analysis = new ProgressDeviationAnalysisDto
             {
                 AnalysisId = Guid.NewGuid(),
@@ -209,12 +225,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 CropSeasonId = cropSeason.CropSeasonId,
                 CropSeasonName = cropSeason.SeasonName,
                 FarmerId = cropSeason.FarmerId,
-                FarmerName = cropSeason.Farmer.User.Email ?? "Unknown",
-                AnalysisDate = DateHelper.NowVietnamTime(),
+                FarmerName = cropSeason.Farmer?.User?.Name ?? cropSeason.Farmer?.User?.Email ?? "Unknown",
+                AnalysisDate = now,
                 ExpectedStartDate = cropSeason.StartDate?.ToDateTime(TimeOnly.MinValue),
                 ExpectedEndDate = cropSeason.EndDate?.ToDateTime(TimeOnly.MinValue),
-                CreatedAt = DateHelper.NowVietnamTime(),
-                UpdatedAt = DateHelper.NowVietnamTime()
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
             // Analyze each detail
@@ -228,12 +244,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Aggregate detail analyses
             if (detailAnalyses.Any())
             {
-                analysis.ExpectedTotalStages = detailAnalyses.Max(d => d.ExpectedTotalStages);
+                analysis.ExpectedTotalStages = Math.Max(detailAnalyses.Max(d => d.ExpectedTotalStages), 1);
                 analysis.CompletedStages = detailAnalyses.Sum(d => d.CompletedStages);
                 analysis.CurrentStageIndex = detailAnalyses.Max(d => d.CurrentStageIndex);
                 analysis.ProgressPercentage = detailAnalyses.Average(d => d.ProgressPercentage);
+
                 analysis.ExpectedProgressPercentage = CalculateExpectedProgressPercentage(cropSeason.StartDate, cropSeason.EndDate);
                 analysis.DeviationPercentage = analysis.ProgressPercentage - analysis.ExpectedProgressPercentage;
+
+                // DaysBehind: lấy lớn nhất giữa (max theo stage của detail) và (quy đổi từ % chênh)
+                var daysByDetails = detailAnalyses.Max(d => d.DaysBehind);
+                var daysByPctGap = EstimateDaysFromPercentageGap(
+                    analysis.ExpectedProgressPercentage, analysis.ProgressPercentage,
+                    analysis.ExpectedTotalStages,
+                    cropSeason.StartDate, cropSeason.EndDate);
+
+                analysis.DaysBehind = Math.Max(daysByDetails, daysByPctGap);
+
                 analysis.DeviationStatus = DetermineDeviationStatus(analysis.DeviationPercentage, analysis.DaysBehind);
                 analysis.DeviationLevel = DetermineDeviationLevel(Math.Abs(analysis.DeviationPercentage));
                 analysis.StageDeviations = detailAnalyses.SelectMany(d => d.StageDeviations).ToList();
@@ -245,6 +272,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         private async Task<ProgressDeviationAnalysisDto> AnalyzeCropSeasonDetailDeviationInternalAsync(CropSeasonDetail detail)
         {
+            var now = DateHelper.NowVietnamTime();
+
             var analysis = new ProgressDeviationAnalysisDto
             {
                 AnalysisId = Guid.NewGuid(),
@@ -253,16 +282,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 CropSeasonDetailName = $"{detail.CropSeason.SeasonName} - {detail.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Unknown"}",
                 ExpectedYield = detail.EstimatedYield,
                 ActualYield = detail.ActualYield,
-                ExpectedTotalStages = 5, // Standard coffee growing stages
-                CreatedAt = DateHelper.NowVietnamTime(),
-                UpdatedAt = DateHelper.NowVietnamTime()
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
+            // Suy ra số stage kỳ vọng từ dữ liệu (fallback 5)
+            var derivedStages = detail.CropProgresses
+                .Select(p => (int?)p.StageId)
+                .Where(id => id.HasValue)
+                .Select(id => id.Value)
+                .Distinct()
+                .Count();
+            analysis.ExpectedTotalStages = derivedStages > 0 ? derivedStages : 5;
+
             // Analyze progress
-            var progresses = detail.CropProgresses.OrderBy(p => p.StepIndex).ToList();
+            var progresses = detail.CropProgresses
+                .OrderBy(p => p.StepIndex ?? int.MaxValue)
+                .ThenBy(p => p.ProgressDate)
+                .ToList();
+
             analysis.CompletedStages = progresses.Count;
             analysis.CurrentStageIndex = progresses.Any() ? progresses.Max(p => p.StepIndex ?? 0) : 0;
-            analysis.ProgressPercentage = (double)analysis.CompletedStages / analysis.ExpectedTotalStages * 100;
+            analysis.ProgressPercentage = analysis.ExpectedTotalStages > 0
+                ? (double)analysis.CompletedStages / analysis.ExpectedTotalStages * 100.0
+                : 0.0;
 
             // Calculate expected progress based on time
             if (detail.ExpectedHarvestStart.HasValue && detail.ExpectedHarvestEnd.HasValue)
@@ -274,15 +317,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Analyze stage deviations
             analysis.StageDeviations = AnalyzeStageDeviations(progresses, detail);
 
-            // Calculate overall deviation
+            // Calculate overall deviation & days behind
+            var maxStageLag = analysis.StageDeviations.Any() ? analysis.StageDeviations.Max(sd => sd.DaysBehind) : 0;
+            var daysByPctGap = EstimateDaysFromPercentageGap(
+                analysis.ExpectedProgressPercentage, analysis.ProgressPercentage,
+                analysis.ExpectedTotalStages,
+                detail.ExpectedHarvestStart, detail.ExpectedHarvestEnd);
+
+            analysis.DaysBehind = Math.Max(maxStageLag, daysByPctGap);
+
             analysis.DeviationPercentage = analysis.ProgressPercentage - analysis.ExpectedProgressPercentage;
             analysis.DeviationStatus = DetermineDeviationStatus(analysis.DeviationPercentage, analysis.DaysBehind);
             analysis.DeviationLevel = DetermineDeviationLevel(Math.Abs(analysis.DeviationPercentage));
 
             // Calculate yield deviation
-            if (analysis.ExpectedYield.HasValue && analysis.ActualYield.HasValue)
+            if (analysis.ExpectedYield.HasValue && analysis.ActualYield.HasValue && analysis.ExpectedYield.Value != 0)
             {
-                analysis.YieldDeviationPercentage = ((analysis.ActualYield.Value - analysis.ExpectedYield.Value) / analysis.ExpectedYield.Value) * 100;
+                analysis.YieldDeviationPercentage = ((analysis.ActualYield.Value - analysis.ExpectedYield.Value) / analysis.ExpectedYield.Value) * 100.0;
             }
 
             // Generate recommendations
@@ -294,48 +345,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         private List<StageDeviationDto> AnalyzeStageDeviations(List<CropProgress> progresses, CropSeasonDetail detail)
         {
             var stageDeviations = new List<StageDeviationDto>();
+
+            if (!detail.ExpectedHarvestStart.HasValue || !detail.ExpectedHarvestEnd.HasValue)
+                return stageDeviations;
+
             var expectedStageDuration = CalculateExpectedStageDuration(detail);
+            var baseStart = detail.ExpectedHarvestStart.Value;
 
             for (int i = 0; i < progresses.Count; i++)
             {
                 var progress = progresses[i];
-                var expectedStartDate = detail.ExpectedHarvestStart?.AddDays(i * expectedStageDuration);
-                var expectedEndDate = expectedStartDate?.AddDays(expectedStageDuration);
+                var orderIndex = progress.StepIndex ?? (i + 1);
+
+                var expectedStartDate = baseStart.AddDays((orderIndex - 1) * expectedStageDuration);
+                var expectedEndDate = expectedStartDate.AddDays(expectedStageDuration);
+                DateTime? actualDate = progress.ProgressDate?.ToDateTime(TimeOnly.MinValue);
 
                 var deviation = new StageDeviationDto
                 {
                     StageId = progress.StageId,
-                    StageName = progress.Stage.StageName,
-                    StageCode = progress.Stage.StageCode,
-                    OrderIndex = progress.StepIndex ?? i + 1,
-                    ExpectedStartDate = expectedStartDate?.ToDateTime(TimeOnly.MinValue),
-                    ExpectedEndDate = expectedEndDate?.ToDateTime(TimeOnly.MinValue),
-                    ActualStartDate = progress.ProgressDate?.ToDateTime(TimeOnly.MinValue),
-                    ActualEndDate = progress.ProgressDate?.ToDateTime(TimeOnly.MinValue)
+                    StageName = progress.Stage?.StageName,
+                    StageCode = progress.Stage?.StageCode,
+                    OrderIndex = orderIndex,
+                    ExpectedStartDate = expectedStartDate.ToDateTime(TimeOnly.MinValue),
+                    ExpectedEndDate = expectedEndDate.ToDateTime(TimeOnly.MinValue),
+                    ActualStartDate = actualDate,
+                    ActualEndDate = actualDate
                 };
 
                 // Calculate timing deviations
-                if (expectedStartDate.HasValue && progress.ProgressDate.HasValue)
+                if (actualDate.HasValue)
                 {
-                    var actualDate = progress.ProgressDate.Value.ToDateTime(TimeOnly.MinValue);
-                    var expectedStartDateTime = expectedStartDate.Value.ToDateTime(TimeOnly.MinValue);
-                    var daysDiff = (actualDate - expectedStartDateTime).Days;
-                    
+                    var expStart = expectedStartDate.ToDateTime(TimeOnly.MinValue);
+                    var daysDiff = (actualDate.Value - expStart).Days;
+
                     if (daysDiff < 0)
                     {
                         deviation.DaysAhead = Math.Abs(daysDiff);
+                        deviation.DaysBehind = 0;
                         deviation.DeviationStatus = DeviationStatus.Ahead.ToString();
+                    }
+                    else if (daysDiff > 0)
+                    {
+                        deviation.DaysAhead = 0;
+                        deviation.DaysBehind = daysDiff;
+                        deviation.DeviationStatus = daysDiff > CRITICAL_DAYS_THRESHOLD
+                            ? DeviationStatus.Critical.ToString()
+                            : DeviationStatus.Behind.ToString();
                     }
                     else
                     {
-                        deviation.DaysBehind = daysDiff;
-                        deviation.DeviationStatus = daysDiff > CRITICAL_DAYS_THRESHOLD 
-                            ? DeviationStatus.Critical.ToString() 
-                            : DeviationStatus.Behind.ToString();
+                        deviation.DaysAhead = 0;
+                        deviation.DaysBehind = 0;
+                        deviation.DeviationStatus = DeviationStatus.OnTime.ToString();
                     }
+
+                    var magnitude = Math.Max(deviation.DaysAhead, deviation.DaysBehind);
+                    deviation.DeviationLevel = DetermineDayBasedLevel(magnitude);
+                }
+                else
+                {
+                    // Chưa có log thực tế → chưa kết luận lệch, coi như Low
+                    deviation.DeviationStatus = DeviationStatus.OnTime.ToString();
+                    deviation.DeviationLevel = DeviationLevel.Low.ToString();
                 }
 
-                deviation.DeviationLevel = DetermineDeviationLevel(Math.Abs(deviation.DaysBehind + deviation.DaysAhead));
                 stageDeviations.Add(deviation);
             }
 
@@ -350,13 +424,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var startDateTime = startDate.Value.ToDateTime(TimeOnly.MinValue);
             var endDateTime = endDate.Value.ToDateTime(TimeOnly.MinValue);
             var totalDuration = (endDateTime - startDateTime).Days;
-            var elapsedDays = (DateHelper.NowVietnamTime() - startDateTime).Days;
-
             if (totalDuration <= 0) return 0;
-            if (elapsedDays <= 0) return 0;
-            if (elapsedDays >= totalDuration) return 100;
 
-            return (double)elapsedDays / totalDuration * 100;
+            var elapsedDays = (DateHelper.NowVietnamTime() - startDateTime).Days;
+            if (elapsedDays < 0) elapsedDays = 0;
+            if (elapsedDays > totalDuration) elapsedDays = totalDuration;
+
+            return (double)elapsedDays / totalDuration * 100.0;
         }
 
         private int CalculateExpectedStageDuration(CropSeasonDetail detail)
@@ -367,14 +441,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var startDateTime = detail.ExpectedHarvestStart.Value.ToDateTime(TimeOnly.MinValue);
             var endDateTime = detail.ExpectedHarvestEnd.Value.ToDateTime(TimeOnly.MinValue);
             var totalDuration = (endDateTime - startDateTime).Days;
-            return Math.Max(1, totalDuration / 5); // 5 stages
+
+            // Ưu tiên số stage suy ra từ dữ liệu, fallback 5
+            var inferredStages = detail.CropProgresses
+                .Select(p => (int?)p.StageId)
+                .Where(id => id.HasValue)
+                .Select(id => id.Value)
+                .Distinct()
+                .Count();
+
+            var stages = Math.Max(inferredStages, 5);
+            return Math.Max(1, totalDuration / stages);
         }
 
         private string DetermineDeviationStatus(double deviationPercentage, int daysBehind)
         {
             if (daysBehind > CRITICAL_DAYS_THRESHOLD)
                 return DeviationStatus.Critical.ToString();
-            
+
             if (deviationPercentage < -10)
                 return DeviationStatus.Behind.ToString();
             else if (deviationPercentage > 10)
@@ -393,6 +477,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return DeviationLevel.High.ToString();
             else
                 return DeviationLevel.Critical.ToString();
+        }
+
+        // Level dựa theo số ngày lệch (áp cho từng stage)
+        private string DetermineDayBasedLevel(int days)
+        {
+            if (days <= 3) return DeviationLevel.Low.ToString();
+            if (days <= 7) return DeviationLevel.Medium.ToString();
+            if (days <= 14) return DeviationLevel.High.ToString();
+            return DeviationLevel.Critical.ToString();
+        }
+
+        // Quy đổi khoảng cách % tiến độ thành số ngày (để ước lượng DaysBehind cho detail/season)
+        private int EstimateDaysFromPercentageGap(
+            double expectedPct, double actualPct, int expectedStages,
+            DateOnly? startDate, DateOnly? endDate)
+        {
+            var pctGap = Math.Max(0.0, expectedPct - actualPct);
+            if (pctGap <= 0.0 || expectedStages <= 0 || !startDate.HasValue || !endDate.HasValue)
+                return 0;
+
+            var totalDays = (endDate.Value.ToDateTime(TimeOnly.MinValue) - startDate.Value.ToDateTime(TimeOnly.MinValue)).Days;
+            if (totalDays <= 0) return 0;
+
+            return Math.Max(0, (int)Math.Round(pctGap / 100.0 * totalDays));
         }
 
         private List<RecommendationDto> GenerateRecommendations(ProgressDeviationAnalysisDto analysis)
@@ -485,8 +593,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         private async Task<string> GenerateDeviationAnalysisCodeAsync()
         {
-            // Generate a simple code for now
-            return $"DA-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+            // Tạm thời sinh code đơn giản (có thể thay bằng _codeGenerator sau)
+            return $"DA-{DateHelper.NowVietnamTime():yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
         }
 
         #endregion

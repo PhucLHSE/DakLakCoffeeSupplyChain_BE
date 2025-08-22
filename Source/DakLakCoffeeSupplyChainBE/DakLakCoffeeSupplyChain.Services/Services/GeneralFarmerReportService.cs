@@ -1,38 +1,44 @@
 ﻿    using DakLakCoffeeSupplyChain.Common;
-    using DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs;
-    using DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums;
-    using DakLakCoffeeSupplyChain.Common.Helpers;
-    using DakLakCoffeeSupplyChain.Repositories.Base;
-    using DakLakCoffeeSupplyChain.Repositories.Models;
-    using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
-    using DakLakCoffeeSupplyChain.Services.Base;
-    using DakLakCoffeeSupplyChain.Services.Generators;
-    using DakLakCoffeeSupplyChain.Services.IServices;
-    using DakLakCoffeeSupplyChain.Services.Mappers;
-    using Microsoft.EntityFrameworkCore;
+using DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.GeneralReportEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Base;
+using DakLakCoffeeSupplyChain.Repositories.Models;
+using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Services.Base;
+using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
     namespace DakLakCoffeeSupplyChain.Services.Services
     {
         public class GeneralFarmerReportService : IGeneralFarmerReportService
         {
-            private readonly IUnitOfWork _unitOfWork;
-            private readonly ICodeGenerator _codeGenerator;
-            private readonly INotificationService _notificationService;
+                    private readonly IUnitOfWork _unitOfWork;
+        private readonly ICodeGenerator _codeGenerator;
+        private readonly INotificationService _notificationService;
+        private readonly IMediaService _mediaService;
 
-            public GeneralFarmerReportService(
-                IUnitOfWork unitOfWork, 
-                ICodeGenerator codeGenerator,
-                INotificationService notificationService)
-            {
-                _unitOfWork = unitOfWork
-                    ?? throw new ArgumentNullException(nameof(unitOfWork));
+                    public GeneralFarmerReportService(
+            IUnitOfWork unitOfWork, 
+            ICodeGenerator codeGenerator,
+            INotificationService notificationService,
+            IMediaService mediaService)
+        {
+            _unitOfWork = unitOfWork
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
 
-                _codeGenerator = codeGenerator
-                    ?? throw new ArgumentNullException(nameof(codeGenerator));
-                
-                _notificationService = notificationService
-                    ?? throw new ArgumentNullException(nameof(notificationService));
-            }
+            _codeGenerator = codeGenerator
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
+            
+            _notificationService = notificationService
+                ?? throw new ArgumentNullException(nameof(notificationService));
+
+            _mediaService = mediaService
+                ?? throw new ArgumentNullException(nameof(mediaService));
+        }
 
             public async Task<IServiceResult> GetAll()
             {
@@ -170,6 +176,43 @@
 
                     if (result > 0)
                     {
+                        // Upload media nếu có
+                        if (dto.PhotoFiles?.Any() == true || dto.VideoFiles?.Any() == true)
+                        {
+                            try
+                            {
+                                var allMediaFiles = new List<IFormFile>();
+                                if (dto.PhotoFiles?.Any() == true)
+                                    allMediaFiles.AddRange(dto.PhotoFiles);
+                                if (dto.VideoFiles?.Any() == true)
+                                    allMediaFiles.AddRange(dto.VideoFiles);
+
+                                // Upload media files
+                                var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                                    allMediaFiles,
+                                    relatedEntity: "GeneralFarmerReport",
+                                    relatedId: newReport.ReportId,
+                                    uploadedBy: userId.ToString()
+                                );
+
+                                // Cập nhật ImageUrl và VideoUrl từ media đầu tiên của mỗi loại
+                                var firstPhoto = mediaList.FirstOrDefault(m => m.MediaType == "image");
+                                var firstVideo = mediaList.FirstOrDefault(m => m.MediaType == "video");
+
+                                if (firstPhoto != null || firstVideo != null)
+                                {
+                                    newReport.ImageUrl = firstPhoto?.MediaUrl;
+                                    newReport.VideoUrl = firstVideo?.MediaUrl;
+                                    await _unitOfWork.GeneralFarmerReportRepository.UpdateAsync(newReport);
+                                    await _unitOfWork.SaveChangesAsync();
+                                }
+                            }
+                            catch (Exception mediaEx)
+                            {
+                                Console.WriteLine($"WARNING: Media upload failed but report was created successfully: {mediaEx.Message}");
+                            }
+                        }
+
                         // ✅ Gửi thông báo cho các chuyên gia
                         await _notificationService.NotifyFarmerReportCreatedAsync(
                             newReport.ReportId, 
@@ -193,6 +236,9 @@
                     return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
                 }
             }
+
+
+
 
             public async Task<IServiceResult> UpdateGeneralFarmerReport(GeneralFarmerReportUpdateDto dto)
             {

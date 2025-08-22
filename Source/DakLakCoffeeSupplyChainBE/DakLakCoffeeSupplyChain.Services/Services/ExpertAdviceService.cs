@@ -5,18 +5,22 @@ using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.EntityFrameworkCore;
+using DakLakCoffeeSupplyChain.Services.IServices;
 
 public class ExpertAdviceService : IExpertAdviceService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationService _notificationService; // ✅ Thêm notification service
+    private readonly IMediaService _mediaService; // ✅ Thêm media service
 
     public ExpertAdviceService(
         IUnitOfWork unitOfWork,
-        INotificationService notificationService) // ✅ Inject notification service
+        INotificationService notificationService, // ✅ Inject notification service
+        IMediaService mediaService) // ✅ Inject media service
     {
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
+        _mediaService = mediaService;
     }
 
     public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin = false)
@@ -109,7 +113,7 @@ public class ExpertAdviceService : IExpertAdviceService
             AdviceId = Guid.NewGuid(),
             ReportId = dto.ReportId,
             ResponseType = dto.ResponseType,
-            AdviceSource = dto.AdviceSource,
+            AdviceSource = dto.AdviceSource ?? "Kinh nghiệm chuyên môn",  // ✅ Sửa: Xử lý null
             AdviceText = dto.AdviceText,
             AttachedFileUrl = dto.AttachedFileUrl,
             ExpertId = expert.ExpertId, // ✅ CẦN THIẾT: tránh lỗi khóa ngoại
@@ -118,6 +122,47 @@ public class ExpertAdviceService : IExpertAdviceService
         };
 
         await _unitOfWork.ExpertAdviceRepository.AddAsync(advice);
+
+        // Upload files nếu có
+        if (dto.AttachedFiles?.Any() == true)
+        {
+            try
+            {
+                var allFiles = dto.AttachedFiles.ToList();
+                
+                // Upload files lên Cloudinary
+                var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                    allFiles,
+                    relatedEntity: "ExpertAdvice",
+                    relatedId: advice.AdviceId,
+                    uploadedBy: userId.ToString()
+                );
+
+                // Cập nhật AttachedFileUrl từ file đầu tiên (hoặc tất cả URLs)
+                if (mediaList.Any())
+                {
+                    var fileUrls = mediaList.Select(m => m.MediaUrl).ToList();
+                    advice.AttachedFileUrl = string.Join(";", fileUrls); // Nối nhiều URL bằng dấu ;
+                    
+                    await _unitOfWork.ExpertAdviceRepository.UpdateAsync(advice);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+            }
+            catch (Exception mediaEx)
+            {
+                Console.WriteLine($"ERROR: File upload failed for ExpertAdvice {advice.AdviceId}: {mediaEx.Message}");
+                Console.WriteLine($"Stack trace: {mediaEx.StackTrace}");
+                
+                // Nếu file upload thất bại, có thể rollback hoặc throw exception
+                // Tùy theo business logic, có thể:
+                // 1. Rollback toàn bộ transaction
+                // 2. Tiếp tục với advice không có file
+                // 3. Throw exception để frontend biết
+                
+                // Hiện tại: tiếp tục với advice không có file
+                // Nhưng log chi tiết để debug
+            }
+        }
 
         // ✅ Cập nhật trạng thái Resolve cho báo cáo nông dân
         var reportToUpdate = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(dto.ReportId);

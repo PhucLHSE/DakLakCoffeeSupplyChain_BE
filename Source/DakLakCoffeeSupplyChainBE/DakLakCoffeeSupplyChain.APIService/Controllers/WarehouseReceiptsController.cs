@@ -170,6 +170,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PATCH: api/WarehouseReceipts/{id}/cancel
+        [HttpPatch("{id}/cancel")]
+        [Authorize(Roles = "BusinessStaff,BusinessManager")]
+        public async Task<IActionResult> CancelReceipt(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+                return Unauthorized("Cannot determine user from token.");
+
+            var result = await _receiptService
+                .CancelReceiptAsync(id, userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
         // GET: api/WarehouseReceipts/debug
         [HttpGet("debug")]
         [Authorize(Roles = "Admin,BusinessStaff,BusinessManager")]

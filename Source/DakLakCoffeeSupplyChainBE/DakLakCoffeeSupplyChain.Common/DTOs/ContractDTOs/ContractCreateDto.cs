@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -69,6 +70,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                 );
             }
 
+            // Validation ngày ký hợp đồng phải ≤ ngày bắt đầu
+            if (SignedAt.HasValue && 
+                StartDate.HasValue)
+            {
+                var signedDate = DateOnly.FromDateTime(SignedAt.Value);
+
+                if (signedDate > StartDate.Value)
+                {
+                    yield return new ValidationResult(
+                        "Ngày ký hợp đồng không được sau ngày bắt đầu.",
+                        new[] { nameof(SignedAt), nameof(StartDate) }
+                    );
+                }
+            }
+
             if (TotalQuantity.HasValue && 
                 TotalQuantity < 0)
             {
@@ -85,6 +101,34 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                     "Tổng giá trị không được âm.",
                     new[] { nameof(TotalValue) }
                 );
+            }
+
+            // Validation cho file upload
+            if (ContractFile != null)
+            {
+                const long maxFileSize = 30 * 1024 * 1024; // 30MB
+                if (ContractFile.Length > maxFileSize)
+                {
+                    yield return new ValidationResult(
+                        "File hợp đồng không được vượt quá 30MB.",
+                        new[] { nameof(ContractFile) }
+                    );
+                }
+
+                var allowedExtensions = new[] { 
+                    ".pdf", ".doc", ".docx", ".txt", ".rtf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm"
+                };
+
+                var fileExtension = Path.GetExtension(ContractFile.FileName)?.ToLowerInvariant();
+                
+                if (string.IsNullOrEmpty(fileExtension) ||
+                    !allowedExtensions.Contains(fileExtension))
+                {
+                    yield return new ValidationResult(
+                        "File hợp đồng phải có định dạng: PDF, DOC, DOCX, TXT, RTF, JPG, JPEG, PNG, GIF, BMP, WEBP, MP4, AVI, MOV, WMV, FLV, WEBM.",
+                        new[] { nameof(ContractFile) }
+                    );
+                }
             }
 
             if (ContractItems != null)

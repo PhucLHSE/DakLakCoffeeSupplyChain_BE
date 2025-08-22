@@ -117,9 +117,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<ContractsController>/{contractId}
         [HttpPut("{contractId}")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateContractAsync(
             Guid contractId, 
-            [FromBody] ContractUpdateDto contractUpdateDto)
+            [FromForm] ContractUpdateDto contractUpdateDto)
         {
             // So sánh route id với dto id để đảm bảo tính nhất quán
             if (contractId != contractUpdateDto.ContractId)

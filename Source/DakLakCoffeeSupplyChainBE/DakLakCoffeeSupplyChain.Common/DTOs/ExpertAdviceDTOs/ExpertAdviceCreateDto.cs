@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs
 {
@@ -10,9 +11,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ExpertAdviceDTOs
     {
         public Guid ReportId { get; set; }
         public string ResponseType { get; set; } = string.Empty;
-        public string AdviceSource { get; set; } = string.Empty;
+        public string? AdviceSource { get; set; }
         public string AdviceText { get; set; } = string.Empty;
         public string? AttachedFileUrl { get; set; }
+        
+        // File upload support
+        public List<IFormFile>? AttachedFiles { get; set; }
     }
 
 

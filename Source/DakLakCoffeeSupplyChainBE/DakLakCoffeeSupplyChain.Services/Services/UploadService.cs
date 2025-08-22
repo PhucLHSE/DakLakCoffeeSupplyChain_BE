@@ -3,6 +3,7 @@ using CloudinaryDotNet.Actions;
 using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Http;
+using System;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -17,45 +18,80 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<UploadImageResult> UploadAsync(IFormFile file)
         {
-            var fileType = file.ContentType.StartsWith("video") ? "video" : "image";
-
+            // Sử dụng logic giống như Contract để xử lý document files
+            var fileType = GetFileType(file.ContentType, file.FileName);
             using var stream = file.OpenReadStream();
 
-            if (fileType == "image")
+            switch (fileType)
             {
-                var uploadParams = new ImageUploadParams
-                {
-                    File = new FileDescription(file.FileName, stream),
-                    Folder = "daklak/images"
-                };
+                case "image":
+                    var imageUploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream),
+                        Folder = "daklak/images"
+                    };
 
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    var imageResult = await _cloudinary.UploadAsync(imageUploadParams);
 
-                return new UploadImageResult
-                {
-                    Url = uploadResult.SecureUrl.ToString(),
-                    PublicId = uploadResult.PublicId,
-                    FileType = fileType,
-                    FileSize = file.Length
-                };
-            }
-            else
-            {
-                var uploadParams = new VideoUploadParams
-                {
-                    File = new FileDescription(file.FileName, stream),
-                    Folder = "daklak/videos"
-                };
+                    if (imageResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for image file {file.FileName}. SecureUrl is null. Error: {imageResult.Error?.Message ?? "Unknown error"}");
+                    }
 
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                    return new UploadImageResult
+                    {
+                        Url = imageResult.SecureUrl.ToString(),
+                        PublicId = imageResult.PublicId,
+                        FileType = fileType,
+                        FileSize = file.Length
+                    };
 
-                return new UploadImageResult
-                {
-                    Url = uploadResult.SecureUrl.ToString(),
-                    PublicId = uploadResult.PublicId,
-                    FileType = fileType,
-                    FileSize = file.Length
-                };
+                case "video":
+                    var videoUploadParams = new VideoUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream),
+                        Folder = "daklak/videos"
+                    };
+
+                    var videoResult = await _cloudinary.UploadAsync(videoUploadParams);
+
+                    if (videoResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for video file {file.FileName}. SecureUrl is null. Error: {videoResult.Error?.Message ?? "Unknown error"}");
+                    }
+
+                    return new UploadImageResult
+                    {
+                        Url = videoResult.SecureUrl.ToString(),
+                        PublicId = videoResult.PublicId,
+                        FileType = fileType,
+                        FileSize = file.Length
+                    };
+
+                case "document":
+                    var documentUploadParams = new RawUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream),
+                        Folder = "daklak/documents"
+                    };
+
+                    var documentResult = await _cloudinary.UploadAsync(documentUploadParams);
+
+                    if (documentResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for document file {file.FileName}. SecureUrl is null. Error: {documentResult.Error?.Message ?? "Unknown error"}");
+                    }
+
+                    return new UploadImageResult
+                    {
+                        Url = documentResult.SecureUrl.ToString(),
+                        PublicId = documentResult.PublicId,
+                        FileType = fileType,
+                        FileSize = file.Length
+                    };
+
+                default:
+                    throw new ArgumentException($"Loại file không được hỗ trợ: {file.ContentType}");
             }
         }
 
@@ -76,6 +112,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var imageResult = await _cloudinary
                         .UploadAsync(imageUploadParams);
 
+                    // Kiểm tra SecureUrl trước khi sử dụng
+                    if (imageResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for contract image file {file.FileName}. SecureUrl is null. Error: {imageResult.Error?.Message ?? "Unknown error"}");
+                    }
+
                     return new UploadImageResult
                     {
                         Url = imageResult.SecureUrl.ToString(),
@@ -94,6 +136,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var videoResult = await _cloudinary
                         .UploadAsync(videoUploadParams);
 
+                    // Kiểm tra SecureUrl trước khi sử dụng
+                    if (videoResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for contract video file {file.FileName}. SecureUrl is null. Error: {videoResult.Error?.Message ?? "Unknown error"}");
+                    }
+
                     return new UploadImageResult
                     {
                         Url = videoResult.SecureUrl.ToString(),
@@ -111,6 +159,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     var documentResult = await _cloudinary
                         .UploadAsync(documentUploadParams);
+
+                    // Kiểm tra SecureUrl trước khi sử dụng
+                    if (documentResult.SecureUrl == null)
+                    {
+                        throw new InvalidOperationException($"Cloudinary upload failed for contract document file {file.FileName}. SecureUrl is null. Error: {documentResult.Error?.Message ?? "Unknown error"}");
+                    }
 
                     return new UploadImageResult
                     {

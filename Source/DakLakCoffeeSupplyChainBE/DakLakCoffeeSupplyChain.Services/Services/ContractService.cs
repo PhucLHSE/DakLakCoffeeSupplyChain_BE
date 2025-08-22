@@ -405,6 +405,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
+                // Upload file nếu có
+                string? contractFileUrl = contractDto.ContractFileUrl;
+
+                if (contractDto.ContractFile is { Length: > 0 })
+                {
+                    var upload = await _uploadService.UploadContractFileAsync(contractDto.ContractFile);
+                    contractFileUrl = upload.Url;
+                }
+                else if (!string.IsNullOrWhiteSpace(contractDto.ContractFileUrl) && IsHttpUrl(contractDto.ContractFileUrl))
+                {
+                    try
+                    {
+                        var up = await _uploadService.UploadFromUrlAsync(contractDto.ContractFileUrl);
+                        contractFileUrl = up.Url;
+                    }
+                    catch (Exception ex)
+                    {
+                        // log lỗi thật ra (ex.Message) để soi nguyên nhân (hotlink, 403, sai URL...)
+                        contractFileUrl = contractDto.ContractFileUrl; // fallback: lưu nguyên URL
+                    }
+                }
+
+                // Cập nhật ContractFileUrl nếu có upload file TRƯỚC KHI map
+                if (contractFileUrl != null)
+                {
+                    contractDto.ContractFileUrl = contractFileUrl;
+                }
+
                 // Tính lại tổng Quantity và Value từ các ContractItemDto
                 double totalItemQuantity = contractDto.ContractItems
                     .Sum(i => i.Quantity ?? 0);

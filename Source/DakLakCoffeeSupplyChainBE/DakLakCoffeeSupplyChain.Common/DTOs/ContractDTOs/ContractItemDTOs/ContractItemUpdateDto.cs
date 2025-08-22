@@ -24,7 +24,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
         [Required(ErrorMessage = "Đơn giá là bắt buộc.")]
         public double? UnitPrice { get; set; }
 
-        public double? DiscountAmount { get; set; } = 0.0;
+        [Range(0, 100, ErrorMessage = "Phần trăm giảm giá phải từ 0% đến 100%.")]
+        public double? DiscountAmount { get; set; } = 0.0; // % giảm giá
 
         [MaxLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự.")]
         public string Note { get; set; } = string.Empty;
@@ -48,20 +49,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs
                 );
             }
 
-            if (DiscountAmount < 0)
+            // Validation cho % giảm giá (0-100%)
+            if (DiscountAmount.HasValue &&
+                (DiscountAmount < 0 || DiscountAmount > 100))
             {
                 yield return new ValidationResult(
-                    "Giảm giá không được âm.",
-                    new[] { nameof(DiscountAmount) }
-                );
-            }
-
-            if (Quantity != null && 
-                UnitPrice != null && 
-                DiscountAmount > Quantity * UnitPrice)
-            {
-                yield return new ValidationResult(
-                    "Giảm giá không được vượt quá tổng thành tiền.",
+                    "Phần trăm giảm giá phải từ 0% đến 100%.",
                     new[] { nameof(DiscountAmount) }
                 );
             }
