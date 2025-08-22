@@ -28,5 +28,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseReceiptDTOs
         
         // ✅ Thêm số lượng yêu cầu nhập từ inbound request
         public double RequestedQuantity { get; set; }
+        
+        // ✅ Thêm thông tin số lượng còn lại thực tế
+        public double RemainingQuantity { get; set; }
+        public double TotalReceivedSoFar { get; set; }
     }
 }

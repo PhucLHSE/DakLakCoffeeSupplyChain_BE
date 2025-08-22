@@ -44,14 +44,33 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(log => log.Inventory)
                     .ThenInclude(i => i.Batch)
                         .ThenInclude(b => b.CoffeeType)
-                .Include(log => log.Inventory)
-                    .ThenInclude(i => i.Batch)
-                        .ThenInclude(b => b.CropSeason)
-                .Include(log => log.Inventory)
-                    .ThenInclude(i => i.Batch)
-                        .ThenInclude(b => b.Farmer)
                 .OrderByDescending(log => log.LoggedAt)
+                .Take(100) // ✅ Giới hạn chỉ lấy 100 log gần nhất để cải thiện performance
                 .ToListAsync();
+        }
+
+        // ✅ Thêm method mới với pagination
+        public async Task<IEnumerable<InventoryLog>> GetAllWithPaginationAsync(int page = 1, int pageSize = 20)
+        {
+            return await _context.InventoryLogs
+                .Where(log => !log.IsDeleted)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Warehouse)
+                .Include(log => log.Inventory)
+                    .ThenInclude(i => i.Batch)
+                        .ThenInclude(b => b.CoffeeType)
+                .OrderByDescending(log => log.LoggedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        // ✅ Thêm method để đếm tổng số logs
+        public async Task<int> GetTotalCountAsync()
+        {
+            return await _context.InventoryLogs
+                .Where(log => !log.IsDeleted)
+                .CountAsync();
         }
 
         public async Task<InventoryLog?> GetByIdWithAllRelationsAsync(Guid logId)

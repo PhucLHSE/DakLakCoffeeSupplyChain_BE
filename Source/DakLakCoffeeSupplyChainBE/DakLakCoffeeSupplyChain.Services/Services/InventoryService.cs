@@ -166,7 +166,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse == null || warehouse.ManagerId != targetManagerId)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
 
-            // Lấy tồn kho trong kho này
+            // Lấy tồn kho trong kho này - CHỈ lấy cà phê sơ chế (có BatchId), KHÔNG lấy cà phê tươi
+            var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
+                !i.IsDeleted && i.WarehouseId == warehouseId && i.BatchId != null);
+
+            if (inventories == null || !inventories.Any())
+                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tồn kho trong kho này.", []);
+
+            var result = inventories.Select(inv => inv.ToListItemDto()).ToList();
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho theo kho thành công.", result);
+        }
+
+        // ✅ Thêm method mới để lấy TẤT CẢ tồn kho (cả sơ chế và tươi) cho warehouse detail
+        public async Task<IServiceResult> GetAllByWarehouseIdForDetailAsync(Guid warehouseId, Guid userId)
+        {
+            Guid? targetManagerId = null;
+
+            // Xác định ManagerId hoặc SupervisorId
+            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            if (manager != null && !manager.IsDeleted)
+                targetManagerId = manager.ManagerId;
+            else
+            {
+                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                if (staff != null && !staff.IsDeleted)
+                    targetManagerId = staff.SupervisorId;
+            }
+
+            if (targetManagerId == null)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+
+            // Kiểm tra kho có thuộc quyền quản lý của người dùng không
+            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            if (warehouse == null || warehouse.ManagerId != targetManagerId)
+                return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
+
+            // Lấy TẤT CẢ tồn kho trong kho này (cả cà phê sơ chế và cà phê tươi) để hiển thị trong warehouse detail
             var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
                 !i.IsDeleted && i.WarehouseId == warehouseId);
 

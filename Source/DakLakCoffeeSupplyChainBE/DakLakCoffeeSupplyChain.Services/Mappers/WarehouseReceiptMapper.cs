@@ -25,11 +25,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchId = batchId,
                 DetailId = detailId,  // Thêm DetailId cho cà phê tươi
                 ReceivedBy = staffId,
-                ReceivedQuantity = dto.ReceivedQuantity,
-                ReceivedAt = DateTime.UtcNow,
-                Note = dto.Note,
-                QrcodeUrl = "",
-                IsDeleted = false
+                LotCode = "", // Có thể để trống
+                ReceivedQuantity = null, // Chỉ set khi xác nhận
+                ReceivedAt = null, // Chỉ set khi xác nhận
+                Note = "", // Chỉ set khi xác nhận
+                QrcodeUrl = "", // Có thể để trống
+                IsDeleted = false // Mặc định không bị xóa
             };
         }
 
