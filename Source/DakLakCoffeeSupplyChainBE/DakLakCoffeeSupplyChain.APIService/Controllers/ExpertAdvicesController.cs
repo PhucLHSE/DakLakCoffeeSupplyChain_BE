@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -113,9 +114,57 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpPost]
         [Authorize(Roles = "AgriculturalExpert")]
-        public async Task<IActionResult> CreateExpertAdviceAsync(
-            [FromBody] ExpertAdviceCreateDto dto)
+        public async Task<IActionResult> CreateExpertAdviceAsync()
         {
+            ExpertAdviceCreateDto dto;
+            
+            // Kiểm tra content type để xử lý phù hợp
+            if (Request.ContentType?.Contains("multipart/form-data") == true)
+            {
+                // Xử lý FormData (có file upload)
+                dto = new ExpertAdviceCreateDto();
+                
+                // Parse các trường cơ bản từ FormData
+                if (Request.Form.ContainsKey("reportId"))
+                    dto.ReportId = Guid.Parse(Request.Form["reportId"].ToString());
+                
+                if (Request.Form.ContainsKey("responseType"))
+                    dto.ResponseType = Request.Form["responseType"].ToString();
+                
+                if (Request.Form.ContainsKey("adviceSource"))
+                    dto.AdviceSource = Request.Form["adviceSource"].ToString();
+                
+                if (Request.Form.ContainsKey("adviceText"))
+                    dto.AdviceText = Request.Form["adviceText"].ToString();
+                
+                if (Request.Form.ContainsKey("attachedFileUrl"))
+                    dto.AttachedFileUrl = Request.Form["attachedFileUrl"].ToString();
+                
+                // Xử lý files
+                if (Request.Form.Files.Any(f => f.Name == "attachedFiles"))
+                    dto.AttachedFiles = Request.Form.Files.Where(f => f.Name == "attachedFiles").ToList();
+            }
+            else
+            {
+                // Xử lý JSON (không có file)
+                try
+                {
+                    using var reader = new StreamReader(Request.Body);
+                    var jsonBody = await reader.ReadToEndAsync();
+                    dto = JsonSerializer.Deserialize<ExpertAdviceCreateDto>(jsonBody, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch
+                {
+                    return BadRequest("Dữ liệu JSON không hợp lệ.");
+                }
+            }
+            
+            if (dto == null)
+                return BadRequest("Dữ liệu không hợp lệ.");
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values
