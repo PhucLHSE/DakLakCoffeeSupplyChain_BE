@@ -18,8 +18,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         // Người cập nhật
         public string UpdatedByName { get; set; }
 
-        // Giai đoạn
-        public string StageId { get; set; }
+        // Giai đoạn - Sửa từ string thành int để nhất quán với model database
+        public int StageId { get; set; }        // ✅ Nhất quán với model: int StageId
         public string StageName { get; set; }
         public string StageDescription { get; set; }
 
@@ -31,5 +31,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public List<ProcessingWasteViewAllDto> Wastes { get; set; }
         public List<MediaFileResponse> MediaFiles { get; set; }
     }
-
 }

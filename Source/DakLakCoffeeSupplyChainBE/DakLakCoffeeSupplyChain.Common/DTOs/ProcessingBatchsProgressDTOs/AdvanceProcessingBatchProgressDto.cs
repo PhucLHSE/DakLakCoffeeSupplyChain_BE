@@ -15,9 +15,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public string? VideoUrl { get; set; }
         public List<ProcessingParameterInProgressDto>? Parameters { get; set; }
         
-        // Stage selection fields
-        public string? StageId { get; set; }
-        public string? CurrentStageId { get; set; }
+        // Stage selection fields - Sửa từ string thành int để nhất quán với model database
+        public int? StageId { get; set; }        // ✅ Nhất quán với model: int StageId
+        public int? CurrentStageId { get; set; } // ✅ Nhất quán với model: int StageId
         public string? StageDescription { get; set; }
     }
 }

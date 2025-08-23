@@ -3,14 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
 {
     public class EvaluationCreateDto
     {
+        [Required(ErrorMessage = "BatchId là bắt buộc")]
         public Guid BatchId { get; set; }
+        
+        [Required(ErrorMessage = "Kết quả đánh giá là bắt buộc")]
+        [StringLength(50, ErrorMessage = "Kết quả đánh giá không được vượt quá 50 ký tự")]
         public string EvaluationResult { get; set; } = default!;
+        
+        [StringLength(2000, ErrorMessage = "Comments không được vượt quá 2000 ký tự")]
         public string? Comments { get; set; }
+        
         public DateTime? EvaluatedAt { get; set; }
         
         /// <summary>
