@@ -320,6 +320,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                 "fermentation" => "Lên men",
                 "washing" => "Rửa sạch",
                 "pulping" => "Tách vỏ quả",
+                "carbonic-ferment" => "Lên men carbonic",
                 _ => stageCode
             };
         }
@@ -374,6 +375,12 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                     new { criteriaId = "PULPING_001", criteriaName = "Tỷ lệ tách vỏ thành công", criteriaType = "Quality", minValue = 95, maxValue = 100, targetValue = 98, unit = "%", weight = 0.4, isRequired = true, description = "Tỷ lệ quả được tách vỏ hoàn toàn" },
                     new { criteriaId = "PULPING_002", criteriaName = "Tỷ lệ hạt bị tổn thương", criteriaType = "Quality", minValue = 0, maxValue = 3, targetValue = 1, unit = "%", weight = 0.3, isRequired = true, description = "Hạt bị vỡ, nứt trong quá trình tách" },
                     new { criteriaId = "PULPING_003", criteriaName = "Năng suất tách vỏ", criteriaType = "Process", minValue = 200, maxValue = 800, targetValue = 500, unit = "kg/giờ", weight = 0.3, isRequired = true, description = "Khối lượng quả được xử lý mỗi giờ" }
+                },
+                "carbonic-ferment" => new List<object>
+                {
+                    new { criteriaId = "CARBONIC_FERMENT_001", criteriaName = "Thời gian lên men carbonic", criteriaType = "Process", minValue = 12, maxValue = 48, targetValue = 24, unit = "giờ", weight = 0.4, isRequired = true, description = "Thời gian lên men carbonic" },
+                    new { criteriaId = "CARBONIC_FERMENT_002", criteriaName = "Nhiệt độ lên men carbonic", criteriaType = "Physical", minValue = 18, maxValue = 25, targetValue = 22, unit = "°C", weight = 0.3, isRequired = true, description = "Nhiệt độ môi trường lên men carbonic" },
+                    new { criteriaId = "CARBONIC_FERMENT_003", criteriaName = "pH cuối", criteriaType = "Chemical", minValue = 4.5, maxValue = 5.5, targetValue = 5.0, unit = "", weight = 0.3, isRequired = true, description = "Độ pH sau lên men carbonic" }
                 },
                 _ => new List<object>()
             };
@@ -431,6 +438,12 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                     new { reasonId = "PULPING_FAIL_002", reasonCode = "HIGH_DAMAGE_RATE", reasonName = "Tỷ lệ hạt tổn thương cao", category = "Quality", severityLevel = 4, description = "Tỷ lệ hạt vỡ, nứt >3%" },
                     new { reasonId = "PULPING_FAIL_003", reasonCode = "LOW_PROCESSING_RATE", reasonName = "Năng suất xử lý thấp", category = "Process", severityLevel = 3, description = "Năng suất <200 kg/giờ" },
                     new { reasonId = "PULPING_FAIL_004", reasonCode = "EQUIPMENT_MAINTENANCE", reasonName = "Thiết bị cần bảo trì", category = "Equipment", severityLevel = 3, description = "Máy tách vỏ hoạt động không tốt" }
+                },
+                "carbonic-ferment" => new List<object>
+                {
+                    new { reasonId = "CARBONIC_FERMENT_FAIL_001", reasonCode = "OVER_FERMENTATION", reasonName = "Lên men carbonic quá lâu", category = "Process", severityLevel = 4, description = "Thời gian lên men carbonic >48 giờ" },
+                    new { reasonId = "CARBONIC_FERMENT_FAIL_002", reasonCode = "UNDER_FERMENTATION", reasonName = "Lên men carbonic chưa đủ", category = "Process", severityLevel = 3, description = "Thời gian lên men carbonic <12 giờ" },
+                    new { reasonId = "CARBONIC_FERMENT_FAIL_003", reasonCode = "WRONG_TEMPERATURE", reasonName = "Nhiệt độ lên men carbonic không phù hợp", category = "Process", severityLevel = 3, description = "Nhiệt độ lên men carbonic không đúng" }
                 },
                 _ => new List<object>()
             };

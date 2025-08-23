@@ -537,7 +537,22 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 if (stage != null && !stage.IsDeleted)
                 {
                     // Sử dụng stageCode trực tiếp từ database (đã có sẵn: "harvest", "drying", "hulling", etc.)
-                    return stage.StageCode;
+                    var stageCode = stage.StageCode;
+                    
+                    // 🔧 CẢI THIỆN: Fallback mapping cho các stage đặc biệt
+                    if (string.IsNullOrEmpty(stageCode))
+                    {
+                        stageCode = stage.StageName?.ToLower() switch
+                        {
+                            "lên men carbonic" => "carbonic-ferment",
+                            "lên men yếm khí" => "carbonic-ferment",
+                            "carbonic fermentation" => "carbonic-ferment",
+                            _ => stageCode
+                        };
+                    }
+                    
+                    Console.WriteLine($"🔍 DEBUG: Mapped stageId {stageId} to stageCode: '{stageCode}' (from: '{stage.StageCode}' or '{stage.StageName}')");
+                    return stageCode;
                 }
                 
                 return string.Empty;

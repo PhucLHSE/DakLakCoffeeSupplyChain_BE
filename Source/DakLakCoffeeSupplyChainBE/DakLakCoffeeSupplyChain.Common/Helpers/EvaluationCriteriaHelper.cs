@@ -120,6 +120,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                 "blending" => GetBlendingCriteria(),
                 "grinding" => GetGrindingCriteria(),
                 "instant_processing" => GetInstantProcessingCriteria(),
+                "carbonic-ferment" => GetCarbonicFermentCriteria(),
                 _ => new List<EvaluationCriteria>()
             };
         }
@@ -152,6 +153,7 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                 "blending" => GetBlendingFailureReasons(),
                 "grinding" => GetGrindingFailureReasons(),
                 "instant_processing" => GetInstantProcessingFailureReasons(),
+                "carbonic-ferment" => GetCarbonicFermentFailureReasons(),
                 _ => new List<FailureReason>()
             };
         }
@@ -1031,6 +1033,52 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         }
 
         /// <summary>
+        /// Tiêu chí đánh giá lên men carbonic
+        /// </summary>
+        private static List<EvaluationCriteria> GetCarbonicFermentCriteria()
+        {
+            return new List<EvaluationCriteria>
+            {
+                new EvaluationCriteria
+                {
+                    CriteriaId = "CARBONIC_FERMENT_001",
+                    CriteriaName = "Thời gian lên men carbonic",
+                    CriteriaType = "Process",
+                    MinValue = 12,
+                    MaxValue = 48,
+                    TargetValue = 24,
+                    Unit = "giờ",
+                    Weight = 0.4m,
+                    Description = "Thời gian lên men carbonic"
+                },
+                new EvaluationCriteria
+                {
+                    CriteriaId = "CARBONIC_FERMENT_002",
+                    CriteriaName = "Nhiệt độ lên men carbonic",
+                    CriteriaType = "Physical",
+                    MinValue = 18,
+                    MaxValue = 25,
+                    TargetValue = 22,
+                    Unit = "°C",
+                    Weight = 0.3m,
+                    Description = "Nhiệt độ môi trường lên men carbonic"
+                },
+                new EvaluationCriteria
+                {
+                    CriteriaId = "CARBONIC_FERMENT_003",
+                    CriteriaName = "pH cuối",
+                    CriteriaType = "Chemical",
+                    MinValue = 4.5m,
+                    MaxValue = 5.5m,
+                    TargetValue = 5.0m,
+                    Unit = "",
+                    Weight = 0.3m,
+                    Description = "Độ pH sau lên men carbonic"
+                }
+            };
+        }
+
+        /// <summary>
         /// Lý do không đạt thu hoạch
         /// </summary>
         private static List<FailureReason> GetHarvestFailureReasons()
@@ -1612,6 +1660,43 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
                     Category = "Quality",
                     SeverityLevel = 3,
                     Description = "Hàm lượng caffein <1.5%"
+                }
+            };
+        }
+
+        /// <summary>
+        /// Lý do không đạt lên men carbonic
+        /// </summary>
+        private static List<FailureReason> GetCarbonicFermentFailureReasons()
+        {
+            return new List<FailureReason>
+            {
+                new FailureReason
+                {
+                    ReasonId = "CARBONIC_FERMENT_FAIL_001",
+                    ReasonCode = "OVER_FERMENTATION",
+                    ReasonName = "Lên men quá lâu",
+                    Category = "Process",
+                    SeverityLevel = 4,
+                    Description = "Lên men >48 giờ"
+                },
+                new FailureReason
+                {
+                    ReasonId = "CARBONIC_FERMENT_FAIL_002",
+                    ReasonCode = "UNDER_FERMENTATION",
+                    ReasonName = "Lên men chưa đủ",
+                    Category = "Process",
+                    SeverityLevel = 3,
+                    Description = "Lên men <12 giờ"
+                },
+                new FailureReason
+                {
+                    ReasonId = "CARBONIC_FERMENT_FAIL_003",
+                    ReasonCode = "WRONG_TEMPERATURE",
+                    ReasonName = "Nhiệt độ lên men không phù hợp",
+                    Category = "Process",
+                    SeverityLevel = 3,
+                    Description = "Nhiệt độ <18°C hoặc >25°C"
                 }
             };
         }

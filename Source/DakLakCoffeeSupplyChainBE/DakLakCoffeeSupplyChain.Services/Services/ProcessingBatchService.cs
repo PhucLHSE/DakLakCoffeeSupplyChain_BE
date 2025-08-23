@@ -281,8 +281,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 d => !d.IsDeleted
                     && d.Status == "Completed"
                     && d.CommitmentDetail != null
-                    && d.CommitmentDetail.Commitment != null
-                    && d.CommitmentDetail.Commitment.FarmerId == farmerId
+                    && d.CommitmentDetail.Commitment != null &&
+                    d.CommitmentDetail.Commitment.FarmerId == farmerId
                     && d.CommitmentDetail.PlanDetail != null
                     && d.CommitmentDetail.PlanDetail.ProcessMethodId.HasValue
                     && d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0,
@@ -595,7 +595,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ? farmerNameDict[p.UpdatedBy]
                             : "N/A",
 
-                        StageId = p.StageId.ToString(),
+                        StageId = p.StageId, // ✅ Giữ nguyên int, không convert sang string
                         StageName = p.Stage?.StageName ?? "N/A",
                         StageDescription = p.StageDescription,
 

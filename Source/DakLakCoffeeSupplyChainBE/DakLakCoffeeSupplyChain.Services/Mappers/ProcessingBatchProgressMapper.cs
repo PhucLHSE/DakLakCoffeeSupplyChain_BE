@@ -103,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 OutputQuantity = progress.OutputQuantity,
                 UpdatedByName = updatedByName,
 
-                StageId = progress.StageId.ToString(),
+                StageId = progress.StageId, // ✅ Giữ nguyên int, không convert sang string
                 StageName = stageName,
                 StageDescription = stageDescription,
 
