@@ -52,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpGet("all")]
         [EnableQuery]
         [Authorize(Roles = "BusinessManager, BusinessStaff")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
@@ -60,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized("Cannot determine user from token.");
 
             var result = await _requestService
-                .GetAllAsync(managerUserId);
+                .GetAllAsync(managerUserId, page, pageSize);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result);

@@ -16,7 +16,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 WarehouseId = e.WarehouseId,
                 WarehouseName = e.Warehouse?.Name,
                 InventoryId = e.InventoryId,
-                ProductName = e.Inventory?.Products?.FirstOrDefault()?.ProductName,
+                ProductName = GetDisplayName(e.Inventory),
                 RequestedQuantity = e.RequestedQuantity,
                 Unit = e.Unit,
                 CreatedAt = e.CreatedAt
@@ -65,5 +65,29 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
+
+        private static string GetDisplayName(Inventory inventory)
+        {
+            if (inventory == null) return "N/A";
+            
+            // Ưu tiên hiển thị tên sản phẩm nếu có
+            var productName = inventory.Products?.FirstOrDefault()?.ProductName;
+            if (!string.IsNullOrEmpty(productName)) return productName;
+            
+            // Nếu có batch, hiển thị tên batch
+            if (inventory.Batch != null)
+            {
+                return $"Mẻ {inventory.Batch.BatchCode}";
+            }
+            
+            // Nếu có crop season detail, hiển thị thông tin mùa vụ
+            if (inventory.Detail != null)
+            {
+                return $"Mùa vụ {inventory.Detail.CropSeason?.SeasonName ?? inventory.Detail.CropSeasonId.ToString()}";
+            }
+            
+            // Fallback
+            return "Cà phê";
+        }
     }
 }
