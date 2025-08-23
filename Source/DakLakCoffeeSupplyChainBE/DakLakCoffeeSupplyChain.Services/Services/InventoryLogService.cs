@@ -53,10 +53,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!filteredLogs.Any())
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có log tồn kho nào thuộc công ty của bạn", null);
 
+            // ✅ Tối ưu hóa: Batch load user names để tránh N+1 query
+            var userIds = filteredLogs
+                .Where(log => log.UpdatedBy.HasValue)
+                .Select(log => log.UpdatedBy.Value)
+                .Distinct()
+                .ToList();
+
+            var users = new Dictionary<Guid, string>();
+            if (userIds.Any())
+            {
+                var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(u => userIds.Contains(u.UserId));
+                users = userAccounts.ToDictionary(u => u.UserId, u => u.Name ?? "Không rõ");
+            }
+
             var result = filteredLogs.Select(log =>
             {
-                var updatedByName = log.UpdatedBy.HasValue
-                    ? _unitOfWork.UserAccountRepository.GetById(log.UpdatedBy.Value)?.Name ?? "Không rõ"
+                var updatedByName = log.UpdatedBy.HasValue && users.ContainsKey(log.UpdatedBy.Value)
+                    ? users[log.UpdatedBy.Value]
                     : "Hệ thống";
 
                 return log.ToListItemDto(updatedByName);

@@ -253,10 +253,26 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
 
         public async Task<string> GenerateWarehouseCodeAsync()
         {
-            var count = await _unitOfWork.Warehouses
-                .CountWarehousesCreatedInYearAsync(CurrentYear);
+            const int maxRetry = 5;
 
-            return $"WH-{CurrentYear}-{(count + 1):D4}";
+            for (int attempt = 0; attempt < maxRetry; attempt++)
+            {
+                // Đếm số warehouse đã tạo trong năm (chỉ những cái chưa bị xóa thật)
+                var count = await _unitOfWork.Warehouses
+                    .GetAllQueryable()
+                    .CountAsync(w => w.CreatedAt.Year == CurrentYear && !w.IsDeleted);
+
+                var newCode = $"WH-{CurrentYear}-{(count + 1):D4}";
+
+                // Kiểm tra xem mã này đã tồn tại chưa (chỉ check warehouse chưa bị xóa thật)
+                var exists = await _unitOfWork.Warehouses
+                    .AnyAsync(w => w.WarehouseCode == newCode && !w.IsDeleted);
+
+                if (!exists)
+                    return newCode;
+            }
+
+            throw new InvalidOperationException("Không thể tạo mã kho duy nhất sau nhiều lần thử.");
         }
 
         public async Task<string> GenerateProcessingSystemBatchCodeAsync(int year)
