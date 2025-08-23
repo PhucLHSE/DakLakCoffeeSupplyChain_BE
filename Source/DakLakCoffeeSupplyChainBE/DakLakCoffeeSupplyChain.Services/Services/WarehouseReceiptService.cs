@@ -59,10 +59,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var receiptCode = await _codeGenerator.GenerateWarehouseReceiptCodeAsync();
             var receiptId = Guid.NewGuid();
 
-            // Debug logging
-            Console.WriteLine($"DEBUG CreateReceiptAsync: RequestId={dto.InboundRequestId}");
-            Console.WriteLine($"DEBUG CreateReceiptAsync: BatchId={request.BatchId}, DetailId={request.DetailId}");
-            Console.WriteLine($"DEBUG CreateReceiptAsync: CoffeeType={(request.BatchId != null ? "Processed" : request.DetailId != null ? "Fresh" : "Unknown")}");
+            // Debug logging removed for performance
+            // Console.WriteLine($"DEBUG CreateReceiptAsync: RequestId={dto.InboundRequestId}");
+            // Console.WriteLine($"DEBUG CreateReceiptAsync: BatchId={request.BatchId}, DetailId={request.DetailId}");
+            // Console.WriteLine($"DEBUG CreateReceiptAsync: CoffeeType={(request.BatchId != null ? "Processed" : request.DetailId != null ? "Fresh" : "Unknown")}");
 
             var receipt = dto.ToEntityFromCreateDto(
                 receiptId,

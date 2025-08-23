@@ -74,13 +74,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             var warehouses = await _unitOfWork.Warehouses.FindAsync(w => !w.IsDeleted && w.ManagerId == targetManagerId);
 
-            var result = warehouses.Select(w => new WarehouseViewDto
+            // ✅ Tính used capacity cho từng warehouse
+            var result = new List<WarehouseViewDto>();
+            foreach (var warehouse in warehouses)
             {
-                WarehouseId = w.WarehouseId,
-                Name = w.Name,
-                Location = w.Location,
-                Capacity = w.Capacity
-            }).ToList();
+                var inventories = await _unitOfWork.Inventories.GetAllAsync(i => i.WarehouseId == warehouse.WarehouseId && !i.IsDeleted);
+                var totalUsed = inventories.Sum(i => i.Quantity);
+
+                result.Add(new WarehouseViewDto
+                {
+                    WarehouseId = warehouse.WarehouseId,
+                    Name = warehouse.Name,
+                    Location = warehouse.Location,
+                    Capacity = warehouse.Capacity,
+                    UsedCapacity = totalUsed
+                });
+            }
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
         }

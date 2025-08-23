@@ -172,16 +172,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách mục hàng với số lượng còn lại thành công", result);
         }
 
-        public async Task<IServiceResult> GetAllAsync(Guid userId)
+                public async Task<IServiceResult> GetAllAsync(Guid userId, int page = 1, int pageSize = 20)
         {
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
             if (staff != null && !staff.IsDeleted)
             {
-                var filtered = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
-                    r => r.RequestedBy == staff.SupervisorId && !r.IsDeleted,
-                    include: query => query.Include(r => r.Warehouse)
-                                               .Include(r => r.Inventory)
-                                                   .ThenInclude(inv => inv.Products));
+                // ✅ Tối ưu: Thêm pagination và chỉ load data cần thiết
+                var query = _unitOfWork.WarehouseOutboundRequests.GetAllQueryable()
+                    .Where(r => r.RequestedBy == staff.SupervisorId && !r.IsDeleted)
+                    .Include(r => r.Warehouse)
+                    .Include(r => r.Inventory)
+                        .ThenInclude(inv => inv.Batch)
+                    .Include(r => r.Inventory)
+                        .ThenInclude(inv => inv.Detail)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize);
+
+                var filtered = await query.ToListAsync();
                 if (!filtered.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
                 return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());
@@ -190,11 +198,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
             if (manager != null && !manager.IsDeleted)
             {
-                var filtered = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
-                    r => r.RequestedBy == manager.ManagerId && !r.IsDeleted,
-                    include: query => query.Include(r => r.Warehouse)
-                                               .Include(r => r.Inventory)
-                                                   .ThenInclude(inv => inv.Products));
+                // ✅ Tối ưu: Thêm pagination và chỉ load data cần thiết
+                var query = _unitOfWork.WarehouseOutboundRequests.GetAllQueryable()
+                    .Where(r => r.RequestedBy == manager.ManagerId && !r.IsDeleted)
+                    .Include(r => r.Warehouse)
+                    .Include(r => r.Inventory)
+                        .ThenInclude(inv => inv.Batch)
+                    .Include(r => r.Inventory)
+                        .ThenInclude(inv => inv.Detail)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize);
+
+                var filtered = await query.ToListAsync();
                 if (!filtered.Any())
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có yêu cầu xuất kho nào thuộc công ty bạn.", new List<WarehouseOutboundRequestListItemDto>());
                 return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu thành công", filtered.Select(x => x.ToListItemDto()).ToList());

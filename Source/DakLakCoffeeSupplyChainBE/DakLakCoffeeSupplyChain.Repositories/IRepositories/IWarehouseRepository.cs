@@ -25,6 +25,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 
         Task<Warehouse?> GetByIdWithManagerAsync(Guid id);
 
+
+
         Task<int> CountWarehousesCreatedInYearAsync(int year);
     }
 }

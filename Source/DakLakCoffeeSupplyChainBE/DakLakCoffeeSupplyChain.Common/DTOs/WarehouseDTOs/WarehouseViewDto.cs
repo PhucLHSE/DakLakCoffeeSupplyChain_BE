@@ -12,5 +12,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseDTOs
         public string Name { get; set; }
         public string Location { get; set; }
         public double? Capacity { get; set; }
+        public double UsedCapacity { get; set; }
     }
 }

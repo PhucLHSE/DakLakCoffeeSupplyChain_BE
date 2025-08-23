@@ -74,6 +74,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 );
         }
 
+
+
         public async Task<int> CountWarehousesCreatedInYearAsync(int year)
         {
             return await _context.Warehouses
