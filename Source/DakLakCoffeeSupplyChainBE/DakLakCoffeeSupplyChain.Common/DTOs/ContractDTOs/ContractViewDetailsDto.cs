@@ -48,6 +48,26 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public DateTime UpdatedAt { get; set; }
 
+        public string ContractType { get; set; } = string.Empty;
+
+        public Guid? ParentContractId { get; set; }
+
+        public string ParentContractCode { get; set; } = string.Empty;
+
+        public int? PaymentRounds { get; set; }
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public SettlementStatus SettlementStatus { get; set; } = SettlementStatus.None;
+
+        public DateOnly? SettledAt { get; set; }
+
+        public string SettlementFileUrl { get; set; } = string.Empty;
+
+        //Parsed from SettlementFilesJson; UI có thể render list link.
+        public List<string> SettlementFiles { get; set; } = new();
+
+        public string SettlementNote { get; set; } = string.Empty;
+
         public List<ContractItemViewDto> ContractItems { get; set; } = new();
     }
 }
