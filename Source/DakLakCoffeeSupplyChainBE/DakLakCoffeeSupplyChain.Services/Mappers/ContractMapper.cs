@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
@@ -50,6 +51,27 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ? parsedStatus
                 : ContractStatus.NotStarted;
 
+            SettlementStatus settlement = Enum.TryParse(contract.SettlementStatus, true, out SettlementStatus parsedSettle)
+                ? parsedSettle
+                : SettlementStatus.None;
+
+            // Parse SettlementFilesJson -> List<string>
+            var settlementFiles = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(contract.SettlementFilesJson))
+            {
+                try
+                {
+                    // Ưu tiên mảng string ["url1","url2"]; nếu bạn lưu object thì có thể đổi sang List<YourFileDto>
+                    settlementFiles = JsonSerializer.Deserialize<List<string>>(contract.SettlementFilesJson)
+                                      ?? new List<string>();
+                }
+                catch
+                {
+                    // Không chặn flow nếu JSON xấu
+                }
+            }
+
             return new ContractViewDetailsDto
             {
                 ContractId = contract.ContractId,
@@ -57,19 +79,34 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ContractNumber = contract.ContractNumber ?? string.Empty,
                 ContractTitle = contract.ContractTitle ?? string.Empty,
                 ContractFileUrl = contract.ContractFileUrl ?? string.Empty,
+
                 SellerName = contract.Seller?.User?.Name ?? "N/A",
                 BuyerId = contract.BuyerId,
                 BuyerName = contract.Buyer?.CompanyName ?? "N/A",
+
                 DeliveryRounds = contract.DeliveryRounds,
                 TotalQuantity = contract.TotalQuantity,
                 TotalValue = contract.TotalValue,
+
                 StartDate = contract.StartDate,
                 EndDate = contract.EndDate,
                 SignedAt = contract.SignedAt,
+
                 Status = status,
                 CancelReason = contract.CancelReason ?? string.Empty,
                 CreatedAt = contract.CreatedAt,
                 UpdatedAt = contract.UpdatedAt,
+
+                ContractType = contract.ContractType ?? string.Empty,
+                ParentContractId = contract.ParentContractId,
+                ParentContractCode = contract.ParentContract?.ContractCode ?? string.Empty,
+                PaymentRounds = contract.PaymentRounds,
+                SettlementStatus = settlement,
+                SettledAt = contract.SettledAt,
+                SettlementFileUrl = contract.SettlementFileUrl ?? string.Empty,
+                SettlementFiles = settlementFiles,
+                SettlementNote = contract.SettlementNote ?? string.Empty,
+
                 ContractItems = contract.ContractItems
                     .Where(item => !item.IsDeleted)
                     .Select(item => new ContractItemViewDto
