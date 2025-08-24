@@ -45,11 +45,31 @@ public partial class Contract
 
     public bool IsDeleted { get; set; }
 
+    public string ContractType { get; set; }
+
+    public Guid? ParentContractId { get; set; }
+
+    public int? PaymentRounds { get; set; }
+
+    public string SettlementStatus { get; set; }
+
+    public DateOnly? SettledAt { get; set; }
+
+    public string SettlementFileUrl { get; set; }
+
+    public string SettlementFilesJson { get; set; }
+
+    public string SettlementNote { get; set; }
+
     public virtual BusinessBuyer Buyer { get; set; }
 
     public virtual ICollection<ContractDeliveryBatch> ContractDeliveryBatches { get; set; } = new List<ContractDeliveryBatch>();
 
     public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
+
+    public virtual ICollection<Contract> InverseParentContract { get; set; } = new List<Contract>();
+
+    public virtual Contract ParentContract { get; set; }
 
     public virtual BusinessManager Seller { get; set; }
 }

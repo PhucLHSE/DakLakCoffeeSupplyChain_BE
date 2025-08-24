@@ -31,5 +31,25 @@ public partial class SystemConfiguration
 
     public bool IsDeleted { get; set; }
 
+    public string TargetEntity { get; set; }
+
+    public string TargetField { get; set; }
+
+    public string Operator { get; set; }
+
+    public string ScopeType { get; set; }
+
+    public Guid? ScopeId { get; set; }
+
+    public string Severity { get; set; }
+
+    public string RuleGroup { get; set; }
+
+    public int? VersionNo { get; set; }
+
+    public Guid? CreatedBy { get; set; }
+
+    public Guid? UpdatedBy { get; set; }
+
     public virtual ICollection<SystemConfigurationUser> SystemConfigurationUsers { get; set; } = new List<SystemConfigurationUser>();
 }

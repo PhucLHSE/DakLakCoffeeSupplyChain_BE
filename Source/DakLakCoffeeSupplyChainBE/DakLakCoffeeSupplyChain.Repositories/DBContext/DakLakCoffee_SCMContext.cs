@@ -331,6 +331,10 @@ public partial class DakLakCoffee_SCMContext : DbContext
         {
             entity.HasKey(e => e.ContractId).HasName("PK__Contract__C90D34096CCA357F");
 
+            entity.ToTable(tb => tb.HasTrigger("TR_Contracts_UpdateTimestamp"));
+
+            entity.HasIndex(e => e.ParentContractId, "IX_Contracts_ParentContractID");
+
             entity.HasIndex(e => e.ContractCode, "UQ__Contract__CBECF8339BC5C481").IsUnique();
 
             entity.Property(e => e.ContractId)
@@ -345,10 +349,19 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .HasColumnName("ContractFileURL");
             entity.Property(e => e.ContractNumber).HasMaxLength(100);
             entity.Property(e => e.ContractTitle).HasMaxLength(255);
+            entity.Property(e => e.ContractType).HasMaxLength(50);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.ParentContractId).HasColumnName("ParentContractID");
             entity.Property(e => e.SellerId).HasColumnName("SellerID");
+            entity.Property(e => e.SettlementFileUrl)
+                .HasMaxLength(255)
+                .HasColumnName("SettlementFileURL");
+            entity.Property(e => e.SettlementStatus)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("None");
             entity.Property(e => e.SignedAt).HasColumnType("datetime");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
@@ -362,6 +375,10 @@ public partial class DakLakCoffee_SCMContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Contracts_BuyerID");
 
+            entity.HasOne(d => d.ParentContract).WithMany(p => p.InverseParentContract)
+                .HasForeignKey(d => d.ParentContractId)
+                .HasConstraintName("FK_Contracts_ParentContract");
+
             entity.HasOne(d => d.Seller).WithMany(p => p.Contracts)
                 .HasForeignKey(d => d.SellerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -371,6 +388,10 @@ public partial class DakLakCoffee_SCMContext : DbContext
         modelBuilder.Entity<ContractDeliveryBatch>(entity =>
         {
             entity.HasKey(e => e.DeliveryBatchId).HasName("PK__Contract__0E96BE56E763AF0D");
+
+            entity.ToTable(tb => tb.HasTrigger("TR_ContractDeliveryBatches_UpdateTimestamp"));
+
+            entity.HasIndex(e => e.ContractId, "IX_ContractDeliveryBatches_ContractID").HasFilter("([IsDeleted]=(0))");
 
             entity.HasIndex(e => e.DeliveryBatchCode, "UQ__Contract__4F2E5F61A577C2FA").IsUnique();
 
@@ -384,6 +405,16 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.DeliveryBatchCode)
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.DeliveryNoteCode)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ExpectedPaymentAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.LastPaidAt).HasColumnType("datetime");
+            entity.Property(e => e.PaidAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PaymentStatus)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("Planned");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValue("Planned");
@@ -400,6 +431,8 @@ public partial class DakLakCoffee_SCMContext : DbContext
         modelBuilder.Entity<ContractDeliveryItem>(entity =>
         {
             entity.HasKey(e => e.DeliveryItemId).HasName("PK__Contract__6A62915DD442745B");
+
+            entity.HasIndex(e => e.DeliveryBatchId, "IX_ContractDeliveryItems_BatchID").HasFilter("([IsDeleted]=(0))");
 
             entity.HasIndex(e => e.DeliveryItemCode, "UQ__Contract__48F2E595DFF01791").IsUnique();
 
@@ -1253,11 +1286,13 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.DecisionReason).HasMaxLength(255);
             entity.Property(e => e.EvaluatedAt).HasColumnType("datetime");
             entity.Property(e => e.EvaluationCode)
                 .HasMaxLength(20)
                 .IsUnicode(false);
             entity.Property(e => e.EvaluationResult).HasMaxLength(50);
+            entity.Property(e => e.TotalScore).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -1690,6 +1725,12 @@ public partial class DakLakCoffee_SCMContext : DbContext
 
             entity.ToTable("SystemConfiguration");
 
+            entity.HasIndex(e => new { e.TargetEntity, e.TargetField, e.ScopeType, e.ScopeId, e.EffectedDateFrom, e.EffectedDateTo }, "IX_SystemConfiguration_Effective");
+
+            entity.HasIndex(e => new { e.Name, e.IsActive, e.IsDeleted }, "UX_SystemConfiguration_Name_Active")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1) AND [IsDeleted]=(0))");
+
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -1702,6 +1743,12 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(100);
+            entity.Property(e => e.Operator).HasMaxLength(10);
+            entity.Property(e => e.RuleGroup).HasMaxLength(50);
+            entity.Property(e => e.ScopeType).HasMaxLength(50);
+            entity.Property(e => e.Severity).HasMaxLength(20);
+            entity.Property(e => e.TargetEntity).HasMaxLength(100);
+            entity.Property(e => e.TargetField).HasMaxLength(100);
             entity.Property(e => e.Unit).HasMaxLength(20);
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")

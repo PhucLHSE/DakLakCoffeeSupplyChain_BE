@@ -13,7 +13,7 @@ CREATE DATABASE DakLakCoffee_SCM;
 
 GO
 
-USE DakLakCoffee_SCM;
+USE DakLakCoffee_SCMDB;
 
 GO
 
@@ -4274,3 +4274,281 @@ INSERT INTO SystemConfigurationUsers (
 VALUES (
    @TaxRateConfigID, @AdminID, 'manage'
 );
+
+GO
+
+-- Cải tiến Database
+/* ============================================================
+   FINAL PATCH (SAFE RERUN): Delivery/Payment tracking + Settlement + Notes
+   SQL Server 2016+ (ISJSON/CREATE OR ALTER VIEW). 
+   Nếu <2016: BỎ/COMMENT các CHECK dùng ISJSON + thay CREATE OR ALTER VIEW bằng CREATE VIEW.
+   ============================================================ */
+
+---------------------------------------------------------------
+-- 1) ADD COLUMNS — Contracts
+---------------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'ContractType')
+  ALTER TABLE Contracts ADD ContractType NVARCHAR(50) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'ParentContractID')
+  ALTER TABLE Contracts ADD ParentContractID UNIQUEIDENTIFIER NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'PaymentRounds')
+  ALTER TABLE Contracts ADD PaymentRounds INT NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'SettlementStatus')
+  ALTER TABLE Contracts ADD SettlementStatus NVARCHAR(30) NOT NULL DEFAULT 'None';
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'SettledAt')
+  ALTER TABLE Contracts ADD SettledAt DATE NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'SettlementFileURL')
+  ALTER TABLE Contracts ADD SettlementFileURL NVARCHAR(255) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'SettlementFilesJson')
+  ALTER TABLE Contracts ADD SettlementFilesJson NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Contracts') AND name = 'SettlementNote')
+  ALTER TABLE Contracts ADD SettlementNote NVARCHAR(MAX) NULL;
+GO
+
+---------------------------------------------------------------
+-- 2) ADD COLUMNS — ContractDeliveryBatches
+---------------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ExpectedPaymentDate')
+  ALTER TABLE ContractDeliveryBatches ADD ExpectedPaymentDate DATE NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ExpectedPaymentAmount')
+  ALTER TABLE ContractDeliveryBatches ADD ExpectedPaymentAmount DECIMAL(18,2) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'PaymentStatus')
+  ALTER TABLE ContractDeliveryBatches ADD PaymentStatus NVARCHAR(30) NOT NULL DEFAULT 'Planned';
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'PaidAmount')
+  ALTER TABLE ContractDeliveryBatches ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'LastPaidAt')
+  ALTER TABLE ContractDeliveryBatches ADD LastPaidAt DATETIME NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'PaymentNote')
+  ALTER TABLE ContractDeliveryBatches ADD PaymentNote NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'PaymentReceiptFilesJson')
+  ALTER TABLE ContractDeliveryBatches ADD PaymentReceiptFilesJson NVARCHAR(MAX) NULL;
+
+-- Delivery window (plan & actual)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ExpectedDeliveryStartDate')
+  ALTER TABLE ContractDeliveryBatches ADD ExpectedDeliveryStartDate DATE NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ExpectedDeliveryEndDate')
+  ALTER TABLE ContractDeliveryBatches ADD ExpectedDeliveryEndDate DATE NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ActualDeliveryStartDate')
+  ALTER TABLE ContractDeliveryBatches ADD ActualDeliveryStartDate DATE NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ActualDeliveryEndDate')
+  ALTER TABLE ContractDeliveryBatches ADD ActualDeliveryEndDate DATE NULL;
+
+-- Delivery notes & actual quantity
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'DeliveryNoteCode')
+  ALTER TABLE ContractDeliveryBatches ADD DeliveryNoteCode VARCHAR(50) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'DeliveryNoteFilesJson')
+  ALTER TABLE ContractDeliveryBatches ADD DeliveryNoteFilesJson NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ContractDeliveryBatches') AND name = 'ActualDeliveredQuantity')
+  ALTER TABLE ContractDeliveryBatches ADD ActualDeliveredQuantity FLOAT NULL;
+GO
+
+---------------------------------------------------------------
+-- 3) CONSTRAINTS — chỉ tạo khi cột tồn tại
+---------------------------------------------------------------
+-- FK ParentContract
+IF COL_LENGTH('Contracts', 'ParentContractID') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Contracts_ParentContract')
+BEGIN
+  ALTER TABLE Contracts
+  ADD CONSTRAINT FK_Contracts_ParentContract
+      FOREIGN KEY (ParentContractID) REFERENCES Contracts(ContractID);
+END
+GO
+
+-- JSON checks (comment 2 dòng này nếu SQL Server < 2016)
+IF COL_LENGTH('Contracts', 'SettlementFilesJson') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Contracts_SettlementFilesJson_IsJson')
+BEGIN
+  ALTER TABLE Contracts
+  ADD CONSTRAINT CK_Contracts_SettlementFilesJson_IsJson
+  CHECK (SettlementFilesJson IS NULL OR ISJSON(SettlementFilesJson) = 1);
+END
+
+IF COL_LENGTH('ContractDeliveryBatches', 'PaymentReceiptFilesJson') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Batches_PaymentReceiptFilesJson_IsJson')
+BEGIN
+  ALTER TABLE ContractDeliveryBatches
+  ADD CONSTRAINT CK_Batches_PaymentReceiptFilesJson_IsJson
+  CHECK (PaymentReceiptFilesJson IS NULL OR ISJSON(PaymentReceiptFilesJson) = 1);
+END
+
+IF COL_LENGTH('ContractDeliveryBatches', 'DeliveryNoteFilesJson') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Batches_DeliveryNoteFilesJson_IsJson')
+BEGIN
+  ALTER TABLE ContractDeliveryBatches
+  ADD CONSTRAINT CK_Batches_DeliveryNoteFilesJson_IsJson
+  CHECK (DeliveryNoteFilesJson IS NULL OR ISJSON(DeliveryNoteFilesJson) = 1);
+END
+GO
+
+---------------------------------------------------------------
+-- 4) INDEXES (safe)
+---------------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ContractDeliveryBatches_ContractID' AND object_id = OBJECT_ID('ContractDeliveryBatches'))
+  CREATE INDEX IX_ContractDeliveryBatches_ContractID ON ContractDeliveryBatches(ContractID) WHERE IsDeleted = 0;
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ContractDeliveryItems_BatchID' AND object_id = OBJECT_ID('ContractDeliveryItems'))
+  CREATE INDEX IX_ContractDeliveryItems_BatchID ON ContractDeliveryItems(DeliveryBatchID) WHERE IsDeleted = 0;
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Contracts_ParentContractID' AND object_id = OBJECT_ID('Contracts'))
+  CREATE INDEX IX_Contracts_ParentContractID ON Contracts(ParentContractID);
+GO
+
+---------------------------------------------------------------
+-- 5) VIEWS (tạo SAU khi cột đã có)
+---------------------------------------------------------------
+-- Nếu SQL Server < 2016: thay CREATE OR ALTER VIEW bằng CREATE VIEW (và drop trước nếu tồn tại)
+CREATE OR ALTER VIEW v_ContractPaymentProgress AS
+SELECT
+  c.ContractID,
+  c.ContractCode,
+  c.TotalValue,
+  SUM(CASE WHEN b.IsDeleted = 0 THEN ISNULL(b.PaidAmount,0) ELSE 0 END) AS TotalPaid,
+  CASE
+    WHEN ISNULL(c.TotalValue,0) = 0 THEN 0
+    ELSE TRY_CONVERT(DECIMAL(5,2),
+         100.0 * SUM(CASE WHEN b.IsDeleted = 0 THEN ISNULL(b.PaidAmount,0) ELSE 0 END) / c.TotalValue)
+  END AS PaidPercent
+FROM Contracts c
+LEFT JOIN ContractDeliveryBatches b ON b.ContractID = c.ContractID
+GROUP BY c.ContractID, c.ContractCode, c.TotalValue;
+GO
+
+CREATE OR ALTER VIEW v_BatchPaymentProgress AS
+SELECT
+  b.DeliveryBatchID,
+  b.DeliveryBatchCode,
+  b.ContractID,
+  b.ExpectedDeliveryStartDate,
+  b.ExpectedDeliveryEndDate,
+  b.ActualDeliveryStartDate,
+  b.ActualDeliveryEndDate,
+  b.ExpectedPaymentDate,
+  b.ExpectedPaymentAmount,
+  b.PaidAmount AS TotalPaidForBatch,
+  b.PaymentStatus,
+  b.LastPaidAt
+FROM ContractDeliveryBatches b
+WHERE b.IsDeleted = 0;
+GO
+
+---------------------------------------------------------------
+-- 6) TRIGGERS (safe)
+---------------------------------------------------------------
+CREATE OR ALTER TRIGGER TR_Contracts_UpdateTimestamp ON Contracts
+AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE c SET UpdatedAt = CURRENT_TIMESTAMP
+  FROM Contracts c
+  INNER JOIN inserted i ON c.ContractID = i.ContractID;
+END;
+GO
+
+CREATE OR ALTER TRIGGER TR_ContractDeliveryBatches_UpdateTimestamp ON ContractDeliveryBatches
+AFTER UPDATE AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE b SET UpdatedAt = CURRENT_TIMESTAMP
+  FROM ContractDeliveryBatches b
+  INNER JOIN inserted i ON b.DeliveryBatchID = i.DeliveryBatchID;
+END;
+
+GO
+
+-- Bổ sung metadata để biết rule áp vào entity/field nào, phạm vi nào
+ALTER TABLE SystemConfiguration
+ADD TargetEntity NVARCHAR(100) NULL,     -- 'ProcessingBatch', 'Shipment',...
+    TargetField  NVARCHAR(100) NULL,     -- 'MoisturePercent', 'DefectRate',...
+    Operator     NVARCHAR(10)  NULL,     -- '<','<=','>','>=','=','between'
+    ScopeType    NVARCHAR(50)  NULL,     -- 'Global','CoffeeType','Factory','Region',...
+    ScopeId      UNIQUEIDENTIFIER NULL,  -- ID phạm vi (nếu có)
+    Severity     NVARCHAR(20)  NULL,     -- 'Hard' (fail ngay) | 'Soft' (cảnh báo/điểm)
+    RuleGroup    NVARCHAR(50)  NULL,     -- Nhóm tiêu chí ('QualityCore','Sensory',...)
+    VersionNo    INT           NULL,     -- Phiên bản bộ quy tắc
+    CreatedBy    UNIQUEIDENTIFIER NULL,
+    UpdatedBy    UNIQUEIDENTIFIER NULL;
+GO
+
+-- Index để truy vấn rule đang hiệu lực nhanh
+CREATE INDEX IX_SystemConfiguration_Effective
+ON SystemConfiguration (TargetEntity, TargetField, ScopeType, ScopeId, EffectedDateFrom, EffectedDateTo)
+INCLUDE (IsActive, MinValue, MaxValue, Operator, Severity, RuleGroup, Name, Description);
+GO
+
+-- Tránh Name bị trùng khi đang active (tối giản; có thể thay bằng composite theo Target/Scope)
+CREATE UNIQUE INDEX UX_SystemConfiguration_Name_Active
+ON SystemConfiguration(Name, IsActive, IsDeleted)
+WHERE IsActive = 1 AND IsDeleted = 0;
+
+GO
+
+ALTER TABLE ProcessingBatchEvaluations
+ADD TotalScore DECIMAL(5,2) NULL,         -- tuỳ chọn (nếu chấm điểm Soft)
+    DecisionReason NVARCHAR(255) NULL,    -- tóm tắt lý do
+    CriteriaSnapshot NVARCHAR(MAX) NULL;  -- JSON checklist đã tick
+
+GO
+
+-- Seed 10 tiêu chí đánh giá sau sơ chế (green coffee) cho ProcessingBatch
+INSERT INTO SystemConfiguration
+(Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom,
+ TargetEntity, TargetField, Operator, ScopeType, ScopeId, Severity, RuleGroup, VersionNo)
+VALUES
+-- 1) Độ ẩm tối đa ≤ 12%
+('PB.MoisturePercent', N'Độ ẩm tối đa (green coffee)', NULL, 12.00, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'MoisturePercent', '<=', 'Global', NULL, 'Hard', 'QualityCore', 1),
+
+-- 2) Water Activity ≤ 0.70
+('PB.WaterActivity', N'Nước tự do (aw) tối đa', NULL, 0.70, N'aw', 1, GETDATE(),
+ 'ProcessingBatch', 'WaterActivity', '<=', 'Global', NULL, 'Hard', 'QualityCore', 1),
+
+-- 3) Tỉ lệ lỗi tổng ≤ 3%
+('PB.DefectRate', N'Tỉ lệ lỗi tổng tối đa', NULL, 3.00, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'DefectRate', '<=', 'Global', NULL, 'Hard', 'Defects', 1),
+
+-- 4) Tạp chất (foreign matter) = 0 g/kg
+('PB.ForeignMatter', N'Tạp chất (vỏ, đá, kim loại...) phải bằng 0', 0.00, 0.00, N'g/kg', 1, GETDATE(),
+ 'ProcessingBatch', 'ForeignMatter', '=', 'Global', NULL, 'Hard', 'Safety', 1),
+
+-- 5) Không có mùi lạ (Off-odor) = 0
+('PB.OffOdor', N'Không có mùi lạ', 0.00, 0.00, N'flag', 1, GETDATE(),
+ 'ProcessingBatch', 'HasOffOdor', '=', 'Global', NULL, 'Soft', 'Sensory', 1),
+
+-- 6) Hạt đen (black beans) ≤ 0.5%
+('PB.BlackBeansRate', N'Tỉ lệ hạt đen tối đa', NULL, 0.50, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'BlackBeansRate', '<=', 'Global', NULL, 'Hard', 'Defects', 1),
+
+-- 7) Hạt vỡ (broken/chipped) ≤ 3%
+('PB.BrokenBeansRate', N'Tỉ lệ hạt vỡ tối đa', NULL, 3.00, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'BrokenBeansRate', '<=', 'Global', NULL, 'Soft', 'Defects', 1),
+
+-- 8) Hạt sâu (insect-damaged) ≤ 1%
+('PB.InsectDamagedRate', N'Tỉ lệ hạt sâu tối đa', NULL, 1.00, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'InsectDamagedRate', '<=', 'Global', NULL, 'Hard', 'Defects', 1),
+
+-- 9) Độ đồng đều cỡ sàng: ≥ 80% trên sàng 16
+('PB.Screen16UpPct', N'≥ 80% hạt trên sàng 16', 80.00, NULL, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'Screen16UpPct', '>=', 'Global', NULL, 'Soft', 'Grading', 1),
+
+-- 10) Hạt còn vỏ trấu (parchment) ≤ 0.5%
+('PB.ParchmentRate', N'Tỉ lệ hạt còn vỏ trấu tối đa', NULL, 0.50, N'%', 1, GETDATE(),
+ 'ProcessingBatch', 'ParchmentRate', '<=', 'Global', NULL, 'Hard', 'Defects', 1);
