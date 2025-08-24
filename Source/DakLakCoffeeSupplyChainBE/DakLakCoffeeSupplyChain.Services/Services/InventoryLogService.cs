@@ -53,25 +53,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!filteredLogs.Any())
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có log tồn kho nào thuộc công ty của bạn", null);
 
-            // ✅ Tối ưu hóa: Batch load user names để tránh N+1 query
-            var userIds = filteredLogs
+            // ✅ Tối ưu hóa: Batch load staff names để tránh N+1 query
+            var staffIds = filteredLogs
                 .Where(log => log.UpdatedBy.HasValue)
                 .Select(log => log.UpdatedBy.Value)
                 .Distinct()
                 .ToList();
 
-            var users = new Dictionary<Guid, string>();
-            if (userIds.Any())
+            var staffs = new Dictionary<Guid, string>();
+            if (staffIds.Any())
             {
-                var userAccounts = await _unitOfWork.UserAccountRepository.GetAllAsync(u => userIds.Contains(u.UserId));
-                users = userAccounts.ToDictionary(u => u.UserId, u => u.Name ?? "Không rõ");
+                // Sử dụng GetAllWithUserAsync để include User
+                var allBusinessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
+                var businessStaffs = allBusinessStaffs.Where(s => staffIds.Contains(s.StaffId)).ToList();
+                staffs = businessStaffs.ToDictionary(s => s.StaffId, s => s.User?.Name ?? "Không rõ");
             }
 
             var result = filteredLogs.Select(log =>
             {
-                var updatedByName = log.UpdatedBy.HasValue && users.ContainsKey(log.UpdatedBy.Value)
-                    ? users[log.UpdatedBy.Value]
-                    : "Hệ thống";
+                string updatedByName;
+                if (log.UpdatedBy.HasValue)
+                {
+                    if (staffs.ContainsKey(log.UpdatedBy.Value))
+                    {
+                        updatedByName = staffs[log.UpdatedBy.Value];
+                    }
+                    else
+                    {
+                        // Debug: Log để xem tại sao không tìm thấy staff
+                        Console.WriteLine($"DEBUG: Không tìm thấy staff với ID: {log.UpdatedBy.Value}");
+                        updatedByName = "Không rõ";
+                    }
+                }
+                else
+                {
+                    updatedByName = "Hệ thống";
+                }
 
                 return log.ToListItemDto(updatedByName);
             });
@@ -111,10 +128,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (logs == null || !logs.Any())
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có log tồn kho nào", null);
 
+            // ✅ Batch load staff names để tránh N+1 query
+            var staffIds = logs
+                .Where(log => log.UpdatedBy.HasValue)
+                .Select(log => log.UpdatedBy.Value)
+                .Distinct()
+                .ToList();
+
+            var staffs = new Dictionary<Guid, string>();
+            if (staffIds.Any())
+            {
+                // Sử dụng GetAllWithUserAsync để include User
+                var allBusinessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
+                var businessStaffs = allBusinessStaffs.Where(s => staffIds.Contains(s.StaffId)).ToList();
+                staffs = businessStaffs.ToDictionary(s => s.StaffId, s => s.User?.Name ?? "Không rõ");
+            }
+
             var result = logs.Select(log =>
             {
-                var updatedByName = log.UpdatedBy.HasValue
-                    ? _unitOfWork.UserAccountRepository.GetById(log.UpdatedBy.Value)?.Name ?? "Không rõ"
+                var updatedByName = log.UpdatedBy.HasValue && staffs.ContainsKey(log.UpdatedBy.Value)
+                    ? staffs[log.UpdatedBy.Value]
                     : "Hệ thống";
 
                 return log.ToByInventoryDto(updatedByName);
@@ -178,7 +211,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập log này");
 
             var updatedByName = log.UpdatedBy.HasValue
-                ? _unitOfWork.UserAccountRepository.GetById(log.UpdatedBy.Value)?.Name ?? "Không rõ"
+                ? (await _unitOfWork.BusinessStaffRepository.GetByIdWithUserAsync(log.UpdatedBy.Value))?.User?.Name ?? "Không rõ"
                 : "Hệ thống";
 
             var dto = log.ToByInventoryDto(updatedByName);
