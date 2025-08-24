@@ -65,7 +65,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ActionType = InventoryLogActionType.decrease.ToString(),
                 QuantityChanged = -confirmedQuantity,
                 Note = $"Xuất kho từ phiếu {receipt.OutboundReceiptCode}",
-                TriggeredBySystem = true,
+                UpdatedBy = receipt.ExportedBy, // ✅ Track staff thực hiện xuất kho
+                TriggeredBySystem = false, // ✅ Không phải hệ thống tự động
                 LoggedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
