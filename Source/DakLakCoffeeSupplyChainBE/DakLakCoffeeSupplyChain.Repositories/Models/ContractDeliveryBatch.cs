@@ -29,6 +29,34 @@ public partial class ContractDeliveryBatch
 
     public bool IsDeleted { get; set; }
 
+    public DateOnly? ExpectedPaymentDate { get; set; }
+
+    public decimal? ExpectedPaymentAmount { get; set; }
+
+    public string PaymentStatus { get; set; }
+
+    public decimal PaidAmount { get; set; }
+
+    public DateTime? LastPaidAt { get; set; }
+
+    public string PaymentNote { get; set; }
+
+    public string PaymentReceiptFilesJson { get; set; }
+
+    public DateOnly? ExpectedDeliveryStartDate { get; set; }
+
+    public DateOnly? ExpectedDeliveryEndDate { get; set; }
+
+    public DateOnly? ActualDeliveryStartDate { get; set; }
+
+    public DateOnly? ActualDeliveryEndDate { get; set; }
+
+    public string DeliveryNoteCode { get; set; }
+
+    public string DeliveryNoteFilesJson { get; set; }
+
+    public double? ActualDeliveredQuantity { get; set; }
+
     public virtual Contract Contract { get; set; }
 
     public virtual ICollection<ContractDeliveryItem> ContractDeliveryItems { get; set; } = new List<ContractDeliveryItem>();

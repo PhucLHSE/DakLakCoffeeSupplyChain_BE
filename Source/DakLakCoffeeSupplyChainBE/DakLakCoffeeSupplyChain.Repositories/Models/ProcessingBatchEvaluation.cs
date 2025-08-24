@@ -27,5 +27,11 @@ public partial class ProcessingBatchEvaluation
 
     public bool IsDeleted { get; set; }
 
+    public decimal? TotalScore { get; set; }
+
+    public string DecisionReason { get; set; }
+
+    public string CriteriaSnapshot { get; set; }
+
     public virtual ProcessingBatch Batch { get; set; }
 }
