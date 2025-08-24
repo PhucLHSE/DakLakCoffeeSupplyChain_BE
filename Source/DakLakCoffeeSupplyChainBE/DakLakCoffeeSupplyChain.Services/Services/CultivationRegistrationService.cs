@@ -289,10 +289,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //        );
                 //}
 
+                // Kiểm tra xem sản lượng đã đăng ký của chi tiết đăng ký có vượt quá sản lượng đã đăng ký của chi tiết kế hoạch thu mua không
+                double? registeredQuantity = 0;
+                var planDetailsDict = selectedProcurementPlan.ProcurementPlansDetails.ToDictionary(d => d.PlanDetailsId, d => d);
                 foreach (var detail in newCultivationRegistration.CultivationRegistrationsDetails)
                 {
                     // Kiểm tra xem plan detail có thuộc plan mẹ không
-                    if (!planDetailIds.Contains(detail.PlanDetailId))
+                    if (!planDetailsDict.TryGetValue(detail.PlanDetailId, out var planDetail))
                     {
                         return new ServiceResult(
                             Const.FAIL_CREATE_CODE,
@@ -301,7 +304,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
 
                     // Kiểm tra xem sản lượng dự kiến có vượt quá kế hoạch hoặc ít hơn mức tối thiểu không
-                    var planDetail = selectedProcurementPlan.ProcurementPlansDetails.FirstOrDefault(d => d.PlanDetailsId == detail.PlanDetailId);
                     if (planDetail == null)
                     {
                         return new ServiceResult(
@@ -309,12 +311,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "Chi tiết kế hoạch thu mua không tồn tại trong kế hoạch chính đã chọn."
                         );
                     }
-                    if (detail.EstimatedYield < planDetail.MinimumRegistrationQuantity || detail.EstimatedYield > planDetail.TargetQuantity)
+                    registeredQuantity = planDetail.TargetQuantity*planDetail.ProgressPercentage / 100;
+                    
+                    // Cho phép đăng ký sản lượng nhỏ hơn mức tối thiểu của chi tiết kế hoạch thu mua nếu sản lượng đã đăng ký gần chạm sản lượng mục tiêu 
+                    if (registeredQuantity + planDetail.MinimumRegistrationQuantity < planDetail.TargetQuantity)
                     {
-                        return new ServiceResult(
-                            Const.FAIL_CREATE_CODE,
-                            "Sản lượng dự kiến phải nằm trong phạm vi tối thiểu và mục tiêu của chi tiết kế hoạch."
-                        );
+                        if (registeredQuantity + detail.EstimatedYield > planDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng đăng ký của chi tiết này đã vượt quá sản lượng đã đăng ký của chi tiết kế hoạch thu mua."
+                            );
+                        }
+                        if (detail.EstimatedYield < planDetail.MinimumRegistrationQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng dự kiến phải nằm trong phạm vi tối thiểu của chi tiết kế hoạch."
+                            );
+                        }
+                    }
+                    else
+                    {
+                        if (detail.EstimatedYield <= 0 || registeredQuantity + detail.EstimatedYield > planDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                $"Sản lượng dự kiến phải lớn hơn 0 và không vượt quá phần còn lại: {planDetail.TargetQuantity - registeredQuantity}kg."
+                            );
+                        }
                     }
 
                     // Kiểm tra xem mức giá mong muốn có vượt quá kế hoạch hoặc ít hơn mức tối thiểu không

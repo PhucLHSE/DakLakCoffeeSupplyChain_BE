@@ -31,6 +31,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public string Note { get; set; } = string.Empty;
 
         public double? ProgressPercentage { get; set; }
+        public double? RegisteredQuantity { get; set; } = 0;
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Disable;

@@ -22,7 +22,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
 
             var procurementPlans = await _unitOfWork.ProcurementPlanRepository.GetAllAsync(
-                predicate: p => p.Status == "Open" && !p.IsDeleted,
+                predicate: p => p.Status == "Open" && !p.IsDeleted && p.ProgressPercentage < 100,
                 include: p => p.
                 Include(p => p.CreatedByNavigation).
                 Include(p => p.ProcurementPlansDetails).
@@ -31,7 +31,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(p => p.ProcessMethod),
                 orderBy: p => p.OrderBy(p => p.PlanCode),
                 asNoTracking: true);
-
+                        
             if (procurementPlans == null || procurementPlans.Count == 0)
             {
                 return new ServiceResult(
@@ -125,6 +125,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 var planDto = plan.MapToProcurementPlanViewDetailsDto();
 
+                if (planDto.ProcurementPlansDetails != null)
+                    foreach (var detailDto in planDto.ProcurementPlansDetails)
+                        detailDto.RegisteredQuantity = detailDto.TargetQuantity * detailDto.ProgressPercentage / 100;
+
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
@@ -157,6 +161,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var planDto = plan.MapToProcurementPlanViewDetailsDto();
+
+                if (planDto.ProcurementPlansDetails != null)
+                    foreach (var detailDto in planDto.ProcurementPlansDetails)
+                        detailDto.RegisteredQuantity = detailDto.TargetQuantity * detailDto.ProgressPercentage / 100;
 
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
