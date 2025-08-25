@@ -113,7 +113,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [HttpPost]
         [Authorize(Roles = "Farmer")]
         public async Task<IActionResult> CreateCultivationRegistrationAsync(
-            [FromBody] CultivationRegistrationCreateViewDto registrationId)
+            [FromBody] CultivationRegistrationCreateViewDto registration)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -131,7 +131,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             var result = await _service
-                .Create(registrationId, userId);
+                .Create(registration, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return CreatedAtAction(nameof(GetById),

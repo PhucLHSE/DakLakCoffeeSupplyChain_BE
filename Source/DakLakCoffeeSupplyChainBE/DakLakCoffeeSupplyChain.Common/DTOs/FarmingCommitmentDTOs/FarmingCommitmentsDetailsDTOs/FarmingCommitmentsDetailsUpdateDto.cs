@@ -10,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs.FarmingCommi
 
         //public Guid PlanDetailId { get; set; }
         [Required(ErrorMessage = "Giá cả cam kết không được phép bỏ trống")]
+        [Range(1000, double.MaxValue, ErrorMessage = "Giá cả tối thiểu phải từ 1000 VNĐ trở lên")]
         public double? ConfirmedPrice { get; set; }
 
         public double? AdvancePayment { get; set; }
