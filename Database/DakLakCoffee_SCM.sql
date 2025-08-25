@@ -13,7 +13,7 @@ CREATE DATABASE DakLakCoffee_SCM;
 
 GO
 
-USE DakLakCoffee_SCMDB;
+USE DakLakCoffee_SCM;
 
 GO
 

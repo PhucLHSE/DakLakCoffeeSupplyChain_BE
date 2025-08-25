@@ -2,6 +2,7 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -270,6 +271,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 newCommitment.PlanId = selectedRegistration.PlanId;
                 newCommitment.FarmerId = selectedRegistration.FarmerId;
 
+                double? registeredQuantity = 0;
+
                 // Tạo Commitment Detail
                 foreach (var detail in newCommitment.FarmingCommitmentsDetails)
                 {
@@ -294,13 +297,48 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "selectedRegistrationDetail được chọn bị rỗng"
                         );
 
+                    // Lấy sản lượng đã đăng ký
+                    registeredQuantity = selectedRegistrationDetail.PlanDetail.TargetQuantity * 
+                        selectedRegistrationDetail.PlanDetail.ProgressPercentage / 100;
+
                     // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
-                    if (detail.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity || detail.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
-                        return new ServiceResult(
-                            Const.FAIL_CREATE_CODE,
-                            "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
-                            $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
-                        );
+                    //if (detail.CommittedQuantity > registeredQuantity || detail.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
+                    //    return new ServiceResult(
+                    //        Const.FAIL_CREATE_CODE,
+                    //        "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
+                    //        $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
+                    //    );
+
+                    if (registeredQuantity + selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity < 
+                        selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                    {
+                        if (registeredQuantity + detail.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng thống nhất của chi tiết cam kết này đã vượt quá sản lượng đã đăng ký của chi tiết kế hoạch thu mua. " +
+                                $"Sản lượng của chi tiết kế hoạch này là {selectedRegistrationDetail.PlanDetail.TargetQuantity}kg."
+                            );
+                        }
+                        if (detail.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng thống nhất phải nằm trong phạm vi tối thiểu của chi tiết kế hoạch. " +
+                                $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity}kg."
+                            );
+                        }                        
+                    }
+                    else
+                    {
+                        if (detail.CommittedQuantity <= 0 || registeredQuantity + detail.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                $"Sản lượng thống nhất phải lớn hơn 0 và không vượt quá phần còn lại: {selectedRegistrationDetail.PlanDetail.TargetQuantity - registeredQuantity}kg."
+                            );
+                        }
+                    }
 
                     // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
                     if (detail.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
@@ -516,6 +554,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //    asNoTracking: true
                 //    );
 
+                double? registeredQuantity = 0;
+
                 // Xóa mềm Details
                 foreach (var oldItem in commitment.FarmingCommitmentsDetails)
                 {
@@ -560,16 +600,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "selectedRegistrationDetail được chọn bị rỗng"
                         );
 
-                    // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
-                    if (itemDto.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity || itemDto.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
-                        return new ServiceResult(
-                            Const.FAIL_CREATE_CODE,
-                            "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
-                            $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
-                        );
+                    registeredQuantity = selectedRegistrationDetail.PlanDetail.TargetQuantity *
+                        selectedRegistrationDetail.PlanDetail.ProgressPercentage / 100;
 
-                    // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
-                    if (itemDto.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
+                    // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
+                    if (registeredQuantity + selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity <
+                        selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                    {
+                        if (registeredQuantity + itemDto.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng thống nhất của chi tiết cam kết này đã vượt quá sản lượng đã đăng ký của chi tiết kế hoạch thu mua. " +
+                                $"Sản lượng của chi tiết kế hoạch này là {selectedRegistrationDetail.PlanDetail.TargetQuantity}kg."
+                            );
+                        }
+                        if (itemDto.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                "Sản lượng thống nhất phải nằm trong phạm vi tối thiểu của chi tiết kế hoạch. " +
+                                $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity}kg."
+                            );
+                        }
+                    }
+                    else
+                    {
+                        if (itemDto.CommittedQuantity <= 0 || registeredQuantity + itemDto.CommittedQuantity > selectedRegistrationDetail.PlanDetail.TargetQuantity)
+                        {
+                            return new ServiceResult(
+                                Const.FAIL_CREATE_CODE,
+                                $"Sản lượng thống nhất phải lớn hơn 0 và không vượt quá phần còn lại: {selectedRegistrationDetail.PlanDetail.TargetQuantity - registeredQuantity}kg."
+                            );
+                        }
+                    }
+
+                        // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
+                        if (itemDto.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
                         return new ServiceResult(Const.FAIL_CREATE_CODE,
                             "Ngày dự kiến bắt đầu giao hàng phải sau ngày dự kiến kết thúc thu hoạch. Cụ thể là từ " +
                             $"{selectedRegistrationDetail.ExpectedHarvestEnd}"
@@ -775,6 +842,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     weightedProgressSum += (pd.TargetQuantity / plan.TotalQuantity) * pd.ProgressPercentage;
                 }
                 plan.ProgressPercentage = plan.TotalQuantity > 0 ? weightedProgressSum : 0;
+                if (plan.ProgressPercentage == 100)
+                    plan.Status = ProcurementPlanStatus.Closed.ToString();                
                 plan.UpdatedAt = DateHelper.NowVietnamTime();
                 await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
 

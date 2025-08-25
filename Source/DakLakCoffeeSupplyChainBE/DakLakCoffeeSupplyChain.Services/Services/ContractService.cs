@@ -118,6 +118,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                    .Include(c => c.Buyer)
                    .Include(c => c.Seller)
                       .ThenInclude(s => s.User)
+                   .Include(c => c.ParentContract)
                    .Include(c => c.ContractItems.Where(ci => !ci.IsDeleted))
                       .ThenInclude(ci => ci.CoffeeType),
                 asNoTracking: true

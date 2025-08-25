@@ -272,12 +272,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             Console.WriteLine($"DEBUG GetAllAsync: Total requests: {allRequests.Count}");
             Console.WriteLine($"DEBUG GetAllAsync: ManagerId: {managerId}");
 
-            // Tạm thời bỏ filter để xem tất cả requests
+            // ✅ SỬA: Filter theo công ty để Staff không thấy yêu cầu của công ty khác
             var filtered = allRequests
-                .Where(r => !r.IsDeleted)
+                .Where(r => !r.IsDeleted &&
+                            (r.Farmer?.FarmingCommitments?.Any(fc => fc.Plan?.CreatedBy == managerId) == true ||
+                             r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy == managerId ||
+                             r.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy == managerId))
                 .Select(r => {
+                    var sellerId = r.Farmer?.FarmingCommitments?.FirstOrDefault()?.Plan?.CreatedBy ??
+                                  r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy ??
+                                  r.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy;
                     Console.WriteLine($"DEBUG Request {r.InboundRequestId}: BatchId={r.BatchId}, DetailId={r.DetailId}, " +
-                                    $"Status={r.Status}, FarmerId={r.FarmerId}");
+                                    $"Status={r.Status}, FarmerId={r.FarmerId}, SellerId={sellerId}");
                     return r.ToViewDto();
                 })
                 .ToList();
