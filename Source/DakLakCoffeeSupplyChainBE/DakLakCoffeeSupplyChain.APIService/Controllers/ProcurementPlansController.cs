@@ -119,7 +119,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PATCH: api/<ProductsController>/soft-delete/{productId}
         [HttpPatch("soft-delete/{planId}")]
         [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> SoftDeleteUserAccountByIdAsync(Guid planId)
+        public async Task<IActionResult> SoftDeleteProcurementPlanByIdAsync(Guid planId)
         {
             var result = await _procurementPlanService
                 .SoftDeleteById(planId);

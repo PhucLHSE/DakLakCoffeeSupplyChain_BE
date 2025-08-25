@@ -270,6 +270,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Tự động map planId và farmerId từ Registration
                 newCommitment.PlanId = selectedRegistration.PlanId;
                 newCommitment.FarmerId = selectedRegistration.FarmerId;
+                newCommitment.ApprovedBy = selectedRegistration.Plan.CreatedBy;
 
                 double? registeredQuantity = 0;
 

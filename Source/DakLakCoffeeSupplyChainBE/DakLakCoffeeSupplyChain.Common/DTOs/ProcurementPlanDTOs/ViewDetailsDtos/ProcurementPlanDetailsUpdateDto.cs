@@ -35,6 +35,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public ProcurementPlanDetailsStatus Status { get; set; } = ProcurementPlanDetailsStatus.Unknown;
+
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (MinimumRegistrationQuantity > TargetQuantity)
