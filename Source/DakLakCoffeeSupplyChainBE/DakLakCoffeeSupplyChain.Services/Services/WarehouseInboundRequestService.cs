@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -67,13 +68,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // 4. Tính khối lượng còn lại = Output lớn nhất - (Đã nhập + Đang xử lý)
             double remaining = totalOutput - (totalCompleted + totalPendingApproved);
             
-            // Debug logging
-            Console.WriteLine($"DEBUG CalcRemainingForBatchAsync for BatchId: {batchId}");
-            Console.WriteLine($"  - Total Output: {totalOutput}");
-            Console.WriteLine($"  - Total Completed Requests: {totalCompleted}");
-            Console.WriteLine($"  - Total Pending/Approved Requests: {totalPendingApproved}");
-            Console.WriteLine($"  - Remaining: {remaining}");
-            
+            // ✅ TỐI ƯU: Bỏ debug logging để tăng performance
             return remaining < 0 ? 0 : remaining;
         }
 
@@ -128,12 +123,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (dto.BatchId.HasValue)
             {
-                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId.Value);
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    b => b.BatchId == dto.BatchId.Value,
+                    include: q => q
+                        .Include(b => b.CropSeason)
+                            .ThenInclude(cs => cs.Commitment)
+                                .ThenInclude(c => c.Plan)
+                                    .ThenInclude(p => p.CreatedByNavigation)
+                );
+                
                 if (batch == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô chế biến.");
 
                 if (batch.FarmerId != farmer.FarmerId)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền gửi yêu cầu cho lô chế biến này.");
+
+                // ✅ THÊM: Kiểm tra ràng buộc với công ty (check theo Plan.CreatedBy thay vì ApprovedBy)
+                if (batch.CropSeason?.Commitment?.Plan?.CreatedBy == null || 
+                    batch.CropSeason.Commitment.Plan.CreatedBy == Guid.Empty)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Lô chế biến này không thuộc về kế hoạch nào với công ty.");
 
                 // Lô phải hoàn tất
                 if (!string.Equals(batch.Status, ProcessingStatus.Completed.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -161,12 +169,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (planDetail == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy thông tin kế hoạch từ hợp đồng.");
 
-                        // Nếu ProcessMethodId có giá trị → Yêu cầu sơ chế → Không được giao tươi
-        if (planDetail.ProcessMethodId.HasValue && planDetail.ProcessMethodId.Value > 0)
-        {
-            return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                "Cam kết sơ chế, vui lòng gửi hàng sơ chế hoặc nếu chưa có hãy tạo lô sơ chế trước khi gửi yêu cầu nhập kho.");
-        }
+                // Nếu ProcessMethodId có giá trị → Yêu cầu sơ chế → Không được giao tươi
+                if (planDetail.ProcessMethodId.HasValue && planDetail.ProcessMethodId.Value > 0)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                        "Cam kết sơ chế, vui lòng gửi hàng sơ chế hoặc nếu chưa có hãy tạo lô sơ chế trước khi gửi yêu cầu nhập kho.");
+                }
 
                 // Kiểm tra khối lượng còn lại
                 remaining = await CalcRemainingForDetailAsync(detail.DetailId);
@@ -190,14 +198,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
             await _unitOfWork.SaveChangesAsync();
 
-             _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
+             await _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
 
         public async Task<IServiceResult> ApproveRequestAsync(Guid requestId, Guid staffUserId)
         {
-            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            // ✅ TỐI ƯU: Chỉ include những gì cần thiết cho việc kiểm tra ràng buộc
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(
+                r => r.InboundRequestId == requestId,
+                include: q => q
+                    .Include(r => r.Batch)
+                        .ThenInclude(b => b.CropSeason)
+                            .ThenInclude(cs => cs.Commitment)
+                                .ThenInclude(c => c.Plan)
+                    .Include(r => r.Detail)
+                        .ThenInclude(d => d.CommitmentDetail)
+                            .ThenInclude(cd => cd.PlanDetail)
+                                .ThenInclude(pd => pd.Plan)
+                    .Include(r => r.Farmer)
+                        .ThenInclude(f => f.User)
+            );
+            
             if (request == null)
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy yêu cầu nhập kho.");
 
@@ -207,6 +230,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
             if (staff == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên xử lý.");
+
+            // ✅ THÊM: Kiểm tra ràng buộc với công ty (check theo Plan.CreatedBy)
+            Guid? requestCompanyId = null;
+            if (request.BatchId.HasValue)
+            {
+                requestCompanyId = request.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy;
+            }
+            else if (request.DetailId.HasValue)
+            {
+                requestCompanyId = request.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy;
+            }
+
+            if (requestCompanyId == null || requestCompanyId == Guid.Empty)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không thuộc về kế hoạch nào với công ty.");
+
+            if (requestCompanyId != staff.SupervisorId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền duyệt yêu cầu của công ty khác.");
 
             // Re-check khối lượng còn lại để chống over-commit
             double remaining = 0;
@@ -267,28 +307,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được công ty của người dùng.");
             }
 
-            var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllWithIncludesAsync();
+            // ✅ TỐI ƯU: Sử dụng method mới để filter trực tiếp trong database thay vì memory
+            var requests = await _unitOfWork.WarehouseInboundRequests.GetAllByCompanyAsync(managerId.Value);
             
-            Console.WriteLine($"DEBUG GetAllAsync: Total requests: {allRequests.Count}");
-            Console.WriteLine($"DEBUG GetAllAsync: ManagerId: {managerId}");
+            // ✅ TỐI ƯU: Bỏ debug logging để tăng performance
+            var result = requests.Select(r => r.ToViewDto()).ToList();
 
-            // ✅ SỬA: Filter theo công ty để Staff không thấy yêu cầu của công ty khác
-            var filtered = allRequests
-                .Where(r => !r.IsDeleted &&
-                            (r.Farmer?.FarmingCommitments?.Any(fc => fc.Plan?.CreatedBy == managerId) == true ||
-                             r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy == managerId ||
-                             r.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy == managerId))
-                .Select(r => {
-                    var sellerId = r.Farmer?.FarmingCommitments?.FirstOrDefault()?.Plan?.CreatedBy ??
-                                  r.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy ??
-                                  r.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy;
-                    Console.WriteLine($"DEBUG Request {r.InboundRequestId}: BatchId={r.BatchId}, DetailId={r.DetailId}, " +
-                                    $"Status={r.Status}, FarmerId={r.FarmerId}, SellerId={sellerId}");
-                    return r.ToViewDto();
-                })
-                .ToList();
-
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu theo công ty thành công", filtered);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách yêu cầu theo công ty thành công", result);
         }
 
         public async Task<IServiceResult> GetByIdAsync(Guid requestId)
@@ -305,7 +330,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> CancelRequestAsync(Guid requestId, Guid farmerUserId)
         {
-            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(r => r.InboundRequestId == requestId);
 
             if (request == null || request.Status != InboundRequestStatus.Pending.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc không thể huỷ.");
@@ -326,13 +351,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> RejectRequestAsync(Guid requestId, Guid staffUserId)
         {
-            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(requestId);
+            // ✅ TỐI ƯU: Chỉ include những gì cần thiết cho việc kiểm tra ràng buộc
+            var request = await _unitOfWork.WarehouseInboundRequests.GetByIdAsync(
+                r => r.InboundRequestId == requestId,
+                include: q => q
+                    .Include(r => r.Batch)
+                        .ThenInclude(b => b.CropSeason)
+                            .ThenInclude(cs => cs.Commitment)
+                                .ThenInclude(c => c.Plan)
+                    .Include(r => r.Detail)
+                        .ThenInclude(d => d.CommitmentDetail)
+                            .ThenInclude(cd => cd.PlanDetail)
+                                .ThenInclude(pd => pd.Plan)
+            );
+            
             if (request == null || request.Status != InboundRequestStatus.Pending.ToString())
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không tồn tại hoặc đã được xử lý.");
 
             var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(staffUserId);
             if (staff == null)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được nhân viên.");
+
+            // ✅ THÊM: Kiểm tra ràng buộc với công ty (check theo Plan.CreatedBy)
+            Guid? requestCompanyId = null;
+            if (request.BatchId.HasValue)
+            {
+                requestCompanyId = request.Batch?.CropSeason?.Commitment?.Plan?.CreatedBy;
+            }
+            else if (request.DetailId.HasValue)
+            {
+                requestCompanyId = request.Detail?.CommitmentDetail?.PlanDetail?.Plan?.CreatedBy;
+            }
+
+            if (requestCompanyId == null || requestCompanyId == Guid.Empty)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Yêu cầu không thuộc về kế hoạch nào với công ty.");
+
+            if (requestCompanyId != staff.SupervisorId)
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền từ chối yêu cầu của công ty khác.");
 
             request.Status = InboundRequestStatus.Rejected.ToString();
             request.BusinessStaffId = staff.StaffId;
