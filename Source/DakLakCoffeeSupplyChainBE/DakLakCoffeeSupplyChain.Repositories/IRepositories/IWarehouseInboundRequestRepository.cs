@@ -29,5 +29,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
         Task<int> CountInboundRequestsInYearAsync(int year);
 
         Task<List<WarehouseInboundRequest>> GetAllByFarmerIdAsync(Guid farmerId);
+        
+        // ✅ THÊM: Method tối ưu cho Staff xem danh sách theo công ty
+        Task<List<WarehouseInboundRequest>> GetAllByCompanyAsync(Guid managerId);
     }
 }

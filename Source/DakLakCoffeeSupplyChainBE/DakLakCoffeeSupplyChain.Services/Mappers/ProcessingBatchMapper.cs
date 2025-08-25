@@ -2,7 +2,6 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;

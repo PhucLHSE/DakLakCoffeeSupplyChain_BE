@@ -26,6 +26,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         public async Task<IActionResult> CreateInboundRequest(
             [FromBody] WarehouseInboundRequestCreateDto dto)
         {
+            // TẠM THỜI ẨN - Chỉ cho phép gửi yêu cầu cà phê sơ chế, không cho cà phê tươi
+            if (dto.DetailId.HasValue)
+            {
+                return BadRequest(new { 
+                    status = "FAIL_CREATE_CODE", 
+                    message = "Chức năng gửi yêu cầu nhập kho cà phê tươi đang tạm thời ẩn." 
+                });
+            }
+
             var farmerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             var result = await _service
