@@ -110,7 +110,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!string.Equals(commitmentWithFarmer.Status, FarmingCommitmentStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết chưa được duyệt hoặc không hợp lệ.");
 
-                // Tối ưu: Kiểm tra overlap trước khi tạo entity
+                // Kiểm tra commitment đã được duyệt (có ApprovedAt)
+                if (!commitmentWithFarmer.ApprovedAt.HasValue)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo mùa vụ từ cam kết đã được duyệt.");
+
+                // Kiểm tra commitment đã có mùa vụ chưa - Mỗi commitment chỉ được tạo 1 mùa vụ
+                var existingSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
+                    x => x.CommitmentId == dto.CommitmentId && !x.IsDeleted
+                );
+                
+                if (existingSeason != null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                        "Cam kết này đã có mùa vụ. Mỗi cam kết chỉ được tạo một mùa vụ duy nhất.");
+
+                // Tối ưu: Kiểm tra overlap trước khi tạo entity (validation này giờ không cần thiết nữa nhưng giữ lại để đảm bảo an toàn)
                 var hasOverlap = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                     x => x.CommitmentId == dto.CommitmentId && 
                          !x.IsDeleted &&
@@ -123,6 +136,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (dto.StartDate >= dto.EndDate)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày bắt đầu phải trước ngày kết thúc.");
+
+                // Validation theo approvedAt của commitment
+                if (commitmentWithFarmer.ApprovedAt.HasValue)
+                {
+                    var approvedDate = DateOnly.FromDateTime(commitmentWithFarmer.ApprovedAt.Value);
+                    
+                    // Kiểm tra start date phải sau hoặc bằng ngày approved (có thể bắt đầu cùng ngày)
+                    if (dto.StartDate < approvedDate)
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                            "Ngày bắt đầu mùa vụ phải sau hoặc bằng ngày cam kết được duyệt.");
+                    }
+                    
+                    // Kiểm tra thời gian mùa vụ phải trong khoảng 11-12 tháng
+                    var monthsDiff = (dto.EndDate.Year - dto.StartDate.Year) * 12 + 
+                                   (dto.EndDate.Month - dto.StartDate.Month);
+                    
+                    if (monthsDiff < 11 || monthsDiff > 13) // Cho phép sai số 1 tháng
+                    {
+                        return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                            "Thời gian mùa vụ phải trong khoảng 11-12 tháng.");
+                    }
+                }
 
                 // Tối ưu: Lấy commitment details với projection để giảm dữ liệu truyền
                 var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
@@ -283,7 +319,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!isAdmin && cropSeason.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật mùa vụ này.");
 
-            // Tối ưu: Kiểm tra overlap bằng ExistsAsync thay vì GetAllAsync
+            // Kiểm tra overlap với các mùa vụ khác trong cùng cam kết (trừ mùa vụ hiện tại)
             var hasOverlap = await _unitOfWork.CropSeasonRepository.ExistsAsync(
                 x => x.CommitmentId == cropSeason.CommitmentId
                     && x.CropSeasonId != dto.CropSeasonId

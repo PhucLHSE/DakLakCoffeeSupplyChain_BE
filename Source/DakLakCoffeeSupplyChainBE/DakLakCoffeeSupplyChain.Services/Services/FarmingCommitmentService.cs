@@ -183,16 +183,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            var available = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+            // Lấy tất cả commitments của farmer
+            var allCommitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
                 predicate: c =>
                     c.FarmerId == farmer.FarmerId &&
                     c.Status == FarmingCommitmentStatus.Active.ToString() &&
+                    c.ApprovedAt.HasValue && // Chỉ lấy commitments đã được duyệt
                     !c.IsDeleted,
                 include: c => c
                 .Include(c => c.Plan).
                     ThenInclude(fm => fm.CreatedByNavigation)
                 .Include(c => c.Farmer)
                     .ThenInclude(f => f.User)
+                .Include(c => c.ApprovedByNavigation)
                 .Include(c => c.FarmingCommitmentsDetails).
                     ThenInclude(fm => fm.PlanDetail).
                         ThenInclude(fm => fm.CoffeeType)
@@ -201,7 +204,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 asNoTracking: true
             );
 
-            var dtoList = available.Select(c => c.MapToFarmingCommitmentViewAllDto()).ToList();
+            // Lọc ra những commitments chưa có crop season
+            var availableCommitments = new List<FarmingCommitment>();
+            foreach (var commitment in allCommitments)
+            {
+                var hasCropSeason = await _unitOfWork.CropSeasonRepository.ExistsAsync(
+                    cs => cs.CommitmentId == commitment.CommitmentId && !cs.IsDeleted
+                );
+                
+                if (!hasCropSeason)
+                {
+                    availableCommitments.Add(commitment);
+                }
+            }
+
+            var dtoList = availableCommitments.Select(c => c.MapToFarmingCommitmentViewAllDto()).ToList();
+
+            // Debug log để kiểm tra ApprovedAt
+            foreach (var dto in dtoList)
+            {
+                Console.WriteLine($"DEBUG: Commitment {dto.CommitmentCode} - ApprovedAt: {dto.ApprovedAt}");
+            }
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
         }
