@@ -29,6 +29,17 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDTOs
                     "Ngày bắt đầu phải trước ngày kết thúc.",
                     new[] { nameof(StartDate), nameof(EndDate) });
             }
+
+            // Validation thời gian mùa vụ phải trong khoảng 11-12 tháng
+            var monthsDiff = (EndDate.Year - StartDate.Year) * 12 + 
+                           (EndDate.Month - StartDate.Month);
+            
+            if (monthsDiff < 11 || monthsDiff > 13) // Cho phép sai số 1 tháng
+            {
+                yield return new ValidationResult(
+                    "Thời gian mùa vụ phải trong khoảng 11-12 tháng.",
+                    new[] { nameof(StartDate), nameof(EndDate) });
+            }
         }
     }
 }
