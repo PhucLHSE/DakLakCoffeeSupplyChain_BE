@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
 {
@@ -17,5 +18,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
         public List<string> AllPhotoUrls { get; set; } = new List<string>();
         public List<string> AllVideoUrls { get; set; } = new List<string>();
         public List<ProcessingParameterViewAllDto> Parameters { get; set; } = new List<ProcessingParameterViewAllDto>();
+        public List<ProcessingWasteViewAllDto> Wastes { get; set; } = new List<ProcessingWasteViewAllDto>();
     }
 }
