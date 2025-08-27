@@ -123,5 +123,28 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
+        
+        // ✅ THÊM: Method tối ưu cho Staff xem danh sách theo công ty
+        public async Task<List<WarehouseInboundRequest>> GetAllByCompanyAsync(Guid managerId)
+        {
+            return await _context.WarehouseInboundRequests
+                .Where(r => !r.IsDeleted)
+                .Include(r => r.Farmer).ThenInclude(f => f.User)
+                .Include(r => r.BusinessStaff).ThenInclude(s => s.User)
+                .Include(r => r.Batch)
+                    .ThenInclude(b => b.CropSeason)
+                        .ThenInclude(cs => cs.Commitment)
+                            .ThenInclude(c => c.Plan)
+                .Include(r => r.Detail)
+                    .ThenInclude(d => d.CommitmentDetail)
+                        .ThenInclude(cd => cd.PlanDetail)
+                            .ThenInclude(pd => pd.Plan)
+                .Where(r => 
+                    (r.Batch != null && r.Batch.CropSeason.Commitment.Plan.CreatedBy == managerId) ||
+                    (r.Detail != null && r.Detail.CommitmentDetail.PlanDetail.Plan.CreatedBy == managerId)
+                )
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

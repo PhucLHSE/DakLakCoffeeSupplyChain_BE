@@ -805,14 +805,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (farmer == null)
                     return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông dân.");
 
-                // Lấy tất cả batch đã hoàn tất của farmer này
+                // ✅ THÊM: Lấy tất cả batch đã hoàn tất của farmer này VÀ có ràng buộc với công ty
                 var completedBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: b => !b.IsDeleted && 
                                    b.FarmerId == farmer.FarmerId &&
-                                   b.Status == ProcessingStatus.Completed.ToString(),
+                                   b.Status == ProcessingStatus.Completed.ToString() &&
+                                   b.CropSeason != null &&
+                                   b.CropSeason.Commitment != null &&
+                                   b.CropSeason.Commitment.Plan != null &&
+                                   b.CropSeason.Commitment.Plan.CreatedBy != Guid.Empty, // Check theo Plan.CreatedBy thay vì ApprovedBy
                     include: q => q
                         .Include(b => b.CoffeeType)
                         .Include(b => b.CropSeason)
+                            .ThenInclude(cs => cs.Commitment)
+                                .ThenInclude(c => c.Plan)
+                                    .ThenInclude(p => p.CreatedByNavigation) // Include thông tin công ty
                         .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted)),
                     orderBy: q => q.OrderByDescending(b => b.CreatedAt),
                     asNoTracking: true
@@ -864,6 +871,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Chỉ trả về batch có available quantity > 0
                     if (availableQuantity > 0)
                     {
+                                            // ✅ THÊM: Lấy thông tin công ty từ Plan.CreatedBy (BusinessManager tạo plan)
+                    var companyName = batch.CropSeason?.Commitment?.Plan?.CreatedByNavigation?.CompanyName ?? "N/A";
+                    var companyId = batch.CropSeason?.Commitment?.Plan?.CreatedBy ?? Guid.Empty;
+                        
                         result.Add(new
                         {
                             batchId = batch.BatchId,
@@ -873,10 +884,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             maxOutputQuantity = maxOutputQuantity,
                             totalRequested = totalRequested,
                             availableQuantity = availableQuantity,
-                            availableQuantityText = $"{availableQuantity} kg"
+                            availableQuantityText = $"{availableQuantity} kg",
+                            // ✅ THÊM: Thông tin công ty
+                            companyId = companyId,
+                            companyName = companyName,
+                            commitmentId = batch.CropSeason?.Commitment?.CommitmentId ?? Guid.Empty
                         });
                         
-                        Console.WriteLine($"  ✅ Added to result: {availableQuantity}kg available");
+                        Console.WriteLine($"  ✅ Added to result: {availableQuantity}kg available for company: {companyName}");
                     }
                     else
                     {

@@ -17,11 +17,13 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         [Required(ErrorMessage = "BuyerId là bắt buộc.")]
         public Guid BuyerId { get; set; }
 
-        [Required(ErrorMessage = "Số hợp đồng (ContractNumber) là bắt buộc.")]
+        [Required(ErrorMessage = "Số hợp đồng là bắt buộc.")]
+        [MinLength(3, ErrorMessage = "Số hợp đồng phải có ít nhất 3 ký tự.")]
         [MaxLength(100, ErrorMessage = "Số hợp đồng không được vượt quá 100 ký tự.")]
         public string ContractNumber { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Tiêu đề hợp đồng (ContractTitle) là bắt buộc.")]
+        [Required(ErrorMessage = "Tiêu đề hợp đồng là bắt buộc.")]
+        [MinLength(10, ErrorMessage = "Tên hợp đồng phải có ít nhất 10 ký tự.")]
         [MaxLength(255, ErrorMessage = "Tiêu đề không được vượt quá 255 ký tự.")]
         public string ContractTitle { get; set; } = string.Empty;
 
