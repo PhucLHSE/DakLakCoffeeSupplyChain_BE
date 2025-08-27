@@ -1,24 +1,23 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs
 {
-    public class ProcessingBatchProgressCreateRequest
+    public class AdvanceProcessingBatchProgressRequest
     {
-        public Guid ProcessingBatchId { get; set; }
-        public int? StageId { get; set; } // Thêm StageId để validation
         public DateOnly? ProgressDate { get; set; }
         public double? OutputQuantity { get; set; }
         public string OutputUnit { get; set; }
 
         public List<IFormFile>? PhotoFiles { get; set; }
         public List<IFormFile>? VideoFiles { get; set; }
+        
+        // Stage selection fields - Sửa từ string thành int để nhất quán với model database
+        public int? StageId { get; set; }        
+        public int? CurrentStageId { get; set; } 
+        public string? StageDescription { get; set; }
         
         // Single parameter fields
         public string? ParameterName { get; set; }

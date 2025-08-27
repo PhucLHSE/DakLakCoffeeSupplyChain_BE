@@ -1,6 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchsProgressDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingWastesDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingParameterDTOs;
+// using DakLakCoffeeSupplyChain.APIService.Requests.ProcessingBatchProgressReques; // Moved to Common
 using DakLakCoffeeSupplyChain.Common.Enum.ProcessingEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -977,7 +980,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     StepIndex = nextStepIndex,
                     StageId = nextStage.StageId,
                     StageDescription = !string.IsNullOrWhiteSpace(input.StageDescription) ? input.StageDescription : (nextStage.Description ?? ""),
-                    ProgressDate = DateOnly.FromDateTime(input.ProgressDate),
+                    ProgressDate = input.ProgressDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
                     OutputQuantity = input.OutputQuantity,
                     OutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit,
                     PhotoUrl = input.PhotoUrl,
@@ -1870,6 +1873,358 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG: Error getting failure info: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Tạo progress với media và waste
+        /// </summary>
+        public async Task<IServiceResult> CreateWithMediaAndWasteAsync(Guid batchId, ProcessingBatchProgressCreateRequest input, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // 1. Parse parameters từ request
+                var parameters = await ParseParametersFromRequest(input);
+                
+                // 2. Tạo progress DTO
+                var progressDto = new ProcessingBatchProgressCreateDto
+                {
+                    StageId = input.StageId,
+                    ProgressDate = input.ProgressDate,
+                    OutputQuantity = input.OutputQuantity,
+                    OutputUnit = input.OutputUnit,
+                    PhotoUrl = null,
+                    VideoUrl = null,
+                    Parameters = parameters.Any() ? parameters : null
+                };
+
+                // 3. Tạo progress
+                var progressResult = await CreateAsync(batchId, progressDto, userId, isAdmin, isManager);
+                if (progressResult.Status != Const.SUCCESS_CREATE_CODE)
+                {
+                    return progressResult;
+                }
+
+                var progressId = (Guid)progressResult.Data;
+
+                // 4. Tạo waste nếu có - từ field riêng biệt hoặc từ array
+                var createdWastes = new List<ProcessingWasteViewAllDto>();
+                Console.WriteLine($"🔍 Service: Input Wastes count: {input.Wastes?.Count ?? 0}");
+                
+                // Kiểm tra waste từ field riêng biệt trước
+                if (!string.IsNullOrEmpty(input.WasteType) && input.WasteQuantity > 0 && !string.IsNullOrEmpty(input.WasteUnit))
+                {
+                    Console.WriteLine($"🔍 Service: Creating waste from individual fields - Type: {input.WasteType}, Quantity: {input.WasteQuantity}, Unit: {input.WasteUnit}");
+                    var wasteDto = new ProcessingWasteCreateDto
+                    {
+                        WasteType = input.WasteType,
+                        Quantity = input.WasteQuantity.Value,
+                        Unit = input.WasteUnit,
+                        Note = input.WasteNote,
+                        RecordedAt = input.WasteRecordedAt ?? DateTime.UtcNow
+                    };
+                    var wasteList = new List<ProcessingWasteCreateDto> { wasteDto };
+                    createdWastes = await CreateWastesForProgress(wasteList, progressId, userId, isAdmin);
+                    Console.WriteLine($"🔍 Service: Created waste from individual fields, count: {createdWastes.Count}");
+                }
+                // Nếu không có field riêng biệt, kiểm tra array
+                else if (input.Wastes?.Any() == true)
+                {
+                    Console.WriteLine($"🔍 Service: About to create wastes from array for progressId: {progressId}");
+                    createdWastes = await CreateWastesForProgress(input.Wastes, progressId, userId, isAdmin);
+                    Console.WriteLine($"🔍 Service: Created wastes from array, count: {createdWastes.Count}");
+                }
+
+                // 5. Lấy parameters của progress vừa tạo
+                var progressWithParams = await GetByIdAsync(progressId);
+                var responseParameters = new List<ProcessingParameterViewAllDto>();
+                
+                if (progressWithParams.Status == Const.SUCCESS_READ_CODE && progressWithParams.Data is ProcessingBatchProgressDetailDto detailDto)
+                {
+                    if (detailDto.Parameters != null)
+                    {
+                        responseParameters = detailDto.Parameters;
+                    }
+                }
+
+                // 6. Tạo response DTO
+                var response = new ProcessingBatchProgressMediaResponse
+                {
+                    Message = progressResult.Message,
+                    ProgressId = progressId,
+                    PhotoUrl = null,
+                    VideoUrl = null,
+                    MediaCount = 0,
+                    AllPhotoUrls = new List<string>(),
+                    AllVideoUrls = new List<string>(),
+                    Parameters = responseParameters,
+                    Wastes = createdWastes
+                };
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo progress với waste thành công", response);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi tạo progress với waste: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Parse parameters từ request
+        /// </summary>
+        private async Task<List<ProcessingParameterInProgressDto>> ParseParametersFromRequest(ProcessingBatchProgressCreateRequest request)
+        {
+            var parameters = new List<ProcessingParameterInProgressDto>();
+            
+            // Single parameter
+            if (!string.IsNullOrEmpty(request.ParameterName))
+            {
+                parameters.Add(new ProcessingParameterInProgressDto
+                {
+                    ParameterName = request.ParameterName,
+                    ParameterValue = request.ParameterValue,
+                    Unit = request.Unit,
+                    RecordedAt = request.RecordedAt
+                });
+            }
+            
+            // Multiple parameters từ JSON array
+            if (!string.IsNullOrEmpty(request.ParametersJson))
+            {
+                try
+                {
+                    var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                    if (multipleParams != null)
+                    {
+                        parameters.AddRange(multipleParams);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                }
+            }
+            
+            return parameters;
+        }
+
+        /// <summary>
+        /// Tạo waste cho progress
+        /// </summary>
+        private async Task<List<ProcessingWasteViewAllDto>> CreateWastesForProgress(List<ProcessingWasteCreateDto> wasteDtos, Guid progressId, Guid userId, bool isAdmin)
+        {
+            Console.WriteLine($"🔍 CreateWastesForProgress: Starting with {wasteDtos.Count} wastes");
+            var createdWastes = new List<ProcessingWasteViewAllDto>();
+            
+            foreach (var wasteDto in wasteDtos)
+            {
+                Console.WriteLine($"🔍 CreateWastesForProgress: Processing waste - Type: {wasteDto.WasteType}, Quantity: {wasteDto.Quantity}, Unit: {wasteDto.Unit}");
+                // Gán ProgressId cho waste
+                wasteDto.ProgressId = progressId;
+                
+                // Tạo waste entity
+                var wasteEntity = new ProcessingBatchWaste
+                {
+                    WasteId = Guid.NewGuid(),
+                    WasteCode = await _codeGenerator.GenerateProcessingWasteCodeAsync(),
+                    ProgressId = wasteDto.ProgressId,
+                    WasteType = wasteDto.WasteType,
+                    Quantity = wasteDto.Quantity,
+                    Unit = wasteDto.Unit,
+                    Note = wasteDto.Note,
+                    RecordedAt = wasteDto.RecordedAt ?? DateTime.UtcNow,
+                    RecordedBy = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false,
+                    IsDisposed = false 
+                };
+
+                // Gọi service tạo waste
+                await _unitOfWork.ProcessingWasteRepository.CreateAsync(wasteEntity);
+
+                // Map to DTO
+                var wasteViewDto = new ProcessingWasteViewAllDto
+                {
+                    WasteId = wasteEntity.WasteId,
+                    WasteCode = wasteEntity.WasteCode,
+                    ProgressId = wasteEntity.ProgressId,
+                    WasteType = wasteEntity.WasteType,
+                    Quantity = wasteEntity.Quantity ?? 0,
+                    Unit = wasteEntity.Unit,
+                    Note = wasteEntity.Note,
+                    RecordedAt = wasteEntity.RecordedAt.HasValue ? DateOnly.FromDateTime(wasteEntity.RecordedAt.Value) : null,
+                    RecordedBy = wasteEntity.RecordedBy?.ToString() ?? "",
+                    IsDisposed = wasteEntity.IsDisposed ?? false, 
+                    DisposedAt = wasteEntity.DisposedAt,
+                    CreatedAt = wasteEntity.CreatedAt,
+                    UpdatedAt = wasteEntity.UpdatedAt
+                };
+                
+                createdWastes.Add(wasteViewDto);
+            }
+            
+            Console.WriteLine($"🔍 CreateWastesForProgress: About to commit {createdWastes.Count} wastes to database");
+            await _unitOfWork.SaveChangesAsync();
+            Console.WriteLine($"🔍 CreateWastesForProgress: Successfully committed wastes to database");
+            return createdWastes;
+        }
+
+        /// <summary>
+        /// Advance progress với media và waste
+        /// </summary>
+        public async Task<IServiceResult> AdvanceWithMediaAndWasteAsync(Guid batchId, AdvanceProcessingBatchProgressRequest input, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // 🔍 DEBUG: Log chi tiết về waste data trong advance service
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Starting advance for batchId: {batchId}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input Wastes count: {input.Wastes?.Count ?? 0}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteType: {input.WasteType}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteQuantity: {input.WasteQuantity}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteUnit: {input.WasteUnit}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteNote: {input.WasteNote}");
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteRecordedAt: {input.WasteRecordedAt}");
+                
+                // 1. Parse parameters từ request
+                var parameters = await ParseParametersFromRequest(input);
+                
+                // 2. Tạo advance progress DTO
+                var advanceDto = new AdvanceProcessingBatchProgressDto
+                {
+                    ProgressDate = input.ProgressDate,
+                    OutputQuantity = input.OutputQuantity,
+                    OutputUnit = input.OutputUnit,
+                    PhotoUrl = null,
+                    VideoUrl = null,
+                    Parameters = parameters.Any() ? parameters : null,
+                    StageId = input.StageId,
+                    CurrentStageId = input.CurrentStageId,
+                    StageDescription = input.StageDescription
+                };
+
+                // 3. Advance progress
+                var advanceResult = await AdvanceProgressByBatchIdAsync(batchId, advanceDto, userId, isAdmin, isManager);
+                if (advanceResult.Status != Const.SUCCESS_CREATE_CODE && advanceResult.Status != Const.SUCCESS_UPDATE_CODE)
+                {
+                    return advanceResult;
+                }
+
+                // 4. Lấy progressId mới nhất
+                var latestProgressResult = await GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                var actualProgressId = Guid.Empty;
+                
+                if (latestProgressResult.Status == Const.SUCCESS_READ_CODE && latestProgressResult.Data is List<ProcessingBatchProgressViewAllDto> progressesList)
+                {
+                    var latestProgressDto = progressesList.LastOrDefault();
+                    if (latestProgressDto != null)
+                    {
+                        actualProgressId = latestProgressDto.ProgressId;
+                    }
+                }
+
+                // 5. Tạo waste nếu có - từ field riêng biệt hoặc từ array
+                var createdWastes = new List<ProcessingWasteViewAllDto>();
+                Console.WriteLine($"🔍 ADVANCE SERVICE: About to process wastes for progressId: {actualProgressId}");
+                
+                // Kiểm tra waste từ field riêng biệt trước
+                if (!string.IsNullOrEmpty(input.WasteType) && input.WasteQuantity > 0 && !string.IsNullOrEmpty(input.WasteUnit))
+                {
+                    Console.WriteLine($"🔍 ADVANCE SERVICE: Creating waste from individual fields - Type: {input.WasteType}, Quantity: {input.WasteQuantity}, Unit: {input.WasteUnit}");
+                    var wasteDto = new ProcessingWasteCreateDto
+                    {
+                        WasteType = input.WasteType,
+                        Quantity = input.WasteQuantity.Value,
+                        Unit = input.WasteUnit,
+                        Note = input.WasteNote,
+                        RecordedAt = input.WasteRecordedAt ?? DateTime.UtcNow
+                    };
+                    var wasteList = new List<ProcessingWasteCreateDto> { wasteDto };
+                    createdWastes = await CreateWastesForProgress(wasteList, actualProgressId, userId, isAdmin);
+                    Console.WriteLine($"🔍 ADVANCE SERVICE: Created waste from individual fields, count: {createdWastes.Count}");
+                }
+                // Nếu không có field riêng biệt, kiểm tra array
+                else if (input.Wastes?.Any() == true)
+                {
+                    Console.WriteLine($"🔍 ADVANCE SERVICE: Creating wastes from array, count: {input.Wastes.Count}");
+                    createdWastes = await CreateWastesForProgress(input.Wastes, actualProgressId, userId, isAdmin);
+                    Console.WriteLine($"🔍 ADVANCE SERVICE: Created wastes from array, count: {createdWastes.Count}");
+                }
+                else
+                {
+                    Console.WriteLine($"🔍 ADVANCE SERVICE: No valid waste data found to process");
+                }
+
+                // 6. Lấy parameters của progress vừa tạo
+                var responseParameters = new List<ProcessingParameterViewAllDto>();
+                if (latestProgressResult.Status == Const.SUCCESS_READ_CODE && latestProgressResult.Data is List<ProcessingBatchProgressViewAllDto> progressesList2)
+                {
+                    var latestProgressDto = progressesList2.LastOrDefault();
+                    if (latestProgressDto != null && latestProgressDto.Parameters != null)
+                    {
+                        responseParameters = latestProgressDto.Parameters;
+                    }
+                }
+
+                // 7. Tạo response DTO
+                Console.WriteLine($"🔍 ADVANCE SERVICE: Creating response with {createdWastes.Count} wastes");
+                var response = new ProcessingBatchProgressMediaResponse
+                {
+                    Message = advanceResult.Message,
+                    ProgressId = actualProgressId,
+                    PhotoUrl = null,
+                    VideoUrl = null,
+                    MediaCount = 0,
+                    AllPhotoUrls = new List<string>(),
+                    AllVideoUrls = new List<string>(),
+                    Parameters = responseParameters,
+                    Wastes = createdWastes
+                };
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Advance progress với waste thành công", response);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi advance progress với waste: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Parse parameters từ advance request
+        /// </summary>
+        private async Task<List<ProcessingParameterInProgressDto>> ParseParametersFromRequest(AdvanceProcessingBatchProgressRequest request)
+        {
+            var parameters = new List<ProcessingParameterInProgressDto>();
+            
+            // Single parameter
+            if (!string.IsNullOrEmpty(request.ParameterName))
+            {
+                parameters.Add(new ProcessingParameterInProgressDto
+                {
+                    ParameterName = request.ParameterName,
+                    ParameterValue = request.ParameterValue,
+                    Unit = request.Unit,
+                    RecordedAt = request.RecordedAt
+                });
+            }
+            
+            // Multiple parameters từ JSON array
+            if (!string.IsNullOrEmpty(request.ParametersJson))
+            {
+                try
+                {
+                    var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                    if (multipleParams != null)
+                    {
+                        parameters.AddRange(multipleParams);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                }
+            }
+            
+            return parameters;
         }
     }
 }
