@@ -458,73 +458,83 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task AutoUpdateCropSeasonStatusAsync(Guid cropSeasonId)
         {
-            // Tối ưu: Chỉ load dữ liệu cần thiết cho status update
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
-                predicate: cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted,
-                include: q => q.Include(cs => cs.CropSeasonDetails.Where(d => !d.IsDeleted)),
-                asNoTracking: false // cần tracking để update status
-            );
-            
-            if (cropSeason == null || cropSeason.IsDeleted) return;
-
-            var allDetails = cropSeason.CropSeasonDetails?.ToList();
-            if (allDetails == null || !allDetails.Any()) return;
-
-            // Tối ưu: Sử dụng LINQ để đếm hiệu quả hơn
-            var statusCounts = allDetails
-                .GroupBy(d => d.Status)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var completedCount = statusCounts.GetValueOrDefault(CropDetailStatus.Completed.ToString(), 0);
-            var inProgressCount = statusCounts.GetValueOrDefault(CropDetailStatus.InProgress.ToString(), 0);
-            var cancelledCount = statusCounts.GetValueOrDefault(CropDetailStatus.Cancelled.ToString(), 0);
-            var plannedCount = statusCounts.GetValueOrDefault(CropDetailStatus.Planned.ToString(), 0);
-            
-            var totalDetails = allDetails.Count;
-
-            // Parse current status
-            CropSeasonStatus currentStatus;
-            if (!Enum.TryParse<CropSeasonStatus>(cropSeason.Status, out currentStatus))
+            try
             {
-                currentStatus = CropSeasonStatus.Active;
+                // Tối ưu: Chỉ load dữ liệu cần thiết cho status update
+                var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(
+                    predicate: cs => cs.CropSeasonId == cropSeasonId && !cs.IsDeleted,
+                    include: q => q.Include(cs => cs.CropSeasonDetails.Where(d => !d.IsDeleted)),
+                    asNoTracking: true // Sử dụng asNoTracking để tránh tracking conflict
+                );
+                
+                if (cropSeason == null || cropSeason.IsDeleted) return;
+
+                var allDetails = cropSeason.CropSeasonDetails?.ToList();
+                if (allDetails == null || !allDetails.Any()) return;
+
+                // Tối ưu: Sử dụng LINQ để đếm hiệu quả hơn
+                var statusCounts = allDetails
+                    .GroupBy(d => d.Status)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                var completedCount = statusCounts.GetValueOrDefault(CropDetailStatus.Completed.ToString(), 0);
+                var inProgressCount = statusCounts.GetValueOrDefault(CropDetailStatus.InProgress.ToString(), 0);
+                var cancelledCount = statusCounts.GetValueOrDefault(CropDetailStatus.Cancelled.ToString(), 0);
+                var plannedCount = statusCounts.GetValueOrDefault(CropDetailStatus.Planned.ToString(), 0);
+                
+                var totalDetails = allDetails.Count;
+
+                // Parse current status
+                CropSeasonStatus currentStatus;
+                if (!Enum.TryParse<CropSeasonStatus>(cropSeason.Status, out currentStatus))
+                {
+                    currentStatus = CropSeasonStatus.Active;
+                }
+
+                CropSeasonStatus? newStatus = null;
+
+                // Tối ưu: Sử dụng switch expression để code ngắn gọn hơn
+                newStatus = (completedCount, inProgressCount, cancelledCount, plannedCount, totalDetails, currentStatus) switch
+                {
+                    // 1. Nếu tất cả details đã Completed -> Completed
+                    (var completed, _, _, _, var total, var current) when completed == total && current != CropSeasonStatus.Completed 
+                        => CropSeasonStatus.Completed,
+                    
+                    // 2. Nếu tất cả details bị Cancelled -> Cancelled  
+                    (_, _, var cancelled, _, var total, var current) when cancelled == total && current != CropSeasonStatus.Cancelled 
+                        => CropSeasonStatus.Cancelled,
+                    
+                    // 3. Nếu có ít nhất 1 detail đang InProgress -> Active
+                    (_, var inProgress, _, _, _, var current) when inProgress > 0 && current != CropSeasonStatus.Active 
+                        => CropSeasonStatus.Active,
+                    
+                    // 4. Nếu tất cả details vẫn Planned -> Active
+                    (_, _, _, var planned, var total, var current) when planned == total && current != CropSeasonStatus.Active 
+                        => CropSeasonStatus.Active,
+                    
+                    // 5. Nếu có mix status -> Active
+                    (var completed, var inProgress, var cancelled, var planned, _, var current) 
+                        when ((completed > 0 && cancelled > 0) || (inProgress > 0 && cancelled > 0) || (planned > 0 && cancelled > 0)) 
+                        && current != CropSeasonStatus.Active 
+                        => CropSeasonStatus.Active,
+                    
+                    _ => null
+                };
+
+                if (newStatus != null)
+                {
+                    // Sử dụng ExecuteUpdateAsync để update trực tiếp database mà không cần tracking
+                    await _unitOfWork.CropSeasonRepository.GetQuery()
+                        .Where(cs => cs.CropSeasonId == cropSeasonId)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(cs => cs.Status, newStatus.ToString())
+                            .SetProperty(cs => cs.UpdatedAt, DateHelper.NowVietnamTime()));
+                }
             }
-
-            CropSeasonStatus? newStatus = null;
-
-            // Tối ưu: Sử dụng switch expression để code ngắn gọn hơn
-            newStatus = (completedCount, inProgressCount, cancelledCount, plannedCount, totalDetails, currentStatus) switch
+            catch (Exception ex)
             {
-                // 1. Nếu tất cả details đã Completed -> Completed
-                (var completed, _, _, _, var total, var current) when completed == total && current != CropSeasonStatus.Completed 
-                    => CropSeasonStatus.Completed,
-                
-                // 2. Nếu tất cả details bị Cancelled -> Cancelled  
-                (_, _, var cancelled, _, var total, var current) when cancelled == total && current != CropSeasonStatus.Cancelled 
-                    => CropSeasonStatus.Cancelled,
-                
-                // 3. Nếu có ít nhất 1 detail đang InProgress -> Active
-                (_, var inProgress, _, _, _, var current) when inProgress > 0 && current != CropSeasonStatus.Active 
-                    => CropSeasonStatus.Active,
-                
-                // 4. Nếu tất cả details vẫn Planned -> Active
-                (_, _, _, var planned, var total, var current) when planned == total && current != CropSeasonStatus.Active 
-                    => CropSeasonStatus.Active,
-                
-                // 5. Nếu có mix status -> Active
-                (var completed, var inProgress, var cancelled, var planned, _, var current) 
-                    when ((completed > 0 && cancelled > 0) || (inProgress > 0 && cancelled > 0) || (planned > 0 && cancelled > 0)) 
-                    && current != CropSeasonStatus.Active 
-                    => CropSeasonStatus.Active,
-                
-                _ => null
-            };
-
-            if (newStatus != null)
-            {
-                cropSeason.Status = newStatus.ToString();
-                cropSeason.UpdatedAt = DateHelper.NowVietnamTime();
-                await _unitOfWork.CropSeasonRepository.UpdateAsync(cropSeason);
-                await _unitOfWork.SaveChangesAsync();
+                // Log error but don't throw to avoid affecting the main operation
+                Console.WriteLine($"Error in AutoUpdateCropSeasonStatusAsync: {ex.Message}");
             }
         }
 
