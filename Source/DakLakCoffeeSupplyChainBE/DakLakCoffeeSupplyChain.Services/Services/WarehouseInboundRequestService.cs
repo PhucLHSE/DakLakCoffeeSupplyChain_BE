@@ -198,7 +198,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.WarehouseInboundRequests.CreateAsync(newRequest);
             await _unitOfWork.SaveChangesAsync();
 
-             await _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
+              _notificationService.NotifyInboundRequestCreatedAsync(newRequest.InboundRequestId, farmer.FarmerId);
 
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo yêu cầu nhập kho thành công", newRequest.InboundRequestId);
         }
@@ -277,7 +277,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (request.Farmer?.User != null)
             {
-                await _notificationService.NotifyInboundRequestApprovedAsync(
+                 _notificationService.NotifyInboundRequestApprovedAsync(
                     request.InboundRequestId,
                     request.Farmer.User.UserId
                 );
