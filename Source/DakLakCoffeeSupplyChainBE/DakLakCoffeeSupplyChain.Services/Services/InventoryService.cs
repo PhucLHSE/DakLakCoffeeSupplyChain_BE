@@ -252,17 +252,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tạo danh sách kết quả với thông tin FIFO chi tiết
             var result = new List<InventoryListItemDto>();
             double remainingQuantity = requestedQuantity ?? 0;
-            
+
+            // ✅ TỐI ƯU: Tìm inventory đầu tiên có hàng để khuyến nghị
+            var firstAvailableInventory = sortedInventories.FirstOrDefault(inv => inv.Quantity > 0);
+
             for (int i = 0; i < sortedInventories.Count; i++)
             {
                 var inv = sortedInventories[i];
                 var fifoPriority = i + 1; // Thứ tự ưu tiên (1 = cao nhất)
                 var daysInWarehouse = (DateTime.UtcNow - inv.CreatedAt).Days;
-                
+
                 // Xác định inventory được khuyến nghị
                 bool isRecommended = false;
                 string fifoRecommendation = "";
-                
+
                 if (requestedQuantity.HasValue && requestedQuantity > 0)
                 {
                     // Nếu có yêu cầu số lượng cụ thể, tính toán khuyến nghị
@@ -271,7 +274,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         isRecommended = true;
                         var recommendedQuantity = Math.Min(remainingQuantity, inv.Quantity);
                         remainingQuantity -= recommendedQuantity;
-                        
+
                         if (daysInWarehouse > 30)
                         {
                             fifoRecommendation = $"Khuyến nghị xuất {recommendedQuantity:n0}kg: Đã nhập kho {daysInWarehouse} ngày trước (FIFO)";
@@ -284,8 +287,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // Nếu không có yêu cầu số lượng cụ thể, khuyến nghị inventory đầu tiên
-                    isRecommended = i == 0;
+                    // ✅ SỬA: Nếu không có yêu cầu số lượng cụ thể, khuyến nghị inventory đầu tiên CÓ HÀNG
+                    isRecommended = firstAvailableInventory != null && inv.InventoryId == firstAvailableInventory.InventoryId;
                     if (isRecommended)
                     {
                         if (daysInWarehouse > 30)
