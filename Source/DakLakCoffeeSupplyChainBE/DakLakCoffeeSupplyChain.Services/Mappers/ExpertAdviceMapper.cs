@@ -28,7 +28,7 @@ public static class ExpertAdviceMapper
             ResponseType = entity.ResponseType ?? string.Empty,
             AdviceSource = entity.AdviceSource ?? string.Empty,
             AdviceText = entity.AdviceText ?? string.Empty,
-            AttachedFileUrl = entity.AttachedFileUrl ?? string.Empty,
+            AttachedFileUrl = entity.AttachedFileUrl,
             CreatedAt = entity.CreatedAt
         };
     }
