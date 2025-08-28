@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Web;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -164,10 +165,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     dto.ResponseType = Request.Form["responseType"].ToString();
                 
                 if (Request.Form.ContainsKey("adviceSource"))
-                    dto.AdviceSource = Request.Form["adviceSource"].ToString();
+                {
+                    var adviceSource = Request.Form["adviceSource"].ToString();
+                    // Đảm bảo encoding UTF-8 cho tiếng Việt
+                    dto.AdviceSource = System.Web.HttpUtility.HtmlDecode(adviceSource);
+                }
                 
                 if (Request.Form.ContainsKey("adviceText"))
-                    dto.AdviceText = Request.Form["adviceText"].ToString();
+                {
+                    var adviceText = Request.Form["adviceText"].ToString();
+                    // Đảm bảo encoding UTF-8 cho tiếng Việt
+                    dto.AdviceText = System.Web.HttpUtility.HtmlDecode(adviceText);
+                }
                 
                 if (Request.Form.ContainsKey("attachedFileUrl"))
                     dto.AttachedFileUrl = Request.Form["attachedFileUrl"].ToString();
