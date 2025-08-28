@@ -13,7 +13,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "AgriculturalExpert,Admin,BusinessManager")] // ✅ Áp dụng xác thực mặc định
+    [Authorize] // ✅ Chỉ yêu cầu xác thực, không giới hạn role
     public class ExpertAdvicesController : ControllerBase
     {
         private readonly IExpertAdviceService _expertAdviceService;
@@ -23,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         [HttpGet]
         [EnableQuery]
+        [Authorize(Roles = "AgriculturalExpert,Admin,BusinessManager")]
         public async Task<IActionResult> GetAllExpertAdvicesAsync()
         {
             Guid userId;
@@ -82,7 +83,38 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // ✅ Thêm endpoint cho Farmer lấy expert advice theo reportId
+        [HttpGet("farmer/report/{reportId}")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> GetExpertAdvicesByReportIdAsync(Guid reportId)
+        {
+            Guid userId;
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được người dùng.");
+            }
+
+            var result = await _expertAdviceService
+                .GetExpertAdvicesByReportIdForFarmerAsync(reportId, userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return Forbid(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
         [HttpGet("{adviceId}", Name = "GetExpertAdviceById")]
+        [Authorize(Roles = "AgriculturalExpert,Admin,BusinessManager")]
         public async Task<IActionResult> GetExpertAdviceByIdAsync(Guid adviceId)
         {
             Guid userId;
@@ -113,7 +145,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "AgriculturalExpert")]
+        [Authorize(Roles = "AgriculturalExpert,Admin")]
         public async Task<IActionResult> CreateExpertAdviceAsync()
         {
             ExpertAdviceCreateDto dto;
@@ -201,7 +233,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
         [HttpPut("{adviceId}")]
-        [Authorize(Roles = "AgriculturalExpert")]
+        [Authorize(Roles = "AgriculturalExpert,Admin")]
         public async Task<IActionResult> UpdateExpertAdviceAsync(
             Guid adviceId, 
             [FromBody] ExpertAdviceUpdateDto dto)
