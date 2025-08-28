@@ -92,6 +92,37 @@ public class ExpertAdviceService : IExpertAdviceService
         return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, advice.MapToViewDetailDto());
     }
 
+    // ✅ Thêm method cho Farmer lấy expert advice theo reportId
+    public async Task<IServiceResult> GetExpertAdvicesByReportIdForFarmerAsync(Guid reportId, Guid userId)
+    {
+        // 1. Kiểm tra báo cáo có tồn tại và thuộc về farmer này không
+        var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(
+            predicate: r => r.ReportId == reportId && !r.IsDeleted,
+            asNoTracking: true
+        );
+
+        if (report == null)
+            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy báo cáo.");
+
+        if (report.ReportedBy != userId)
+            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xem expert advice của báo cáo này.");
+
+        // 2. Lấy tất cả expert advice cho báo cáo này
+        var advices = await _unitOfWork.ExpertAdviceRepository.GetAllAsync(
+            predicate: a => a.ReportId == reportId && !a.IsDeleted,
+            include: q => q.Include(a => a.Expert).ThenInclude(e => e.User),
+            orderBy: q => q.OrderByDescending(a => a.CreatedAt),
+            asNoTracking: true
+        );
+
+        var result = advices.Select(a => a.MapToViewDetailDto()).ToList();
+
+        if (!result.Any())
+            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có phản hồi từ chuyên gia.");
+
+        return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+    }
+
     public async Task<IServiceResult> CreateAsync(ExpertAdviceCreateDto dto, Guid userId)
     {
         // 1. Lấy thông tin chuyên gia từ userId
