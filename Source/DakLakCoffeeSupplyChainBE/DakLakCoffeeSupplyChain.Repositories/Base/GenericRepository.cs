@@ -282,5 +282,21 @@ namespace DakLakCoffeeSupplyChain.Repositories.Base
 
             return await query.Select(selector).FirstOrDefaultAsync();
         }
+
+        //Đếm số lần dữ liệu cần lấy xuất hiện trong 1 bảng, vd 1 kế hoạch thu mua có 1 farmer đăng ký nhiều lần vào đó
+        public async Task<int> CountAsync(
+        Expression<Func<T, bool>>? predicate = null,
+        bool asNoTracking = true)
+        {
+            IQueryable<T> query = _context.Set<T>();
+
+            if (asNoTracking)
+                query = query.AsNoTracking();
+
+            if (predicate != null)
+                query = query.Where(predicate);
+
+            return await query.CountAsync();
+        }
     }
 }

@@ -94,6 +94,7 @@ builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
+builder.Services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
