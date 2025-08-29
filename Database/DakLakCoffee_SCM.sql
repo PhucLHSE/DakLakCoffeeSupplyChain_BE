@@ -4237,6 +4237,11 @@ INSERT INTO SystemConfiguration
 VALUES 
     ('TAX_RATE_FOR_COMMITMENT', N'Giá trị thuế khi tạo cam kết với nông dân', 0.05, NULL, '%', 1, GETDATE());
 
+INSERT INTO SystemConfiguration 
+    (Name, Description, MinValue, MaxValue, Unit, IsActive, EffectedDateFrom)
+VALUES 
+    ('CULTIVATION_REGISTRATION_CREATION_LIMIT', N'Giới hạn số lần nông dân được phép đăng ký trong cùng một kế hoạch', 3, NULL, 'times', 1, GETDATE());
+
 GO
 
 -- Insert vào bảng SystemConfigurationUsers
@@ -4273,6 +4278,23 @@ INSERT INTO SystemConfigurationUsers (
 )
 VALUES (
    @TaxRateConfigID, @AdminID, 'manage'
+);
+
+GO
+
+DECLARE @CultivationRegistrationLimitConfigID INT = (
+   SELECT Id FROM SystemConfiguration WHERE Name = 'CULTIVATION_REGISTRATION_CREATION_LIMIT'
+);
+
+DECLARE @AdminID UNIQUEIDENTIFIER = (
+   SELECT UserID FROM UserAccounts WHERE Email = 'admin@gmail.com'
+);
+
+INSERT INTO SystemConfigurationUsers (
+   SystemConfigurationID, UserID, PermissionLevel
+)
+VALUES (
+   @CultivationRegistrationLimitConfigID, @AdminID, 'manage'
 );
 
 GO
