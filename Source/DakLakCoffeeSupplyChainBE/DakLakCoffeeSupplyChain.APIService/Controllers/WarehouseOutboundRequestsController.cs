@@ -39,10 +39,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.FAIL_READ_CODE)
                 return NotFound(result);
 
-            if (result.Status == Const.ERROR_VALIDATION_CODE)
-                return BadRequest(result);
-
-            if (result.Status == Const.FAIL_CREATE_CODE)
+            if (result.Status == Const.ERROR_VALIDATION_CODE || result.Status == Const.FAIL_CREATE_CODE)
                 return Conflict(result);
 
             return StatusCode(500, result);
@@ -104,7 +101,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
-            if (result.Status == Const.FAIL_UPDATE_CODE)
+            if (result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
                 return Conflict(result);
 
             return StatusCode(500, result);
@@ -125,7 +122,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
-            if (result.Status == Const.FAIL_UPDATE_CODE)
+            if (result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
                 return Conflict(result);
 
             return StatusCode(500, result);
@@ -169,7 +166,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result);
 
-            if (result.Status == Const.FAIL_UPDATE_CODE)
+            if (result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
                 return Conflict(result);
 
             return StatusCode(500, result);
