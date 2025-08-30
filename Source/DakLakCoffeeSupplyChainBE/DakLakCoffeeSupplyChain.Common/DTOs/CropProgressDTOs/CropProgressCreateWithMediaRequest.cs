@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropProgressDTOs
         public int StageId { get; set; }
 
         [Required]
-        public DateOnly ProgressDate { get; set; }
+        public string ProgressDate { get; set; }
 
         public double? ActualYield { get; set; }
 

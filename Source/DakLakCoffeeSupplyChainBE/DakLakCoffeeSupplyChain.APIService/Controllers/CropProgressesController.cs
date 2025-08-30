@@ -75,19 +75,44 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             try
             {
+                // Log request data for debugging
+                Console.WriteLine($"CropProgress Create Request:");
+                Console.WriteLine($"  CropSeasonDetailId: {request.CropSeasonDetailId}");
+                Console.WriteLine($"  StageId: {request.StageId}");
+                Console.WriteLine($"  ProgressDate: {request.ProgressDate}");
+                Console.WriteLine($"  ActualYield: {request.ActualYield}");
+                Console.WriteLine($"  Notes: {request.Notes}");
+                Console.WriteLine($"  MediaFiles Count: {request.MediaFiles?.Count ?? 0}");
+                
                 if (!ModelState.IsValid)
+                {
+                    Console.WriteLine($"ModelState Errors:");
+                    foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        Console.WriteLine($"  - {error.ErrorMessage}");
+                    }
                     return BadRequest(ModelState);
+                }
 
                 Guid userId;
                 try { userId = User.GetUserId(); }
                 catch { return Unauthorized("Không xác định được userId từ token."); }
+
+                // Parse ProgressDate từ string
+                Console.WriteLine($"Attempting to parse ProgressDate: '{request.ProgressDate}'");
+                if (!DateOnly.TryParse(request.ProgressDate, out var progressDate))
+                {
+                    Console.WriteLine($"Failed to parse ProgressDate: '{request.ProgressDate}'");
+                    return BadRequest(new { message = "Ngày ghi nhận không hợp lệ. Vui lòng sử dụng định dạng yyyy-MM-dd." });
+                }
+                Console.WriteLine($"Successfully parsed ProgressDate: {progressDate}");
 
                 // Tạo DTO từ request
                 var dto = new CropProgressCreateDto
                 {
                     CropSeasonDetailId = request.CropSeasonDetailId,
                     StageId = request.StageId,
-                    ProgressDate = request.ProgressDate,
+                    ProgressDate = progressDate,
                     ActualYield = request.ActualYield,
                     Note = request.Notes,
                     // StageDescription sẽ được tự động lấy từ CropStage.Description
@@ -97,7 +122,15 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 };
 
                 // Tạo progress trước
+                Console.WriteLine($"Calling CropProgressService.Create with DTO:");
+                Console.WriteLine($"  CropSeasonDetailId: {dto.CropSeasonDetailId}");
+                Console.WriteLine($"  StageId: {dto.StageId}");
+                Console.WriteLine($"  ProgressDate: {dto.ProgressDate}");
+                Console.WriteLine($"  ActualYield: {dto.ActualYield}");
+                
                 var result = await _cropProgressService.Create(dto, userId);
+                
+                Console.WriteLine($"Service result - Status: {result.Status}, Message: {result.Message}");
 
                 if (result.Status != Const.SUCCESS_CREATE_CODE)
                     return BadRequest(new { message = result.Message });

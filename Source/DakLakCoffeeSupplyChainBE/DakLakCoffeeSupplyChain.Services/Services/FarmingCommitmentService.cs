@@ -205,17 +205,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 asNoTracking: true
             );
 
-            // Lọc ra những commitments chưa có crop season
+            // Lọc ra những commitments có ít nhất một commitment detail chưa được sử dụng
             var availableCommitments = new List<FarmingCommitment>();
             foreach (var commitment in allCommitments)
             {
-                var hasCropSeason = await _unitOfWork.CropSeasonRepository.ExistsAsync(
-                    cs => cs.CommitmentId == commitment.CommitmentId && !cs.IsDeleted
+                // Kiểm tra xem commitment có crop season không
+                var cropSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
+                    cs => cs.CommitmentId == commitment.CommitmentId && !cs.IsDeleted,
+                    asNoTracking: true
                 );
-                
-                if (!hasCropSeason)
+
+                if (!cropSeasons.Any())
                 {
+                    // Nếu không có crop season, toàn bộ commitment đều available
                     availableCommitments.Add(commitment);
+                }
+                else
+                {
+                    // Nếu có crop season, kiểm tra từng commitment detail
+                    var usedCommitmentDetailIds = new HashSet<Guid>();
+                    
+                    foreach (var cropSeason in cropSeasons)
+                    {
+                        var cropSeasonDetails = await _unitOfWork.CropSeasonDetailRepository.GetAllAsync(
+                            csd => csd.CropSeasonId == cropSeason.CropSeasonId && !csd.IsDeleted,
+                            asNoTracking: true
+                        );
+                        
+                                             foreach (var detail in cropSeasonDetails)
+                     {
+                         if (detail.CommitmentDetailId != Guid.Empty)
+                         {
+                             usedCommitmentDetailIds.Add(detail.CommitmentDetailId);
+                         }
+                     }
+                    }
+
+                    // Tạo commitment mới chỉ với những detail chưa được sử dụng
+                    var availableDetails = commitment.FarmingCommitmentsDetails
+                        .Where(d => !usedCommitmentDetailIds.Contains(d.CommitmentDetailId))
+                        .ToList();
+
+                    if (availableDetails.Any())
+                    {
+                        var availableCommitment = new FarmingCommitment
+                        {
+                            CommitmentId = commitment.CommitmentId,
+                            CommitmentCode = commitment.CommitmentCode,
+                            Status = commitment.Status,
+                            ApprovedAt = commitment.ApprovedAt,
+                            FarmerId = commitment.FarmerId,
+                            RegistrationId = commitment.RegistrationId,
+                            PlanId = commitment.PlanId,
+                            ApprovedBy = commitment.ApprovedBy,
+                            CreatedAt = commitment.CreatedAt,
+                            UpdatedAt = commitment.UpdatedAt,
+                            IsDeleted = commitment.IsDeleted,
+                            FarmingCommitmentsDetails = availableDetails,
+                            Farmer = commitment.Farmer,
+                            Plan = commitment.Plan,
+                            Registration = commitment.Registration,
+                            ApprovedByNavigation = commitment.ApprovedByNavigation
+                        };
+                        
+                        availableCommitments.Add(availableCommitment);
+                    }
                 }
             }
 
