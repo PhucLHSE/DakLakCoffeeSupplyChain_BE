@@ -289,8 +289,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //        );
                 //}
 
+                // Giới hạn số lần cho phép farmer tạo đăng ký
+                var limitCount = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                    predicate: t => t.Name == "CULTIVATION_REGISTRATION_CREATION_LIMIT" && !t.IsDeleted,
+                    asNoTracking: true
+                    );
+
+                int creationLimit = 0;
+                if (limitCount != null && limitCount.MinValue.HasValue)
+                    creationLimit = (int)limitCount.MinValue.Value;
+                else creationLimit = int.MaxValue;
+
+                var existingRegistrationCount = await _unitOfWork.CultivationRegistrationRepository.CountAsync(
+                    r => r.FarmerId == farmerId && r.PlanId == registrationDto.PlanId);
+
+                if (existingRegistrationCount >= creationLimit)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Bạn chỉ được phép tạo tối đa {creationLimit} đơn đăng ký trên kế hoạch thu mua này."
+                    );
+                }
+
                 // Kiểm tra xem sản lượng đã đăng ký của chi tiết đăng ký có vượt quá sản lượng đã đăng ký của chi tiết kế hoạch thu mua không
-                double? registeredQuantity = 0;
+                double ? registeredQuantity = 0;
                 var planDetailsDict = selectedProcurementPlan.ProcurementPlansDetails.ToDictionary(d => d.PlanDetailsId, d => d);
                 foreach (var detail in newCultivationRegistration.CultivationRegistrationsDetails)
                 {
@@ -448,12 +470,53 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Bạn không có quyền hạn này."
                     );
                 }
+
+                // Lấy tổng sản lượng đã được duyệt của các chi tiết đăng ký khác trong cùng một đơn đăng ký
+                var totalApprovedYield = await _unitOfWork.CultivationRegistrationsDetailRepository.GetAllQueryable()
+                    .Where(c => !c.IsDeleted
+                        && c.Status == "Approved"
+                        && c.PlanDetail.PlanDetailsId == registrationDetail.PlanDetail.PlanDetailsId)
+                    .SumAsync(c => (double?)c.EstimatedYield) ?? 0;
+
                 // Kiểm tra sản lượng đăng ký có vượt sản lượng của kế hoạch đã đề ra không
-                if (registrationDetail.Status == "Approved" && registrationDetail.EstimatedYield > registrationDetail.PlanDetail.TargetQuantity)
+                if (dto.Status.ToString() == "Approved" && (totalApprovedYield + registrationDetail.EstimatedYield) > registrationDetail.PlanDetail.TargetQuantity)
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
-                        "Sản lượng dự kiến của chi tiết đơn đăng ký này đã vượt sản lượng đăng ký rồi"
+                        "Sản lượng dự kiến của chi tiết đơn đăng ký này đã vượt sản lượng đăng ký rồi" +
+                        $"\n Cụ thể sản lượng đã duyệt cho chi tiết kế hoạch này là {totalApprovedYield}kg." +
+                        $"\n Nếu muốn duyệt chi tiết đăng ký này thì hãy từ chối chi tiết đăng ký khác."
                     );
+
+                // Lấy tất cả chi tiết của đơn đăng ký hiện tại
+                var registrationDetails = await _unitOfWork.CultivationRegistrationsDetailRepository.GetAllAsync(
+                    predicate: c => !c.IsDeleted && c.RegistrationId == registrationDetail.RegistrationId,
+                    asNoTracking: false);
+
+                // Update trạng thái trong bộ nhớ để kiểm tra thay cho lấy lại từ DB
+                foreach (var detail in registrationDetails)
+                {
+                    if (detail.CultivationRegistrationDetailId == registrationDetail.CultivationRegistrationDetailId)
+                    {
+                        detail.Status = dto.Status.ToString();
+                        break;
+                    }
+                }
+
+                // Nếu toàn bộ chi tiết đăng ký đã bị từ chối thì cập nhật trạng thái đơn đăng ký thành từ chối
+                bool allRejected = registrationDetails.All(d => d.Status == "Rejected");
+
+                if (allRejected)
+                {
+                    var registration = registrationDetail.Registration;
+
+                    if (registration != null)
+                    {
+                        registration.Status = "Rejected";
+                        registration.UpdatedAt = DateHelper.NowVietnamTime();
+                        await _unitOfWork.CultivationRegistrationRepository.UpdateAsync(registration);
+                    }
+                }
+
                 registrationDetail.Status = dto.Status.ToString();
                 registrationDetail.UpdatedAt = DateHelper.NowVietnamTime();
                 registrationDetail.ApprovedAt = DateHelper.NowVietnamTime();
