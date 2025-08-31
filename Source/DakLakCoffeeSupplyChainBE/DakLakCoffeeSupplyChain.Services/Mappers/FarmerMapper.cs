@@ -14,7 +14,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 FarmerCode = farmer.FarmerCode,
                 FarmLocation = farmer.FarmLocation,
                 UserId = farmer.UserId,
-                FarmerName = farmer.User.Name
+                FarmerName = farmer.User.Name,
+                IsVerified = farmer.IsVerified
             };
         }
 
