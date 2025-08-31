@@ -88,6 +88,34 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PATCH: api/agriculturalexperts/{id}/verify
+        [HttpPatch("{id}/verify")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> VerifyExpert(Guid id, [FromBody] bool isVerified)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Lấy UserID của admin từ token
+            var adminUserId = User.GetUserId();
+            if (adminUserId == Guid.Empty)
+                return Unauthorized("Không thể xác định người dùng.");
+
+            var result = await _agriculturalExpertService
+                .VerifyExpertAsync(id, isVerified, adminUserId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
         // POST: api/agriculturalexperts
         [HttpPost]
         [Authorize(Roles = "Admin")]
