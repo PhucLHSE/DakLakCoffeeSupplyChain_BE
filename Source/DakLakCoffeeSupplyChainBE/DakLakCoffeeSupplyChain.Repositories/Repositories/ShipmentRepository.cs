@@ -22,10 +22,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         public async Task<int> CountShipmentsInYearAsync(int year)
         {
             return await _context.Shipments
-                .CountAsync(s =>
-                    s.CreatedAt.Year == year &&
-                    !s.IsDeleted
-                );
+                .CountAsync(s => s.CreatedAt.Year == year);
         }
     }
 }

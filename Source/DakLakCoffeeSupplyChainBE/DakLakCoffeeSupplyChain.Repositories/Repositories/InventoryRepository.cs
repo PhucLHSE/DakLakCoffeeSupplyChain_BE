@@ -71,6 +71,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                    .ThenInclude(b => b.CoffeeType) // Bắt buộc để lấy CoffeeTypeName
                 .Include(i => i.Batch)
                    .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
+                .Include(i => i.Batch)
+                   .ThenInclude(b => b.ProcessingBatchEvaluations)
+                 .Include(i => i.Batch)
+                   .ThenInclude(b => b.Farmer)
+                      .ThenInclude(f => f.User)
                 .Include(i => i.Detail)  // Thêm Detail cho cà phê tươi
                     .ThenInclude(d => d.CropSeason)
                 .Include(i => i.Detail)

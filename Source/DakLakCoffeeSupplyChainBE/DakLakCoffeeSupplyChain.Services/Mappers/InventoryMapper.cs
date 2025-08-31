@@ -84,6 +84,10 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             bool isProcessedCoffee = inv.BatchId.HasValue && inv.BatchId != Guid.Empty;
             bool isFreshCoffee = inv.DetailId.HasValue && inv.DetailId != Guid.Empty;
 
+            // Lấy thông tin từ Farmer và ProcessingBatchEvaluations
+            var farmer = inv.Batch?.Farmer;
+            var evaluation = inv.Batch?.ProcessingBatchEvaluations?.FirstOrDefault();
+
             return new InventoryDetailDto
             {
                 InventoryId = inv.InventoryId,
@@ -122,7 +126,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Quantity = inv.Quantity,
                 Unit = inv.Unit,
                 CreatedAt = inv.CreatedAt,
-                UpdatedAt = inv.UpdatedAt
+                UpdatedAt = inv.UpdatedAt,
+
+                // Map thông tin từ Farmer và ProcessingBatchEvaluations
+                FarmerId = farmer?.FarmerId,
+                FarmerName = farmer?.User.Name,
+                FarmLocation = farmer?.FarmLocation,
+                EvaluationResult = evaluation?.EvaluationResult,
+                TotalScore = evaluation?.TotalScore
             };
         }
     }
