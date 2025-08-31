@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.FarmerDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,6 +84,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH: api/<Farmer>/{farmerId}/verify
+        [HttpPatch("{farmerId}/verify")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> VerifyFarmer(Guid farmerId, [FromBody] FarmerVerifyDto verifyDto)
+        {
+            var result = await _service.VerifyFarmer(farmerId, verifyDto.IsVerified);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok("Cập nhật trạng thái xác thực thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy nông dân.");
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict("Cập nhật trạng thái xác thực thất bại.");
 
             return StatusCode(500, result.Message);
         }
