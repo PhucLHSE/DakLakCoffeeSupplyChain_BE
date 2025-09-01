@@ -28,6 +28,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = CodeGenerator;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin)
         {
             // Lấy toàn bộ danh sách người dùng để ánh xạ tên
@@ -47,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Farmer tương ứng.");
+                    return CreateValidationError("FarmerNotFoundForWaste");
                 }
 
                 // Lọc các ProgressId thuộc về farmer
@@ -92,7 +97,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (waste == null)
             {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy dữ liệu chất thải.");
+                return CreateValidationError("WasteDataNotFound");
             }
 
             // If not admin, ensure this waste belongs to the requesting farmer
@@ -101,7 +106,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập chất thải này.");
+                    return CreateValidationError("NoPermissionToAccessWaste");
                 }
             }
 
@@ -120,25 +125,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Retrieve the farmer based on the userId
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null && !isAdmin)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ người dùng có vai trò Nông hộ (Farmer) mới được phép tạo xử lý chất thải.");
+                    return CreateValidationError("OnlyFarmerCanCreateWaste");
 
                 // Check if the progress exists
                 var progressExists = await _unitOfWork.ProcessingBatchProgressRepository.AnyAsync(
                     x => x.ProgressId == dto.ProgressId && !x.IsDeleted);
                 if (!progressExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tiến trình sơ chế không tồn tại.");
+                    return CreateValidationError("ProcessingProgressNotFound");
 
                 // Validate if WasteType is provided
                 if (string.IsNullOrEmpty(dto.WasteType))
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại chất thải không được để trống.");
+                    return CreateValidationError("WasteTypeRequired");
 
                 // Validate if Quantity is greater than zero
                 if (dto.Quantity <= 0)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Số lượng chất thải phải lớn hơn 0.");
+                    return CreateValidationError("WasteQuantityMustBePositive");
 
                 // Validate if Unit is provided
                 if (string.IsNullOrEmpty(dto.Unit))
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Đơn vị không được để trống.");
+                    return CreateValidationError("WasteUnitRequired");
 
                 // Prepare the ProcessingBatchWaste entity
                 var waste = new ProcessingBatchWaste
@@ -163,7 +168,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     x => x.ProgressId == waste.ProgressId && x.WasteType == waste.WasteType && !x.IsDeleted);
                 if (isDuplicate)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Loại chất thải đã tồn tại cho tiến trình này.");
+                    return CreateValidationError("WasteTypeExistsForProgress");
                 }
 
                 // Save the ProcessingBatchWaste entity
@@ -171,7 +176,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var result = await _unitOfWork.SaveChangesAsync();
                 if (result <= 0)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo chất thải không thành công.");
+                    return CreateValidationError("CreateWasteFailed");
 
                 // Retrieve the created waste record
                 var createdWaste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
@@ -193,7 +198,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, viewDto);
                 }
 
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo thành công nhưng không truy xuất được bản ghi.");
+                return CreateValidationError("CreateWasteSuccessButCannotRetrieve");
             }
             catch (Exception ex)
             {
@@ -208,7 +213,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // 1. Kiểm tra vai trò Farmer nếu không phải Admin
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (!isAdmin && farmer == null)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Chỉ Farmer hoặc Admin mới được phép cập nhật chất thải.");
+                    return CreateValidationError("OnlyFarmerOrAdminCanUpdateWaste");
 
                 // 2. Lấy bản ghi chất thải cần cập nhật
                 var waste = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
@@ -217,17 +222,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (waste == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải cần cập nhật.");
+                    return CreateValidationError("WasteRecordNotFoundForUpdate");
 
                 // 3. Nếu không phải Admin, chỉ cho phép cập nhật bản ghi do chính Farmer đó tạo
                 if (!isAdmin && waste.RecordedBy != farmer.FarmerId)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không được phép cập nhật bản ghi chất thải của người khác.");
+                    return CreateValidationError("NoPermissionToUpdateOthersWaste");
 
                 // 4. Kiểm tra tiến trình tồn tại
                 var progressExists = await _unitOfWork.ProcessingBatchProgressRepository.AnyAsync(
                     x => x.ProgressId == dto.ProgressId && !x.IsDeleted);
                 if (!progressExists)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tiến trình sơ chế không tồn tại.");
+                    return CreateValidationError("ProcessingProgressNotFoundForUpdate");
 
                 // 5. Cập nhật dữ liệu
                 waste.ProgressId = dto.ProgressId;
@@ -242,7 +247,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result <= 0)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật bản ghi thất bại.");
+                    return CreateValidationError("UpdateWasteRecordFailed");
 
                 // 6. Truy xuất lại bản ghi để trả về
                 var updated = await _unitOfWork.ProcessingWasteRepository.GetByIdAsync(
@@ -251,7 +256,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (updated == null)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thành công nhưng không truy xuất được bản ghi.");
+                    return CreateValidationError("UpdateWasteSuccessButCannotRetrieve");
 
                 // 7. Truy ngược Farmer → User để lấy recordedByName
                 var recordedFarmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.FarmerId == updated.RecordedBy);
@@ -278,13 +283,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (waste == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải.");
+                    return CreateValidationError("WasteRecordNotFoundForSoftDelete");
 
                 if (!isAdmin)
                 {
                     var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                     if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
-                        return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xóa bản ghi này.");
+                        return CreateValidationError("NoPermissionToDeleteWasteRecord");
                 }
 
                 waste.IsDeleted = true;
@@ -295,7 +300,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 return result > 0
                     ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa mềm thành công.")
-                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa mềm thất bại.");
+                    : CreateValidationError("SoftDeleteWasteFailed");
             }
             catch (Exception ex)
             {
@@ -313,13 +318,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (waste == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi chất thải.");
+                    return CreateValidationError("WasteRecordNotFoundForHardDelete");
 
                 if (!isAdmin)
                 {
                     var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                     if (farmer == null || waste.Progress?.Batch?.FarmerId != farmer.FarmerId)
-                        return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xóa bản ghi này.");
+                        return CreateValidationError("NoPermissionToDeleteWasteRecordForHardDelete");
                 }
 
                 _unitOfWork.ProcessingWasteRepository.PrepareRemove(waste);
@@ -327,7 +332,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 return result > 0
                     ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa cứng thành công.")
-                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa cứng thất bại.");
+                    : CreateValidationError("HardDeleteWasteFailed");
             }
             catch (Exception ex)
             {

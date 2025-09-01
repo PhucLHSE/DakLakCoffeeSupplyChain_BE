@@ -35,6 +35,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _notificationService = notificationService;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
      
         private async Task<bool> HasPermissionToAccessAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert)
         {
@@ -53,24 +58,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Quyền tạo: theo rule chung trên (Admin/Manager/Expert hoặc Farmer của chính batch)
             var canAccess = await HasPermissionToAccessAsync(dto.BatchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền tạo đánh giá cho lô này.");
+                return CreateValidationError("NoPermissionToCreateEvaluation");
 
             // Tồn tại batch?
             var batchExists = await _unitOfWork.ProcessingBatchRepository.AnyAsync(
                 b => b.BatchId == dto.BatchId && !b.IsDeleted
             );
             if (!batchExists)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Lô sơ chế không hợp lệ.");
+                return CreateValidationError("InvalidProcessingBatch");
 
             // Validate EvaluationResult
             var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary", "Pending" };
             if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Kết quả đánh giá không hợp lệ. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary, Pending.");
+                return CreateValidationError("InvalidEvaluationResult");
 
             // Kiểm tra batch status trước khi đánh giá
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
             if (batch == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy lô sơ chế.");
+                return CreateValidationError("ProcessingBatchNotFound");
 
             // Cho phép Expert tạo đánh giá cho batch đã hoàn thành, đang chờ đánh giá, hoặc đang xử lý
             // Cho phép Admin/Manager tạo đánh giá cho mọi trạng thái
@@ -79,7 +84,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Expert có thể tạo đánh giá cho batch Completed, AwaitingEvaluation, hoặc InProgress
                 if (batch.Status != "Completed" && batch.Status != "AwaitingEvaluation" && batch.Status != "InProgress")
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đánh giá cho lô đã hoàn thành, đang chờ đánh giá, hoặc đang xử lý.");
+                    return CreateValidationError("ExpertCanOnlyEvaluateCompletedAwaitingOrInProgress");
             }
             else if (isAdmin || isManager)
             {
@@ -89,7 +94,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Farmer chỉ có thể tạo đơn đánh giá khi batch đã hoàn thành
                 if (batch.Status != "Completed")
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ có thể tạo đơn đánh giá cho lô đã hoàn thành.");
+                    return CreateValidationError("FarmerCanOnlyRequestEvaluationForCompleted");
             }
 
             var code = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
@@ -290,7 +295,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, entity.MapToViewDto())
-                : new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo đánh giá thất bại.");
+                : CreateValidationError("CreateEvaluationFailed");
         }
 
         // ================== UPDATE ==================
@@ -300,17 +305,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 e => e.EvaluationId == id && !e.IsDeleted
             );
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy đánh giá.");
+                return CreateValidationError("EvaluationNotFound");
 
             var canAccess = await HasPermissionToAccessAsync(entity.BatchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật đánh giá này.");
+                return CreateValidationError("NoPermissionToUpdateEvaluation");
 
             // 🔧 FIX: Thêm validation cho EvaluationResult
             if (string.IsNullOrWhiteSpace(dto.EvaluationResult))
             {
                 Console.WriteLine($"DEBUG UPDATE EVALUATION: EvaluationResult is null or empty: '{dto.EvaluationResult}'");
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Kết quả đánh giá không được để trống.");
+                return CreateValidationError("EvaluationResultRequired");
             }
             
             // Validate EvaluationResult
@@ -318,7 +323,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"DEBUG UPDATE EVALUATION: Invalid EvaluationResult: '{dto.EvaluationResult}'");
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, $"Kết quả đánh giá không hợp lệ: '{dto.EvaluationResult}'. Chỉ chấp nhận: Pass, Fail, NeedsImprovement, Temporary.");
+                var parameters = new Dictionary<string, object> { ["result"] = dto.EvaluationResult };
+                return CreateValidationError("InvalidEvaluationResultForUpdate", parameters);
             }
 
             // Lưu kết quả cũ để so sánh
@@ -495,7 +501,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công.", entity.MapToViewDto())
-                : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại.");
+                : CreateValidationError("UpdateEvaluationFailed");
         }
 
         // ================== DELETE (soft) ==================
@@ -505,11 +511,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 e => e.EvaluationId == id && !e.IsDeleted
             );
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy đánh giá.");
+                return CreateValidationError("EvaluationNotFoundForDelete");
 
             var canAccess = await HasPermissionToAccessAsync(entity.BatchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá đánh giá này.");
+                return CreateValidationError("NoPermissionToDeleteEvaluation");
 
             entity.IsDeleted = true;
             entity.UpdatedAt = DateTime.UtcNow;
@@ -519,7 +525,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
+                : CreateValidationError("SoftDeleteEvaluationFailed");
         }
 
         // ================== HARD DELETE ==================
@@ -529,47 +535,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 e => e.EvaluationId == id
             );
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy đánh giá.");
+                return CreateValidationError("EvaluationNotFoundForHardDelete");
 
             var canAccess = await HasPermissionToAccessAsync(entity.BatchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá cứng đánh giá này.");
+                return CreateValidationError("NoPermissionToHardDeleteEvaluation");
 
             // Chỉ Admin mới được xóa cứng
             if (!isAdmin)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Admin mới có quyền xoá cứng đánh giá.");
+                return CreateValidationError("OnlyAdminCanHardDeleteEvaluation");
 
             await _unitOfWork.ProcessingBatchEvaluationRepository.RemoveAsync(entity);
             var saved = await _unitOfWork.SaveChangesAsync();
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá cứng thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá cứng thất bại.");
+                : CreateValidationError("HardDeleteEvaluationFailed");
         }
 
         // ================== BULK HARD DELETE ==================
         public async Task<IServiceResult> BulkHardDeleteAsync(List<Guid> ids, Guid userId, bool isAdmin, bool isManager, bool isExpert)
         {
             if (ids == null || !ids.Any())
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Danh sách ID không hợp lệ.");
+                return CreateValidationError("InvalidBulkDeleteIds");
 
             // Chỉ Admin mới được xóa cứng hàng loạt
             if (!isAdmin)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Admin mới có quyền xoá cứng hàng loạt đánh giá.");
+                return CreateValidationError("OnlyAdminCanBulkHardDeleteEvaluation");
 
             var entities = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => ids.Contains(e.EvaluationId)
             );
 
             if (!entities.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy đánh giá nào để xoá.");
+                return CreateValidationError("NoEvaluationsFoundForBulkDelete");
 
             // Kiểm tra quyền cho từng entity
             foreach (var entity in entities)
             {
                 var canAccess = await HasPermissionToAccessAsync(entity.BatchId, userId, isAdmin, isManager, isExpert);
                 if (!canAccess)
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, $"Bạn không có quyền xoá đánh giá {entity.EvaluationId}.");
+                {
+                    var parameters = new Dictionary<string, object> { ["evaluationId"] = entity.EvaluationId };
+                    return CreateValidationError("NoPermissionToDeleteSpecificEvaluation", parameters);
+                }
             }
 
             foreach (var entity in entities)
@@ -581,7 +590,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, $"Đã xoá cứng {saved} đánh giá thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá cứng hàng loạt thất bại.");
+                : CreateValidationError("BulkHardDeleteEvaluationFailed");
         }
 
         // ================== RESTORE ==================
@@ -591,11 +600,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 e => e.EvaluationId == id && e.IsDeleted
             );
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy đánh giá đã xóa.");
+                return CreateValidationError("EvaluationNotFoundForRestore");
 
             var canAccess = await HasPermissionToAccessAsync(entity.BatchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền khôi phục đánh giá này.");
+                return CreateValidationError("NoPermissionToRestoreEvaluation");
 
             entity.IsDeleted = false;
             entity.UpdatedAt = DateTime.UtcNow;
@@ -605,7 +614,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Khôi phục đánh giá thành công.", entity.MapToViewDto())
-                : new ServiceResult(Const.FAIL_UPDATE_CODE, "Khôi phục đánh giá thất bại.");
+                : CreateValidationError("RestoreEvaluationFailed");
         }
 
         // ================== GET ALL ==================
@@ -613,7 +622,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Chỉ Admin, Manager, Expert mới có quyền xem tất cả evaluations
             if (!isAdmin && !isManager && !isExpert)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xem tất cả đánh giá.");
+                return CreateValidationError("NoPermissionToViewAllEvaluations");
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted,
@@ -653,7 +662,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var canAccess = await HasPermissionToAccessAsync(batchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không có quyền xem.");
+                return CreateValidationError("NoPermissionToViewBatchEvaluations");
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted && e.BatchId == batchId,
@@ -691,7 +700,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var canAccess = await HasPermissionToAccessAsync(batchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không có quyền xem.");
+                return CreateValidationError("NoPermissionToViewEvaluationSummary");
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => !e.IsDeleted && e.BatchId == batchId,
@@ -723,7 +732,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var canAccess = await HasPermissionToAccessAsync(batchId, userId, isAdmin, isManager, isExpert);
             if (!canAccess)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không có quyền xem.");
+                return CreateValidationError("NoPermissionToViewDeletedEvaluations");
 
             var list = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                 e => e.IsDeleted && e.BatchId == batchId,
