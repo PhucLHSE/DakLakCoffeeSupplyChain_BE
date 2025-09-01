@@ -202,8 +202,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Ưu tiên kiểm tra BusinessManager
                 var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                    predicate: m =>
-                       m.UserId == userId &&
+                    predicate: m => 
+                       m.UserId == userId && 
                        !m.IsDeleted,
                     asNoTracking: true
                 );
@@ -216,8 +216,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Nếu không phải Manager, kiểm tra BusinessStaff
                     var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
-                        predicate: s =>
-                           s.UserId == userId &&
+                        predicate: s => 
+                           s.UserId == userId && 
                            !s.IsDeleted,
                         asNoTracking: true
                     );
@@ -236,13 +236,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Kiểm tra DeliveryBatch có tồn tại và chưa bị xoá
+                // Kiểm tra DeliveryBatch tồn tại & quyền
                 var deliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
-                    predicate: b =>
-                        b.DeliveryBatchId == orderCreateDto.DeliveryBatchId &&
-                        !b.IsDeleted,
+                    predicate: b => 
+                       b.DeliveryBatchId == orderCreateDto.DeliveryBatchId && 
+                       !b.IsDeleted,
                     include: query => query
-                        .Include(b => b.Contract),
+                       .Include(b => b.Contract),
                     asNoTracking: true
                 );
 
@@ -262,11 +262,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
-                // Kiểm tra số lượng đơn hàng đã tồn tại cho lô này chưa (optional)
+                // Một lô chỉ được tạo 1 Order (nếu đây là rule)
                 var isOrderExists = await _unitOfWork.OrderRepository.AnyAsync(
-                    predicate: o =>
-                        o.DeliveryBatchId == orderCreateDto.DeliveryBatchId &&
-                        o.IsDeleted == false
+                    predicate: o => 
+                       o.DeliveryBatchId == orderCreateDto.DeliveryBatchId && 
+                       o.IsDeleted == false
                 );
 
                 if (isOrderExists)
@@ -277,9 +277,175 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Gom ID duy nhất
+                var cdiIds = orderCreateDto.OrderItems
+                    .Select(i => i.ContractDeliveryItemId).Distinct().ToList();
+
+                var productIds = orderCreateDto.OrderItems
+                    .Select(i => i.ProductId).Distinct().ToList();
+
+                // Lấy CDI kèm ContractItem và CoffeeType
+                var cdis = await _unitOfWork.ContractDeliveryItemRepository.GetAllAsync(
+                    predicate: cdi => 
+                       cdiIds.Contains(cdi.DeliveryItemId) && 
+                       !cdi.IsDeleted,
+                    include: q => q
+                       .Include(x => x.ContractItem)
+                          .ThenInclude(ci => ci.CoffeeType),
+                    asNoTracking: true
+                );
+
+                var cdiById = cdis.ToDictionary(x => x.DeliveryItemId);
+
+                // Lấy Product
+                var products = await _unitOfWork.ProductRepository.GetAllAsync(
+                    predicate: p => 
+                       productIds.Contains(p.ProductId) && 
+                       !p.IsDeleted,
+                    include: q => q
+                       .Include(p => p.CoffeeType),
+                    asNoTracking: true
+                );
+
+                var productById = products.ToDictionary(p => p.ProductId);
+
+                var errors = new List<string>();
+
+                // Kiểm tra tồn tại, đúng lô, CoffeeType, và từng dòng không vượt khả dụng
+                foreach (var item in orderCreateDto.OrderItems)
+                {
+                    if (!cdiById.TryGetValue(item.ContractDeliveryItemId, out var cdi))
+                    {
+                        errors.Add($"Không tìm thấy mục giao hàng (CDI) cho dòng đơn hàng đã chọn.");
+
+                        continue;
+                    }
+
+                    if (cdi.DeliveryBatchId != orderCreateDto.DeliveryBatchId)
+                    {
+                        var cdiCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                ?? "không rõ loại";
+
+                        errors.Add($"Mục giao hàng ({cdiCoffeeTypeName}) không thuộc lô giao hàng đang tạo đơn.");
+
+                        continue;
+                    }
+
+                    if (cdi.ContractItem == null)
+                    {
+                        errors.Add("Mục giao hàng này không gắn ContractItem hợp lệ.");
+
+                        continue;
+                    }
+
+                    if (!productById.TryGetValue(item.ProductId, out var p))
+                    {
+                        errors.Add("Không tìm thấy sản phẩm tương ứng cho dòng đơn hàng.");
+
+                        continue;
+                    }
+
+                    // CoffeeType phải trùng giữa ContractItem và Product
+                    var productLabel = p.ProductName ?? $"Product #{p.ProductId}";
+
+                    var productCoffeeTypeName = p.CoffeeType?.TypeName
+                                                ?? p.CoffeeTypeId.ToString()
+                                                ?? "không rõ loại";
+
+                    var contractCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                                 ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                                 ?? "không rõ loại";
+
+                    if (cdi.ContractItem?.CoffeeTypeId != p.CoffeeTypeId)
+                    {
+                        errors.Add(
+                            $"Loại cà phê không khớp: {productLabel} ({productCoffeeTypeName}) " +
+                            $"≠ ContractItem ({contractCoffeeTypeName})."
+                        );
+                    }
+
+                    // Số lượng khả dụng (điều chỉnh tên field cho đúng schema của bạn)
+                    double cdiAvailable = Math.Max(0d, cdi.PlannedQuantity - (cdi.FulfilledQuantity ?? 0d));
+
+                    double productAvailable = p.QuantityAvailable ?? 0;
+
+                    double requested = item.Quantity ?? 0;
+
+                    if (requested <= 0)
+                        errors.Add($"Số lượng cho {productLabel} phải lớn hơn 0.");
+
+                    if (requested > cdiAvailable)
+                        errors.Add(
+                            $"Số lượng cho {productLabel} vượt mức cho phép của mục giao hàng ({contractCoffeeTypeName}): " +
+                            $"{requested} > {cdiAvailable}."
+                        );
+
+                    if (requested > productAvailable)
+                    {
+                        errors.Add(
+                            $"Số lượng cho {productLabel} vượt tồn kho khả dụng: {requested} > {productAvailable}."
+                        );
+                    }
+                }
+
+                // Tổng theo CDI
+                var totalByCdi = orderCreateDto.OrderItems
+                    .GroupBy(i => i.ContractDeliveryItemId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity ?? 0));
+
+                foreach (var kv in totalByCdi)
+                {
+                    if (cdiById.TryGetValue(kv.Key, out var cdi))
+                    {
+                        var contractCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                     ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                     ?? "không rõ loại";
+
+                        double cdiAvailable = Math.Max(0d, cdi.PlannedQuantity - (cdi.FulfilledQuantity ?? 0d));
+
+                        if (kv.Value > cdiAvailable)
+                            errors.Add(
+                                $"Tổng số lượng cho mục giao hàng ({contractCoffeeTypeName}) vượt mức: " +
+                                $"{kv.Value} > {cdiAvailable}."
+                            );
+                    }
+                }
+
+                // Tổng theo Product
+                var totalByProduct = orderCreateDto.OrderItems
+                    .GroupBy(i => i.ProductId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity ?? 0));
+
+                foreach (var kv in totalByProduct)
+                {
+                    if (productById.TryGetValue(kv.Key, out var p))
+                    {
+                        var productLabel = p.ProductName ?? $"Product #{p.ProductId}";
+
+                        double productAvailable = p.QuantityAvailable ?? 0;
+
+                        if (kv.Value > productAvailable)
+                            errors.Add(
+                                $"Tổng số lượng cho {productLabel} vượt tồn kho khả dụng: " +
+                                $"{kv.Value} > {productAvailable}."
+                            );
+                    }
+                }
+
+                if (errors.Count > 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Order validation failed:\n- " + string.Join("\n- ", errors)
+                    );
+                }
+
                 // Sinh mã đơn hàng
-                string orderCode = await _codeGenerator
-                    .GenerateOrderCodeAsync();
+                string orderCode = await _codeGenerator.GenerateOrderCodeAsync();
+
+                // (Tuỳ chọn) Chuẩn hoá default status nếu cần
+                // if (orderCreateDto.Status == default) orderCreateDto.Status = OrderStatus.Processing;
 
                 // Ánh xạ dữ liệu từ DTO vào entity
                 var newOrder = orderCreateDto
@@ -294,9 +460,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.OrderRepository
                     .CreateAsync(newOrder);
 
-                // Lưu thay đổi vào database
-                var result = await _unitOfWork
-                    .SaveChangesAsync();
+                // Lưu thay đổi
+                var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
                 {
@@ -304,10 +469,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var createdOrder = await _unitOfWork.OrderRepository.GetByIdAsync(
                         predicate: o => o.OrderId == newOrder.OrderId,
                         include: query => query
-                           .Include(o => o.DeliveryBatch)
-                              .ThenInclude(b => b.Contract)
-                           .Include(o => o.OrderItems)
-                              .ThenInclude(i => i.Product),
+                            .Include(o => o.DeliveryBatch)
+                               .ThenInclude(b => b.Contract)
+                            .Include(o => o.OrderItems)
+                               .ThenInclude(i => i.Product),
                         asNoTracking: true
                     );
 
@@ -317,8 +482,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         var responseDto = createdOrder.MapToOrderViewDetailsDto();
 
                         return new ServiceResult(
-                            Const.SUCCESS_CREATE_CODE,
-                            Const.SUCCESS_CREATE_MSG,
+                            Const.SUCCESS_CREATE_CODE, 
+                            Const.SUCCESS_CREATE_MSG, 
                             responseDto
                         );
                     }
@@ -338,7 +503,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
                 return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
+                    Const.ERROR_EXCEPTION, 
                     ex.Message
                 );
             }
