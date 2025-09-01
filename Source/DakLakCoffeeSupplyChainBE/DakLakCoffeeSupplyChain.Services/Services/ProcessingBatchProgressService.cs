@@ -25,12 +25,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     public class ProcessingBatchProgressService : IProcessingBatchProgressService
     {
         private readonly IUnitOfWork _unitOfWork;
-            private readonly ICodeGenerator _codeGenerator;
+        private readonly ICodeGenerator _codeGenerator;
+        private readonly IEvaluationService _evaluationService;
 
-            public ProcessingBatchProgressService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
+        public ProcessingBatchProgressService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator, IEvaluationService evaluationService)
         {
             _unitOfWork = unitOfWork;
-                _codeGenerator = codeGenerator;
+            _codeGenerator = codeGenerator;
+            _evaluationService = evaluationService;
         }
 
         /// <summary>
@@ -470,20 +472,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         ["MethodId"] = batch.MethodId.ToString()
                     });
 
-                // 5. Kiểm tra xem batch có bị Fail không và lấy thông tin stage cần retry
+                // 5. Kiểm tra xem batch có bị Fail không (đã chuyển sang đánh giá batch toàn diện)
                 var failureInfo = await GetFailureInfoForBatch(batchId);
                 if (failureInfo != null)
                 {
-                    Console.WriteLine($"DEBUG CREATE: Found failure info - OrderIndex: {failureInfo.FailedOrderIndex}, StageName: {failureInfo.FailedStageName}");
+                    Console.WriteLine($"DEBUG CREATE: Found failure info for batch - BatchId: {batchId}");
                 }
                 else
                 {
                     Console.WriteLine($"DEBUG CREATE: No failure info found");
                 }
                 
-                // 6. Xác định bước tiếp theo
-                int nextStepIndex;
-                int nextStageId;
+                // 6. Xác định bước tiếp theo (hỗ trợ retry stage khi batch fail)
+                int nextStepIndex = 0;
+                int nextStageId = 0;
                 bool isLastStep = false;
                 bool isRetryScenario = false;
 
@@ -491,8 +493,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Bước đầu tiên
                     nextStageId = stages[0].StageId;
-                    nextStepIndex = 1; // Luôn bắt đầu từ 1
-                    // Kiểm tra nếu chỉ có 1 stage thì đó là bước cuối
+                    nextStepIndex = 1;
                     isLastStep = (stages.Count == 1);
                 }
                 else
@@ -507,8 +508,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ["StageId"] = latestProgress.StageId.ToString()
                         });
 
-                    // 🔧 FIX: Kiểm tra retry scenario trước
-                    if (failureInfo != null && failureInfo.FailedStageId.HasValue && latestProgress.StageId == failureInfo.FailedStageId.Value)
+                                        // 🔧 KIỂM TRA RETRY SCENARIO: Nếu batch bị fail, cho phép retry stage cuối cùng
+                    if (failureInfo != null)
+                    {
+                        var failureInfoObj = failureInfo as dynamic;
+                        if (failureInfoObj?.FailedStageId != null && latestProgress.StageId == failureInfoObj.FailedStageId)
                     {
                         // ✅ Retry stage hiện tại (stage bị fail)
                         nextStageId = latestProgress.StageId;
@@ -518,23 +522,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         
                         Console.WriteLine($"DEBUG: Retry scenario - StageId: {nextStageId}, StepIndex: {nextStepIndex}, isLastStep: {isLastStep}");
                     }
-                    else if (currentStageIndex >= stages.Count - 1)
+                    }
+
+                    // 🔧 ĐẢM BẢO LUÔN CÓ GIÁ TRỊ: Nếu không phải retry scenario thì xử lý bình thường
+                    if (!isRetryScenario)
                     {
-                        // 🔧 FIX: Chỉ chặn nếu không phải retry scenario
-                        if (!isRetryScenario) {
+                        if (currentStageIndex >= stages.Count - 1)
+                        {
+                            // Đã hoàn thành tất cả stages
                             return CreateValidationError("CannotCreateNextStepLastStageCompleted", new Dictionary<string, object>
                             {
                                 ["StageName"] = stages[currentStageIndex].StageName
                             });
-                        }
-                        
-                        // Nếu là retry scenario, cho phép retry stage cuối
-                        nextStageId = latestProgress.StageId;
-                        nextStepIndex = latestProgress.StepIndex + 1;
-                        isLastStep = true;
-                        isRetryScenario = true;
-                        
-                        Console.WriteLine($"DEBUG: Retry scenario for last stage - StageId: {nextStageId}, StepIndex: {nextStepIndex}");
                     }
                     else
                     {
@@ -542,15 +541,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         var nextStage = stages[currentStageIndex + 1];
                         nextStageId = nextStage.StageId;
                         nextStepIndex = latestProgress.StepIndex + 1;
-                        
-                        // 🔧 FIX: Dùng OrderIndex để xác định stage cuối chính xác
-                        var maxOrderIndex = stages.Max(s => s.OrderIndex);
-                        isLastStep = (nextStage.OrderIndex >= maxOrderIndex);
+                            isLastStep = (nextStage.OrderIndex >= stages.Max(s => s.OrderIndex));
                         
                         Console.WriteLine($"DEBUG: Normal next step - CurrentStageIndex: {currentStageIndex}, StagesCount: {stages.Count}, isLastStep: {isLastStep}");
                         Console.WriteLine($"DEBUG: NextStageId: {nextStageId}, NextStepIndex: {nextStepIndex}");
-                        Console.WriteLine($"DEBUG: Next stage OrderIndex: {nextStage.OrderIndex}, Max OrderIndex: {maxOrderIndex}");
+                        }
                     }
+                }
+
+                // 🔧 VALIDATION: Đảm bảo nextStageId và nextStepIndex đã được gán giá trị
+                if (nextStageId == 0)
+                {
+                    Console.WriteLine($"ERROR: nextStageId is not assigned! This should not happen.");
+                    return CreateValidationError("InternalError", new Dictionary<string, object>
+                    {
+                        ["Message"] = "Lỗi nội bộ: Không thể xác định stage tiếp theo"
+                    });
                 }
 
                 // 7. VALIDATION: Kiểm tra nếu input có StageId thì phải đúng Stage được phép
@@ -661,7 +667,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // 10. Xử lý workflow theo bước
-                Console.WriteLine($"DEBUG CREATE: Processing workflow - isRetryScenario: {isRetryScenario}, isLastStep: {isLastStep}");
+                Console.WriteLine($"DEBUG CREATE: Processing workflow - isLastStep: {isLastStep}");
                 
                 if (!existingProgresses.Any())
                 {
@@ -1442,22 +1448,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     });
                 }
 
-                // Parse failure info để biết stage nào bị fail
-                var failureInfo = await GetFailureInfoForBatch(batchId);
-                if (failureInfo == null)
+                // Lấy danh sách stages bị fail từ SystemConfiguration
+                var failedStages = await _evaluationService.GetFailedStagesForBatchAsync(batchId);
+                if (failedStages == null || failedStages.Count == 0)
                 {
-                    // Debug: Log comments để xem format thực tế
-                    if (evaluation != null)
-                    {
-                        Console.WriteLine($"DEBUG: Evaluation comments: {evaluation.Comments}");
-                    }
-                    return CreateValidationError("CannotDetermineStageToImprove", new Dictionary<string, object>
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: No failed stages found for batch {batchId}");
+                    return CreateValidationError("NoFailedStagesToUpdate", new Dictionary<string, object>
                     {
                         ["BatchId"] = batchId.ToString()
                     });
                 }
 
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Failed stage - OrderIndex: {failureInfo.FailedOrderIndex}, StageName: {failureInfo.FailedStageName}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Found {failedStages.Count} failed stages: {string.Join(", ", failedStages)}");
 
                 // Lấy danh sách stages
                 var stages = (await _unitOfWork.ProcessingStageRepository.GetAllAsync(
@@ -1472,38 +1474,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     });
                 }
 
-                // Kiểm tra stage bị fail có tồn tại không
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Checking if stage with OrderIndex {failureInfo.FailedOrderIndex} exists in stages list");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Available stages: {string.Join(", ", stages.Select(s => $"{s.StageId}({s.StageName})[Order:{s.OrderIndex}]"))}");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Batch MethodId: {batch.MethodId}");
-                
-                // 🔧 FIX: Sử dụng OrderIndex để tìm stage
-                var failedStage = stages.FirstOrDefault(s => s.OrderIndex == failureInfo.FailedOrderIndex);
-                if (failedStage == null)
+                // Kiểm tra xem stage được cập nhật có trong danh sách failed stages không
+                var currentStage = stages.FirstOrDefault(s => s.StageId == input.StageId);
+                if (currentStage == null)
                 {
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Stage with OrderIndex {failureInfo.FailedOrderIndex} not found in stages list!");
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Checking all stages in database for MethodId {batch.MethodId}...");
-                    
-                    // Kiểm tra tất cả stages trong database
-                    var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
-                        s => s.MethodId == batch.MethodId && !s.IsDeleted,
-                        q => q.OrderBy(s => s.OrderIndex)
-                    );
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All stages for MethodId {batch.MethodId}: {string.Join(", ", allStages.Select(s => $"{s.StageId}({s.StageName})[Order:{s.OrderIndex}]"))}");
-                    
-                    return CreateValidationError("FailedStageNotFound", new Dictionary<string, object>
+                    return CreateValidationError("CurrentStageNotFound", new Dictionary<string, object>
                     {
-                        ["FailedOrderIndex"] = failureInfo.FailedOrderIndex,
+                        ["StageId"] = input.StageId?.ToString() ?? "null",
                         ["MethodId"] = batch.MethodId.ToString()
                     });
                 }
-                
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Found failed stage: {failedStage.StageId} - {failedStage.StageName}");
 
-                // 🔧 VALIDATION: Kiểm tra khối lượng output khi stage bị fail
+                // Kiểm tra xem stage hiện tại có trong danh sách failed stages không
+                var stageNameWithOrder = $"{currentStage.StageName} (Thứ tự: {currentStage.OrderIndex})";
+                var isStageInFailedList = failedStages.Any(failedStage => 
+                    failedStage.Contains(currentStage.StageName) || 
+                    failedStage.Contains(stageNameWithOrder) ||
+                    failedStage.Contains(currentStage.StageId.ToString())
+                );
+
+                if (!isStageInFailedList)
+                {
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Stage {currentStage.StageName} (ID: {currentStage.StageId}) is not in failed stages list");
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Failed stages: {string.Join(", ", failedStages)}");
+                    return CreateValidationError("StageNotInFailedList", new Dictionary<string, object>
+                    {
+                        ["StageId"] = currentStage.StageId.ToString(),
+                        ["StageName"] = currentStage.StageName,
+                        ["FailedStages"] = string.Join(", ", failedStages)
+                    });
+                }
+
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Stage {currentStage.StageName} (ID: {currentStage.StageId}) is in failed stages list - proceeding with update");
+
+                // 🔧 VALIDATION: Kiểm tra khối lượng output (đã chuyển sang đánh giá batch toàn diện)
                 if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
                 {
-                    return CreateValidationError("OutputQuantityMustBePositiveForFailedStage", new Dictionary<string, object>
+                    return CreateValidationError("OutputQuantityMustBePositive", new Dictionary<string, object>
                     {
                         ["OutputQuantity"] = input.OutputQuantity?.ToString() ?? "null",
                         ["MinValue"] = 0
@@ -1535,7 +1542,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     
                     if (currentQuantity > previousQuantity * (1 + tolerance))
                     {
-                        return CreateValidationError("OutputQuantityIncreaseTooHighForFailedStage", new Dictionary<string, object>
+                        return CreateValidationError("OutputQuantityIncreaseTooHigh", new Dictionary<string, object>
                         {
                             ["CurrentQuantity"] = currentQuantity,
                             ["CurrentUnit"] = input.OutputUnit ?? "kg",
@@ -1549,7 +1556,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Nếu khối lượng giảm quá nhiều (>20%), cảnh báo
                     if (improvementPercentage < -20)
                     {
-                        return CreateValidationError("OutputQuantityDecreaseTooHighForFailedStage", new Dictionary<string, object>
+                        return CreateValidationError("OutputQuantityDecreaseTooHigh", new Dictionary<string, object>
                         {
                             ["CurrentQuantity"] = currentQuantity,
                             ["CurrentUnit"] = input.OutputUnit ?? "kg",
@@ -1573,14 +1580,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: StepIndex {nextStepIndex} already exists: {existingStepIndex}");
 
-                // Tạo progress mới cho stage bị fail
+                // Tạo progress mới cho stage hiện tại
                 var progress = new ProcessingBatchProgress
                 {
                     ProgressId = Guid.NewGuid(),
                     BatchId = batchId,
                     StepIndex = nextStepIndex,
-                    StageId = failedStage.StageId, // 🔧 FIX: Sử dụng StageId thực tế từ database
-                    StageDescription = $"Cải thiện sau đánh giá fail - {failureInfo.FailureDetails}",
+                    StageId = currentStage.StageId,
+                    StageDescription = $"Cải thiện sau đánh giá fail - batch evaluation",
                     ProgressDate = input.ProgressDate,
                     OutputQuantity = input.OutputQuantity,
                     OutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit,
@@ -1597,8 +1604,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"  - ProgressId: {progress.ProgressId}");
                 Console.WriteLine($"  - BatchId: {progress.BatchId}");
                 Console.WriteLine($"  - StepIndex: {progress.StepIndex}");
-                Console.WriteLine($"  - StageId: {progress.StageId} (from OrderIndex {failureInfo.FailedOrderIndex})");
-                Console.WriteLine($"  - StageName: {failedStage.StageName}");
+                                    Console.WriteLine($"  - StageId: {progress.StageId}");
+                Console.WriteLine($"  - StageName: {currentStage.StageName}");
                 Console.WriteLine($"  - UpdatedBy: {progress.UpdatedBy}");
                 Console.WriteLine($"  - OutputQuantity: {progress.OutputQuantity}");
                 Console.WriteLine($"  - OutputUnit: {progress.OutputUnit}");
@@ -1698,7 +1705,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     EvaluatedBy = null,
                     EvaluatedAt = null,
                     EvaluationResult = null,
-                    Comments = $"Đánh giá lại sau khi cải thiện stage: {failureInfo.FailedStageName}",
+                    Comments = $"Đánh giá lại sau khi cải thiện batch",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsDeleted = false
@@ -1727,7 +1734,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation created with code: {evaluationCode}");
 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, 
-                    $"Đã cập nhật progress cho stage {failureInfo.FailedStageName} và chuyển sang chờ đánh giá lại.", 
+                    $"Đã cập nhật progress và chuyển sang chờ đánh giá lại batch.", 
                     progress.ProgressId);
 
             }
@@ -2054,14 +2061,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
-        /// Lấy thông tin failure từ evaluation của batch
-        /// </summary>
-        /// <summary>
-        /// Lấy thông tin failure từ evaluation của batch
+        /// Lấy thông tin failure từ evaluation của batch và xác định stage cần retry
         /// </summary>
         /// <param name="batchId">ID của batch</param>
-        /// <returns>StageFailureInfo hoặc null nếu không có failure</returns>
-        private async Task<StageFailureInfo?> GetFailureInfoForBatch(Guid batchId)
+        /// <returns>Thông tin failure và stage cần retry hoặc null nếu không có failure</returns>
+        private async Task<object?> GetFailureInfoForBatch(Guid batchId)
         {
             try
             {
@@ -2088,38 +2092,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 Console.WriteLine($"DEBUG: Found Fail evaluation. Comments: {evaluation.Comments}");
 
-                // Sử dụng StageFailureParser để parse comments
-                var failureInfo = StageFailureParser.ParseFailureFromComments(evaluation.Comments);
-                if (failureInfo != null)
-                {
-                    Console.WriteLine($"DEBUG: Parsed failure info - OrderIndex: {failureInfo.FailedOrderIndex}, StageName: {failureInfo.FailedStageName}");
-                    
-                    // Lấy StageId thực tế từ database dựa trên OrderIndex
+                // Lấy batch để biết method
                     var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
-                    if (batch != null)
+                if (batch == null)
                     {
+                    Console.WriteLine($"DEBUG: Batch not found: {batchId}");
+                    return null;
+                }
+
+                // Lấy tất cả stages của method
                         var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
                             s => s.MethodId == batch.MethodId && !s.IsDeleted,
                             q => q.OrderBy(s => s.OrderIndex)
                         );
                         
-                        var failedStage = stages.FirstOrDefault(s => s.OrderIndex == failureInfo.FailedOrderIndex);
-                        if (failedStage != null)
-                        {
-                            failureInfo.FailedStageId = failedStage.StageId;
-                            Console.WriteLine($"DEBUG: Found actual StageId: {failedStage.StageId} for OrderIndex: {failureInfo.FailedOrderIndex}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"DEBUG: Warning - No stage found for OrderIndex: {failureInfo.FailedOrderIndex}");
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"DEBUG: Failed to parse failure comment: {evaluation.Comments}");
-                }
+                // Lấy tất cả progress đã thực hiện
+                var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderBy(p => p.StepIndex)
+                );
 
+                // Xác định stage cuối cùng đã thực hiện để retry
+                var lastProgress = progresses.LastOrDefault();
+                var stageToRetry = lastProgress != null ? stages.FirstOrDefault(s => s.StageId == lastProgress.StageId) : null;
+
+                // Trả về thông tin failure và stage cần retry
+                var failureInfo = new
+                {
+                    BatchId = batchId,
+                    EvaluationId = evaluation.EvaluationId,
+                    FailedAt = evaluation.CreatedAt,
+                    Comments = evaluation.Comments,
+                    // Thông tin stage cần retry
+                    FailedStageId = stageToRetry?.StageId,
+                    FailedStageName = stageToRetry?.StageName,
+                    FailedOrderIndex = stageToRetry?.OrderIndex,
+                    LastStepIndex = lastProgress?.StepIndex ?? 0,
+                    // Thông tin tất cả stages đã thực hiện
+                    CompletedStages = progresses.Select(p => new
+                    {
+                        StageId = p.StageId,
+                        StageName = stages.FirstOrDefault(s => s.StageId == p.StageId)?.StageName,
+                        OrderIndex = stages.FirstOrDefault(s => s.StageId == p.StageId)?.OrderIndex,
+                        StepIndex = p.StepIndex,
+                        OutputQuantity = p.OutputQuantity,
+                        OutputUnit = p.OutputUnit,
+                        ProgressDate = p.ProgressDate
+                    }).ToList(),
+                    Note = "Batch bị fail - cần retry stage cuối cùng đã thực hiện"
+                };
+
+                Console.WriteLine($"DEBUG: Created failure info with retry stage: {stageToRetry?.StageName} (ID: {stageToRetry?.StageId})");
                 return failureInfo;
             }
             catch (Exception ex)

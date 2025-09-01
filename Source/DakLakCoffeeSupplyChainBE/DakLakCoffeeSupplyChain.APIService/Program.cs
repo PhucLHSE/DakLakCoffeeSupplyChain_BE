@@ -96,6 +96,7 @@ builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
 builder.Services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
 
+
 //Add MemoryCache
 builder.Services.AddMemoryCache();
 
