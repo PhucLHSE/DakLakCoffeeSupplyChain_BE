@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
+using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 {
@@ -19,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 
         public double? TotalWantedPrice { get; set; }
 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public CultivationRegistrationStatus Status { get; set; }
 
         public string Note { get; set; } = string.Empty;

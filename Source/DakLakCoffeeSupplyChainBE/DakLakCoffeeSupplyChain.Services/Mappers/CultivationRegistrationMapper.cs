@@ -105,6 +105,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 TotalWantedPrice = 0, // Vì sql không có khai báo mặc định nên buộc phải khai báo ở đây
                 Status = CultivationRegistrationStatus.Pending.ToString(), // Mặc định gán vào luôn, farmer không có lựa chọn
                 Note = dto.Note,
+                RegisteredAt = DateHelper.NowVietnamTime(),
                 CultivationRegistrationsDetails = [.. dto.CultivationRegistrationDetailsCreateViewDto
                 .Select(detail => new CultivationRegistrationsDetail
                 {
