@@ -178,5 +178,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> VerifyFarmer(Guid farmerId, bool isVerified)
+        {
+            try
+            {
+                // Tìm farmer theo ID
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: f => f.FarmerId == farmerId,
+                    asNoTracking: false
+                );
+
+                if (farmer == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy nông dân."
+                    );
+                }
+
+                // Cập nhật trạng thái xác thực
+                farmer.IsVerified = isVerified;
+                farmer.UpdatedAt = DateHelper.NowVietnamTime();
+
+                // Lưu thay đổi
+                await _unitOfWork.FarmerRepository.UpdateAsync(farmer);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        "Cập nhật trạng thái xác thực thành công."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật trạng thái xác thực thất bại."
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }

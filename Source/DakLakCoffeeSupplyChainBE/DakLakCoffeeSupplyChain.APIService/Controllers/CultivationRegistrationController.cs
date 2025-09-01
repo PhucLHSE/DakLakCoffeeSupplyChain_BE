@@ -51,6 +51,35 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
 
+        // GET: api/<CultivationRegistration/GetByUser>
+        [HttpGet("GetByUser")]
+        [EnableQuery]
+        public async Task<IActionResult> GetAllCultivationRegistrationnByUserAsync()
+        {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _service
+                .GetByUserId(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả đúng dữ liệu
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 + message
+
+            return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
         // GET api/<CultivationRegistration>/{registrationId}
         [HttpGet("{registrationId}")]
         [EnableQuery]

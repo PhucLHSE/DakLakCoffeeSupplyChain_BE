@@ -19,6 +19,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         public DateTime RegisteredAt { get; set; }
 
         public double? TotalWantedPrice { get; set; }
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CultivationRegistrationStatus Status { get; set; } = CultivationRegistrationStatus.Unknown;
 

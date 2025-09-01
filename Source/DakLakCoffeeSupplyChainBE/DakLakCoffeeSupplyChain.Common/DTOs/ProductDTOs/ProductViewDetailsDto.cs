@@ -59,5 +59,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProductDTOs
         public string InventoryLocation { get; set; } = string.Empty;
 
         public string BatchCode { get; set; } = string.Empty;
+
+        public string FarmerName { get; set; } = string.Empty;
     }
 }

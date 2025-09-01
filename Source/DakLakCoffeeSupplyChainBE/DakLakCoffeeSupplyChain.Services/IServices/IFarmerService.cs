@@ -8,6 +8,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetById(Guid farmerId);
         Task<IServiceResult> SoftDeleteById(Guid farmerId);
         Task<IServiceResult> DeleteById(Guid farmerId);
-
+        Task<IServiceResult> VerifyFarmer(Guid farmerId, bool isVerified);
     }
 }

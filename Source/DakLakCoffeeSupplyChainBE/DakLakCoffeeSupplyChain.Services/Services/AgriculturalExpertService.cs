@@ -442,5 +442,67 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
+
+        // Cập nhật trạng thái xác thực chuyên gia
+        public async Task<IServiceResult> VerifyExpertAsync(Guid expertId, bool isVerified, Guid adminUserId)
+        {
+            try
+            {
+                // 1. Kiểm tra chuyên gia có tồn tại không
+                var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(expertId);
+                if (expert == null || expert.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy chuyên gia này."
+                    );
+                }
+
+                // 2. Kiểm tra admin có quyền không
+                var adminUser = await _unitOfWork.UserAccountRepository.GetAllAsync(
+                    predicate: u => u.UserId == adminUserId && !u.IsDeleted,
+                    include: query => query.Include(u => u.Role),
+                    asNoTracking: true
+                );
+                
+                var admin = adminUser.FirstOrDefault();
+                if (admin == null || admin.Role?.RoleName != "Admin")
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Bạn không có quyền thực hiện hành động này."
+                    );
+                }
+
+                // 3. Cập nhật trạng thái xác thực
+                expert.IsVerified = isVerified;
+                expert.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.AgriculturalExpertRepository.UpdateAsync(expert);
+                await _unitOfWork.SaveChangesAsync();
+
+                // 4. Trả về thông tin đã cập nhật
+                var updatedExpert = await _unitOfWork.AgriculturalExpertRepository.GetAllAsync(
+                    predicate: e => e.ExpertId == expertId,
+                    include: query => query.Include(e => e.User),
+                    asNoTracking: true
+                );
+
+                var dto = updatedExpert.FirstOrDefault()?.MapToViewDetailDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_UPDATE_CODE,
+                    isVerified ? "Đã xác thực chuyên gia thành công." : "Đã bỏ xác thực chuyên gia thành công.",
+                    dto
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.FAIL_UPDATE_CODE,
+                    $"Lỗi khi cập nhật trạng thái xác thực: {ex.Message}"
+                );
+            }
+        }
     }
 }

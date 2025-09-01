@@ -13,5 +13,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteAsync(Guid expertId);
         Task<IServiceResult> SoftDeleteAsync(Guid expertId, Guid userId, string userRole);
         Task<IServiceResult> GetVerifiedExpertsAsync();
+        Task<IServiceResult> VerifyExpertAsync(Guid expertId, bool isVerified, Guid adminUserId);
     }
 }

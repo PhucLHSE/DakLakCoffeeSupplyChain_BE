@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -105,6 +106,41 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Lấy những đơn đăng ký thuộc kế hoạch đang chọn
             var cultivationRegistrations = await _unitOfWork.CultivationRegistrationRepository.GetAllAsync(
                 predicate: c => !c.IsDeleted && c.PlanId == planId,
+                include: c => c.
+                    Include(c => c.Farmer).
+                        ThenInclude(c => c.User).
+                    Include(c => c.CultivationRegistrationsDetails).
+                        ThenInclude(c => c.PlanDetail).
+                            ThenInclude(c => c.CoffeeType).
+                    Include(c => c.FarmingCommitment),
+                orderBy: c => c.OrderBy(c => c.RegistrationCode),
+                asNoTracking: true);
+
+            if (cultivationRegistrations == null || cultivationRegistrations.Count == 0)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new List<CultivationRegistrationViewAllAvailableDto>()
+                );
+            }
+            else
+            {
+                var cultivationRegistrationViewAllDto = cultivationRegistrations
+                    .Select(c => c.MapToCultivationRegistrationViewAllAvailableDto())
+                    .ToList();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    cultivationRegistrationViewAllDto
+                );
+            }
+        }
+        public async Task<IServiceResult> GetByUserId(Guid userId)
+        {
+            var cultivationRegistrations = await _unitOfWork.CultivationRegistrationRepository.GetAllAsync(
+                predicate: c => !c.IsDeleted && c.Farmer.UserId == userId,
                 include: c => c.
                     Include(c => c.Farmer).
                         ThenInclude(c => c.User).

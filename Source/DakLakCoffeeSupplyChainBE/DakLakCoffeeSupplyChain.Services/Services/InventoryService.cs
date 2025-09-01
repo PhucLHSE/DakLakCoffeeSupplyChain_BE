@@ -8,8 +8,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.Generators;
-using DakLakCoffeeSupplyChain.Services.Mappers; // ✅ Thêm dòng này
-using System.Collections.Generic; // ✅ Thêm dòng này
+using DakLakCoffeeSupplyChain.Services.Mappers; // Thêm dòng này
+using System.Collections.Generic; // Thêm dòng này
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -26,76 +26,122 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetAllAsync(Guid userId)
         {
-            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .FindByUserIdAsync(userId);
+
             Guid? targetManagerId = null;
 
             if (manager != null && !manager.IsDeleted)
                 targetManagerId = manager.ManagerId;
             else
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted)
                     targetManagerId = staff.SupervisorId;
             }
 
             if (targetManagerId == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được quyền truy cập.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Không xác định được quyền truy cập."
+                );
 
             var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
                 !i.IsDeleted && i.Warehouse.ManagerId == targetManagerId);
 
             if (inventories == null || !inventories.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có dữ liệu tồn kho.", []);
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE, 
+                    "Không có dữ liệu tồn kho.", 
+                    []
+                );
 
-            var result = inventories.Select(inv => inv.ToListItemDto()).ToList(); // ✅ Dùng mapper
+            var result = inventories
+                .Select(inv => inv.ToListItemDto()).ToList(); // Dùng mapper
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách tồn kho thành công.", result);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                "Lấy danh sách tồn kho thành công.", 
+                result
+            );
         }
 
         public async Task<IServiceResult> GetByIdAsync(Guid id)
         {
-            var inv = await _unitOfWork.Inventories.GetDetailByIdAsync(id);
+            var inv = await _unitOfWork.Inventories
+                .GetDetailByIdAsync(id);
+
             if (inv == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin tồn kho.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Không tìm thấy thông tin tồn kho."
+                );
 
             var dto = inv.ToDetailDto();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết tồn kho thành công.", dto);
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                "Lấy chi tiết tồn kho thành công.", 
+                dto
+            );
         }
 
         public async Task<IServiceResult> CreateAsync(InventoryCreateDto dto, Guid userId)
         {
             Guid? targetManagerId = null;
 
-            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .FindByUserIdAsync(userId);
+
             if (manager != null && !manager.IsDeleted)
                 targetManagerId = manager.ManagerId;
             else
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted)
                     targetManagerId = staff.SupervisorId;
             }
 
             if (targetManagerId == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Không xác định được người dùng thuộc công ty nào."
+                );
 
-            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(dto.WarehouseId);
+            var warehouse = await _unitOfWork.Warehouses
+                .GetByIdAsync(dto.WarehouseId);
+
             if (warehouse == null || warehouse.ManagerId != targetManagerId)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền tạo tồn kho cho kho này.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Bạn không có quyền tạo tồn kho cho kho này."
+                );
 
-            var existing = await _unitOfWork.Inventories.FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
+            var existing = await _unitOfWork.Inventories
+                .FindByWarehouseAndBatchAsync(dto.WarehouseId, dto.BatchId);
+
             if (existing != null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tồn kho đã tồn tại cho kho và batch này.");
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE, 
+                    "Tồn kho đã tồn tại cho kho và batch này."
+                );
 
             var currentInventories = await _unitOfWork.Inventories
                 .GetAllAsync(i => i.WarehouseId == dto.WarehouseId && !i.IsDeleted);
+
             double totalCurrentQuantity = currentInventories.Sum(i => i.Quantity);
             double available = (warehouse.Capacity ?? 0) - totalCurrentQuantity;
 
             if (dto.Quantity > available)
             {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể thêm {dto.Quantity}kg.");
+                return new ServiceResult(
+                    Const.ERROR_VALIDATION_CODE,
+                    $"Kho \"{warehouse.Name}\" chỉ còn trống {available:n0}kg, không thể thêm {dto.Quantity}kg."
+                );
             }
 
             var inventoryCode = await _codeGenerator.GenerateInventoryCodeAsync();
@@ -116,133 +162,217 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.Inventories.CreateAsync(newInventory);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo tồn kho thành công.", newInventory.InventoryId);
+            return new ServiceResult(
+                Const.SUCCESS_CREATE_CODE, 
+                "Tạo tồn kho thành công.",
+                newInventory.InventoryId
+            );
         }
 
         public async Task<IServiceResult> SoftDeleteAsync(Guid id)
         {
-            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            var entity = await _unitOfWork.Inventories
+                .FindByIdAsync(id);
+
             if (entity == null)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+                return new ServiceResult(
+                    Const.FAIL_DELETE_CODE,
+                    "Không tìm thấy tồn kho để xoá."
+                );
 
             entity.IsDeleted = true;
             entity.UpdatedAt = DateTime.UtcNow;
+
             _unitOfWork.Inventories.Update(entity);
+
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm tồn kho thành công.");
+            return new ServiceResult(
+                Const.SUCCESS_DELETE_CODE,
+                "Xoá mềm tồn kho thành công."
+            );
         }
 
         public async Task<IServiceResult> HardDeleteAsync(Guid id)
         {
-            var entity = await _unitOfWork.Inventories.FindByIdAsync(id);
+            var entity = await _unitOfWork.Inventories
+                .FindByIdAsync(id);
+
             if (entity == null)
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Không tìm thấy tồn kho để xoá.");
+                return new ServiceResult(
+                    Const.FAIL_DELETE_CODE,
+                    "Không tìm thấy tồn kho để xoá."
+                );
 
             await _unitOfWork.Inventories.RemoveAsync(entity);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá thật tồn kho thành công.");
+            return new ServiceResult(
+                Const.SUCCESS_DELETE_CODE, 
+                "Xoá thật tồn kho thành công."
+            );
         }
+
         public async Task<IServiceResult> GetAllByWarehouseIdAsync(Guid warehouseId, Guid userId)
         {
             Guid? targetManagerId = null;
 
             // Xác định ManagerId hoặc SupervisorId
-            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .FindByUserIdAsync(userId);
+
             if (manager != null && !manager.IsDeleted)
                 targetManagerId = manager.ManagerId;
             else
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted)
                     targetManagerId = staff.SupervisorId;
             }
 
             if (targetManagerId == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Không xác định được người dùng thuộc công ty nào."
+                );
 
             // Kiểm tra kho có thuộc quyền quản lý của người dùng không
-            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            var warehouse = await _unitOfWork.Warehouses
+                .GetByIdAsync(warehouseId);
+
             if (warehouse == null || warehouse.ManagerId != targetManagerId)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Kho không tồn tại hoặc không thuộc công ty bạn."
+                );
 
             // Lấy tồn kho trong kho này - CHỈ lấy cà phê sơ chế (có BatchId), KHÔNG lấy cà phê tươi
             var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
                 !i.IsDeleted && i.WarehouseId == warehouseId && i.BatchId != null);
 
             if (inventories == null || !inventories.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tồn kho trong kho này.", []);
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE, 
+                    "Không có tồn kho trong kho này.", 
+                    []
+                );
 
-            var result = inventories.Select(inv => inv.ToListItemDto()).ToList();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho theo kho thành công.", result);
+            var result = inventories
+                .Select(inv => inv.ToListItemDto()).ToList();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                "Lấy tồn kho theo kho thành công.", 
+                result
+            );
         }
 
-        // ✅ Thêm method mới để lấy TẤT CẢ tồn kho (cả sơ chế và tươi) cho warehouse detail
+        // Thêm method mới để lấy TẤT CẢ tồn kho (cả sơ chế và tươi) cho warehouse detail
         public async Task<IServiceResult> GetAllByWarehouseIdForDetailAsync(Guid warehouseId, Guid userId)
         {
             Guid? targetManagerId = null;
 
             // Xác định ManagerId hoặc SupervisorId
-            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .FindByUserIdAsync(userId);
+
             if (manager != null && !manager.IsDeleted)
                 targetManagerId = manager.ManagerId;
             else
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted)
                     targetManagerId = staff.SupervisorId;
             }
 
             if (targetManagerId == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Không xác định được người dùng thuộc công ty nào."
+                );
 
             // Kiểm tra kho có thuộc quyền quản lý của người dùng không
-            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            var warehouse = await _unitOfWork.Warehouses
+                .GetByIdAsync(warehouseId);
+
             if (warehouse == null || warehouse.ManagerId != targetManagerId)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Kho không tồn tại hoặc không thuộc công ty bạn."
+                );
 
             // Lấy TẤT CẢ tồn kho trong kho này (cả cà phê sơ chế và cà phê tươi) để hiển thị trong warehouse detail
             var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
                 !i.IsDeleted && i.WarehouseId == warehouseId);
 
             if (inventories == null || !inventories.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tồn kho trong kho này.", []);
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE, 
+                    "Không có tồn kho trong kho này.", 
+                    []
+                );
 
-            var result = inventories.Select(inv => inv.ToListItemDto()).ToList();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho theo kho thành công.", result);
+            var result = inventories
+                .Select(inv => inv.ToListItemDto()).ToList();
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                "Lấy tồn kho theo kho thành công.", 
+                result
+            );
         }
 
-        // ✅ Method mới để lấy inventory với thông tin FIFO chi tiết cho việc tạo yêu cầu xuất kho
-        public async Task<IServiceResult> GetInventoriesWithFifoRecommendationAsync(Guid warehouseId, Guid userId, double? requestedQuantity = null)
+        // Method mới để lấy inventory với thông tin FIFO chi tiết cho việc tạo yêu cầu xuất kho
+        public async Task<IServiceResult> GetInventoriesWithFifoRecommendationAsync(
+            Guid warehouseId, Guid userId, double? requestedQuantity = null)
         {
             Guid? targetManagerId = null;
 
             // Xác định ManagerId hoặc SupervisorId
-            var manager = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .FindByUserIdAsync(userId);
+
             if (manager != null && !manager.IsDeleted)
                 targetManagerId = manager.ManagerId;
             else
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.FindByUserIdAsync(userId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .FindByUserIdAsync(userId);
+
                 if (staff != null && !staff.IsDeleted)
                     targetManagerId = staff.SupervisorId;
             }
 
             if (targetManagerId == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không xác định được người dùng thuộc công ty nào.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Không xác định được người dùng thuộc công ty nào."
+                );
 
             // Kiểm tra kho có thuộc quyền quản lý của người dùng không
-            var warehouse = await _unitOfWork.Warehouses.GetByIdAsync(warehouseId);
+            var warehouse = await _unitOfWork.Warehouses
+                .GetByIdAsync(warehouseId);
+
             if (warehouse == null || warehouse.ManagerId != targetManagerId)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Kho không tồn tại hoặc không thuộc công ty bạn.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Kho không tồn tại hoặc không thuộc công ty bạn."
+                );
 
             // Lấy tồn kho trong kho này - CHỈ lấy cà phê sơ chế (có BatchId), KHÔNG lấy cà phê tươi
             var inventories = await _unitOfWork.Inventories.GetAllWithIncludesAsync(i =>
                 !i.IsDeleted && i.WarehouseId == warehouseId && i.BatchId != null);
 
             if (inventories == null || !inventories.Any())
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có tồn kho trong kho này.", []);
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE, 
+                    "Không có tồn kho trong kho này.", 
+                    []
+                );
 
             // Sắp xếp theo FIFO (First In, First Out) - nhập trước xuất trước
             var sortedInventories = inventories
@@ -253,8 +383,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = new List<InventoryListItemDto>();
             double remainingQuantity = requestedQuantity ?? 0;
 
-            // ✅ TỐI ƯU: Tìm inventory đầu tiên có hàng để khuyến nghị
-            var firstAvailableInventory = sortedInventories.FirstOrDefault(inv => inv.Quantity > 0);
+            // TỐI ƯU: Tìm inventory đầu tiên có hàng để khuyến nghị
+            var firstAvailableInventory = sortedInventories
+                .FirstOrDefault(inv => inv.Quantity > 0);
 
             for (int i = 0; i < sortedInventories.Count; i++)
             {
@@ -287,8 +418,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // ✅ SỬA: Nếu không có yêu cầu số lượng cụ thể, khuyến nghị inventory đầu tiên CÓ HÀNG
-                    isRecommended = firstAvailableInventory != null && inv.InventoryId == firstAvailableInventory.InventoryId;
+                    // SỬA: Nếu không có yêu cầu số lượng cụ thể, khuyến nghị inventory đầu tiên CÓ HÀNG
+                    isRecommended = firstAvailableInventory != null 
+                        && inv.InventoryId == firstAvailableInventory.InventoryId;
+
                     if (isRecommended)
                     {
                         if (daysInWarehouse > 30)
@@ -305,8 +438,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 result.Add(inv.ToListItemDto(fifoPriority, isRecommended, fifoRecommendation));
             }
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy tồn kho với khuyến nghị FIFO thành công.", result);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                "Lấy tồn kho với khuyến nghị FIFO thành công.", 
+                result
+            );
         }
-
     }
 }

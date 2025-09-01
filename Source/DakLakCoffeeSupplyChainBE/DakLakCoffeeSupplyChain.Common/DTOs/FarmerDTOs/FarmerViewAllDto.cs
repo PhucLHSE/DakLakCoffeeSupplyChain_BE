@@ -10,5 +10,6 @@
 
         public string FarmLocation { get; set; } = string.Empty;
         public string FarmerName { get; set;} = string.Empty;
+        public bool? IsVerified { get; set; }
     }
 }
