@@ -574,6 +574,159 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Dùng DeliveryBatchId hiện tại của Order
+                var deliveryBatchId = order.DeliveryBatchId;
+
+                // Gom ID duy nhất
+                var cdiIds = orderUpdateDto.OrderItems
+                    .Select(i => i.ContractDeliveryItemId)
+                    .Distinct()
+                    .ToList();
+
+                var productIds = orderUpdateDto.OrderItems
+                    .Select(i => i.ProductId)
+                    .Distinct()
+                    .ToList();
+
+                // Lấy CDI kèm ContractItem và CoffeeType
+                var cdis = await _unitOfWork.ContractDeliveryItemRepository.GetAllAsync(
+                    predicate: cdi => 
+                       cdiIds.Contains(cdi.DeliveryItemId) && 
+                       !cdi.IsDeleted,
+                    include: q => q
+                        .Include(x => x.ContractItem)
+                            .ThenInclude(ci => ci.CoffeeType),
+                    asNoTracking: true
+                );
+
+                var cdiById = cdis.ToDictionary(x => x.DeliveryItemId);
+
+                // Lấy Product kèm CoffeeType
+                var products = await _unitOfWork.ProductRepository.GetAllAsync(
+                    predicate: p => 
+                       productIds.Contains(p.ProductId) && 
+                       !p.IsDeleted,
+                    include: q => q
+                       .Include(p => p.CoffeeType),
+                    asNoTracking: true
+                );
+
+                var productById = products.ToDictionary(p => p.ProductId);
+
+                var errors = new List<string>();
+
+                // Kiểm tra từng dòng
+                foreach (var item in orderUpdateDto.OrderItems)
+                {
+                    if (!cdiById.TryGetValue(item.ContractDeliveryItemId, out var cdi))
+                    {
+                        errors.Add("Không tìm thấy mục giao hàng (CDI) cho dòng đơn hàng đã chọn.");
+
+                        continue;
+                    }
+
+                    if (cdi.DeliveryBatchId != deliveryBatchId)
+                    {
+                        var cdiCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                                ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                                ?? "không rõ loại";
+
+                        errors.Add($"Mục giao hàng ({cdiCoffeeTypeName}) không thuộc lô giao hàng của đơn hiện tại.");
+
+                        continue;
+                    }
+
+                    if (cdi.ContractItem == null)
+                    {
+                        errors.Add("Mục giao hàng này không gắn ContractItem hợp lệ.");
+
+                        continue;
+                    }
+
+                    if (!productById.TryGetValue(item.ProductId, out var p))
+                    {
+                        errors.Add("Không tìm thấy sản phẩm tương ứng cho dòng đơn hàng.");
+
+                        continue;
+                    }
+
+                    // CoffeeType phải trùng giữa ContractItem và Product
+                    var productLabel = p.ProductName ?? $"Product #{p.ProductId}";
+
+                    var productCoffeeTypeName = p.CoffeeType?.TypeName ?? p.CoffeeTypeId.ToString() ?? "không rõ loại";
+
+                    var contractCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                                 ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                                 ?? "không rõ loại";
+
+                    if (cdi.ContractItem?.CoffeeTypeId != p.CoffeeTypeId)
+                    {
+                        errors.Add($"Loại cà phê không khớp: {productLabel} ({productCoffeeTypeName}) ≠ ContractItem ({contractCoffeeTypeName}).");
+                    }
+
+                    // Số lượng khả dụng
+                    double requested = item.Quantity ?? 0;
+
+                    double cdiAvailable = Math.Max(0d, cdi.PlannedQuantity - (cdi.FulfilledQuantity ?? 0d));
+
+                    double productAvailable = p.QuantityAvailable ?? 0d;
+
+                    if (requested <= 0)
+                        errors.Add($"Số lượng cho {productLabel} phải lớn hơn 0.");
+
+                    if (requested > cdiAvailable)
+                        errors.Add($"Số lượng cho {productLabel} vượt mức mục giao hàng ({contractCoffeeTypeName}): {requested} > {cdiAvailable}.");
+
+                    if (requested > productAvailable)
+                        errors.Add($"Số lượng cho {productLabel} vượt tồn kho khả dụng: {requested} > {productAvailable}.");
+                }
+
+                // Tổng theo CDI
+                var totalByCdi = orderUpdateDto.OrderItems
+                    .GroupBy(i => i.ContractDeliveryItemId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity ?? 0));
+
+                foreach (var kv in totalByCdi)
+                {
+                    if (cdiById.TryGetValue(kv.Key, out var cdi))
+                    {
+                        var contractCoffeeTypeName = cdi.ContractItem?.CoffeeType?.TypeName
+                                                     ?? cdi.ContractItem?.CoffeeTypeId.ToString()
+                                                     ?? "không rõ loại";
+
+                        double cdiAvailable = Math.Max(0d, cdi.PlannedQuantity - (cdi.FulfilledQuantity ?? 0d));
+
+                        if (kv.Value > cdiAvailable)
+                            errors.Add($"Tổng số lượng cho mục giao hàng ({contractCoffeeTypeName}) vượt mức: {kv.Value} > {cdiAvailable}.");
+                    }
+                }
+
+                // Tổng theo Product
+                var totalByProduct = orderUpdateDto.OrderItems
+                    .GroupBy(i => i.ProductId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity ?? 0));
+
+                foreach (var kv in totalByProduct)
+                {
+                    if (productById.TryGetValue(kv.Key, out var p))
+                    {
+                        var productLabel = p.ProductName ?? $"Product #{p.ProductId}";
+
+                        double productAvailable = p.QuantityAvailable ?? 0d;
+
+                        if (kv.Value > productAvailable)
+                            errors.Add($"Tổng số lượng cho {productLabel} vượt tồn kho khả dụng: {kv.Value} > {productAvailable}.");
+                    }
+                }
+
+                if (errors.Count > 0)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Order validation failed:\n- " + string.Join("\n- ", errors)
+                    );
+                }
+
                 // Ánh xạ dữ liệu từ DTO vào entity
                 orderUpdateDto.MapToUpdatedOrder(order);
 
