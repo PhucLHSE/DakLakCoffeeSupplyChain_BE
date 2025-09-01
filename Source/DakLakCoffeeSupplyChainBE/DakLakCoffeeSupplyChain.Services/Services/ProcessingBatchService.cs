@@ -32,6 +32,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = codeGenerator;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         private bool HasPermissionToAccess(ProcessingBatch batch, Guid userId, bool isAdmin, bool isManager)
         {
             if (isAdmin || isManager) return true;
@@ -81,7 +86,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
 
                 if (manager == null)
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                    return CreateValidationError("BusinessManagerNotFound");
 
                 var managerId = manager.ManagerId;
 
@@ -101,7 +106,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (batches == null || !batches.Any())
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ lô sơ chế nào.");
+                    return CreateValidationError("NoAccessToProcessingBatches");
                 }
             }
             else if (isExpert)
@@ -119,7 +124,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (batches == null || !batches.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có lô sơ chế nào để đánh giá.");
+                    return CreateValidationError("NoProcessingBatchesForEvaluation");
                 }
             }
             else
@@ -129,7 +134,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (farmer == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                    return CreateValidationError("FarmerInfoNotFound");
                 }
 
                 batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
@@ -143,7 +148,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (batches == null || !batches.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Bạn chưa tạo lô sơ chế nào.");
+                    return CreateValidationError("NoProcessingBatchesCreated");
                 }
             }
 
@@ -155,17 +160,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // 1. Không cho BusinessManager tạo lô
             var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
             if (manager != null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Business Manager không được tạo lô sơ chế.");
+                return CreateValidationError("BusinessManagerCannotCreateBatch");
 
             // 2. Kiểm tra vai trò Farmer
             var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
             if (farmer == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo lô sơ chế.");
+                return CreateValidationError("OnlyFarmerCanCreateBatch");
 
             // 3. Kiểm tra mùa vụ
             var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
             if (cropSeason == null || cropSeason.IsDeleted)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Mùa vụ không hợp lệ.");
+                return CreateValidationError("InvalidCropSeason");
 
             // 4. Truy xuất CropSeasonDetail khớp mùa vụ, loại cà phê và farmer, đã hoàn thành
             var cropDetails = await _unitOfWork.CropSeasonDetailRepository
@@ -188,26 +193,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var cropDetail = cropDetails.FirstOrDefault();
 
             if (cropDetail == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Loại cà phê không thuộc kế hoạch nào đã hoàn thành.");
+                return CreateValidationError("CoffeeTypeNotInCompletedPlan");
 
             // 5. Xác định phương pháp sơ chế từ plan
             var planDetail = cropDetail.CommitmentDetail.PlanDetail;
             
             // Plan phải có định nghĩa phương pháp sơ chế (đã được filter ở GetAvailableCoffeeTypesAsync)
             if (!planDetail.ProcessMethodId.HasValue || planDetail.ProcessMethodId.Value <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Cam kết với doanh nghiệp yêu cầu giao hàng tươi. Hãy thực hiện giao hàng tươi.");
+                return CreateValidationError("CommitmentRequiresFreshDelivery");
             
             var methodId = planDetail.ProcessMethodId.Value;
             
             // Kiểm tra phương pháp sơ chế có tồn tại không
             var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(methodId);
             if (method == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Phương pháp sơ chế từ kế hoạch không hợp lệ.");
+                return CreateValidationError("InvalidProcessingMethodFromPlan");
 
             // 6. Kiểm tra khối lượng đầu ra kỳ vọng
             var actualYield = cropDetail.ActualYield ?? 0;
             if (actualYield <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Loại cà phê này chưa có khối lượng đầu ra.");
+                return CreateValidationError("NoActualYieldForCoffeeType");
 
             // 7. Tính khối lượng còn lại chưa tạo lô
             var existingBatches = await _unitOfWork.ProcessingBatchRepository
@@ -219,7 +224,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var remainingQuantity = actualYield - usedQuantity;
 
             if (remainingQuantity <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng của loại cà phê này đã được sử dụng hết.");
+                return CreateValidationError("CoffeeTypeQuantityExhausted");
 
             // 8. Sinh mã hệ thống
             int year = cropSeason.StartDate?.Year ?? DateTime.Now.Year;
@@ -247,7 +252,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var saveResult = await _unitOfWork.SaveChangesAsync();
 
             if (saveResult <= 0)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo lô sơ chế thất bại.");
+                return CreateValidationError("CreateBatchFailed");
 
             // 10. Trả về kết quả
             var created = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
@@ -260,7 +265,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             if (created == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể truy xuất lô sơ chế vừa tạo.");
+                return CreateValidationError("CannotRetrieveCreatedBatch");
 
             var responseDto = created.MapToProcessingBatchViewDto();
             return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo lô sơ chế thành công.", responseDto);
@@ -273,7 +278,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var farmer = await _unitOfWork.FarmerRepository
                 .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
             if (farmer == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông hộ.");
+                return CreateValidationError("FarmerNotFound");
             var farmerId = farmer.FarmerId;
 
             // Lấy tất cả crop seasons có plan yêu cầu sơ chế
@@ -398,10 +403,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
             if (batch == null || batch.IsDeleted)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
+                return CreateValidationError("ProcessingBatchNotFound");
 
             if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật lô sơ chế này.");
+                return CreateValidationError("NoPermissionToUpdateBatch");
 
             batch.CoffeeTypeId = dto.CoffeeTypeId;
             batch.CropSeasonId = dto.CropSeasonId;
@@ -416,7 +421,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật thành công.")
-                : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại.");
+                : CreateValidationError("UpdateBatchFailed");
         }
 
         public async Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
@@ -427,10 +432,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             if (batch == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Lô sơ chế không tồn tại.");
+                return CreateValidationError("ProcessingBatchNotExists");
 
             if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá lô sơ chế này.");
+                return CreateValidationError("NoPermissionToDeleteBatch");
 
             batch.IsDeleted = true;
             batch.UpdatedAt = DateTime.UtcNow;
@@ -440,7 +445,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
+                : CreateValidationError("SoftDeleteBatchFailed");
         }
 
         public async Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
@@ -453,10 +458,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (batch == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy mẻ sơ chế.");
+                    return CreateValidationError("ProcessingBatchNotFoundForHardDelete");
 
                 if (!HasPermissionToAccess(batch, userId, isAdmin, isManager))
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Không được xóa mẻ sơ chế của người khác.");
+                    return CreateValidationError("CannotDeleteOthersProcessingBatch");
 
                 await _unitOfWork.ProcessingBatchRepository.RemoveAsync(batch);
                 var result = await _unitOfWork.SaveChangesAsync();
@@ -498,7 +503,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         var manager = await _unitOfWork.BusinessManagerRepository
                             .GetByIdAsync(b => b.UserId == userId && !b.IsDeleted);
                         if (manager == null)
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager.");
+                            return CreateValidationError("BusinessManagerNotFoundForDetails");
 
                         var managerId = manager.ManagerId;
                         batchQuery = batchQuery.Where(b =>
@@ -521,7 +526,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var batch = await batchQuery.FirstOrDefaultAsync();
 
                 if (batch == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
+                    return CreateValidationError("ProcessingBatchNotFoundForDetails");
 
                 // ✅ Lấy toàn bộ UpdatedById từ progresses
                 var updatedByIds = batch.ProcessingBatchProgresses
@@ -631,7 +636,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (manager == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                    return CreateValidationError("BusinessManagerNotFoundForFarmers");
                 }
 
                 // Lấy tất cả FarmingCommitment được approved bởi manager này (chỉ đọc dữ liệu)
@@ -649,8 +654,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!commitments.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        "Không có cam kết nào được approved bởi Business Manager này.");
+                    return CreateValidationError("NoCommitmentsApprovedByManager");
                 }
 
                 // Lấy tất cả CropSeasonId từ các commitment
@@ -669,8 +673,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!cropSeasonIds.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        "Không có mùa vụ nào từ các cam kết.");
+                    return CreateValidationError("NoCropSeasonsFromCommitments");
                 }
 
                 // Lấy tất cả ProcessingBatch trong các crop season này
@@ -690,8 +693,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!batches.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        "Chưa có lô sơ chế nào trong các mùa vụ đã cam kết.");
+                    return CreateValidationError("NoProcessingBatchesInCommittedSeasons");
                 }
 
                 // Lấy danh sách unique farmers có batches (chỉ từ các commitment được approved)
@@ -726,7 +728,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (manager == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                    return CreateValidationError("BusinessManagerNotFoundForFarmerBatches");
                 }
 
                 // Kiểm tra Farmer có tồn tại không
@@ -735,7 +737,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (farmer == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Farmer tương ứng.");
+                    return CreateValidationError("FarmerNotFoundForBatches");
                 }
 
                 // Lấy tất cả FarmingCommitment của farmer này được approved bởi manager này (chỉ đọc dữ liệu)
@@ -748,8 +750,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!commitments.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        $"Không có cam kết nào của farmer {farmer.User?.Name ?? farmer.FarmerCode} được approved bởi Business Manager này.");
+                    var parameters = new Dictionary<string, object>
+                    {
+                        ["farmerName"] = farmer.User?.Name ?? farmer.FarmerCode
+                    };
+                    return CreateValidationError("NoCommitmentsForFarmerByManager", parameters);
                 }
 
                 // Lấy tất cả CropSeasonId từ các commitment
@@ -761,8 +766,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!cropSeasonIds.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        "Không có mùa vụ nào từ các cam kết của farmer này.");
+                    return CreateValidationError("NoCropSeasonsFromFarmerCommitments");
                 }
 
                 // Lấy tất cả ProcessingBatch của farmer trong các crop season này
@@ -781,8 +785,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!batches.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, 
-                        $"Farmer {farmer.User?.Name ?? farmer.FarmerCode} chưa có lô sơ chế nào trong các mùa vụ đã cam kết.");
+                    var parameters = new Dictionary<string, object>
+                    {
+                        ["farmerName"] = farmer.User?.Name ?? farmer.FarmerCode
+                    };
+                    return CreateValidationError("FarmerNoProcessingBatchesInCommittedSeasons", parameters);
                 }
 
                 var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
@@ -803,7 +810,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Lấy thông tin farmer
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông dân.");
+                    return CreateValidationError("FarmerNotFoundForWarehouseRequest");
 
                 // ✅ THÊM: Lấy tất cả batch đã hoàn tất của farmer này VÀ có ràng buộc với công ty
                 var completedBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(

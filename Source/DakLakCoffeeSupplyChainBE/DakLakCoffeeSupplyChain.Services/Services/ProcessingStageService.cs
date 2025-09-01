@@ -22,6 +22,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork = unitOfWork;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         public async Task<IServiceResult> GetAll()
         {
             var stages = await _unitOfWork.ProcessingStageRepository.GetAllStagesAsync();
@@ -54,11 +59,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (stage == null)
             {
-                return new ServiceResult(
-                    Const.WARNING_NO_DATA_CODE,
-                    $"Processing stage with ID {stageId} not found.",
-                    null
-                );
+                var parameters = new Dictionary<string, object>
+                {
+                    ["stageId"] = stageId
+                };
+                return CreateValidationError("ProcessingStageNotFound", parameters);
             }
 
             var dto = stage.MapToProcessingStageViewDetailDto();
@@ -118,7 +123,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, viewDto);
                 }
 
-                return new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+                return CreateValidationError("CreateProcessingStageFailed");
             }
             catch (Exception ex)
             {
@@ -130,20 +135,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var deleted = await _unitOfWork.ProcessingStageRepository.SoftDeleteAsync(stageId);
             if (!deleted)
             {
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"StageId {stageId} không tồn tại hoặc đã bị xóa.");
+                var parameters = new Dictionary<string, object>
+                {
+                    ["stageId"] = stageId
+                };
+                return CreateValidationError("ProcessingStageNotFoundOrDeleted", parameters);
             }
 
             var result = await _unitOfWork.SaveChangesAsync();
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG)
-                : new ServiceResult(Const.FAIL_DELETE_CODE, Const.FAIL_DELETE_MSG);
+                : CreateValidationError("DeleteProcessingStageFailed");
         }
         public async Task<IServiceResult> UpdateAsync(ProcessingStageUpdateDto dto)
         {
             // Lấy thực thể từ database
             var entity = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(dto.StageId);
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"Không tìm thấy stage ID {dto.StageId}");
+            {
+                var parameters = new Dictionary<string, object>
+                {
+                    ["stageId"] = dto.StageId
+                };
+                return CreateValidationError("ProcessingStageNotFoundForUpdate", parameters);
+            }
 
             // Ánh xạ giá trị mới từ dto sang entity
             ProcessingStageMapper.MapToProcessingStageUpdateEntity(entity, dto);
@@ -151,12 +166,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Gọi update và lưu
             var updated = await _unitOfWork.ProcessingStageRepository.UpdateAsync(entity);
             if (!updated)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại");
+                return CreateValidationError("UpdateProcessingStageFailed");
 
             var result = await _unitOfWork.SaveChangesAsync();
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG)
-                : new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+                : CreateValidationError("SaveProcessingStageUpdateFailed");
         }
 
     }

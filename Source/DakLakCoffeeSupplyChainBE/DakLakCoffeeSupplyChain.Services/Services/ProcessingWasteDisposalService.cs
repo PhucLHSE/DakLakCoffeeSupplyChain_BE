@@ -26,6 +26,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = codeGenerator;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         public async Task<IServiceResult> GetAllAsync(Guid userId, bool isAdmin)
         {
             try
@@ -68,14 +73,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             .ToListAsync();
 
                         if (disposals == null || disposals.Count == 0)
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập dữ liệu xử lý chất thải.");
+                            return CreateValidationError("NoAccessToWasteDisposalData");
                     }
                     else
                     {
                         // Nếu không phải BM, kiểm tra Farmer
                         var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                         if (farmer == null)
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy nông hộ.");
+                            return CreateValidationError("FarmerNotFoundForWasteDisposal");
 
                         disposals = await query
                             .Where(x => x.HandledBy == farmer.FarmerId)
@@ -83,7 +88,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             .ToListAsync();
 
                         if (disposals == null || disposals.Count == 0)
-                            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Bạn chưa tạo xử lý chất thải nào.");
+                            return CreateValidationError("NoWasteDisposalCreated");
                     }
                 }
 
@@ -112,7 +117,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .FirstOrDefaultAsync(x => x.DisposalId == disposalId && !x.IsDeleted);
 
                 if (entity == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy bản ghi.");
+                    return CreateValidationError("WasteDisposalRecordNotFound");
 
                 // Lấy tên người xử lý
                 string handledByName = "N/A";
@@ -158,12 +163,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     m => m.UserId == userId && !m.IsDeleted
                 );
                 if (manager != null)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Business Manager không được tạo xử lý chất thải.");
+                    return CreateValidationError("BusinessManagerCannotCreateWasteDisposal");
 
                 // Chỉ cho Farmer tạo
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
                 if (farmer == null)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ nông hộ mới được tạo xử lý chất thải.");
+                    return CreateValidationError("OnlyFarmerCanCreateWasteDisposal");
 
                 // Sinh mã xử lý
                 var disposalCode = await _codeGenerator.GenerateProcessingWasteDisposalCodeAsync();
@@ -171,7 +176,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .AnyAsync(x => x.DisposalCode == disposalCode && !x.IsDeleted);
 
                 if (isExist)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Mã xử lý chất thải đã tồn tại.");
+                    return CreateValidationError("WasteDisposalCodeExists");
 
                 // Tạo entity
                 var disposal = new ProcessingWasteDisposal
@@ -195,7 +200,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var saveResult = await _unitOfWork.SaveChangesAsync();
 
                 if (saveResult <= 0)
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo xử lý chất thải thất bại.");
+                    return CreateValidationError("CreateWasteDisposalFailed");
 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, disposal.DisposalId);
             }
@@ -213,7 +218,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (disposal == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin xử lý chất thải.");
+                    return CreateValidationError("WasteDisposalInfoNotFoundForUpdate");
 
                 // Lấy Farmer từ userId
                 var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
@@ -221,21 +226,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (farmer == null)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Người dùng hiện tại không phải là nông dân hợp lệ.");
+                    return CreateValidationError("UserNotValidFarmer");
 
                 if (disposal.HandledBy != farmer.FarmerId)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền cập nhật thông tin xử lý chất thải này.");
+                    return CreateValidationError("NoPermissionToUpdateWasteDisposal");
 
                 // Validate dữ liệu
                 if (string.IsNullOrWhiteSpace(dto.DisposalMethod))
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Phương pháp xử lý không được để trống.");
+                    return CreateValidationError("DisposalMethodRequired");
 
                 if (dto.WasteId == Guid.Empty)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại chất thải không hợp lệ.");
+                    return CreateValidationError("InvalidWasteType");
 
                 var wasteExists = await _unitOfWork.ProcessingWasteRepository.AnyAsync(w => w.WasteId == dto.WasteId && !w.IsDeleted);
                 if (!wasteExists)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại chất thải không tồn tại hoặc đã bị xóa.");
+                    return CreateValidationError("WasteTypeNotFoundOrDeleted");
 
                 // Cập nhật dữ liệu
                 disposal.WasteId = dto.WasteId;
@@ -251,7 +256,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 return result > 0
                     ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Cập nhật xử lý chất thải thành công.")
-                    : new ServiceResult(Const.FAIL_UPDATE_CODE, "Cập nhật thất bại.");
+                    : CreateValidationError("UpdateWasteDisposalFailed");
             }
             catch (Exception ex)
             {
@@ -316,10 +321,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             if (disposal == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin xử lý chất thải.");
+                return CreateValidationError("WasteDisposalInfoNotFoundForSoftDelete");
 
             if (!await HasPermissionToDeleteAsync(disposalId, userId))
-                return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá xử lý chất thải này.");
+                return CreateValidationError("NoPermissionToDeleteWasteDisposal");
 
             disposal.IsDeleted = true;
             disposal.UpdatedAt = DateTime.UtcNow;
@@ -329,7 +334,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm thất bại.");
+                : CreateValidationError("SoftDeleteWasteDisposalFailed");
         }
         public async Task<IServiceResult> HardDeleteAsync(Guid disposalId, Guid userId, bool isManager)
         {
@@ -340,17 +345,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 );
 
                 if (disposal == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin xử lý chất thải.");
+                    return CreateValidationError("WasteDisposalInfoNotFoundForHardDelete");
 
                 if (!await HasPermissionToDeleteAsync(disposalId, userId))
-                    return new ServiceResult(Const.FAIL_DELETE_CODE, "Bạn không có quyền xoá xử lý chất thải này.");
+                    return CreateValidationError("NoPermissionToDeleteWasteDisposalForHardDelete");
 
                 await _unitOfWork.ProcessingWasteDisposalRepository.RemoveAsync(disposal);
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 return result > 0
                     ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Đã xóa vĩnh viễn thông tin xử lý chất thải.")
-                    : new ServiceResult(Const.FAIL_DELETE_CODE, "Xóa vĩnh viễn thất bại.");
+                    : CreateValidationError("HardDeleteWasteDisposalFailed");
             }
             catch (Exception ex)
             {

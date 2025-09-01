@@ -21,6 +21,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         public async Task<IServiceResult> GetAll()
         {
             var methods = await _unitOfWork.ProcessingMethodRepository.GetAllAsync();
@@ -120,10 +125,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (existing != null)
                 {
-                    return new ServiceResult(
-                        Const.FAIL_CREATE_CODE,
-                        $"Mã phương pháp '{input.MethodCode}' đã tồn tại."
-                    );
+                    var parameters = new Dictionary<string, object>
+                    {
+                        ["methodCode"] = input.MethodCode
+                    };
+                    return CreateValidationError("ProcessingMethodCodeExists", parameters);
                 }
 
                 var method = input.MapToProcessingMethodCreateDto();
@@ -132,7 +138,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 return result > 0
                     ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG)
-                    : new ServiceResult(Const.FAIL_CREATE_CODE, Const.FAIL_CREATE_MSG);
+                    : CreateValidationError("CreateProcessingMethodFailed");
             }
             catch (Exception ex)
             {
@@ -146,7 +152,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var success = await _unitOfWork.ProcessingMethodRepository.SoftDeleteAsync(methodId);
                 if (!success)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Method not found");
+                    return CreateValidationError("ProcessingMethodNotFound");
                 }
 
                 await _unitOfWork.SaveChangesAsync();
