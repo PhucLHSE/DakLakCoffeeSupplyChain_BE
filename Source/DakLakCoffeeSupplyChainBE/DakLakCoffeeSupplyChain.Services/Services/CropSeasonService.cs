@@ -451,8 +451,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
-                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mềm mùa vụ và toàn bộ vùng trồng thành công.")
-                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mềm mùa vụ thất bại.");
+                ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xoá mùa vụ và toàn bộ vùng trồng thành công.")
+                : new ServiceResult(Const.FAIL_DELETE_CODE, "Xoá mùa vụ thất bại.");
         }
         // ================================================================
 

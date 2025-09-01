@@ -342,6 +342,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (stage == null)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Giai đoạn không tồn tại.");
 
+                // Validate progress date
+                if (dto.ProgressDate.HasValue)
+                {
+                    var today = DateOnly.FromDateTime(DateHelper.NowVietnamTime());
+                    
+                    // Không cho phép ngày trong tương lai
+                    if (dto.ProgressDate.Value > today)
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày ghi nhận không được lớn hơn hôm nay.");
+                    
+                    // Không cho phép ngày quá xa trong quá khứ (tối đa 1 năm)
+                    var minDate = today.AddDays(-365);
+                    if (dto.ProgressDate.Value < minDate)
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày ghi nhận không được quá xa trong quá khứ (tối đa 1 năm trước).");
+                    
+                    // Kiểm tra ngày có hợp lý với mùa vụ không
+                    var cropSeason = detail.CropSeason;
+                    if (cropSeason?.StartDate.HasValue == true && cropSeason?.EndDate.HasValue == true)
+                    {
+                        if (dto.ProgressDate.Value < cropSeason.StartDate.Value)
+                            return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày ghi nhận không được trước ngày bắt đầu mùa vụ.");
+                        
+                        if (dto.ProgressDate.Value > cropSeason.EndDate.Value.AddDays(30))
+                            return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày ghi nhận không được quá xa sau ngày kết thúc mùa vụ.");
+                    }
+
+                    // Validate ngày không được trùng với các progress khác
+                    var existingProgressWithSameDate = await _unitOfWork.CropProgressRepository
+                        .FindAsync(p => p.CropSeasonDetailId == dto.CropSeasonDetailId && 
+                                       p.ProgressDate == dto.ProgressDate.Value &&
+                                       p.ProgressId != dto.ProgressId && // Loại trừ chính nó
+                                       !p.IsDeleted);
+                    
+                    if (existingProgressWithSameDate.Any())
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE, "Ngày ghi nhận đã tồn tại trong tiến độ khác. Vui lòng chọn ngày khác.");
+                }
+
                 // Handle harvesting stage updates
                 if (stage.StageCode == HARVESTING_STAGE_CODE && dto.ActualYield.HasValue && dto.ActualYield.Value > 0)
                 {
