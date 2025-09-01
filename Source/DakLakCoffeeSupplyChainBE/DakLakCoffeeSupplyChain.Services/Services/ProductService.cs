@@ -212,6 +212,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                    .Include(p => p.ApprovedByNavigation)
                    .Include(p => p.CoffeeType)
                    .Include(p => p.Batch)
+                      .ThenInclude(b => b.Farmer)
+                         .ThenInclude(f => f.User)
                    .Include(p => p.Inventory)
                       .ThenInclude(i => i.Warehouse),
                 asNoTracking: true
