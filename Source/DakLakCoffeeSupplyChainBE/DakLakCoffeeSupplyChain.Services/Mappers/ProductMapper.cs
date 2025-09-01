@@ -82,7 +82,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 InventoryCode = product.Inventory?.InventoryCode ?? string.Empty,
                 InventoryLocation = product.Inventory?.Warehouse?.Location ?? string.Empty,
                 WarehouseName = product.Inventory?.Warehouse?.Name ?? string.Empty,
-                BatchCode = product.Batch?.BatchCode ?? string.Empty
+                BatchCode = product.Batch?.BatchCode ?? string.Empty,
+                FarmerName = product.Batch?.Farmer?.User?.Name ?? string.Empty
             };
         }
 
