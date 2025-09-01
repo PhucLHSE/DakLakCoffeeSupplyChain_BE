@@ -33,6 +33,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 _codeGenerator = codeGenerator;
         }
 
+        /// <summary>
+        /// 🔧 HELPER: Tạo lỗi validation cho i18n
+        /// </summary>
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            var errorData = new
+            {
+                ErrorKey = errorKey,
+                Parameters = parameters ?? new Dictionary<string, object>(),
+                Timestamp = DateTime.UtcNow,
+                ErrorType = "ValidationError"
+            };
+
+            // Trả về errorKey trong message, data trong data để Frontend dễ xử lý
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, errorData);
+        }
+
 
         public async Task<IServiceResult> GetAllByUserIdAsync(Guid userId, bool isAdmin, bool isManager)
         {
@@ -72,7 +89,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
                     if (manager == null)
                     {
-                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin Business Manager.");
+                        return CreateValidationError("BusinessManagerNotFound");
                     }
 
                     var managerId = manager.ManagerId;
@@ -85,7 +102,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     if (!progresses.Any())
                     {
-                        return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập bất kỳ tiến trình nào.");
+                        return CreateValidationError("NoPermissionToAccessAnyProgress");
                     }
                 }
                 else
@@ -93,7 +110,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
                     if (farmer == null)
-                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                        return CreateValidationError("FarmerNotFound");
 
                     progresses = progresses
                         .Where(p => batchDict.ContainsKey(p.BatchId) &&
@@ -119,7 +136,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 .GetByIdAsync(progressId);
 
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy tiến trình xử lý", null);
+                return CreateValidationError("ProgressNotFound", new Dictionary<string, object>
+                {
+                    ["ProgressId"] = progressId.ToString()
+                });
 
             // Lấy toàn bộ media từ bảng MediaFile
             var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
@@ -151,7 +171,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Thêm media vào DTO
             dto.MediaFiles = mediaDtos;
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Thành công", dto);
+            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dto);
         }
 
         public async Task<IServiceResult> GetAllByBatchIdAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
@@ -169,7 +189,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (batch == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô sơ chế.");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // 2. Kiểm tra quyền truy cập
@@ -184,12 +207,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                         if (manager == null)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin Business Manager.");
+                            return CreateValidationError("BusinessManagerNotFound", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString()
+                            });
                         }
 
                         if (batch.CropSeason?.Commitment?.ApprovedBy != manager.ManagerId)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+                            return CreateValidationError("NoPermissionToAccessBatch", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString(),
+                                ["BatchId"] = batchId.ToString()
+                            });
                         }
                     }
                     else
@@ -201,12 +231,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                         if (farmer == null)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                            return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString()
+                            });
                         }
 
                         if (batch.FarmerId != farmer.FarmerId)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô sơ chế này.");
+                            return CreateValidationError("NoPermissionToAccessBatch", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString(),
+                                ["BatchId"] = batchId.ToString()
+                            });
                         }
                     }
                 }
@@ -237,7 +274,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!progresses.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có tiến trình nào cho lô sơ chế này.", new List<ProcessingBatchProgressViewAllDto>());
+                    return CreateValidationError("NoProgressesForBatch", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // 4. Lấy media files cho từng progress
@@ -289,7 +329,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
                 if (batch == null || batch.IsDeleted)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // 2. Nếu không phải Admin hoặc Manager thì phải là đúng Farmer
@@ -300,10 +343,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .FirstOrDefault();
 
                     if (farmer == null)
-                        return CreateNotFoundError("Nông hộ", userId.ToString());
+                        return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                        {
+                            ["UserId"] = userId.ToString()
+                        });
 
                     if (batch.FarmerId != farmer.FarmerId)
-                        return CreatePermissionError("Tạo tiến trình", "Batch", userId.ToString());
+                        return CreateValidationError("NoPermissionToCreateProgress", new Dictionary<string, object>
+                        {
+                            ["UserId"] = userId.ToString(),
+                            ["BatchId"] = batchId.ToString()
+                        });
                 }
 
                 // 3. Kiểm tra khối lượng còn lại của batch
@@ -320,7 +370,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Kiểm tra khối lượng phải > 0
                     if (input.OutputQuantity.Value <= 0)
                     {
-                        return CreateBusinessLogicError("OutputQuantityMustBePositive", new Dictionary<string, object>
+                        return CreateValidationError("OutputQuantityMustBePositive", new Dictionary<string, object>
                         {
                             ["OutputQuantity"] = input.OutputQuantity.Value,
                             ["MinValue"] = 0
@@ -330,10 +380,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Kiểm tra khối lượng không được quá lớn (ví dụ: 100,000 kg)
                     if (input.OutputQuantity.Value > 100000)
                     {
-                        return CreateBusinessLogicError("OutputQuantityTooLarge", new Dictionary<string, object>
+                        return CreateValidationError("OutputQuantityTooLarge", new Dictionary<string, object>
                         {
                             ["OutputQuantity"] = input.OutputQuantity.Value,
-                            ["MaxValue"] = 100000
+                            ["MaxValue"] = 1000000
+                        });
+                    }
+
+                    // 🔧 VALIDATION MỚI: Khối lượng ra phải nhỏ hơn khối lượng vào của batch
+                    if (input.OutputQuantity.Value >= batch.InputQuantity)
+                    {
+                        return CreateValidationError("OutputQuantityExceedsInputQuantity", new Dictionary<string, object>
+                        {
+                            ["OutputQuantity"] = input.OutputQuantity.Value,
+                            ["OutputUnit"] = input.OutputUnit ?? "kg",
+                            ["InputQuantity"] = batch.InputQuantity,
+                            ["InputUnit"] = batch.InputUnit
                         });
                     }
 
@@ -343,7 +405,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     
                     if (!validUnits.Contains(outputUnit))
                     {
-                        return CreateBusinessLogicError("InvalidOutputUnit", new Dictionary<string, object>
+                        return CreateValidationError("InvalidOutputUnit", new Dictionary<string, object>
                         {
                             ["InvalidUnit"] = input.OutputUnit,
                             ["ValidUnits"] = string.Join(", ", validUnits)
@@ -370,7 +432,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             
                             if (currentQuantity > previousQuantity * (1 + tolerance))
                             {
-                                return CreateBusinessLogicError("OutputQuantityIncreaseTooHigh", new Dictionary<string, object>
+                                return CreateValidationError("OutputQuantityIncreaseTooHigh", new Dictionary<string, object>
                                 {
                                     ["CurrentQuantity"] = currentQuantity,
                                     ["CurrentUnit"] = input.OutputUnit ?? batch.InputUnit,
@@ -384,7 +446,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             // Nếu khối lượng giảm quá nhiều (>70%), cảnh báo
                             if (changePercentage < -70)
                             {
-                                return CreateBusinessLogicError("OutputQuantityDecreaseTooHigh", new Dictionary<string, object>
+                                return CreateValidationError("OutputQuantityDecreaseTooHigh", new Dictionary<string, object>
                                 {
                                     ["CurrentQuantity"] = currentQuantity,
                                     ["CurrentUnit"] = input.OutputUnit ?? batch.InputUnit,
@@ -403,7 +465,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     q => q.OrderBy(s => s.OrderIndex))).ToList();
 
                 if (!stages.Any())
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Chưa có công đoạn nào cho phương pháp chế biến này.");
+                    return CreateValidationError("NoStagesForMethod", new Dictionary<string, object>
+                    {
+                        ["MethodId"] = batch.MethodId.ToString()
+                    });
 
                 // 5. Kiểm tra xem batch có bị Fail không và lấy thông tin stage cần retry
                 var failureInfo = await GetFailureInfoForBatch(batchId);
@@ -437,7 +502,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var currentStageIndex = stages.FindIndex(s => s.StageId == latestProgress.StageId);
 
                     if (currentStageIndex == -1)
-                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
+                        return CreateValidationError("CurrentStageNotFound", new Dictionary<string, object>
+                        {
+                            ["StageId"] = latestProgress.StageId.ToString()
+                        });
 
                     // 🔧 FIX: Kiểm tra retry scenario trước
                     if (failureInfo != null && failureInfo.FailedStageId.HasValue && latestProgress.StageId == failureInfo.FailedStageId.Value)
@@ -454,7 +522,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         // 🔧 FIX: Chỉ chặn nếu không phải retry scenario
                         if (!isRetryScenario) {
-                            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không thể tạo bước tiếp theo. Công đoạn cuối cùng đã hoàn tất.");
+                            return CreateValidationError("CannotCreateNextStepLastStageCompleted", new Dictionary<string, object>
+                            {
+                                ["StageName"] = stages[currentStageIndex].StageName
+                            });
                         }
                         
                         // Nếu là retry scenario, cho phép retry stage cuối
@@ -488,9 +559,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var requestedStage = stages.FirstOrDefault(s => s.StageId == input.StageId.Value);
                     var allowedStage = stages.FirstOrDefault(s => s.StageId == nextStageId);
                     
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                        $"Không thể tạo tiến trình cho công đoạn '{requestedStage?.StageName}'. " +
-                        $"Bước tiếp theo phải là '{allowedStage?.StageName}' (thứ tự {allowedStage?.OrderIndex}).");
+                    return CreateValidationError("InvalidStageForNextStep", new Dictionary<string, object>
+                    {
+                        ["RequestedStageName"] = requestedStage?.StageName ?? "Unknown",
+                        ["AllowedStageName"] = allowedStage?.StageName ?? "Unknown",
+                        ["AllowedOrderIndex"] = allowedStage?.OrderIndex ?? 0
+                    });
                 }
 
                 // 7. Lấy danh sách parameters cho Stage này
@@ -694,15 +768,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             if (entity == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, $"[Step 1] Không tìm thấy tiến độ với ID = {progressId}");
+                return CreateValidationError("ProgressNotFound", new Dictionary<string, object>
+                {
+                    ["ProgressId"] = progressId.ToString()
+                });
 
             // [Step 1.5] Kiểm tra batch status - chỉ cho phép update khi batch đang InProgress
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(entity.BatchId);
             if (batch == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "[Step 1.5] Không tìm thấy batch tương ứng.");
+                return CreateValidationError("BatchNotFoundForProgress", new Dictionary<string, object>
+                {
+                    ["BatchId"] = entity.BatchId.ToString()
+                });
             
             if (batch.Status != "InProgress")
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 1.5] Chỉ có thể cập nhật tiến độ khi batch đang trong trạng thái 'Đang thực hiện'.");
+                return CreateValidationError("CannotUpdateProgressBatchNotInProgress", new Dictionary<string, object>
+                {
+                    ["CurrentStatus"] = batch.Status
+                });
 
             // [Step 2] Kiểm tra StepIndex trùng (nếu thay đổi)
             if (dto.StepIndex != entity.StepIndex)
@@ -715,7 +798,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 if (isDuplicated)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, $"[Step 2] StepIndex {dto.StepIndex} đã tồn tại trong Batch.");
+                    return CreateValidationError("StepIndexAlreadyExists", new Dictionary<string, object>
+                    {
+                        ["StepIndex"] = dto.StepIndex,
+                        ["BatchId"] = entity.BatchId.ToString()
+                    });
             }
 
             // [Step 3] So sánh và cập nhật nếu có thay đổi
@@ -751,7 +838,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (!isModified)
             {
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 4] Dữ liệu truyền vào không có gì khác biệt.");
+                return CreateValidationError("NoDataModified", new Dictionary<string, object>
+                {
+                    ["ProgressId"] = progressId.ToString()
+                });
             }
 
             entity.UpdatedAt = DateTime.UtcNow;
@@ -759,18 +849,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // [Step 4] Gọi UpdateAsync và kiểm tra trả về bool
             var updated = await _unitOfWork.ProcessingBatchProgressRepository.UpdateAsync(entity);
             if (!updated)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 5] UpdateAsync() trả về false.");
+                return CreateValidationError("UpdateFailed", new Dictionary<string, object>
+                {
+                    ["ProgressId"] = progressId.ToString()
+                });
             var result = await _unitOfWork.SaveChangesAsync();
 
             if (result > 0)
             {
                 var resultDto = entity.MapToProcessingBatchProgressDetailDto();
 
-                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "[Step 6] Cập nhật thành công.", resultDto);
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, resultDto);
             }
             else
             {
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "[Step 6] Không có thay đổi nào được lưu.");
+                return CreateValidationError("NoChangesSaved", new Dictionary<string, object>
+                {
+                    ["ProgressId"] = progressId.ToString()
+                });
             }
         }
 
@@ -810,12 +906,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var success = await _unitOfWork.ProcessingBatchProgressRepository.HardDeleteAsync(progressId);
                 if (!success)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy Progress hoặc đã bị xóa.");
+                    return CreateValidationError("ProgressNotFoundOrAlreadyDeleted", new Dictionary<string, object>
+                    {
+                        ["ProgressId"] = progressId.ToString()
+                    });
                 }
 
                 await _unitOfWork.SaveChangesAsync();
 
-                return new ServiceResult(Const.SUCCESS_DELETE_CODE, "Xóa vĩnh viễn Progress thành công.");
+                return new ServiceResult(Const.SUCCESS_DELETE_CODE, Const.SUCCESS_DELETE_MSG);
             }
             catch (DbUpdateException dbEx)
             {
@@ -840,7 +939,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Starting advance for batchId: {batchId}, userId: {userId}");
                 
                 if (batchId == Guid.Empty)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "BatchId không hợp lệ.");
+                    return CreateValidationError("InvalidBatchId", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
 
                 // if (isAdmin || isManager)
                 //     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Chỉ nông hộ mới được phép cập nhật tiến trình.");
@@ -851,7 +953,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (farmer == null)
                 {
                     Console.WriteLine($"DEBUG SERVICE ADVANCE: Farmer not found for userId: {userId}");
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy nông hộ.");
+                    return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                    {
+                        ["UserId"] = userId.ToString()
+                    });
                 }
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Found farmer: {farmer.FarmerId}");
 
@@ -861,14 +966,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (batch == null || batch.IsDeleted)
                 {
                     Console.WriteLine($"DEBUG SERVICE ADVANCE: Batch not found or deleted: {batchId}");
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Found batch: {batch.BatchId}, status: {batch.Status}, farmerId: {batch.FarmerId}");
 
                 if (batch.FarmerId != farmer.FarmerId)
                 {
                     Console.WriteLine($"DEBUG SERVICE ADVANCE: Permission denied - batch farmer: {batch.FarmerId}, current farmer: {farmer.FarmerId}");
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không có quyền cập nhật batch này.");
+                    return CreateValidationError("NoPermissionToUpdateBatch", new Dictionary<string, object>
+                    {
+                        ["UserId"] = userId.ToString(),
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // 🔧 REMOVED: Logic chuyển status phức tạp - để UpdateAfterEvaluation xử lý
@@ -882,7 +994,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (stages.Count == 0)
                 {
                     Console.WriteLine($"DEBUG SERVICE ADVANCE: No stages found for methodId: {batch.MethodId}");
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có công đoạn nào cho phương pháp này.");
+                    return CreateValidationError("NoStagesForMethod", new Dictionary<string, object>
+                    {
+                        ["MethodId"] = batch.MethodId.ToString()
+                    });
                 }
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Found {stages.Count} stages");
 
@@ -921,14 +1036,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (currentStageIdx == -1)
                     {
                         Console.WriteLine($"DEBUG SERVICE ADVANCE: Current stage not found in stages list");
-                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy công đoạn hiện tại.");
+                        return CreateValidationError("CurrentStageNotFound", new Dictionary<string, object>
+                        {
+                            ["StageId"] = latestProgress.StageId.ToString()
+                        });
                     }
 
                     if (currentStageIdx >= stages.Count - 1)
                     {
                         // Đã ở stage cuối cùng
                         Console.WriteLine($"DEBUG SERVICE ADVANCE: Already at last stage, cannot advance further");
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Đã hoàn thành tất cả các bước. Không thể tiến thêm nữa.");
+                        return CreateValidationError("AllStepsCompletedCannotAdvance", new Dictionary<string, object>
+                        {
+                            ["CurrentStageName"] = stages[currentStageIdx].StageName
+                        });
                     }
                     else
                     {
@@ -946,7 +1067,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 if (nextStage == null)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy công đoạn kế tiếp.");
+                    return CreateValidationError("NextStageNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
 
                 // 🔧 VALIDATION: Kiểm tra khối lượng output khi advance
                 if (input.OutputQuantity.HasValue)
@@ -954,7 +1078,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Kiểm tra khối lượng phải > 0
                     if (input.OutputQuantity.Value <= 0)
                     {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Khối lượng đầu ra phải lớn hơn 0.");
+                        return CreateValidationError("OutputQuantityMustBePositive", new Dictionary<string, object>
+                        {
+                            ["OutputQuantity"] = input.OutputQuantity.Value,
+                            ["MinValue"] = 0
+                        });
+                    }
+
+                    // 🔧 VALIDATION MỚI: Khối lượng ra phải nhỏ hơn khối lượng vào của batch
+                    if (input.OutputQuantity.Value >= batch.InputQuantity)
+                    {
+                        return CreateValidationError("OutputQuantityExceedsInputQuantity", new Dictionary<string, object>
+                        {
+                            ["OutputQuantity"] = input.OutputQuantity.Value,
+                            ["OutputUnit"] = input.OutputUnit ?? "kg",
+                            ["InputQuantity"] = batch.InputQuantity,
+                            ["InputUnit"] = batch.InputUnit
+                        });
                     }
 
                     // 🔧 VALIDATION: So sánh với progress trước đó (nếu có)
@@ -974,23 +1114,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         
                         if (currentQuantity > previousQuantity * (1 + tolerance))
                         {
-                            return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                                $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) tăng quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
-                                $"Vui lòng kiểm tra lại hoặc giải thích lý do tăng khối lượng.");
+                            return CreateValidationError("OutputQuantityIncreaseTooHigh", new Dictionary<string, object>
+                            {
+                                ["CurrentQuantity"] = currentQuantity,
+                                ["CurrentUnit"] = input.OutputUnit ?? "kg",
+                                ["PreviousQuantity"] = previousQuantity,
+                                ["PreviousUnit"] = latestProgress.OutputUnit,
+                                ["Tolerance"] = tolerance * 100,
+                                ["IncreasePercentage"] = changePercentage
+                            });
                         }
 
                         // Nếu khối lượng giảm quá nhiều (>70%), cảnh báo
                         if (changePercentage < -70)
                         {
-                            return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                                $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) giảm quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
-                                $"Vui lòng kiểm tra lại hoặc giải thích lý do giảm khối lượng.");
+                            return CreateValidationError("OutputQuantityDecreaseTooHigh", new Dictionary<string, object>
+                            {
+                                ["CurrentQuantity"] = currentQuantity,
+                                ["CurrentUnit"] = input.OutputUnit ?? "kg",
+                                ["PreviousQuantity"] = previousQuantity,
+                                ["PreviousUnit"] = latestProgress.OutputUnit,
+                                ["DecreasePercentage"] = Math.Abs(changePercentage)
+                            });
                         }
                     }
-
-                    // 🔧 FIX: Bỏ validation sai - không thể so sánh InputQuantity với OutputQuantity
-                    // Vì InputQuantity = cà phê tươi, OutputQuantity = cà phê đã chế biến
-                    // Có thể có hao hụt hoặc thay đổi khối lượng trong quá trình chế biến
                 }
 
                 Console.WriteLine($"DEBUG SERVICE ADVANCE: Creating new progress - stepIndex: {nextStepIndex}, stageId: {nextStage.StageId}");
@@ -1159,7 +1306,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         else
                         {
                             Console.WriteLine($"DEBUG ADVANCE: Save failed - no changes saved");
-                            return new ServiceResult(Const.FAIL_CREATE_CODE, "Không thể tạo bước kế tiếp.");
+                            return CreateValidationError("CannotCreateNextStep", new Dictionary<string, object>
+                            {
+                                ["BatchId"] = batchId.ToString()
+                            });
                         }
                     }
                     catch (Exception saveEx)
@@ -1202,26 +1352,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Starting update for batchId: {batchId}, userId: {userId}");
                 
                 if (batchId == Guid.Empty)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "BatchId không hợp lệ.");
+                    return CreateValidationError("InvalidBatchId", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
 
                 // Lấy Farmer từ userId
                 var farmer = (await _unitOfWork.FarmerRepository.GetAllAsync(f => f.UserId == userId && !f.IsDeleted)).FirstOrDefault();
                 if (farmer == null)
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy nông hộ.");
+                    return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                    {
+                        ["UserId"] = userId.ToString()
+                    });
                 }
 
                 // Lấy Batch
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
                 if (batch == null || batch.IsDeleted)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 if (batch.FarmerId != farmer.FarmerId)
                 {
                     Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Permission denied - batch farmer: {batch.FarmerId}, current farmer: {farmer.FarmerId}");
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không có quyền cập nhật batch này.");
+                    return CreateValidationError("NoPermissionToUpdateBatch", new Dictionary<string, object>
+                    {
+                        ["UserId"] = userId.ToString(),
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
                 
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Permission granted - using farmer: {farmer.FarmerId}");
@@ -1235,7 +1398,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // 🔧 KIỂM TRA: Chỉ cho phép cập nhật khi batch đang ở InProgress (sau khi bị fail)
                 if (batch.Status != "InProgress")
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Chỉ có thể cập nhật progress khi batch đang ở trạng thái InProgress (sau khi bị đánh giá fail). Trạng thái hiện tại: '{batch.Status}'");
+                    return CreateValidationError("CannotUpdateProgressBatchNotInProgress", new Dictionary<string, object>
+                    {
+                        ["CurrentStatus"] = batch.Status
+                    });
                 }
 
                 // Lấy evaluation fail cuối cùng
@@ -1262,12 +1428,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 
                 if (evaluation == null)
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không tìm thấy đánh giá nào cho batch này.");
+                    return CreateValidationError("NoEvaluationFoundForBatch", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
                 
                 if (evaluation.EvaluationResult != "Fail")
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Đánh giá cuối cùng không phải là Fail. Kết quả hiện tại: '{evaluation.EvaluationResult}'");
+                    return CreateValidationError("LastEvaluationNotFail", new Dictionary<string, object>
+                    {
+                        ["CurrentResult"] = evaluation.EvaluationResult ?? "Unknown"
+                    });
                 }
 
                 // Parse failure info để biết stage nào bị fail
@@ -1279,7 +1451,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         Console.WriteLine($"DEBUG: Evaluation comments: {evaluation.Comments}");
                     }
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Không thể xác định stage nào cần cải thiện.");
+                    return CreateValidationError("CannotDetermineStageToImprove", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Failed stage - OrderIndex: {failureInfo.FailedOrderIndex}, StageName: {failureInfo.FailedStageName}");
@@ -1291,7 +1466,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (stages.Count == 0)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có công đoạn nào cho phương pháp này.");
+                    return CreateValidationError("NoStagesForMethod", new Dictionary<string, object>
+                    {
+                        ["MethodId"] = batch.MethodId.ToString()
+                    });
                 }
 
                 // Kiểm tra stage bị fail có tồn tại không
@@ -1313,7 +1491,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                     Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All stages for MethodId {batch.MethodId}: {string.Join(", ", allStages.Select(s => $"{s.StageId}({s.StageName})[Order:{s.OrderIndex}]"))}");
                     
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Không tìm thấy stage với thứ tự: {failureInfo.FailedOrderIndex} trong danh sách stages của method {batch.MethodId}");
+                    return CreateValidationError("FailedStageNotFound", new Dictionary<string, object>
+                    {
+                        ["FailedOrderIndex"] = failureInfo.FailedOrderIndex,
+                        ["MethodId"] = batch.MethodId.ToString()
+                    });
                 }
                 
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Found failed stage: {failedStage.StageId} - {failedStage.StageName}");
@@ -1321,7 +1503,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // 🔧 VALIDATION: Kiểm tra khối lượng output khi stage bị fail
                 if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Khối lượng đầu ra phải lớn hơn 0 khi cải thiện stage bị fail.");
+                    return CreateValidationError("OutputQuantityMustBePositiveForFailedStage", new Dictionary<string, object>
+                    {
+                        ["OutputQuantity"] = input.OutputQuantity?.ToString() ?? "null",
+                        ["MinValue"] = 0
+                    });
                 }
 
                 // Lấy progress cuối cùng để so sánh khối lượng
@@ -1349,17 +1535,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     
                     if (currentQuantity > previousQuantity * (1 + tolerance))
                     {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                            $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) tăng quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
-                            $"Vui lòng kiểm tra lại hoặc giải thích lý do tăng khối lượng.");
+                        return CreateValidationError("OutputQuantityIncreaseTooHighForFailedStage", new Dictionary<string, object>
+                        {
+                            ["CurrentQuantity"] = currentQuantity,
+                            ["CurrentUnit"] = input.OutputUnit ?? "kg",
+                            ["PreviousQuantity"] = previousQuantity,
+                            ["PreviousUnit"] = latestProgress.OutputUnit,
+                            ["Tolerance"] = tolerance * 100,
+                            ["IncreasePercentage"] = improvementPercentage
+                        });
                     }
 
                     // Nếu khối lượng giảm quá nhiều (>20%), cảnh báo
                     if (improvementPercentage < -20)
                     {
-                        return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                            $"Khối lượng đầu ra ({currentQuantity} {input.OutputUnit}) giảm quá nhiều so với lần trước ({previousQuantity} {latestProgress.OutputUnit}). " +
-                            $"Vui lòng kiểm tra lại hoặc giải thích lý do giảm khối lượng.");
+                        return CreateValidationError("OutputQuantityDecreaseTooHighForFailedStage", new Dictionary<string, object>
+                        {
+                            ["CurrentQuantity"] = currentQuantity,
+                            ["CurrentUnit"] = input.OutputUnit ?? "kg",
+                            ["PreviousQuantity"] = previousQuantity,
+                            ["PreviousUnit"] = latestProgress.OutputUnit,
+                            ["DecreasePercentage"] = Math.Abs(improvementPercentage)
+                        });
                     }
                 }
 
@@ -1487,7 +1684,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 
                 if (evaluationCode == null)
                 {
-                    return new ServiceResult(Const.ERROR_EXCEPTION, "Không thể tạo mã đánh giá duy nhất sau nhiều lần thử.");
+                    return CreateValidationError("CannotGenerateUniqueEvaluationCode", new Dictionary<string, object>
+                    {
+                        ["MaxRetries"] = maxRetries
+                    });
                 }
                 
                 var newEvaluation = new ProcessingBatchEvaluation
@@ -1567,7 +1767,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
 
                     if (manager == null)
-                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy Business Manager tương ứng.");
+                        return CreateValidationError("BusinessManagerNotFound", new Dictionary<string, object>
+                        {
+                            ["UserId"] = userId.ToString()
+                        });
 
                     var managerId = manager.ManagerId;
 
@@ -1595,7 +1798,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
 
                     if (farmer == null)
-                        return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                        return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                        {
+                            ["UserId"] = userId.ToString()
+                        });
 
                     availableBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                         predicate: b => !b.IsDeleted && 
@@ -1615,7 +1821,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (!availableBatches.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có lô chế biến nào có thể tạo tiến độ.", new List<object>());
+                    return CreateValidationError("NoAvailableBatchesForProgress", new Dictionary<string, object>
+                    {
+                        ["UserId"] = userId.ToString()
+                    });
                 }
 
                 // Tính toán khối lượng còn lại cho mỗi batch
@@ -1666,7 +1875,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách batch có thể tạo tiến độ thành công.", result);
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
             }
             catch (Exception ex)
             {
@@ -1683,22 +1892,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     if (isManager)
                     {
-                        var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
-                        if (manager == null)
-                        {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin Business Manager.");
-                        }
+                                            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+                    if (manager == null)
+                    {
+                        return CreateValidationError("BusinessManagerNotFound");
+                    }
 
                         var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(b => b.BatchId == batchId && !b.IsDeleted);
                         if (batch == null)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến.");
+                            return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                        {
+                            ["BatchId"] = batchId.ToString()
+                        });
                         }
 
                         var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(c => c.CommitmentId == batch.CropSeason.CommitmentId && !c.IsDeleted);
                         if (commitment?.ApprovedBy != manager.ManagerId)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập lô chế biến này.");
+                            return CreateValidationError("NoPermissionToAccessBatch", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString(),
+                                ["BatchId"] = batchId.ToString()
+                            });
                         }
                     }
                     else
@@ -1706,13 +1922,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
                         if (farmer == null)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin nông hộ.");
+                            return CreateValidationError("FarmerNotFound", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString()
+                            });
                         }
 
                         var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(b => b.BatchId == batchId && b.FarmerId == farmer.FarmerId && !b.IsDeleted);
                         if (batch == null)
                         {
-                            return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến hoặc bạn không có quyền truy cập.");
+                            return CreateValidationError("BatchNotFoundOrNoPermission", new Dictionary<string, object>
+                            {
+                                ["UserId"] = userId.ToString(),
+                                ["BatchId"] = batchId.ToString()
+                            });
                         }
                     }
                 }
@@ -1729,14 +1952,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (processingBatch == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy lô chế biến.");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // Kiểm tra trạng thái batch
                 if (processingBatch.Status != ProcessingStatus.InProgress.ToString() && 
                     processingBatch.Status != ProcessingStatus.NotStarted.ToString())
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Lô chế biến không ở trạng thái có thể tiến hành.");
+                    return CreateValidationError("BatchNotInProgressableState", new Dictionary<string, object>
+                    {
+                        ["CurrentStatus"] = processingBatch.Status
+                    });
                 }
 
                 // Lấy bước tiếp theo
@@ -1753,7 +1982,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (nextStage == null)
                 {
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Không tìm thấy thông tin bước tiếp theo.");
+                    return CreateValidationError("NextStepInfoNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString(),
+                        ["NextStepIndex"] = nextStepIndex
+                    });
                 }
 
                 // Tạo progress mới cho bước tiếp theo
@@ -1812,7 +2045,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 await _unitOfWork.SaveChangesAsync();
 
-                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tiến hành bước tiếp theo thành công.", newProgress);
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, newProgress);
             }
             catch (Exception ex)
             {
@@ -1903,10 +2136,44 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                // 1. Parse parameters từ request
+                // 🔍 DEBUG: Log chi tiết về waste data
+                Console.WriteLine($"🔍 Service: Starting create with media and waste for batchId: {batchId}");
+                Console.WriteLine($"🔍 Service: Input Wastes count: {input.Wastes?.Count ?? 0}");
+                Console.WriteLine($"🔍 Service: Input WasteType: {input.WasteType}");
+                Console.WriteLine($"🔍 Service: Input WasteQuantity: {input.WasteQuantity}");
+                Console.WriteLine($"🔍 Service: Input WasteUnit: {input.WasteUnit}");
+                Console.WriteLine($"🔍 Service: Input WasteNote: {input.WasteNote}");
+                Console.WriteLine($"🔍 Service: Input WasteRecordedAt: {input.WasteRecordedAt}");
+                
+                // 1. 🔧 VALIDATION: Chỉ validate những gì người dùng nhập vào
+                var hasOutputQuantity = input.OutputQuantity.HasValue && input.OutputQuantity.Value > 0;
+                var hasWasteData = (!string.IsNullOrEmpty(input.WasteType) && input.WasteQuantity > 0 && !string.IsNullOrEmpty(input.WasteUnit)) ||
+                                   (input.Wastes?.Any() == true);
+                
+                // Validate khối lượng nếu có
+                if (hasOutputQuantity)
+                {
+                    var outputQuantityValidationResult = await ValidateOutputQuantityBeforeCreateProgress(batchId, input);
+                    if (outputQuantityValidationResult.Status != Const.SUCCESS_READ_CODE)
+                    {
+                        return outputQuantityValidationResult;
+                    }
+                }
+                
+                // Validate waste nếu có
+                if (hasWasteData)
+                {
+                    var wasteValidationResult = await ValidateWasteBeforeCreateProgress(batchId, input);
+                    if (wasteValidationResult.Status != Const.SUCCESS_READ_CODE)
+                    {
+                        return wasteValidationResult;
+                    }
+                }
+                
+                // 2. Parse parameters từ request
                 var parameters = await ParseParametersFromRequest(input);
                 
-                // 2. Tạo progress DTO
+                // 3. Tạo progress DTO
                 var progressDto = new ProcessingBatchProgressCreateDto
                 {
                     StageId = input.StageId,
@@ -1918,14 +2185,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Parameters = parameters.Any() ? parameters : null
                 };
 
-                // 3. 🔧 VALIDATION: Kiểm tra waste trước khi tạo progress
-                var wasteValidationResult = await ValidateWasteBeforeCreateProgress(batchId, input);
-                if (wasteValidationResult.Status != Const.SUCCESS_READ_CODE)
-                {
-                    return wasteValidationResult;
-                }
-
-                // 4. Tạo progress
+                // 4. Tạo progress (đã validate waste trước)
                 var progressResult = await CreateAsync(batchId, progressDto, userId, isAdmin, isManager);
                 if (progressResult.Status != Const.SUCCESS_CREATE_CODE)
                 {
@@ -1934,7 +2194,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var progressId = (Guid)progressResult.Data;
 
-                // 5. Tạo waste nếu có - từ field riêng biệt hoặc từ array
+                // 5. Tạo waste nếu có - từ field riêng biệt hoặc từ array (sau khi đã validate output quantity và waste)
                 var createdWastes = new List<ProcessingWasteViewAllDto>();
                 Console.WriteLine($"🔍 Service: Input Wastes count: {input.Wastes?.Count ?? 0}");
                 
@@ -1962,16 +2222,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Console.WriteLine($"🔍 Service: Created wastes from array, count: {createdWastes.Count}");
                 }
 
-                // 6. Lấy parameters của progress vừa tạo
-                var progressWithParams = await GetByIdAsync(progressId);
+                // 6. Tạo response parameters từ input (tránh gọi GetByIdAsync gây conflict)
                 var responseParameters = new List<ProcessingParameterViewAllDto>();
-                
-                if (progressWithParams.Status == Const.SUCCESS_READ_CODE && progressWithParams.Data is ProcessingBatchProgressDetailDto detailDto)
+                if (parameters.Any())
                 {
-                    if (detailDto.Parameters != null)
+                    responseParameters = parameters.Select(p => new ProcessingParameterViewAllDto
                     {
-                        responseParameters = detailDto.Parameters;
-                    }
+                        ParameterId = Guid.NewGuid(), // Tạm thời, sẽ được cập nhật khi lấy từ DB
+                        ProgressId = progressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt
+                    }).ToList();
                 }
 
                 // 7. Tạo response DTO
@@ -1988,7 +2251,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Wastes = createdWastes
                 };
 
-                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo progress với waste thành công", response);
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, response);
             }
             catch (Exception ex)
             {
@@ -2036,18 +2299,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
-        /// Tạo waste cho progress với validation khối lượng
+        /// Tạo waste cho progress
         /// </summary>
         private async Task<List<ProcessingWasteViewAllDto>> CreateWastesForProgress(List<ProcessingWasteCreateDto> wasteDtos, Guid progressId, Guid userId, bool isAdmin)
         {
             Console.WriteLine($"🔍 CreateWastesForProgress: Starting with {wasteDtos.Count} wastes");
-            
-            // 🔧 VALIDATION: Kiểm tra khối lượng waste trước khi tạo
-            var validationResult = await ValidateWasteQuantities(wasteDtos, progressId);
-            if (validationResult.Status != Const.SUCCESS_READ_CODE)
-            {
-                throw new InvalidOperationException(validationResult.Message);
-            }
             
             var createdWastes = new List<ProcessingWasteViewAllDto>();
             
@@ -2121,11 +2377,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteNote: {input.WasteNote}");
                 Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteRecordedAt: {input.WasteRecordedAt}");
                 
-                // 1. 🔧 VALIDATION: Kiểm tra waste trước khi advance progress
-                var wasteValidationResult = await ValidateWasteBeforeAdvanceProgress(batchId, input);
-                if (wasteValidationResult.Status != Const.SUCCESS_READ_CODE)
+                // 1. 🔧 VALIDATION: Chỉ validate những gì người dùng nhập vào
+                var hasOutputQuantity = input.OutputQuantity.HasValue && input.OutputQuantity.Value > 0;
+                var hasWasteData = (!string.IsNullOrEmpty(input.WasteType) && input.WasteQuantity > 0 && !string.IsNullOrEmpty(input.WasteUnit)) ||
+                                   (input.Wastes?.Any() == true);
+                
+                // Validate khối lượng nếu có
+                if (hasOutputQuantity)
                 {
-                    return wasteValidationResult;
+                    var outputQuantityValidationResult = await ValidateOutputQuantityBeforeAdvanceProgress(batchId, input, userId, isAdmin, isManager);
+                    if (outputQuantityValidationResult.Status != Const.SUCCESS_READ_CODE)
+                    {
+                        return outputQuantityValidationResult;
+                    }
+                }
+                
+                // Validate waste nếu có
+                if (hasWasteData)
+                {
+                    var wasteValidationResult = await ValidateWasteBeforeAdvanceProgress(batchId, input);
+                    if (wasteValidationResult.Status != Const.SUCCESS_READ_CODE)
+                    {
+                        return wasteValidationResult;
+                    }
                 }
                 
                 // 2. Parse parameters từ request
@@ -2197,15 +2471,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Console.WriteLine($"🔍 ADVANCE SERVICE: No valid waste data found to process");
                 }
 
-                // 7. Lấy parameters của progress vừa tạo
+                // 7. Tạo response parameters từ input (tránh query lại DB gây conflict)
                 var responseParameters = new List<ProcessingParameterViewAllDto>();
-                if (latestProgressResult.Status == Const.SUCCESS_READ_CODE && latestProgressResult.Data is List<ProcessingBatchProgressViewAllDto> progressesList2)
+                if (parameters.Any())
                 {
-                    var latestProgressDto = progressesList2.LastOrDefault();
-                    if (latestProgressDto != null && latestProgressDto.Parameters != null)
+                    responseParameters = parameters.Select(p => new ProcessingParameterViewAllDto
                     {
-                        responseParameters = latestProgressDto.Parameters;
-                    }
+                        ParameterId = Guid.NewGuid(), // Tạm thời, sẽ được cập nhật khi lấy từ DB
+                        ProgressId = actualProgressId,
+                        ParameterName = p.ParameterName,
+                        ParameterValue = p.ParameterValue,
+                        Unit = p.Unit,
+                        RecordedAt = p.RecordedAt
+                    }).ToList();
                 }
 
                 // 7. Tạo response DTO
@@ -2223,7 +2501,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Wastes = createdWastes
                 };
 
-                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Advance progress với waste thành công", response);
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, response);
             }
             catch (Exception ex)
             {
@@ -2286,53 +2564,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!hasWasteData)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: No waste data found, skipping validation");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có waste data để validate");
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
                 }
 
-                // 2. Lấy batch và progress hiện tại
+                // 2. Lấy batch
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
                 if (batch == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy batch để validate waste");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
-                // 3. Lấy progress hiện tại (nếu có)
-                var currentProgresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
-                    p => p.BatchId == batchId && !p.IsDeleted,
-                    q => q.OrderByDescending(p => p.StepIndex)
-                );
-
-                var currentProgress = currentProgresses.FirstOrDefault();
-                if (currentProgress == null)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: No current progress found, this is first step");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Đây là bước đầu tiên, không cần validate waste");
-                }
-
-                // 4. Lấy progress trước đó
-                var previousProgresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
-                    p => p.BatchId == batchId && p.StepIndex < currentProgress.StepIndex && !p.IsDeleted,
-                    q => q.OrderByDescending(p => p.StepIndex)
-                );
-
-                var previousProgress = previousProgresses.FirstOrDefault();
-                if (previousProgress == null)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: No previous progress found");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có progress trước đó để so sánh");
-                }
-
-                // 5. Kiểm tra khối lượng đầu ra của bước trước
-                if (!previousProgress.OutputQuantity.HasValue || previousProgress.OutputQuantity.Value <= 0)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Previous progress has no valid output quantity");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Bước trước không có khối lượng đầu ra hợp lệ");
-                }
-
-                var previousOutputQuantity = previousProgress.OutputQuantity.Value;
-                var previousOutputUnit = previousProgress.OutputUnit ?? "kg";
-
-                // 6. Kiểm tra khối lượng đầu ra của bước hiện tại (từ input)
+                // 3. Kiểm tra khối lượng đầu ra của progress hiện tại (từ input)
                 if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Current input has no valid output quantity");
@@ -2342,21 +2587,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var currentOutputQuantity = input.OutputQuantity.Value;
                 var currentOutputUnit = input.OutputUnit ?? "kg";
 
-                // 7. Tính toán khối lượng hao hụt tối đa cho phép
-                var maxAllowedWaste = previousOutputQuantity - currentOutputQuantity;
+                // 🔧 VALIDATION: Kiểm tra waste dựa trên khối lượng vào batch và khối lượng ra progress
+                // Waste phải <= (InputQuantity - OutputQuantity)
+                var maxAllowedWasteFromBatch = batch.InputQuantity - currentOutputQuantity;
                 
-                Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Quantity analysis:");
-                Console.WriteLine($"  - Previous output: {previousOutputQuantity} {previousOutputUnit}");
-                Console.WriteLine($"  - Current output: {currentOutputQuantity} {currentOutputUnit}");
-                Console.WriteLine($"  - Max allowed waste: {maxAllowedWaste} {previousOutputUnit}");
+                Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Batch-based waste validation:");
+                Console.WriteLine($"  - Batch input quantity: {batch.InputQuantity} {batch.InputUnit}");
+                Console.WriteLine($"  - Current output quantity: {currentOutputQuantity} {currentOutputUnit}");
+                Console.WriteLine($"  - Max allowed waste from batch: {maxAllowedWasteFromBatch} {batch.InputUnit}");
 
-                // 8. Kiểm tra nếu khối lượng đầu ra tăng (không hợp lý)
-                if (maxAllowedWaste < 0)
-                {
-                    return CreateLogicQuantityError(previousOutputQuantity, previousOutputUnit, currentOutputQuantity, currentOutputUnit);
-                }
-
-                // 9. Tính tổng khối lượng waste từ input
+                // 4. Tính tổng khối lượng waste từ input
                 double totalWasteQuantity = 0;
                 
                 // Từ field riêng biệt
@@ -2378,23 +2618,33 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                // 10. Chuyển đổi về cùng đơn vị để so sánh
-                var previousQuantityInKg = ConvertToKg(previousOutputQuantity, previousOutputUnit);
+                // 5. Chuyển đổi về cùng đơn vị để so sánh
+                var batchInputQuantityInKg = ConvertToKg(batch.InputQuantity, batch.InputUnit);
                 var currentQuantityInKg = ConvertToKg(currentOutputQuantity, currentOutputUnit);
-                var maxAllowedWasteInKg = previousQuantityInKg - currentQuantityInKg;
+                var maxAllowedWasteInKg = batchInputQuantityInKg - currentQuantityInKg;
 
-                Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Total waste: {totalWasteQuantity} kg, Max allowed: {maxAllowedWasteInKg} kg");
+                Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Total waste: {totalWasteQuantity} kg, Max allowed from batch: {maxAllowedWasteInKg} kg");
 
-                // 11. Validation cuối cùng
+                // 6. Validation cuối cùng - Waste phải <= (InputQuantity - OutputQuantity)
                 if (totalWasteQuantity > maxAllowedWasteInKg)
                 {
-                    var tolerance = 0.05; // Cho phép sai số 5%
-                    var maxAllowedWithTolerance = maxAllowedWasteInKg * (1 + tolerance);
+                    // 🔧 FIX: Xử lý trường hợp maxAllowedWasteInKg = 0
+                    double maxAllowedWithTolerance;
+                    if (maxAllowedWasteInKg <= 0)
+                    {
+                        // Nếu không được phép waste (maxAllowedWasteInKg = 0), chỉ cho phép tolerance nhỏ
+                        maxAllowedWithTolerance = 1.0; // Cho phép tối đa 1kg khi không được phép waste
+                    }
+                    else
+                    {
+                        var tolerance = 0.10; // Cho phép sai số 10% hoặc tối đa 5kg
+                        maxAllowedWithTolerance = Math.Max(maxAllowedWasteInKg * (1 + tolerance), maxAllowedWasteInKg + 5.0);
+                    }
                     
                     if (totalWasteQuantity > maxAllowedWithTolerance)
                     {
-                        return CreateWasteQuantityError(totalWasteQuantity, maxAllowedWasteInKg, 
-                            previousOutputQuantity, previousOutputUnit, currentOutputQuantity, currentOutputUnit);
+                        return CreateWasteQuantityExceedsBatchLimitError(totalWasteQuantity, maxAllowedWasteInKg, 
+                            batch.InputQuantity, batch.InputUnit, currentOutputQuantity, currentOutputUnit);
                     }
                     else
                     {
@@ -2403,7 +2653,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 Console.WriteLine($"🔍 ValidateWasteBeforeCreateProgress: Pre-validation passed successfully");
-                return new ServiceResult(Const.SUCCESS_READ_CODE, "Pre-validation waste thành công");
+                                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
             }
             catch (Exception ex)
             {
@@ -2412,129 +2662,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        /// <summary>
-        /// 🔧 VALIDATION: Kiểm tra khối lượng waste dựa trên logic nghiệp vụ
-        /// </summary>
-        private async Task<IServiceResult> ValidateWasteQuantities(List<ProcessingWasteCreateDto> wasteDtos, Guid progressId)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 ValidateWasteQuantities: Starting validation for {wasteDtos.Count} wastes");
-                
-                if (!wasteDtos.Any())
-                {
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có waste để validate");
-                }
 
-                // 1. Lấy thông tin progress hiện tại
-                var currentProgress = await _unitOfWork.ProcessingBatchProgressRepository.GetByIdAsync(progressId);
-                if (currentProgress == null)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy progress để validate waste");
-                }
-
-                // 2. Lấy batch và progress trước đó
-                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(currentProgress.BatchId);
-                if (batch == null)
-                {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy batch để validate waste");
-                }
-
-                // 3. Lấy progress trước đó (nếu có)
-                var previousProgresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
-                    p => p.BatchId == batch.BatchId && p.StepIndex < currentProgress.StepIndex && !p.IsDeleted,
-                    q => q.OrderByDescending(p => p.StepIndex)
-                );
-
-                var previousProgress = previousProgresses.FirstOrDefault();
-                if (previousProgress == null)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteQuantities: No previous progress found, skipping quantity validation");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có progress trước đó để so sánh");
-                }
-
-                // 4. Kiểm tra khối lượng đầu ra của bước trước
-                if (!previousProgress.OutputQuantity.HasValue || previousProgress.OutputQuantity.Value <= 0)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteQuantities: Previous progress has no valid output quantity");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Bước trước không có khối lượng đầu ra hợp lệ");
-                }
-
-                var previousOutputQuantity = previousProgress.OutputQuantity.Value;
-                var previousOutputUnit = previousProgress.OutputUnit ?? "kg";
-
-                // 5. Kiểm tra khối lượng đầu ra của bước hiện tại
-                if (!currentProgress.OutputQuantity.HasValue || currentProgress.OutputQuantity.Value <= 0)
-                {
-                    Console.WriteLine($"🔍 ValidateWasteQuantities: Current progress has no valid output quantity");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Bước hiện tại không có khối lượng đầu ra hợp lệ");
-                }
-
-                var currentOutputQuantity = currentProgress.OutputQuantity.Value;
-                var currentOutputUnit = currentProgress.OutputUnit ?? "kg";
-
-                // 6. Tính toán khối lượng hao hụt tối đa cho phép
-                var maxAllowedWaste = previousOutputQuantity - currentOutputQuantity;
-                
-                Console.WriteLine($"🔍 ValidateWasteQuantities: Quantity analysis:");
-                Console.WriteLine($"  - Previous output: {previousOutputQuantity} {previousOutputUnit}");
-                Console.WriteLine($"  - Current output: {currentOutputQuantity} {currentOutputUnit}");
-                Console.WriteLine($"  - Max allowed waste: {maxAllowedWaste} {previousOutputUnit}");
-
-                // 7. Kiểm tra nếu khối lượng đầu ra tăng (không hợp lý)
-                if (maxAllowedWaste < 0)
-                {
-                    return CreateLogicQuantityError(previousOutputQuantity, previousOutputUnit, currentOutputQuantity, currentOutputUnit);
-                }
-
-                // 8. Tính tổng khối lượng waste (chuyển đổi về cùng đơn vị)
-                // Chuyển đổi đơn vị về kg để so sánh
-                var previousQuantityInKg = ConvertToKg(previousOutputQuantity, previousOutputUnit);
-                var currentQuantityInKg = ConvertToKg(currentOutputQuantity, currentOutputUnit);
-                var maxAllowedWasteInKg = previousQuantityInKg - currentQuantityInKg;
-                
-                double totalWasteQuantity = 0;
-                foreach (var wasteDto in wasteDtos)
-                {
-                    var wasteQuantity = wasteDto.Quantity;
-                    var wasteUnit = wasteDto.Unit?.Trim().ToLower() ?? "kg";
-
-                    // Chuyển đổi đơn vị về kg để so sánh
-                    var wasteQuantityInKg = ConvertToKg(wasteQuantity, wasteUnit);
-
-                    totalWasteQuantity += wasteQuantityInKg;
-
-                    Console.WriteLine($"🔍 ValidateWasteQuantities: Waste {wasteDto.WasteType}: {wasteQuantity} {wasteUnit} = {wasteQuantityInKg} kg");
-                }
-
-                Console.WriteLine($"🔍 ValidateWasteQuantities: Total waste: {totalWasteQuantity} kg, Max allowed: {maxAllowedWasteInKg} kg");
-
-                // 9. Validation cuối cùng
-                if (totalWasteQuantity > maxAllowedWasteInKg)
-                {
-                    var tolerance = 0.05; // Cho phép sai số 5%
-                    var maxAllowedWithTolerance = maxAllowedWasteInKg * (1 + tolerance);
-                    
-                    if (totalWasteQuantity > maxAllowedWithTolerance)
-                    {
-                        return CreateWasteQuantityError(totalWasteQuantity, maxAllowedWasteInKg, 
-                            previousOutputQuantity, previousOutputUnit, currentOutputQuantity, currentOutputUnit);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"🔍 ValidateWasteQuantities: Warning - waste quantity exceeds limit but within tolerance");
-                    }
-                }
-
-                Console.WriteLine($"🔍 ValidateWasteQuantities: Validation passed successfully");
-                return new ServiceResult(Const.SUCCESS_READ_CODE, "Validation waste quantity thành công");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"🔍 ValidateWasteQuantities: Error during validation: {ex.Message}");
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi validate waste quantity: {ex.Message}");
-            }
-        }
 
         /// <summary>
         /// 🔧 HELPER: Chuyển đổi đơn vị về kg để so sánh
@@ -2557,22 +2685,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             };
         }
 
-        /// <summary>
-        /// 🔧 HELPER: Tạo lỗi validation cho i18n
-        /// </summary>
-        private IServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
-        {
-            var errorData = new
-            {
-                ErrorKey = errorKey,
-                Parameters = parameters ?? new Dictionary<string, object>(),
-                Timestamp = DateTime.UtcNow,
-                ErrorType = "ValidationError"
-            };
 
-            // Trả về errorKey trong message, data trong data để Frontend dễ xử lý
-            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, errorData);
-        }
 
         /// <summary>
         /// 🔧 HELPER: Tạo lỗi waste quantity validation
@@ -2592,6 +2705,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             };
 
             return CreateValidationError("WasteQuantityExceeded", parameters);
+        }
+
+        /// <summary>
+        /// 🔧 HELPER: Tạo lỗi waste quantity vượt quá giới hạn batch
+        /// </summary>
+        private IServiceResult CreateWasteQuantityExceedsBatchLimitError(double totalWaste, double maxAllowed, 
+            double batchInput, string batchInputUnit, double currentOutput, string currentOutputUnit)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                ["TotalWaste"] = totalWaste,
+                ["MaxAllowed"] = maxAllowed,
+                ["BatchInputQuantity"] = batchInput,
+                ["BatchInputUnit"] = batchInputUnit,
+                ["CurrentOutput"] = currentOutput,
+                ["CurrentOutputUnit"] = currentOutputUnit,
+                ["WasteExceeded"] = totalWaste - maxAllowed
+            };
+
+            return CreateFieldValidationError("WasteQuantityExceedsBatchLimit", "WasteQuantity", parameters);
         }
 
         /// <summary>
@@ -2624,7 +2757,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ["Required"] = true
             };
 
-            return CreateValidationError("MissingRequiredField", parameters);
+            return CreateFieldValidationError("MissingRequiredField", fieldName, parameters);
         }
 
         /// <summary>
@@ -2671,13 +2804,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return CreateValidationError("InvalidStatus", parameters);
         }
 
-        /// <summary>
-        /// 🔧 HELPER: Tạo lỗi logic nghiệp vụ
-        /// </summary>
-        private IServiceResult CreateBusinessLogicError(string errorType, Dictionary<string, object> parameters = null)
-        {
-            return CreateValidationError(errorType, parameters);
-        }
+
 
         /// <summary>
         /// 🔧 VALIDATION: Kiểm tra waste trước khi advance progress
@@ -2695,14 +2822,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (!hasWasteData)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: No waste data found, skipping validation");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có waste data để validate");
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
                 }
 
                 // 2. Lấy batch và progress hiện tại
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
                 if (batch == null)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy batch để validate waste");
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
                 }
 
                 // 3. Lấy progress hiện tại (nếu có)
@@ -2715,7 +2845,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (currentProgress == null)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: No current progress found, this is first step");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Đây là bước đầu tiên, không cần validate waste");
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
                 }
 
                 // 4. Lấy progress trước đó
@@ -2728,14 +2858,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (previousProgress == null)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: No previous progress found");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Không có progress trước đó để so sánh");
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
                 }
 
                 // 5. Kiểm tra khối lượng đầu ra của bước trước
                 if (!previousProgress.OutputQuantity.HasValue || previousProgress.OutputQuantity.Value <= 0)
                 {
                     Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Previous progress has no valid output quantity");
-                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Bước trước không có khối lượng đầu ra hợp lệ");
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
                 }
 
                 var previousOutputQuantity = previousProgress.OutputQuantity.Value;
@@ -2751,24 +2881,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var currentOutputQuantity = input.OutputQuantity.Value;
                 var currentOutputUnit = input.OutputUnit ?? "kg";
 
-                // 7. Tính toán khối lượng hao hụt tối đa cho phép
-                var maxAllowedWaste = previousOutputQuantity - currentOutputQuantity;
+                // 🔧 VALIDATION MỚI: Kiểm tra waste dựa trên progress trước đó
+                // Waste phải <= (PreviousOutputQuantity - CurrentOutputQuantity)
+                var maxAllowedWasteFromPrevious = previousOutputQuantity - currentOutputQuantity;
                 
-                Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Quantity analysis:");
-                Console.WriteLine($"  - Previous output: {previousOutputQuantity} {previousOutputUnit}");
-                Console.WriteLine($"  - Current output: {currentOutputQuantity} {currentOutputUnit}");
-                Console.WriteLine($"  - Max allowed waste: {maxAllowedWaste} {previousOutputUnit}");
+                Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Previous progress-based waste validation:");
+                Console.WriteLine($"  - Previous output quantity: {previousOutputQuantity} {previousOutputUnit}");
+                Console.WriteLine($"  - Current output quantity: {currentOutputQuantity} {currentOutputUnit}");
+                Console.WriteLine($"  - Max allowed waste from previous: {maxAllowedWasteFromPrevious} {previousOutputUnit}");
 
-                // 8. Kiểm tra nếu khối lượng đầu ra tăng (không hợp lý)
-                if (maxAllowedWaste < 0)
+                // 7. Kiểm tra nếu khối lượng đầu ra tăng hoặc bằng (không hợp lý)
+                if (maxAllowedWasteFromPrevious <= 0)
                 {
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
-                        $"Khối lượng đầu ra không hợp lý: Bước trước ({previousOutputQuantity} {previousOutputUnit}) " +
-                        $"nhỏ hơn bước hiện tại ({currentOutputQuantity} {currentOutputUnit}). " +
-                        $"Vui lòng kiểm tra lại khối lượng đầu ra.");
+                    if (maxAllowedWasteFromPrevious < 0)
+                    {
+                        return CreateValidationError("InvalidOutputQuantityIncrease", new Dictionary<string, object>
+                        {
+                            ["PreviousOutput"] = previousOutputQuantity,
+                            ["PreviousUnit"] = previousOutputUnit,
+                            ["CurrentOutput"] = currentOutputQuantity,
+                            ["CurrentUnit"] = currentOutputUnit
+                        });
+                    }
+                    else // maxAllowedWasteFromPrevious == 0
+                    {
+                        var parameters = new Dictionary<string, object>
+                        {
+                            ["previousOutput"] = previousOutputQuantity,
+                            ["previousUnit"] = previousOutputUnit,
+                            ["currentOutput"] = currentOutputQuantity,
+                            ["currentUnit"] = currentOutputUnit
+                        };
+                        return CreateValidationError("InvalidOutputQuantityEqual", parameters);
+                    }
                 }
 
-                // 9. Tính tổng khối lượng waste từ input
+                // 8. Tính tổng khối lượng waste từ input
                 double totalWasteQuantity = 0;
                 
                 // Từ field riêng biệt
@@ -2790,18 +2938,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                // 10. Chuyển đổi về cùng đơn vị để so sánh
+                // 9. Chuyển đổi về cùng đơn vị để so sánh
                 var previousQuantityInKg = ConvertToKg(previousOutputQuantity, previousOutputUnit);
                 var currentQuantityInKg = ConvertToKg(currentOutputQuantity, currentOutputUnit);
                 var maxAllowedWasteInKg = previousQuantityInKg - currentQuantityInKg;
 
-                Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Total waste: {totalWasteQuantity} kg, Max allowed: {maxAllowedWasteInKg} kg");
+                Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Total waste: {totalWasteQuantity} kg, Max allowed from previous: {maxAllowedWasteInKg} kg");
 
-                // 11. Validation cuối cùng
+                // 10b. Validation cuối cùng - Waste phải <= (PreviousOutputQuantity - CurrentOutputQuantity)
                 if (totalWasteQuantity > maxAllowedWasteInKg)
                 {
-                    var tolerance = 0.05; // Cho phép sai số 5%
-                    var maxAllowedWithTolerance = maxAllowedWasteInKg * (1 + tolerance);
+                    // 🔧 FIX: Xử lý trường hợp maxAllowedWasteInKg = 0
+                    double maxAllowedWithTolerance;
+                    if (maxAllowedWasteInKg <= 0)
+                    {
+                        // Nếu không được phép waste (maxAllowedWasteInKg = 0), chỉ cho phép tolerance nhỏ
+                        maxAllowedWithTolerance = 1.0; // Cho phép tối đa 1kg khi không được phép waste
+                    }
+                    else
+                    {
+                        var tolerance = 0.10; // Cho phép sai số 10% hoặc tối đa 5kg
+                        maxAllowedWithTolerance = Math.Max(maxAllowedWasteInKg * (1 + tolerance), maxAllowedWasteInKg + 5.0);
+                    }
                     
                     if (totalWasteQuantity > maxAllowedWithTolerance)
                     {
@@ -2815,13 +2973,201 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Pre-validation passed successfully");
-                return new ServiceResult(Const.SUCCESS_READ_CODE, "Pre-validation waste thành công");
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Error during pre-validation: {ex.Message}");
                 return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi pre-validate waste: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 🔧 VALIDATION: Kiểm tra khối lượng đầu ra trước khi tạo progress
+        /// </summary>
+        private async Task<IServiceResult> ValidateOutputQuantityBeforeCreateProgress(Guid batchId, ProcessingBatchProgressCreateRequest input)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeCreateProgress: Starting validation for batchId: {batchId}");
+                
+                // 1. Kiểm tra khối lượng đầu ra có tồn tại và hợp lệ
+                if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
+                {
+                    Console.WriteLine($"🔍 ValidateOutputQuantityBeforeCreateProgress: Invalid output quantity: {input.OutputQuantity}");
+                    return CreateFieldValidationError("OutputQuantity", "OutputQuantity");
+                }
+
+                // 2. Lấy batch để kiểm tra
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
+                {
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
+                }
+
+                var currentOutputQuantity = input.OutputQuantity.Value;
+                var currentOutputUnit = input.OutputUnit ?? "kg";
+                var batchInputQuantity = batch.InputQuantity;
+                var batchInputUnit = batch.InputUnit;
+
+                // Chuyển đổi về cùng đơn vị để so sánh
+                var batchInputQuantityInKg = ConvertToKg(batchInputQuantity, batchInputUnit);
+                var currentOutputQuantityInKg = ConvertToKg(currentOutputQuantity, currentOutputUnit);
+
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeCreateProgress: Quantity validation:");
+                Console.WriteLine($"  - Batch input: {batchInputQuantity} {batchInputUnit} = {batchInputQuantityInKg} kg");
+                Console.WriteLine($"  - Current output: {currentOutputQuantity} {currentOutputUnit} = {currentOutputQuantityInKg} kg");
+
+                // 3. 🔧 VALIDATION: Kiểm tra logic khối lượng (giống advance)
+                // 3a. Khối lượng đầu ra không được vượt quá khối lượng đầu vào
+                if (currentOutputQuantityInKg > batchInputQuantityInKg)
+                {
+                    return CreateFieldValidationError("OutputQuantityExceedsInput", "OutputQuantity", new Dictionary<string, object>
+                    {
+                        ["InputQuantity"] = batchInputQuantity,
+                        ["InputUnit"] = batchInputUnit,
+                        ["OutputQuantity"] = currentOutputQuantity,
+                        ["OutputUnit"] = currentOutputUnit
+                    });
+                }
+
+                // 3b. 🔧 NEW: Không cho phép output quantity bằng với input (luôn phải giảm sau sơ chế)
+                if (Math.Abs(currentOutputQuantityInKg - batchInputQuantityInKg) < 0.01) // Bằng nhau (tolerance 0.01 kg)
+                {
+                    return CreateFieldValidationError("OutputQuantityEqualNotAllowed", "OutputQuantity", new Dictionary<string, object>
+                    {
+                        ["PreviousOutputQuantity"] = batchInputQuantity,
+                        ["PreviousOutputUnit"] = batchInputUnit,
+                        ["CurrentOutputQuantity"] = currentOutputQuantity,
+                        ["CurrentOutputUnit"] = currentOutputUnit
+                    });
+                }
+
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeCreateProgress: Validation passed successfully");
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeCreateProgress: Error during validation: {ex.Message}");
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi validate output quantity: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 🔧 VALIDATION: Kiểm tra khối lượng đầu ra trước khi advance progress
+        /// </summary>
+        private async Task<IServiceResult> ValidateOutputQuantityBeforeAdvanceProgress(Guid batchId, AdvanceProcessingBatchProgressRequest input, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeAdvanceProgress: Starting validation for batchId: {batchId}");
+                
+                // 1. Kiểm tra khối lượng đầu ra có tồn tại và hợp lệ
+                if (!input.OutputQuantity.HasValue || input.OutputQuantity.Value <= 0)
+                {
+                    Console.WriteLine($"🔍 ValidateOutputQuantityBeforeAdvanceProgress: Invalid output quantity: {input.OutputQuantity}");
+                    return CreateFieldValidationError("OutputQuantity", "OutputQuantity");
+                }
+
+                // 2. Lấy batch để kiểm tra
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
+                {
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
+                }
+
+                // 3. Lấy progress cuối cùng để so sánh
+                var latestProgressResult = await GetAllByBatchIdAsync(batchId, userId, isAdmin, isManager);
+                if (latestProgressResult.Status != Const.SUCCESS_READ_CODE || latestProgressResult.Data is not List<ProcessingBatchProgressViewAllDto> progressesList || !progressesList.Any())
+                {
+                    return CreateValidationError("NoPreviousProgress", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
+                }
+
+                var latestProgress = progressesList.Last();
+                var previousOutputQuantity = latestProgress.OutputQuantity ?? 0;
+                var previousOutputUnit = latestProgress.OutputUnit ?? "kg";
+                var currentOutputQuantity = input.OutputQuantity.Value;
+                var currentOutputUnit = input.OutputUnit ?? "kg";
+
+                // Chuyển đổi về cùng đơn vị để so sánh
+                var previousOutputQuantityInKg = ConvertToKg(previousOutputQuantity, previousOutputUnit);
+                var currentOutputQuantityInKg = ConvertToKg(currentOutputQuantity, currentOutputUnit);
+
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeAdvanceProgress: Quantity validation:");
+                Console.WriteLine($"  - Previous output: {previousOutputQuantity} {previousOutputUnit} = {previousOutputQuantityInKg} kg");
+                Console.WriteLine($"  - Current output: {currentOutputQuantity} {currentOutputUnit} = {currentOutputQuantityInKg} kg");
+
+                // 4. 🔧 VALIDATION: Kiểm tra logic khối lượng giữa các step
+                // 4a. Khối lượng đầu ra mới không được vượt quá khối lượng đầu ra trước đó
+                if (currentOutputQuantityInKg > previousOutputQuantityInKg)
+                {
+                    return CreateFieldValidationError("OutputQuantityExceedsPrevious", "OutputQuantity", new Dictionary<string, object>
+                    {
+                        ["PreviousOutputQuantity"] = previousOutputQuantity,
+                        ["PreviousOutputUnit"] = previousOutputUnit,
+                        ["CurrentOutputQuantity"] = currentOutputQuantity,
+                        ["CurrentOutputUnit"] = currentOutputUnit
+                    });
+                }
+
+                // 4b. 🔧 NEW: Không cho phép output quantity bằng nhau (luôn phải giảm sau sơ chế)
+                if (Math.Abs(currentOutputQuantityInKg - previousOutputQuantityInKg) < 0.01) // Bằng nhau (tolerance 0.01 kg)
+                {
+                    return CreateFieldValidationError("OutputQuantityEqualNotAllowed", "OutputQuantity", new Dictionary<string, object>
+                    {
+                        ["PreviousOutputQuantity"] = previousOutputQuantity,
+                        ["PreviousOutputUnit"] = previousOutputUnit,
+                        ["CurrentOutputQuantity"] = currentOutputQuantity,
+                        ["CurrentOutputUnit"] = currentOutputUnit
+                    });
+                }
+
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeAdvanceProgress: Validation passed successfully");
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🔍 ValidateOutputQuantityBeforeAdvanceProgress: Error during validation: {ex.Message}");
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi validate output quantity: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Tạo validation error với field name để frontend hiển thị dưới field
+        /// </summary>
+        private ServiceResult CreateFieldValidationError(string errorKey, string fieldName, Dictionary<string, object> parameters = null)
+        {
+            var errorData = new
+            {
+                ErrorKey = errorKey,
+                FieldName = fieldName, // Thêm field name để frontend biết field nào bị lỗi
+                Parameters = parameters ?? new Dictionary<string, object>(),
+                Timestamp = DateTime.UtcNow,
+                ErrorType = "FieldValidationError"
+            };
+
+            // Tạo message rõ ràng hơn
+            string message = GetFieldValidationErrorMessage(errorKey, fieldName, parameters);
+            
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, message, errorData);
+        }
+
+        /// <summary>
+        /// Tạo validation error message rõ ràng cho field
+        /// </summary>
+        private string GetFieldValidationErrorMessage(string errorKey, string fieldName, Dictionary<string, object> parameters)
+        {
+            // 🔧 Sử dụng error key để frontend có thể translate
+            return errorKey;
         }
     }
 }

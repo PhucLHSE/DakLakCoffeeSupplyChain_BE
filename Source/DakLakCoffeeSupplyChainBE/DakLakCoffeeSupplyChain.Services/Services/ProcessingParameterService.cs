@@ -22,6 +22,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _unitOfWork = unitOfWork;
         }
 
+        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        {
+            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+        }
+
         public async Task<IServiceResult> GetAll()
         {
             var parameters = await _unitOfWork.ProcessingParameterRepository.GetAllActiveAsync();
@@ -51,11 +56,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (parameter == null)
             {
-                return new ServiceResult(
-                    Const.WARNING_NO_DATA_CODE,
-                    $"Không tìm thấy thông số chế biến với ID = {id}",
-                    null
-                );
+                var parameters = new Dictionary<string, object>
+                {
+                    ["parameterId"] = id
+                };
+                return CreateValidationError("ProcessingParameterNotFound", parameters);
             }
 
             var dto = parameter.MapToProcessingParameterDetailDto();
@@ -70,16 +75,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // 🛡️ Validate thủ công
             if (dto.ProgressId == Guid.Empty)
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "ProgressId không được để trống");
+                return CreateValidationError("ProgressIdRequired");
 
             if (string.IsNullOrWhiteSpace(dto.ParameterName))
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "ParameterName không được để trống");
+                return CreateValidationError("ParameterNameRequired");
 
             if (string.IsNullOrWhiteSpace(dto.ParameterValue))
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "ParameterValue không được để trống");
+                return CreateValidationError("ParameterValueRequired");
 
             if (string.IsNullOrWhiteSpace(dto.Unit))
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Unit không được để trống");
+                return CreateValidationError("UnitRequired");
 
             // 🔁 Kiểm tra trùng tên trong cùng Progress
             var isDuplicate = await _unitOfWork.ProcessingParameterRepository
@@ -89,10 +94,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (isDuplicate)
             {
-                return new ServiceResult(
-                    Const.ERROR_VALIDATION_CODE,
-                    $"Thông số \"{dto.ParameterName}\" đã tồn tại cho bước này."
-                );
+                var parameters = new Dictionary<string, object>
+                {
+                    ["parameterName"] = dto.ParameterName
+                };
+                return CreateValidationError("ProcessingParameterNameExists", parameters);
             }
 
             try
@@ -123,18 +129,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> UpdateAsync(ProcessingParameterUpdateDto dto)
         {
             if (dto.ParameterId == Guid.Empty)
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "ParameterId không hợp lệ");
+                return CreateValidationError("InvalidParameterId");
 
             if (string.IsNullOrWhiteSpace(dto.ParameterName) ||
                 string.IsNullOrWhiteSpace(dto.ParameterValue) ||
                 string.IsNullOrWhiteSpace(dto.Unit))
             {
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Dữ liệu không hợp lệ");
+                return CreateValidationError("InvalidParameterData");
             }
 
             var entity = await _unitOfWork.ProcessingParameterRepository.GetByIdAsync(dto.ParameterId);
             if (entity == null || entity.IsDeleted)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Thông số không tồn tại");
+                return CreateValidationError("ProcessingParameterNotExists");
 
             // Check trùng tên (nếu cần)
             var isDuplicate = await _unitOfWork.ProcessingParameterRepository.AnyAsync(x =>
@@ -144,7 +150,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 !x.IsDeleted);
 
             if (isDuplicate)
-                return new ServiceResult(Const.ERROR_VALIDATION_CODE, $"Thông số \"{dto.ParameterName}\" đã tồn tại trong bước này");
+            {
+                var parameters = new Dictionary<string, object>
+                {
+                    ["parameterName"] = dto.ParameterName
+                };
+                return CreateValidationError("ProcessingParameterNameExistsInStep", parameters);
+            }
 
             // Cập nhật
             entity.ParameterName = dto.ParameterName;
@@ -165,10 +177,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var success = await _unitOfWork.ProcessingParameterRepository.SoftDeleteAsync(parameterId);
                 if (!success)
                 {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Parameter not found or already deleted"
-                    );
+                    return CreateValidationError("ProcessingParameterNotFoundOrDeleted");
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -193,7 +202,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var success = await _unitOfWork.ProcessingParameterRepository.HardDeleteAsync(parameterId);
                 if (!success)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Parameter not found");
+                    return CreateValidationError("ProcessingParameterNotFoundForHardDelete");
                 }
 
                 await _unitOfWork.SaveChangesAsync();
