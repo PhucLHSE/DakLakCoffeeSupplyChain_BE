@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DakLakCoffeeSupplyChain.Common.DTOs.SystemConfigurationDTOs.ProcessingBatchCriteria;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -39,6 +40,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
         }
+
+
 
      
         private async Task<bool> HasPermissionToAccessAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert)
@@ -101,6 +104,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             // Tạo comments chi tiết bao gồm thông tin đơn yêu cầu đánh giá và tiến trình
             var detailedComments = dto.Comments ?? "";
+
+            // 🔧 TÍCH HỢP: Logic đánh giá chất lượng dựa theo tiêu chí từ SystemConfiguration
+            if (dto.QualityCriteriaEvaluations?.Any() == true)
+            {
+                try
+                {
+                    // Tạo comment đánh giá chất lượng theo format mới
+                    var qualityComment = CreateQualityEvaluationComment(dto.QualityCriteriaEvaluations, dto.ExpertNotes);
+
+                    // Thêm comment đánh giá chất lượng vào đầu
+                    detailedComments = qualityComment + "\n\n" + detailedComments;
+                }
+                catch (Exception ex)
+                {
+                    // Log lỗi nhưng không dừng quá trình tạo evaluation
+                    Console.WriteLine($"Lỗi đánh giá chất lượng: {ex.Message}");
+                    detailedComments = $"[LỖI ĐÁNH GIÁ CHẤT LƯỢNG: {ex.Message}]\n\n" + detailedComments;
+                }
+            }
+
+
             
             // 🔧 CẢI THIỆN: Logic tạo comments thông minh cho evaluation
             if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase) && 
@@ -109,28 +133,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Nếu là Fail và có problematic steps, tạo format chuẩn
                 var problematicStep = dto.ProblematicSteps.First();
                 
-                // Parse để lấy thông tin stage từ format "Bước X: StageName"
-                var stepMatch = System.Text.RegularExpressions.Regex.Match(problematicStep, @"Bước\s*(\d+):\s*(.+)");
-                
-                if (stepMatch.Success)
-                {
-                    var orderIndex = int.Parse(stepMatch.Groups[1].Value);
-                    var stageName = stepMatch.Groups[2].Value.Trim();
-                    var failureDetails = dto.DetailedFeedback ?? dto.Comments ?? "Tiến trình có vấn đề";
-                    var recommendations = dto.Recommendations ?? "Cần cải thiện theo hướng dẫn";
-                    
-                    // Tạo format chuẩn theo StageFailureParser
-                    detailedComments = StageFailureParser.CreateFailureComment(
-                        orderIndex,
-                        stageName,
-                        failureDetails,
-                        recommendations
-                    );
-                }
-                else
-                {
-                    // Fallback nếu không parse được format chuẩn
-                    detailedComments = dto.Comments ?? "";
+                // Tạo format đơn giản cho problematic steps
                     if (!string.IsNullOrEmpty(dto.DetailedFeedback))
                     {
                         detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
@@ -142,13 +145,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (!string.IsNullOrEmpty(dto.Recommendations))
                     {
                         detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
-                    }
                 }
             }
             else
             {
                 // Tạo comments thông thường cho các trường hợp khác
-                detailedComments = dto.Comments ?? "";
                 if (!string.IsNullOrEmpty(dto.DetailedFeedback))
                 {
                     detailedComments += $"\n\nChi tiết vấn đề: {dto.DetailedFeedback}";
@@ -177,11 +178,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             Guid? expertId = null;
             if (isExpert)
             {
-                var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
-                    predicate: e => e.UserId == userId && !e.IsDeleted,
-                    asNoTracking: true
-                );
-                expertId = expert?.ExpertId;
+                try
+                {
+                    var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
+                        predicate: e => e.UserId == userId && !e.IsDeleted,
+                        asNoTracking: true
+                    );
+                    expertId = expert?.ExpertId;
+                }
+                catch (Exception ex)
+                {
+                    // Log lỗi nhưng không dừng quá trình tạo evaluation
+                    Console.WriteLine($"Lỗi tìm AgriculturalExpert: {ex.Message}");
+                    expertId = null; // Sử dụng null nếu không tìm thấy
+                }
             }
 
             var entity = new ProcessingBatchEvaluation
@@ -217,81 +227,99 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(autoEval);
             }
 
-            await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
+            int saved = 0;
+            try
+            {
+                await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
 
-                        // Xử lý logic workflow theo kết quả đánh giá
-            if (dto.EvaluationResult.Equals("Pending", StringComparison.OrdinalIgnoreCase))
-            {
-                // Nếu farmer tạo đơn đánh giá, chuyển batch sang AwaitingEvaluation
-                if (batch.Status == "Completed")
+                // Xử lý logic workflow theo kết quả đánh giá
+                if (dto.EvaluationResult.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 {
-                    batch.Status = "AwaitingEvaluation";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                }
-            }
-            else if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
-            {
-                // Nếu đánh giá Fail, chuyển batch về trạng thái InProgress để farmer sửa
-                if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
-                {
-                    batch.Status = "InProgress";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                    
-                    // Gửi notification cho Farmer
-                    try
+                    // Nếu farmer tạo đơn đánh giá, chuyển batch sang AwaitingEvaluation
+                    if (batch.Status == "Completed")
                     {
-                        var batchWithFarmer = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                            predicate: b => b.BatchId == dto.BatchId,
-                            include: b => b.Include(b => b.Farmer)
-                        );
+                        batch.Status = "AwaitingEvaluation";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    }
+                }
+                else if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 🔧 MỚI: Xử lý logic retry khi evaluation fail
+                    if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
+                    {
+                        // Chuyển batch về trạng thái InProgress để farmer cập nhật
+                        batch.Status = "InProgress";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
                         
-                        if (batchWithFarmer?.Farmer?.UserId != null)
+                        // 🔧 MỚI: Lưu thông tin về các stage cần cập nhật
+                        if (dto.ProblematicSteps?.Any() == true)
                         {
-                            await _notificationService.NotifyEvaluationFailedAsync(
-                                dto.BatchId, 
-                                batchWithFarmer.Farmer.UserId, 
-                                detailedComments
+                            await SaveFailedStagesInfoAsync(dto.BatchId, dto.ProblematicSteps);
+                        }
+                        
+                        // Gửi notification cho Farmer (chỉ gửi 1 lần)
+                        try
+                        {
+                            var batchWithFarmer = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                                predicate: b => b.BatchId == dto.BatchId,
+                                include: b => b.Include(b => b.Farmer)
                             );
+                            
+                            if (batchWithFarmer?.Farmer?.UserId != null)
+                            {
+                                await _notificationService.NotifyEvaluationFailedAsync(
+                                    dto.BatchId, 
+                                    batchWithFarmer.Farmer.UserId, 
+                                    detailedComments
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log lỗi notification nhưng không ảnh hưởng đến việc tạo evaluation
+                            Console.WriteLine($"Lỗi gửi notification: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
+                }
+                else if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool statusChanged = false;
+                    
+                    // Nếu đánh giá Pass và batch đang AwaitingEvaluation, chuyển sang Completed
+                    if (batch.Status == "AwaitingEvaluation")
                     {
-                        // Log lỗi notification nhưng không ảnh hưởng đến việc tạo evaluation
-                        Console.WriteLine($"Lỗi gửi notification: {ex.Message}");
+                        batch.Status = "Completed";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                        statusChanged = true;
+                    }
+                    // Nếu đánh giá Pass và batch đang InProgress, chuyển sang Completed
+                    else if (batch.Status == "InProgress")
+                    {
+                        batch.Status = "Completed";
+                        batch.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                        statusChanged = true;
+                    }
+
+                    // 🔧 MỚI: Xóa thông tin retry khi batch được đánh giá thành công
+                    if (statusChanged)
+                    {
+                        await ClearRetryInfoAsync(dto.BatchId);
                     }
                 }
+
+                saved = await _unitOfWork.SaveChangesAsync();
             }
-            else if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+            catch (Exception ex)
             {
-                bool statusChanged = false;
-                
-                // Nếu đánh giá Pass và batch đang AwaitingEvaluation, chuyển sang Completed
-                if (batch.Status == "AwaitingEvaluation")
-                {
-                    batch.Status = "Completed";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                    statusChanged = true;
-                }
-                // Nếu đánh giá Pass và batch đang InProgress, chuyển sang Completed
-                else if (batch.Status == "InProgress")
-                {
-                    batch.Status = "Completed";
-                    batch.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                    statusChanged = true;
-                }
-
-                                 // Nếu status đã chuyển sang Completed, chỉ cập nhật trạng thái
-                 if (statusChanged)
-                 {
-                     // Batch đã được chuyển sang Completed thành công
-                 }
-             }
-
-            var saved = await _unitOfWork.SaveChangesAsync();
+                // Log lỗi chi tiết
+                Console.WriteLine($"Lỗi tạo evaluation: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw; // Re-throw để controller có thể xử lý
+            }
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, entity.MapToViewDto())
@@ -341,27 +369,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Nếu là Fail và có problematic steps, tạo format chuẩn
                 var problematicStep = dto.ProblematicSteps.First();
                 
-                // Parse để lấy thông tin stage từ format "Bước X: StageName"
-                var stepMatch = System.Text.RegularExpressions.Regex.Match(problematicStep, @"Bước\s*(\d+):\s*(.+)");
-                
-                if (stepMatch.Success)
-                {
-                    var orderIndex = int.Parse(stepMatch.Groups[1].Value);
-                    var stageName = stepMatch.Groups[2].Value.Trim();
-                    var failureDetails = dto.DetailedFeedback ?? dto.Comments ?? "Tiến trình có vấn đề";
-                    var recommendations = dto.Recommendations ?? "Cần cải thiện theo hướng dẫn";
-                    
-                    // Tạo format chuẩn theo StageFailureParser
-                    detailedComments = StageFailureParser.CreateFailureComment(
-                        orderIndex,
-                        stageName,
-                        failureDetails,
-                        recommendations
-                    );
-                }
-                else
-                {
-                    // Fallback nếu không parse được format chuẩn
+                // Tạo format đơn giản cho problematic steps
                     detailedComments = dto.Comments ?? "";
                     if (!string.IsNullOrEmpty(dto.DetailedFeedback))
                     {
@@ -374,7 +382,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     if (!string.IsNullOrEmpty(dto.Recommendations))
                     {
                         detailedComments += $"\nKhuyến nghị: {dto.Recommendations}";
-                    }
                 }
             }
             else
@@ -744,6 +751,117 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return dtos.Any()
                 ? new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy danh sách đánh giá đã xóa thành công.", dtos)
                 : new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có đánh giá nào đã xóa.", new List<EvaluationViewDto>());
+        }
+
+        // ========== HELPER METHODS CHO ĐÁNH GIÁ CHẤT LƯỢNG ==========
+
+        /// <summary>
+        /// Tạo comment đánh giá chất lượng theo format mới
+        /// </summary>
+        /// <param name="criteria">Danh sách tiêu chí đánh giá với actual values</param>
+        /// <param name="expertNotes">Ghi chú của expert</param>
+        /// <returns>Comment đã format theo format mới</returns>
+        private string CreateQualityEvaluationComment(List<QualityCriteriaEvaluationDto> criteria, string? expertNotes)
+        {
+            // Tự động đánh giá các tiêu chí dựa trên actual values
+            var criteriaResults = QualityEvaluationHelper.AutoEvaluateCriteria(criteria);
+
+            // Sử dụng QualityEvaluationHelper để tạo comment theo format mới
+            return QualityEvaluationHelper.CreateQualityEvaluationComment(criteriaResults, expertNotes);
+        }
+
+        // ========== HELPER METHODS CHO RETRY LOGIC ==========
+
+        /// <summary>
+        /// Lưu thông tin về các stage cần cập nhật khi evaluation fail
+        /// </summary>
+        /// <param name="batchId">ID của batch</param>
+        /// <param name="problematicSteps">Danh sách stage cần cập nhật</param>
+        private async Task SaveFailedStagesInfoAsync(Guid batchId, List<string> problematicSteps)
+        {
+            try
+            {
+                // Tạo một record trong SystemConfiguration để lưu thông tin retry
+                var retryInfo = new SystemConfiguration
+                {
+                    Name = $"RETRY_INFO_{batchId}",
+                    Description = string.Join("|", problematicSteps), // Lưu danh sách stages trong Description
+                    TargetEntity = "ProcessingBatch",
+                    TargetField = "FailedStages",
+                    IsActive = true,
+                    EffectedDateFrom = DateTime.UtcNow,
+                    EffectedDateTo = DateTime.UtcNow.AddDays(30), // Tự động xóa sau 30 ngày
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.SystemConfigurationRepository.CreateAsync(retryInfo);
+                await _unitOfWork.SaveChangesAsync();
+                
+                Console.WriteLine($"✅ Đã lưu thông tin retry cho batch {batchId}: {string.Join(", ", problematicSteps)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi lưu thông tin retry: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Lấy thông tin về các stage cần cập nhật cho batch
+        /// </summary>
+        /// <param name="batchId">ID của batch</param>
+        /// <returns>Danh sách stage cần cập nhật</returns>
+        public async Task<List<string>> GetFailedStagesForBatchAsync(Guid batchId)
+        {
+            try
+            {
+                var retryInfo = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                    predicate: c => c.Name == $"RETRY_INFO_{batchId}" && c.IsActive && !c.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (retryInfo != null && !string.IsNullOrEmpty(retryInfo.Description))
+                {
+                    return retryInfo.Description.Split('|').ToList();
+                }
+
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi lấy thông tin retry: {ex.Message}");
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Xóa thông tin retry khi batch được đánh giá thành công
+        /// </summary>
+        /// <param name="batchId">ID của batch</param>
+        private async Task ClearRetryInfoAsync(Guid batchId)
+        {
+            try
+            {
+                var retryInfo = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
+                    predicate: c => c.Name == $"RETRY_INFO_{batchId}" && !c.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (retryInfo != null)
+                {
+                    retryInfo.IsDeleted = true;
+                    retryInfo.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.SystemConfigurationRepository.UpdateAsync(retryInfo);
+                    await _unitOfWork.SaveChangesAsync();
+                    
+                    Console.WriteLine($"✅ Đã xóa thông tin retry cho batch {batchId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi xóa thông tin retry: {ex.Message}");
+            }
         }
     }
 }

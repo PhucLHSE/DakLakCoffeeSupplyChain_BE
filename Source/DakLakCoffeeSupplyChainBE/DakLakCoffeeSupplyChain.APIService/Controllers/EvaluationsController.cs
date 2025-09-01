@@ -1,6 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs;
-using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using Microsoft.AspNetCore.Authorization;
@@ -87,6 +86,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (result.Status == Const.WARNING_NO_DATA_CODE) return NotFound(result.Message);
             if (result.Status == Const.ERROR_EXCEPTION) return Forbid();
             return StatusCode(500, result.Message);
+        }
+
+        // 🔧 MỚI: API để lấy thông tin về các stage cần cập nhật khi retry
+        [HttpGet("failed-stages/{batchId:guid}")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager,AgriculturalExpert")]
+        public async Task<IActionResult> GetFailedStages(Guid batchId)
+        {
+            try
+            {
+                var failedStages = await _evaluationService.GetFailedStagesForBatchAsync(batchId);
+                return Ok(new { failedStages });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi lấy thông tin failed stages: {ex.Message}");
+                return StatusCode(500, "Lỗi khi lấy thông tin stage cần cập nhật");
+            }
         }
 
         [HttpPost]
@@ -382,234 +398,110 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        #region Evaluation Criteria APIs
-
         /// <summary>
-        /// Lấy tiêu chí đánh giá cho stage cụ thể (hỗ trợ cả stageCode và stageId)
+        /// Lấy thông tin failure và stages cần retry khi batch bị đánh giá FAIL
         /// </summary>
-        /// <param name="stageCode">Mã stage hoặc ID stage</param>
-        /// <returns>Danh sách tiêu chí đánh giá</returns>
-        [HttpGet("criteria/{stageCode}")]
+        /// <param name="batchId">ID của batch</param>
+        /// <returns>Thông tin failure và stages đã thực hiện để retry</returns>
+        [HttpGet("failure-info/{batchId:guid}")]
         [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
-        public IActionResult GetCriteriaForStage(string stageCode)
+        public async Task<IActionResult> GetFailureInfo(Guid batchId)
         {
             try
             {
-                Console.WriteLine($"🔍 DEBUG: GetCriteriaForStage called with: '{stageCode}'");
-                
-                string actualStageCode = stageCode;
-                
-                // 🔧 CẢI THIỆN: Kiểm tra nếu stageCode là số (stageId) thì map sang stageCode
-                if (int.TryParse(stageCode, out int stageId))
+                // Lấy evaluation cuối cùng của batch
+                var latestEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                    e => e.BatchId == batchId && !e.IsDeleted,
+                    q => q.OrderByDescending(e => e.CreatedAt)
+                );
+
+                var evaluation = latestEvaluation.FirstOrDefault();
+                if (evaluation == null)
                 {
-                    Console.WriteLine($"🔍 DEBUG: Detected stageId: {stageId}, mapping to stageCode...");
-                    actualStageCode = MapStageIdToStageCode(stageId);
-                    Console.WriteLine($"🔍 DEBUG: Mapped stageId {stageId} to stageCode: '{actualStageCode}'");
-                    
-                    if (string.IsNullOrEmpty(actualStageCode))
-                    {
-                        Console.WriteLine($"❌ ERROR: Could not map stageId {stageId} to stageCode");
                         return NotFound(new
                         {
                             status = Const.WARNING_NO_DATA_CODE,
-                            message = $"Không thể map stageId {stageId} sang stageCode",
-                            data = new List<object>()
-                        });
-                    }
-                }
-                
-                Console.WriteLine($"🔍 DEBUG: Getting criteria for stageCode: '{actualStageCode}'");
-                var stageInfo = StageFailureParser.GetStageFailureInfo(actualStageCode);
-                var criteria = stageInfo.GetType().GetProperty("criteria")?.GetValue(stageInfo) as List<object> ?? new List<object>();
-                
-                Console.WriteLine($"🔍 DEBUG: Found {criteria.Count} criteria for stageCode '{actualStageCode}'");
-                
-                if (!criteria.Any())
-                {
-                    Console.WriteLine($"❌ WARNING: No criteria found for stageCode: '{actualStageCode}'");
-                    return NotFound(new
-                    {
-                        status = Const.WARNING_NO_DATA_CODE,
-                        message = $"Không tìm thấy tiêu chí đánh giá cho stage: {actualStageCode}",
-                        data = new List<object>()
+                        message = "Không tìm thấy đánh giá cho batch này",
+                        data = new object()
                     });
                 }
 
-                Console.WriteLine($"✅ SUCCESS: Returning {criteria.Count} criteria for stageCode '{actualStageCode}'");
+                if (evaluation.EvaluationResult != "Fail")
+                {
                 return Ok(new
                 {
                     status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy tiêu chí đánh giá thành công",
-                    data = criteria
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ EXCEPTION: Error in GetCriteriaForStage for '{stageCode}': {ex.Message}");
-                Console.WriteLine($"❌ EXCEPTION: Stack trace: {ex.StackTrace}");
-                return StatusCode(500, new
-                {
-                    status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy tiêu chí đánh giá: {ex.Message}",
-                    data = new List<object>()
-                });
-            }
-        }
-
-        /// <summary>
-        /// Lấy tiêu chí đánh giá cho stage cụ thể (sử dụng stageId int)
-        /// </summary>
-        /// <param name="stageId">ID của stage từ database</param>
-        /// <returns>Danh sách tiêu chí đánh giá</returns>
-        [HttpGet("criteria-by-id/{stageId:int}")]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
-        public IActionResult GetCriteriaForStageById(int stageId)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 DEBUG: GetCriteriaForStageById called with stageId: {stageId}");
-                
-                // 🔧 CẢI THIỆN: Map stageId sang stageCode tương ứng
-                var stageCode = MapStageIdToStageCode(stageId);
-                Console.WriteLine($"🔍 DEBUG: Mapped stageId {stageId} to stageCode: '{stageCode}'");
-                
-                if (string.IsNullOrEmpty(stageCode))
-                {
-                    Console.WriteLine($"❌ ERROR: Could not map stageId {stageId} to stageCode");
-                    return NotFound(new
-                    {
-                        status = Const.WARNING_NO_DATA_CODE,
-                        message = $"Không thể map stageId {stageId} sang stageCode",
-                        data = new List<object>()
-                    });
-                }
-
-                Console.WriteLine($"🔍 DEBUG: Getting criteria for stageCode: '{stageCode}'");
-                var stageInfo = StageFailureParser.GetStageFailureInfo(stageCode);
-                var criteria = stageInfo.GetType().GetProperty("criteria")?.GetValue(stageInfo) as List<object> ?? new List<object>();
-                
-                Console.WriteLine($"🔍 DEBUG: Found {criteria.Count} criteria for stageCode '{stageCode}'");
-                
-                if (!criteria.Any())
-                {
-                    Console.WriteLine($"❌ WARNING: No criteria found for stageCode: '{stageCode}'");
-                    return NotFound(new
-                    {
-                        status = Const.WARNING_NO_DATA_CODE,
-                        message = $"Không tìm thấy tiêu chí đánh giá cho stage: {stageCode}",
-                        data = new List<object>()
-                    });
-                }
-
-                Console.WriteLine($"✅ SUCCESS: Returning {criteria.Count} criteria for stageCode '{stageCode}'");
-                return Ok(new
-                {
-                    status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy tiêu chí đánh giá thành công",
-                    data = criteria
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ EXCEPTION: Error in GetCriteriaForStageById for stageId {stageId}: {ex.Message}");
-                Console.WriteLine($"❌ EXCEPTION: Stack trace: {ex.StackTrace}");
-                return StatusCode(500, new
-                {
-                    status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy tiêu chí đánh giá: {ex.Message}",
-                    data = new List<object>()
-                });
-            }
-        }
-
-        /// <summary>
-        /// Map stageId (int) sang stageCode (string) tương ứng
-        /// </summary>
-        /// <param name="stageId">ID của stage từ database</param>
-        /// <returns>Stage code tương ứng</returns>
-        private string MapStageIdToStageCode(int stageId)
-        {
-            try
-            {
-                // 🔧 CẢI THIỆN: Lấy stageCode trực tiếp từ database thay vì map từ stageName
-                var stage = _unitOfWork.ProcessingStageRepository.GetByIdAsync(stageId).Result;
-                
-                if (stage != null && !stage.IsDeleted)
-                {
-                    // Sử dụng stageCode trực tiếp từ database (đã có sẵn: "harvest", "drying", "hulling", etc.)
-                    var stageCode = stage.StageCode;
-                    
-                    // 🔧 CẢI THIỆN: Fallback mapping cho các stage đặc biệt
-                    if (string.IsNullOrEmpty(stageCode))
-                    {
-                        stageCode = stage.StageName?.ToLower() switch
+                        message = "Batch này không bị đánh giá FAIL",
+                        data = new
                         {
-                            "lên men carbonic" => "carbonic-ferment",
-                            "lên men yếm khí" => "carbonic-ferment",
-                            "carbonic fermentation" => "carbonic-ferment",
-                            _ => stageCode
-                        };
-                    }
-                    
-                    Console.WriteLine($"🔍 DEBUG: Mapped stageId {stageId} to stageCode: '{stageCode}' (from: '{stage.StageCode}' or '{stage.StageName}')");
-                    return stageCode;
+                            evaluationResult = evaluation.EvaluationResult,
+                            note = "Chỉ hiển thị thông tin retry khi batch bị FAIL"
+                        }
+                    });
                 }
-                
-                return string.Empty;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting stage code for ID {stageId}: {ex.Message}");
-                return string.Empty;
-            }
-        }
 
-        /// <summary>
-        /// Lấy stageName từ stageId bằng cách query database
-        /// </summary>
-        /// <param name="stageId">ID của stage</param>
-        /// <returns>Tên của stage</returns>
-        private string GetStageNameById(int stageId)
-        {
-            try
-            {
-                // 🔧 CẢI THIỆN: Query database để lấy stageName từ stageId
-                // Sử dụng UnitOfWork để truy cập ProcessingStageRepository
-                var stage = _unitOfWork.ProcessingStageRepository.GetByIdAsync(stageId).Result;
-                
-                if (stage != null && !stage.IsDeleted)
+                // Lấy batch để biết method
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
                 {
-                    return stage.StageName;
+                    return NotFound(new
+                    {
+                        status = Const.WARNING_NO_DATA_CODE,
+                        message = "Không tìm thấy batch",
+                        data = new object()
+                    });
                 }
-                
-                return string.Empty;
-            }
-            catch (Exception ex)
-            {
-                // Log error và return empty string
-                Console.WriteLine($"Error getting stage name for ID {stageId}: {ex.Message}");
-                return string.Empty;
-            }
-        }
 
-        /// <summary>
-        /// Lấy thông tin stage và tiêu chí để hiển thị khi fail
-        /// </summary>
-        /// <param name="stageCode">Mã stage</param>
-        /// <returns>Thông tin stage, tiêu chí và lý do không đạt</returns>
-        [HttpGet("stage-failure-info/{stageCode}")]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
-        public IActionResult GetStageFailureInfo(string stageCode)
-        {
-            try
-            {
-                var stageInfo = StageFailureParser.GetStageFailureInfo(stageCode);
+                // Lấy tất cả stages của method
+                var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                    q => q.OrderBy(s => s.OrderIndex)
+                );
+
+                // Lấy tất cả progress đã thực hiện
+                var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderBy(p => p.StepIndex)
+                );
+
+                // Xác định stage cuối cùng đã thực hiện để retry
+                var lastProgress = progresses.LastOrDefault();
+                var stageToRetry = lastProgress != null ? stages.FirstOrDefault(s => s.StageId == lastProgress.StageId) : null;
+
+                // Tạo response data
+                var failureInfo = new
+                {
+                    batchId = batchId,
+                    evaluationId = evaluation.EvaluationId,
+                    failedAt = evaluation.CreatedAt,
+                    comments = evaluation.Comments,
+                    // Thông tin stage cần retry
+                    failedStage = stageToRetry != null ? new
+                    {
+                        stageId = stageToRetry.StageId,
+                        stageName = stageToRetry.StageName,
+                        orderIndex = stageToRetry.OrderIndex,
+                        lastStepIndex = lastProgress?.StepIndex ?? 0
+                    } : null,
+                    // Thông tin tất cả stages đã thực hiện
+                    completedStages = progresses.Select(p => new
+                    {
+                        stageId = p.StageId,
+                        stageName = stages.FirstOrDefault(s => s.StageId == p.StageId)?.StageName,
+                        orderIndex = stages.FirstOrDefault(s => s.StageId == p.StageId)?.OrderIndex,
+                        stepIndex = p.StepIndex,
+                        outputQuantity = p.OutputQuantity,
+                        outputUnit = p.OutputUnit,
+                        progressDate = p.ProgressDate
+                    }).ToList(),
+                    note = "Batch bị fail - cần retry stage cuối cùng đã thực hiện"
+                };
                 
                 return Ok(new
                 {
                     status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy thông tin stage failure thành công",
-                    data = stageInfo
+                    message = "Lấy thông tin failure thành công",
+                    data = failureInfo
                 });
             }
             catch (Exception ex)
@@ -617,158 +509,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return StatusCode(500, new
                 {
                     status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy thông tin stage failure: {ex.Message}",
+                    message = $"Lỗi khi lấy thông tin failure: {ex.Message}",
                     data = new object()
                 });
             }
         }
 
-        /// <summary>
-        /// Lấy lý do không đạt cho stage cụ thể (hỗ trợ cả stageCode và stageId)
-        /// </summary>
-        /// <param name="stageCode">Mã stage hoặc ID stage</param>
-        /// <returns>Danh sách lý do không đạt</returns>
-        [HttpGet("failure-reasons/{stageCode}")]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert,Farmer")]
-        public IActionResult GetFailureReasonsForStage(string stageCode)
-        {
-            try
-            {
-                Console.WriteLine($"🔍 DEBUG: GetFailureReasonsForStage called with: '{stageCode}'");
-                
-                string actualStageCode = stageCode;
-                
-                // 🔧 CẢI THIỆN: Kiểm tra nếu stageCode là số (stageId) thì map sang stageCode
-                if (int.TryParse(stageCode, out int stageId))
-                {
-                    Console.WriteLine($"🔍 DEBUG: Detected stageId: {stageId}, mapping to stageCode...");
-                    actualStageCode = MapStageIdToStageCode(stageId);
-                    Console.WriteLine($"🔍 DEBUG: Mapped stageId {stageId} to stageCode: '{actualStageCode}'");
-                    
-                    if (string.IsNullOrEmpty(actualStageCode))
-                    {
-                        Console.WriteLine($"❌ ERROR: Could not map stageId {stageId} to stageCode");
-                        return NotFound(new
-                        {
-                            status = Const.WARNING_NO_DATA_CODE,
-                            message = $"Không thể map stageId {stageId} sang stageCode",
-                            data = new List<object>()
-                        });
-                    }
-                }
-                
-                Console.WriteLine($"🔍 DEBUG: Getting failure reasons for stageCode: '{actualStageCode}'");
-                var stageInfo = StageFailureParser.GetStageFailureInfo(actualStageCode);
-                var reasons = stageInfo.GetType().GetProperty("failureReasons")?.GetValue(stageInfo) as List<object> ?? new List<object>();
-                
-                Console.WriteLine($"🔍 DEBUG: Found {reasons.Count} failure reasons for stageCode '{actualStageCode}'");
-                
-                if (!reasons.Any())
-                {
-                    Console.WriteLine($"❌ WARNING: No failure reasons found for stageCode: '{actualStageCode}'");
-                    return NotFound(new
-                    {
-                        status = Const.WARNING_NO_DATA_CODE,
-                        message = $"Không tìm thấy lý do không đạt cho stage: {actualStageCode}",
-                        data = new List<object>()
-                    });
-                }
 
-                Console.WriteLine($"✅ SUCCESS: Returning {reasons.Count} failure reasons for stageCode '{actualStageCode}'");
-                return Ok(new
-                {
-                    status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy lý do không đạt thành công",
-                    data = reasons
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ EXCEPTION: Error in GetFailureReasonsForStage for '{stageCode}': {ex.Message}");
-                Console.WriteLine($"❌ EXCEPTION: Stack trace: {ex.StackTrace}");
-                return StatusCode(500, new
-                {
-                    status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy lý do không đạt: {ex.Message}",
-                    data = new List<object>()
-                });
-            }
-        }
-
-        /// <summary>
-        /// Lấy tất cả tiêu chí đánh giá cho tất cả stages
-        /// </summary>
-        /// <returns>Dictionary với key là stageCode, value là danh sách tiêu chí</returns>
-        [HttpGet("all-criteria")]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
-        public IActionResult GetAllCriteria()
-        {
-            try
-            {
-                var stageCodes = new[] { "harvest", "drying", "hulling", "grading", "fermentation", "washing", "pulping" };
-                var allCriteria = new Dictionary<string, object>();
-
-                foreach (var stageCode in stageCodes)
-                {
-                    allCriteria[stageCode] = StageFailureParser.GetStageFailureInfo(stageCode);
-                }
-
-                return Ok(new
-                {
-                    status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy tất cả tiêu chí đánh giá thành công",
-                    data = allCriteria
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy tất cả tiêu chí đánh giá: {ex.Message}",
-                    data = new Dictionary<string, object>()
-                });
-            }
-        }
-
-        /// <summary>
-        /// Lấy tất cả lý do không đạt cho tất cả stages
-        /// </summary>
-        /// <returns>Dictionary với key là stageCode, value là danh sách lý do</returns>
-        [HttpGet("all-failure-reasons")]
-        [Authorize(Roles = "Admin,BusinessManager,AgriculturalExpert")]
-        public IActionResult GetAllFailureReasons()
-        {
-            try
-            {
-                var stageCodes = new[] { "harvest", "drying", "hulling", "grading", "fermentation", "washing", "pulping" };
-                var allReasons = new Dictionary<string, object>();
-
-                foreach (var stageCode in stageCodes)
-                {
-                    var stageInfo = StageFailureParser.GetStageFailureInfo(stageCode);
-                    allReasons[stageCode] = stageInfo.GetType().GetProperty("failureReasons")?.GetValue(stageInfo) as List<object> ?? new List<object>();
-                }
-
-                return Ok(new
-                {
-                    status = Const.SUCCESS_READ_CODE,
-                    message = "Lấy tất cả lý do không đạt thành công",
-                    data = allReasons
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    status = Const.ERROR_EXCEPTION,
-                    message = $"Lỗi khi lấy tất cả lý do không đạt: {ex.Message}",
-                    data = new Dictionary<string, object>()
-                });
-            }
-        }
-
-        #endregion
     }
 }
 
