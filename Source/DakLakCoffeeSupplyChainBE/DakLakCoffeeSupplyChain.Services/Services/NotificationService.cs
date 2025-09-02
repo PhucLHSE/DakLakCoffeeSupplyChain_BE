@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -325,10 +326,22 @@ public class NotificationService : INotificationService
     }
 
     public async Task<SystemNotification> NotifyShipmentStatusUpdatedAsync(
-        Guid shipmentId, Guid orderId, string shipmentCode, string orderCode, string oldStatus, string newStatus, Guid businessManagerId)
+        Guid shipmentId, Guid orderId, string shipmentCode, string orderCode, string oldStatus, string newStatus, Guid businessManagerUserId, string deliveryStaffName = null)
     {
         var title = "📦 Cập nhật trạng thái giao hàng";
-        var message = $"Chuyến giao hàng {shipmentCode} (Đơn hàng: {orderCode}) đã được cập nhật từ trạng thái '{oldStatus}' sang '{newStatus}'.";
+        
+        // Tạo message song ngữ - chỉ hiển thị trạng thái hiện tại
+        var deliveryStaffInfo = !string.IsNullOrEmpty(deliveryStaffName) 
+            ? $" bởi nhân viên {deliveryStaffName}" 
+            : "";
+            
+        // Chuyển đổi trạng thái sang tiếng Việt
+        var statusInVietnamese = ConvertStatusToVietnamese(newStatus);
+            
+        var message = $"Chuyến giao hàng {shipmentCode} (Đơn hàng: {orderCode}) đã được cập nhật thành trạng thái '{statusInVietnamese}'{deliveryStaffInfo}.";
+        
+        // Message tiếng Anh
+        var messageEn = $"Shipment {shipmentCode} (Order: {orderCode}) has been updated to status '{newStatus}'{deliveryStaffInfo}.";
 
         var notification = new SystemNotification
         {
@@ -337,19 +350,19 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ShipmentStatusUpdate",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
         await _unitOfWork.SystemNotificationRepository
             .CreateAsync(notification);
 
-        // Tạo recipient cho BusinessManager
+        // Tạo recipient cho BusinessManager (businessManagerUserId là UserId)
         var recipient = new SystemNotificationRecipient
         {
             Id = Guid.NewGuid(),
             NotificationId = notification.NotificationId,
-            RecipientId = businessManagerId,
+            RecipientId = businessManagerUserId,  // businessManagerUserId là UserId từ BusinessManager.User.UserId
             IsRead = false,
             ReadAt = null
         };
@@ -357,22 +370,23 @@ public class NotificationService : INotificationService
         await _unitOfWork.SystemNotificationRecipientRepository
             .CreateAsync(recipient);
 
-        // Gửi email nếu có
-        var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-            predicate: bm => 
-               bm.ManagerId == businessManagerId && 
-               !bm.IsDeleted,
-            include: bm => bm
-               .Include(bm => bm.User),
+        // Gửi email nếu có (businessManagerUserId là UserId)
+        var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+            predicate: u => 
+               u.UserId == businessManagerUserId && 
+               !u.IsDeleted,
             asNoTracking: true
         );
 
-        if (businessManager?.User != null && 
-            !string.IsNullOrWhiteSpace(businessManager.User.Email))
+        if (user != null && 
+            !string.IsNullOrWhiteSpace(user.Email))
         {
-            var emailMessage = $"{message}\n\nChi tiết:\n- Mã chuyến giao: {shipmentCode}\n- Mã đơn hàng: {orderCode}\n- Trạng thái cũ: {oldStatus}\n- Trạng thái mới: {newStatus}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết.";
+            var emailMessage = $"{message}\n\nChi tiết:\n- Mã chuyến giao: {shipmentCode}\n- Mã đơn hàng: {orderCode}\n- Trạng thái hiện tại: {statusInVietnamese}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết.";
+            
+            var emailMessageEn = $"{messageEn}\n\nDetails:\n- Shipment Code: {shipmentCode}\n- Order Code: {orderCode}\n- Current Status: {newStatus}\n\nPlease login to the system to view details.";
 
-            await _emailService.SendEmailAsync(businessManager.User.Email, title, emailMessage);
+            // Gửi email song ngữ
+            await _emailService.SendEmailAsync(user.Email, title, emailMessage + "\n\n---\n" + emailMessageEn);
         }
 
         await _unitOfWork.SaveChangesAsync();
@@ -558,5 +572,28 @@ public class NotificationService : INotificationService
                 "Lỗi hệ thống: " + ex.Message
             );
         }
+    }
+
+    /// <summary>
+    /// Chuyển đổi trạng thái shipment từ tiếng Anh sang tiếng Việt
+    /// </summary>
+    private string ConvertStatusToVietnamese(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "pending" => "Chờ xử lý",
+            "preparing" => "Đang chuẩn bị",
+            "intransit" => "Đang giao hàng",
+            "delivered" => "Đã giao hàng",
+            "failed" => "Giao hàng thất bại",
+            "canceled" => "Đã hủy",
+            "cancelled" => "Đã hủy",
+            "shipped" => "Đã xuất hàng",
+            "processing" => "Đang xử lý",
+            "completed" => "Hoàn thành",
+            "returned" => "Đã trả hàng",
+            "refunded" => "Đã hoàn tiền",
+            _ => status // Nếu không tìm thấy, giữ nguyên giá trị gốc
+        };
     }
 }

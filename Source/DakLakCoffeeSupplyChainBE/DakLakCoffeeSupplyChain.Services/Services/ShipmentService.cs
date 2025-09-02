@@ -982,15 +982,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     if (shipment.Order?.DeliveryBatch?.Contract?.SellerId != null)
                     {
-                        await _notificationService.NotifyShipmentStatusUpdatedAsync(
-                            shipment.ShipmentId,
-                            shipment.Order.OrderId,
-                            shipment.ShipmentCode ?? "N/A",
-                            shipment.Order.OrderCode ?? "N/A",
-                            oldStatus,
-                            statusUpdateDto.DeliveryStatus.ToString(),
-                            shipment.Order.DeliveryBatch.Contract.SellerId
+                        // Kiểm tra BusinessManager có tồn tại không và lấy UserId để gửi notification
+                        var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                            predicate: bm => bm.ManagerId == shipment.Order.DeliveryBatch.Contract.SellerId && !bm.IsDeleted,
+                            include: bm => bm.Include(bm => bm.User),
+                            asNoTracking: true
                         );
+
+                        if (businessManager != null && businessManager.User != null)
+                        {
+                            // Lấy tên DeliveryStaff
+                            var deliveryStaffName = shipment.DeliveryStaff?.Name ?? shipment.DeliveryStaff?.Name ?? "Không rõ";
+                            
+                            // Gửi notification đến UserId của BusinessManager
+                            await _notificationService.NotifyShipmentStatusUpdatedAsync(
+                                shipment.ShipmentId,
+                                shipment.Order.OrderId,
+                                shipment.ShipmentCode ?? "N/A",
+                                shipment.Order.OrderCode ?? "N/A",
+                                oldStatus,
+                                statusUpdateDto.DeliveryStatus.ToString(),
+                                businessManager.User.UserId,  // Sử dụng UserId thay vì ManagerId
+                                deliveryStaffName  // Truyền tên DeliveryStaff
+                            );
+                        }
+                        else
+                        {
+                            Console.WriteLine($"BusinessManager với ID {shipment.Order.DeliveryBatch.Contract.SellerId} không tồn tại hoặc không có User, bỏ qua notification");
+                        }
                     }
                 }
                 catch (Exception notificationEx)
@@ -998,6 +1017,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Log lỗi notification nhưng không làm gián đoạn quá trình cập nhật chính
                     // Có thể ghi log vào file hoặc database
                     Console.WriteLine($"Notification error: {notificationEx.Message}");
+                    Console.WriteLine($"StackTrace: {notificationEx.StackTrace}");
                 }
 
                 // Cập nhật ghi chú nếu có

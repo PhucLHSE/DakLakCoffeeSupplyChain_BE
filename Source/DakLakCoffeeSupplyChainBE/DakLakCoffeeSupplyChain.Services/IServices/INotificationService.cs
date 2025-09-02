@@ -22,7 +22,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<SystemNotification> NotifyExpertAdviceCreatedAsync(Guid reportId, Guid expertId, string expertName, string adviceText);
 
-        Task<SystemNotification> NotifyShipmentStatusUpdatedAsync(Guid shipmentId, Guid orderId, string shipmentCode, string orderCode, string oldStatus, string newStatus, Guid businessManagerId);
+        Task<SystemNotification> NotifyShipmentStatusUpdatedAsync(Guid shipmentId, Guid orderId, string shipmentCode, string orderCode, string oldStatus, string newStatus, Guid businessManagerUserId, string deliveryStaffName = null);
 
         Task<IServiceResult> GetUserNotificationsAsync(Guid userId, int page, int pageSize);
 
