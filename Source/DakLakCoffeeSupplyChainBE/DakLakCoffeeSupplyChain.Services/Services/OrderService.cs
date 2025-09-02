@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -441,6 +442,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     );
                 }
 
+                // Cập nhật QuantityAvailable của Products (trừ số lượng khi đặt hàng)
+                await UpdateProductQuantityAvailable(orderCreateDto.OrderItems, true);
+
                 // Sinh mã đơn hàng
                 string orderCode = await _codeGenerator.GenerateOrderCodeAsync();
 
@@ -738,6 +742,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var now = DateHelper.NowVietnamTime();
 
+                // Cộng lại số lượng của những item cũ sẽ bị xóa
+                var itemsToDelete = order.OrderItems
+                    .Where(i => !i.IsDeleted && !dtoItemIds.Contains(i.OrderItemId))
+                    .Select(oi => new OrderItemUpdateDto
+                    {
+                        ProductId = oi.ProductId,
+                        Quantity = oi.Quantity
+                    });
+
+                await UpdateProductQuantityAvailable(itemsToDelete, false);
+
                 // Xoá mềm những item cũ không còn trong DTO
                 foreach (var oldItem in order.OrderItems.Where(i => !i.IsDeleted))
                 {
@@ -750,6 +765,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             .UpdateAsync(oldItem);
                     }
                 }
+
+                // Lưu trữ thông tin OrderItems cũ để tính chênh lệch
+                var oldItemQuantities = order.OrderItems
+                    .Where(i => !i.IsDeleted)
+                    .GroupBy(i => i.ProductId)
+                    .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
 
                 // Xử lý thêm/cập nhật các item
                 foreach (var itemDto in orderUpdateDto.OrderItems)
@@ -808,6 +829,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             .CreateAsync(newItem);
 
                         order.OrderItems.Add(newItem);
+                    }
+                }
+
+                // Tính chênh lệch và cập nhật QuantityAvailable
+                var newItemQuantities = orderUpdateDto.OrderItems
+                    .GroupBy(i => i.ProductId)
+                    .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity ?? 0));
+
+                var quantityDifferences = new List<OrderItemUpdateDto>();
+
+                // Tính chênh lệch cho từng Product
+                foreach (var productId in oldItemQuantities.Keys.Union(newItemQuantities.Keys))
+                {
+                    var oldQuantity = oldItemQuantities.GetValueOrDefault(productId, 0);
+                    var newQuantity = newItemQuantities.GetValueOrDefault(productId, 0);
+                    var difference = newQuantity - oldQuantity;
+
+                    if (difference != 0)
+                    {
+                        var absDifference = Math.Abs(difference ?? 0);
+
+                        quantityDifferences.Add(new OrderItemUpdateDto
+                        {
+                            ProductId = productId,
+                            Quantity = absDifference
+                        });
+
+                        // Nếu difference > 0: tăng đặt hàng, cần trừ thêm từ QuantityAvailable
+                        // Nếu difference < 0: giảm đặt hàng, cần cộng lại vào QuantityAvailable
+                        await UpdateProductQuantityAvailable(
+                            new[] { new OrderItemUpdateDto { ProductId = productId, Quantity = absDifference } },
+                            difference > 0
+                        );
                     }
                 }
 
@@ -920,17 +974,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
-                    // Xóa từng OrderItem trước (nếu có)
-                    if (order.OrderItems != null &&
-                        order.OrderItems.Any())
-                    {
-                        foreach (var item in order.OrderItems)
+                // Xóa từng OrderItem trước (nếu có)
+                if (order.OrderItems != null &&
+                    order.OrderItems.Any())
+                {
+                    // Cập nhật QuantityAvailable của Products (cộng lại số lượng đã đặt)
+                    var orderItemsForUpdate = order.OrderItems
+                        .Where(oi => !oi.IsDeleted)
+                        .Select(oi => new OrderItemUpdateDto
                         {
-                            // Xóa OrderItem khỏi repository
-                            await _unitOfWork.OrderItemRepository
-                                .RemoveAsync(item);
-                        }
+                            ProductId = oi.ProductId,
+                            Quantity = oi.Quantity
+                        });
+                    
+                    await UpdateProductQuantityAvailable(orderItemsForUpdate, false);
+
+                    foreach (var item in order.OrderItems)
+                    {
+                        // Xóa OrderItem khỏi repository
+                        await _unitOfWork.OrderItemRepository
+                            .RemoveAsync(item);
                     }
+                }
 
                     // Xóa Order khỏi repository
                     await _unitOfWork.OrderRepository
@@ -1011,6 +1076,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 else
                 {
+                    // Cập nhật QuantityAvailable của Products (cộng lại số lượng đã đặt)
+                    var orderItemsForUpdate = order.OrderItems
+                        .Where(oi => !oi.IsDeleted)
+                        .Select(oi => new OrderItemUpdateDto
+                        {
+                            ProductId = oi.ProductId,
+                            Quantity = oi.Quantity
+                        });
+                    
+                    await UpdateProductQuantityAvailable(orderItemsForUpdate, false);
+
                     // Đánh dấu order là đã xóa
                     order.IsDeleted = true;
                     order.UpdatedAt = DateHelper.NowVietnamTime();
@@ -1057,6 +1133,122 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
                 );
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật QuantityAvailable của Products dựa trên OrderItems
+        /// </summary>
+        /// <param name="orderItems">Danh sách OrderItems</param>
+        /// <param name="isReserve">True: trừ số lượng (đặt hàng), False: cộng số lượng (hủy đặt hàng)</param>
+        private async Task UpdateProductQuantityAvailable(IEnumerable<OrderItemCreateDto> orderItems, bool isReserve)
+        {
+            try
+            {
+                // Gom nhóm theo ProductId và tính tổng số lượng
+                var productQuantities = orderItems
+                    .GroupBy(item => item.ProductId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Sum(item => item.Quantity ?? 0)
+                    );
+
+                foreach (var kvp in productQuantities)
+                {
+                    var productId = kvp.Key;
+                    var quantity = kvp.Value;
+
+                    // Lấy Product hiện tại
+                    var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                        predicate: p => 
+                           p.ProductId == productId && 
+                           !p.IsDeleted,
+                        asNoTracking: false
+                    );
+
+                    if (product != null)
+                    {
+                        // Cập nhật QuantityAvailable
+                        if (isReserve)
+                        {
+                            // Trừ số lượng khi đặt hàng
+                            product.QuantityAvailable = Math.Max(0, (product.QuantityAvailable ?? 0) - quantity);
+                        }
+                        else
+                        {
+                            // Cộng số lượng khi hủy đặt hàng
+                            product.QuantityAvailable = (product.QuantityAvailable ?? 0) + quantity;
+                        }
+
+                        product.UpdatedAt = DateHelper.NowVietnamTime();
+
+                        // Cập nhật Product
+                        await _unitOfWork.ProductRepository.UpdateAsync(product);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không làm gián đoạn luồng chính
+                Console.WriteLine($"Error updating product quantity available: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật QuantityAvailable của Products dựa trên OrderItems (cho Update)
+        /// </summary>
+        /// <param name="orderItems">Danh sách OrderItems</param>
+        /// <param name="isReserve">True: trừ số lượng (đặt hàng), False: cộng số lượng (hủy đặt hàng)</param>
+        private async Task UpdateProductQuantityAvailable(IEnumerable<OrderItemUpdateDto> orderItems, bool isReserve)
+        {
+            try
+            {
+                // Gom nhóm theo ProductId và tính tổng số lượng
+                var productQuantities = orderItems
+                    .GroupBy(item => item.ProductId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Sum(item => item.Quantity ?? 0)
+                    );
+
+                foreach (var kvp in productQuantities)
+                {
+                    var productId = kvp.Key;
+                    var quantity = kvp.Value;
+
+                    // Lấy Product hiện tại
+                    var product = await _unitOfWork.ProductRepository.GetByIdAsync(
+                        predicate: p => 
+                           p.ProductId == productId && 
+                           !p.IsDeleted,
+                        asNoTracking: false
+                    );
+
+                    if (product != null)
+                    {
+                        // Cập nhật QuantityAvailable
+                        if (isReserve)
+                        {
+                            // Trừ số lượng khi đặt hàng
+                            product.QuantityAvailable = Math.Max(0, (product.QuantityAvailable ?? 0) - quantity);
+                        }
+                        else
+                        {
+                            // Cộng số lượng khi hủy đặt hàng
+                            product.QuantityAvailable = (product.QuantityAvailable ?? 0) + quantity;
+                        }
+
+                        product.UpdatedAt = DateHelper.NowVietnamTime();
+
+                        // Cập nhật Product
+                        await _unitOfWork.ProductRepository.UpdateAsync(product);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không làm gián đoạn luồng chính
+                Console.WriteLine($"Error updating product quantity available: {ex.Message}");
             }
         }
     }
