@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.Enum.ShipmentEnums;
+using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,5 +33,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
         public DateTime? ReceivedAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        // Thêm shipmentDetails để hiển thị danh sách sản phẩm
+        public List<ShipmentDetailViewDto> ShipmentDetails { get; set; } = new();
     }
 }
