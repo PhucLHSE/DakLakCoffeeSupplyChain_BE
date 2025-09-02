@@ -34,7 +34,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // SỬ DỤNG GENERATOR
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -50,14 +50,19 @@ public class NotificationService : INotificationService
 
         var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
             predicate: b => b.BatchId == request.BatchId,
-            include: b => b.Include(b => b.Farmer).ThenInclude(f => f.FarmingCommitments)
+            include: b => b
+               .Include(b => b.Farmer)
+                  .ThenInclude(f => f.FarmingCommitments)
         );
 
-        var managerId = batch?.Farmer?.FarmingCommitments?.FirstOrDefault(fc => !fc.IsDeleted)?.ApprovedBy;
+        var managerId = batch?.Farmer?.FarmingCommitments?
+            .FirstOrDefault(fc => !fc.IsDeleted)?.ApprovedBy;
+
         if (managerId == null || managerId == Guid.Empty)
             return notification;
 
-        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetBySupervisorIdAsync(managerId.Value);
+        var businessStaffs = await _unitOfWork.BusinessStaffRepository
+            .GetBySupervisorIdAsync(managerId.Value);
 
         foreach (var staff in businessStaffs)
         {
@@ -70,17 +75,20 @@ public class NotificationService : INotificationService
                 ReadAt = null
             };
 
-            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+            await _unitOfWork.SystemNotificationRecipientRepository
+                .CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(staff.User?.Email))
                 await _emailService.SendEmailAsync(staff.User.Email, title, message);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
-    public async Task<SystemNotification> NotifyEvaluationFailedAsync(Guid batchId, Guid farmerId, string evaluationComments)
+    public async Task<SystemNotification> NotifyEvaluationFailedAsync(
+        Guid batchId, Guid farmerId, string evaluationComments)
     {
         var title = "⚠️ Lô sơ chế cần cải thiện";
         var message = $"Lô sơ chế của bạn đã được đánh giá không đạt. Vui lòng xem chi tiết và cải thiện theo hướng dẫn.";
@@ -108,17 +116,23 @@ public class NotificationService : INotificationService
             ReadAt = null
         };
 
-        await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
 
         // Gửi email nếu có
-        var farmerUser = await _unitOfWork.UserAccountRepository.GetByIdAsync(farmerId);
-        if (farmerUser != null && !string.IsNullOrWhiteSpace(farmerUser.Email))
+        var farmerUser = await _unitOfWork.UserAccountRepository
+            .GetByIdAsync(farmerId);
+
+        if (farmerUser != null && 
+            !string.IsNullOrWhiteSpace(farmerUser.Email))
         {
             var emailMessage = $"{message}\n\nChi tiết đánh giá:\n{evaluationComments}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết và cải thiện.";
+
             await _emailService.SendEmailAsync(farmerUser.Email, title, emailMessage);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
@@ -130,7 +144,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR 
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // SỬ DỤNG GENERATOR 
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
@@ -138,9 +152,12 @@ public class NotificationService : INotificationService
             CreatedBy = null
         };
 
-        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
 
-        var farmerUser = await _unitOfWork.UserAccountRepository.GetByIdAsync(farmerId);
+        var farmerUser = await _unitOfWork.UserAccountRepository
+            .GetByIdAsync(farmerId);
+
         if (farmerUser != null)
         {
             var recipient = new SystemNotificationRecipient
@@ -152,13 +169,15 @@ public class NotificationService : INotificationService
                 ReadAt = null
             };
 
-            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+            await _unitOfWork.SystemNotificationRecipientRepository
+                .CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(farmerUser.Email))
                 await _emailService.SendEmailAsync(farmerUser.Email, title, message);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
@@ -170,7 +189,7 @@ public class NotificationService : INotificationService
         var notification = new SystemNotification
         {
             NotificationId = Guid.NewGuid(),
-            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // ✅ SỬ DỤNG GENERATOR
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(), // SỬ DỤNG GENERATOR
             Title = title,
             Message = message,
             Type = "WarehouseOutbound",
@@ -178,9 +197,12 @@ public class NotificationService : INotificationService
             CreatedBy = null
         };
 
-        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
 
-        var businessStaffs = await _unitOfWork.BusinessStaffRepository.GetAllWithUserAsync();
+        var businessStaffs = await _unitOfWork.BusinessStaffRepository
+            .GetAllWithUserAsync();
+
         foreach (var staff in businessStaffs)
         {
             var recipient = new SystemNotificationRecipient
@@ -192,17 +214,19 @@ public class NotificationService : INotificationService
                 ReadAt = null
             };
 
-            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+            await _unitOfWork.SystemNotificationRecipientRepository
+                .CreateAsync(recipient);
 
             if (!string.IsNullOrWhiteSpace(staff.User?.Email))
                 await _emailService.SendEmailAsync(staff.User.Email, title, message);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
-    // ✅ Thêm 2 phương thức mới
+    // Thêm 2 phương thức mới
     public async Task<SystemNotification> NotifyFarmerReportCreatedAsync(Guid reportId, Guid farmerId, string reportTitle)
     {
         var title = "🚨 Báo cáo mới từ nông dân";
@@ -219,12 +243,16 @@ public class NotificationService : INotificationService
             CreatedBy = farmerId
         };
 
-        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
 
-        // ✅ Gửi thông báo cho tất cả chuyên gia nông nghiệp
+        // Gửi thông báo cho tất cả chuyên gia nông nghiệp
         var experts = await _unitOfWork.AgriculturalExpertRepository.GetAllAsync(
-            predicate: e => !e.IsDeleted && e.IsVerified == true,
-            include: e => e.Include(e => e.User),
+            predicate: e => 
+               !e.IsDeleted && 
+               e.IsVerified == true,
+            include: e => 
+               e.Include(e => e.User),
             asNoTracking: true
         );
 
@@ -239,14 +267,17 @@ public class NotificationService : INotificationService
                 ReadAt = null
             };
 
-            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+            await _unitOfWork.SystemNotificationRecipientRepository
+                .CreateAsync(recipient);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
-    public async Task<SystemNotification> NotifyExpertAdviceCreatedAsync(Guid reportId, Guid expertId, string expertName, string adviceText)
+    public async Task<SystemNotification> NotifyExpertAdviceCreatedAsync(
+        Guid reportId, Guid expertId, string expertName, string adviceText)
     {
         var title = " Chuyên gia đã phản hồi báo cáo";
         var message = $"Chuyên gia {expertName} đã phản hồi báo cáo của bạn: '{adviceText.Substring(0, Math.Min(100, adviceText.Length))}...'";
@@ -262,11 +293,14 @@ public class NotificationService : INotificationService
             CreatedBy = expertId
         };
 
-        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
 
-        // ✅ Lấy thông tin Farmer từ báo cáo
+        // Lấy thông tin Farmer từ báo cáo
         var report = await _unitOfWork.GeneralFarmerReportRepository.GetByIdAsync(
-            predicate: r => r.ReportId == reportId && !r.IsDeleted,
+            predicate: r => 
+               r.ReportId == reportId && 
+               !r.IsDeleted,
             asNoTracking: true
         );
 
@@ -281,14 +315,72 @@ public class NotificationService : INotificationService
                 ReadAt = null
             };
 
-            await _unitOfWork.SystemNotificationRecipientRepository.CreateAsync(recipient);
+            await _unitOfWork.SystemNotificationRecipientRepository
+                .CreateAsync(recipient);
         }
 
         await _unitOfWork.SaveChangesAsync();
+
         return notification;
     }
 
-    // ✅ Thêm các phương thức để Frontend gọi
+    public async Task<SystemNotification> NotifyShipmentStatusUpdatedAsync(
+        Guid shipmentId, Guid orderId, string shipmentCode, string orderCode, string oldStatus, string newStatus, Guid businessManagerId)
+    {
+        var title = "📦 Cập nhật trạng thái giao hàng";
+        var message = $"Chuyến giao hàng {shipmentCode} (Đơn hàng: {orderCode}) đã được cập nhật từ trạng thái '{oldStatus}' sang '{newStatus}'.";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "ShipmentStatusUpdate",
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = null
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        // Tạo recipient cho BusinessManager
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = businessManagerId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        // Gửi email nếu có
+        var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+            predicate: bm => 
+               bm.ManagerId == businessManagerId && 
+               !bm.IsDeleted,
+            include: bm => bm
+               .Include(bm => bm.User),
+            asNoTracking: true
+        );
+
+        if (businessManager?.User != null && 
+            !string.IsNullOrWhiteSpace(businessManager.User.Email))
+        {
+            var emailMessage = $"{message}\n\nChi tiết:\n- Mã chuyến giao: {shipmentCode}\n- Mã đơn hàng: {orderCode}\n- Trạng thái cũ: {oldStatus}\n- Trạng thái mới: {newStatus}\n\nVui lòng đăng nhập vào hệ thống để xem chi tiết.";
+
+            await _emailService.SendEmailAsync(businessManager.User.Email, title, emailMessage);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    // Thêm các phương thức để Frontend gọi
     public async Task<IServiceResult> GetUserNotificationsAsync(Guid userId, int page, int pageSize)
     {
         try
@@ -299,6 +391,7 @@ public class NotificationService : INotificationService
                 .OrderByDescending(r => r.Notification.CreatedAt);
 
             var totalCount = await query.CountAsync();
+
             var notifications = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -325,11 +418,18 @@ public class NotificationService : INotificationService
                 TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
             };
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, result);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                Const.SUCCESS_READ_MSG, 
+                result
+            );
         }
         catch (Exception ex)
         {
-            return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            return new ServiceResult(
+                Const.ERROR_EXCEPTION, 
+                "Lỗi hệ thống: " + ex.Message
+            );
         }
     }
 
@@ -341,11 +441,17 @@ public class NotificationService : INotificationService
                 .Where(r => r.RecipientId == userId && !r.IsDeleted && (r.IsRead == null || r.IsRead == false))
                 .CountAsync();
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, count);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG, 
+                count);
         }
         catch (Exception ex)
         {
-            return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            return new ServiceResult(
+                Const.ERROR_EXCEPTION, 
+                "Lỗi hệ thống: " + ex.Message
+            );
         }
     }
 
@@ -362,14 +468,22 @@ public class NotificationService : INotificationService
             recipient.IsRead = true;
             recipient.ReadAt = DateTime.UtcNow;
 
-            _unitOfWork.SystemNotificationRecipientRepository.Update(recipient);
+            _unitOfWork.SystemNotificationRecipientRepository
+                .Update(recipient);
+
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Đã đánh dấu thông báo đã đọc.");
+            return new ServiceResult(
+                Const.SUCCESS_UPDATE_CODE, 
+                "Đã đánh dấu thông báo đã đọc."
+            );
         }
         catch (Exception ex)
         {
-            return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            return new ServiceResult(
+                Const.ERROR_EXCEPTION,
+                "Lỗi hệ thống: " + ex.Message
+            );
         }
     }
 
@@ -385,16 +499,24 @@ public class NotificationService : INotificationService
             {
                 recipient.IsRead = true;
                 recipient.ReadAt = DateTime.UtcNow;
-                _unitOfWork.SystemNotificationRecipientRepository.Update(recipient);
+
+                _unitOfWork.SystemNotificationRecipientRepository
+                    .Update(recipient);
             }
 
             await _unitOfWork.SaveChangesAsync();
 
-            return new ServiceResult(Const.SUCCESS_UPDATE_CODE, $"Đã đánh dấu {unreadRecipients.Count} thông báo đã đọc.");
+            return new ServiceResult(
+                Const.SUCCESS_UPDATE_CODE, 
+                $"Đã đánh dấu {unreadRecipients.Count} thông báo đã đọc."
+            );
         }
         catch (Exception ex)
         {
-            return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            return new ServiceResult(
+                Const.ERROR_EXCEPTION,
+                "Lỗi hệ thống: " + ex.Message
+            );
         }
     }
 
@@ -423,11 +545,18 @@ public class NotificationService : INotificationService
                 ReadAt = recipient.ReadAt
             };
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, notification);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG, 
+                notification
+            );
         }
         catch (Exception ex)
         {
-            return new ServiceResult(Const.ERROR_EXCEPTION, "Lỗi hệ thống: " + ex.Message);
+            return new ServiceResult(
+                Const.ERROR_EXCEPTION, 
+                "Lỗi hệ thống: " + ex.Message
+            );
         }
     }
 }
