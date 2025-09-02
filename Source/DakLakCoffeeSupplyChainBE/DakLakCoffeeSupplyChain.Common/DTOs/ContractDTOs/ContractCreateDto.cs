@@ -1,14 +1,8 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
-using System.IO;
-using System.Linq;
-using System.Text;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 {
@@ -59,6 +53,18 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public List<ContractItemCreateDto> ContractItems { get; set; } = new();
 
+        public string ContractType { get; set; } = string.Empty;
+
+        public Guid? ParentContractID { get; set; }
+
+        public int PaymentRounds { get; set; }
+        public ICollection<IFormFile>? SettlementFiles { get; set; }
+        public string? SettlementFileURL { get; set; }
+
+        public string? SettlementFilesJson { get; set; }
+
+        public string? SettlementNote { get; set; }
+
         // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
@@ -108,11 +114,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
             // Validation cho file upload
             if (ContractFile != null)
             {
-                const long maxFileSize = 30 * 1024 * 1024; // 30MB
+                const long maxFileSize = 10 * 1024 * 1024; // 10MB
                 if (ContractFile.Length > maxFileSize)
                 {
                     yield return new ValidationResult(
-                        "File hợp đồng không được vượt quá 30MB.",
+                        "File hợp đồng không được vượt quá 10MB.",
                         new[] { nameof(ContractFile) }
                     );
                 }
@@ -160,6 +166,28 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
                     );
                 }
             }
+
+            //if (!string.IsNullOrWhiteSpace(SettlementFilesJson))
+            //{
+            //    bool isValidJson = true;
+            //    try
+            //    {
+            //        JsonDocument.Parse(SettlementFilesJson);
+            //    }
+            //    catch (JsonException)
+            //    {
+            //        isValidJson = false;
+            //    }
+
+            //    if (!isValidJson)
+            //    {
+            //        yield return new ValidationResult(
+            //            "SettlementFilesJson phải là chuỗi JSON hợp lệ.",
+            //            new[] { nameof(SettlementFilesJson) }
+            //        );
+            //    }
+            //}
+
         }
     }
 }

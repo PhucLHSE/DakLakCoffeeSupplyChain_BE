@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.SettlementDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
 using System;
 using System.Collections.Generic;
@@ -64,7 +65,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         public string SettlementFileUrl { get; set; } = string.Empty;
 
         //Parsed from SettlementFilesJson; UI có thể render list link.
-        public List<string> SettlementFiles { get; set; } = new();
+        public List<SettlementRound> SettlementFiles { get; set; } = new();
 
         public string SettlementNote { get; set; } = string.Empty;
 
