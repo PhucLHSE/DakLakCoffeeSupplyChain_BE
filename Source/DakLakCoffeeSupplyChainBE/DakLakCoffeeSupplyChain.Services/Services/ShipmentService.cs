@@ -90,7 +90,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Include(s => s.Order)
                             .ThenInclude(o => o.DeliveryBatch)
                                 .ThenInclude(db => db.Contract)
-                        .Include(s => s.DeliveryStaff),
+                        .Include(s => s.DeliveryStaff)
+                        .Include(s => s.ShipmentDetails)
+                            .ThenInclude(sd => sd.OrderItem)
+                                .ThenInclude(oi => oi.Product),
                     orderBy: query => query.OrderByDescending(s => s.CreatedAt),
                     asNoTracking: true
                 );
@@ -109,7 +112,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Include(s => s.Order)
                             .ThenInclude(o => o.DeliveryBatch)
                                 .ThenInclude(db => db.Contract)
-                        .Include(s => s.DeliveryStaff),
+                        .Include(s => s.DeliveryStaff)
+                        .Include(s => s.ShipmentDetails)
+                            .ThenInclude(sd => sd.OrderItem)
+                                .ThenInclude(oi => oi.Product),
                     orderBy: query => query.OrderByDescending(s => s.CreatedAt),
                     asNoTracking: true
                 );

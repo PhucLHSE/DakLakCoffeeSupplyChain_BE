@@ -36,7 +36,29 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ShippedAt = shipment.ShippedAt,
                 DeliveryStatus = status,
                 ReceivedAt = shipment.ReceivedAt,
-                CreatedAt = shipment.CreatedAt
+                CreatedAt = shipment.CreatedAt,
+                // Thêm shipmentDetails để hiển thị danh sách sản phẩm
+                ShipmentDetails = shipment.ShipmentDetails?
+                    .Where(detail => !detail.IsDeleted)
+                    .Select(detail =>
+                    {
+                        // Parse Unit string to enum
+                        ProductUnit unit = Enum.TryParse<ProductUnit>(detail.Unit, ignoreCase: true, out var parsedUnit)
+                            ? parsedUnit
+                            : ProductUnit.Kg;
+
+                        return new ShipmentDetailViewDto
+                        {
+                            ShipmentDetailId = detail.ShipmentDetailId,
+                            OrderItemId = detail.OrderItemId,
+                            ProductName = detail.OrderItem?.Product?.ProductName ?? string.Empty,
+                            Quantity = detail.Quantity,
+                            Unit = unit,
+                            Note = detail.Note ?? string.Empty,
+                            CreatedAt = detail.CreatedAt
+                        };
+                    })
+                    .ToList() ?? new()
             };
         }
 
