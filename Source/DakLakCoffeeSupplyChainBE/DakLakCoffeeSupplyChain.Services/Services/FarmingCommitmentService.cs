@@ -35,7 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
-                predicate: fm => fm.IsDeleted != true,
+                predicate: fm => fm.IsDeleted != true && fm.Plan.CreatedBy == manager.ManagerId,
                 include: fm => fm.
                 Include(fm => fm.Plan).
                     ThenInclude(fm => fm.CreatedByNavigation).
