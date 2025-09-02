@@ -13,7 +13,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class RolesController : ControllerBase
     {
         private readonly IRoleService _roleService;
@@ -24,6 +23,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/<RolesController>
         [HttpGet]
         [EnableQuery]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllRolesAsync()
         {
             var result = await _roleService
@@ -38,8 +38,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);  // Trả 500 + message
         }
 
+        // GET: api/<RolesController>
+        [HttpGet("BusinessAndFarmer")]
+        [EnableQuery]
+        public async Task<IActionResult> GetAllRolesBusinessAndFarmerAsync()
+        {
+            var result = await _roleService
+                .GetBusinessAndFarmerRole();
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả đúng dữ liệu
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 + message
+
+            return StatusCode(500, result.Message);  // Trả 500 + message
+        }
+
         // GET api/<RolesController>/{roleId}
         [HttpGet("{roleId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(int roleId)
         {
             var result = await _roleService
@@ -56,6 +74,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // POST api/<RolesController>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateRoleAsync(
             [FromBody] RoleCreateDto roleDto)
         {
@@ -78,6 +97,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PUT api/<RolesController>/{roleId}
         [HttpPut("{roleId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateRoleAsync(
             int roleId, 
             [FromBody] RoleUpdateDto roleDto)
@@ -106,6 +126,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // DELETE api/<RolesController>/{roleId}
         [HttpDelete("{roleId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRoleByIdAsync(int roleId)
         {
             var result = await _roleService
@@ -125,6 +146,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // PATCH: api/<RolesController>/soft-delete/{roleId}
         [HttpPatch("soft-delete/{roleId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SoftDeleteRoleByIdAsync(int roleId)
         {
             var result = await _roleService

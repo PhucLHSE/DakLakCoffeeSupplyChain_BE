@@ -2,18 +2,9 @@
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
-using Microsoft.EntityFrameworkCore;
 using DakLakCoffeeSupplyChain.Common.Helpers;
-using DakLakCoffeeSupplyChain.Services.Generators;
-using DakLakCoffeeSupplyChain.Common.Enum.RoleEnums;
-using DakLakCoffeeSupplyChain.Repositories.Models;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -25,6 +16,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             _unitOfWork = unitOfWork 
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+        }
+
+        public async Task<IServiceResult> GetBusinessAndFarmerRole()
+        {
+            // Lấy danh sách vai trò từ repository
+            var roles = await _unitOfWork.RoleRepository.GetAllAsync(
+                predicate: role => role.IsDeleted != true && (role.RoleName.Equals("Farmer") || role.RoleName.Equals("BusinessManager"))
+            );
+
+            // Kiểm tra nếu không có dữ liệu
+            if (roles == null || roles.Count == 0)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new List<RoleViewAllDto>()  // Trả về danh sách rỗng
+                );
+            }
+            else
+            {
+                // Chuyển đổi sang danh sách DTO để trả về cho client
+                var roleDtos = roles
+                    .Select(roles => roles.MapToRoleViewAllDto())
+                    .ToList();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    roleDtos
+                );
+            }
         }
 
         public async Task<IServiceResult> GetAll()
