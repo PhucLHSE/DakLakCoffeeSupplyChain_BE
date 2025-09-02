@@ -15,6 +15,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> GetById(int roleId);
 
+        Task<IServiceResult> GetBusinessAndFarmerRole();
+
         Task<IServiceResult> Create(RoleCreateDto roleDto);
 
         Task<IServiceResult> Update(RoleUpdateDto roleDto);
