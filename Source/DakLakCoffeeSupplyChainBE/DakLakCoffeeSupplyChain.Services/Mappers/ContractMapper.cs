@@ -1,14 +1,10 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.SettlementDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
@@ -56,15 +52,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 : SettlementStatus.None;
 
             // Parse SettlementFilesJson -> List<string>
-            var settlementFiles = new List<string>();
+            var settlementFiles = new List<SettlementRound>();
 
             if (!string.IsNullOrWhiteSpace(contract.SettlementFilesJson))
             {
                 try
                 {
                     // Ưu tiên mảng string ["url1","url2"]; nếu bạn lưu object thì có thể đổi sang List<YourFileDto>
-                    settlementFiles = JsonSerializer.Deserialize<List<string>>(contract.SettlementFilesJson)
-                                      ?? new List<string>();
+                    //settlementFiles = JsonSerializer.Deserialize<List<string>>(contract.SettlementFilesJson)
+                                      //?? new List<string>();
+                    var wrapper = JsonSerializer.Deserialize<SettlementFilesWrapper>(contract.SettlementFilesJson);
+                    settlementFiles = wrapper?.SettlementRounds ?? [];
                 }
                 catch
                 {
@@ -151,6 +149,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false,
 
+                ContractType = dto.ContractType,
+                ParentContractId = dto.ParentContractID != Guid.Empty ? dto.ParentContractID : null,
+                PaymentRounds = dto.PaymentRounds != 0 ? dto.PaymentRounds : 1,
+                SettlementStatus = SettlementStatus.Pending.ToString(),
+                SettlementFileUrl = dto.SettlementFileURL,
+                SettlementFilesJson = dto.SettlementFilesJson,
+                SettlementNote = dto.SettlementNote,
+
                 ContractItems = dto.ContractItems.Select((itemDto, index) => new ContractItem
                 {
                     ContractItemId = Guid.NewGuid(),
@@ -188,6 +194,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             contract.Status = dto.Status.ToString();
             contract.CancelReason = dto.CancelReason;
             contract.UpdatedAt = DateHelper.NowVietnamTime();
+
+            contract.ContractType = dto.ContractType;
+            contract.ParentContractId = dto.ParentContractID != Guid.Empty ? dto.ParentContractID : null;
+            contract.PaymentRounds = dto.PaymentRounds != 0 ? dto.PaymentRounds : 1;
+            contract.SettlementStatus = SettlementStatus.Pending.ToString();
+            contract.SettlementFileUrl = dto.SettlementFileURL;
+            contract.SettlementFilesJson = dto.SettlementFilesJson;
+            contract.SettlementNote = dto.SettlementNote;
         }
     }
 }

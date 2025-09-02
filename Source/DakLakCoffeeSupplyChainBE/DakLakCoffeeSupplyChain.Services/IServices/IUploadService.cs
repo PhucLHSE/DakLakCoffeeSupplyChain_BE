@@ -15,6 +15,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<UploadImageResult> UploadAsync(IFormFile file);
 
         Task<UploadImageResult> UploadContractFileAsync(IFormFile file);
+        Task<UploadImageResult> UploadSettlementFileAsync(IFormFile file);
 
         Task<UploadImageResult> UploadFromUrlAsync(string fileUrl);
     }

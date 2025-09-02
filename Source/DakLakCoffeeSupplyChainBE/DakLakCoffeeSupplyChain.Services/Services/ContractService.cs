@@ -3,16 +3,13 @@ using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Repositories.Models;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -277,6 +274,59 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
+                //string? settlementFileUrl = contractDto.SettlementFileURL;
+                //if (contractDto.SettlementFile is { Length: > 0 })
+                //{
+                //    var upload = await _uploadService.UploadSettlementFileAsync(contractDto.SettlementFile);
+                //    settlementFileUrl = upload.Url;
+                //}
+                //else if (!string.IsNullOrWhiteSpace(contractDto.SettlementFileURL) && IsHttpUrl(contractDto.SettlementFileURL))
+                //{
+                //    try
+                //    {
+                //        var up = await _uploadService.UploadFromUrlAsync(contractDto.SettlementFileURL);
+                //        settlementFileUrl = up.Url;
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        // log lỗi thật ra (ex.Message) để soi nguyên nhân (hotlink, 403, sai URL...)
+                //        settlementFileUrl = contractDto.ContractFileUrl; // fallback: lưu nguyên URL
+                //    }
+                //}
+
+                var settlementRounds = new List<object>();
+
+                if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                {
+                    // Convert ICollection to List to maintain order
+                    var settlementFilesList = contractDto.SettlementFiles.ToList();
+
+                    // Process files in order, up to the number of payment rounds
+                    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                    {
+                        var file = settlementFilesList[i];
+
+                        if (file != null && file.Length > 0)
+                        {
+                            var upload = await _uploadService.UploadSettlementFileAsync(file);
+
+                            settlementRounds.Add(new
+                            {
+                                roundName = i + 1, // Round numbers start from 1
+                                settlementFileURL = upload.Url
+                            });
+                        }
+                    }
+                }
+
+                var settlementFilesJson = JsonSerializer.Serialize(new
+                {
+                    settlementRounds = settlementRounds.Count > 0 ? settlementRounds : null
+                });
+
+                contractDto.SettlementFilesJson = settlementFilesJson;
+
+                //contractDto.SettlementFileURL = settlementFileUrl;
                 contractDto.ContractFileUrl = contractFileUrl;
 
                 // Sinh mã định danh cho Contract
@@ -433,6 +483,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     contractDto.ContractFileUrl = contractFileUrl;
                 }
+
+                var settlementRounds = new List<object>();
+
+                // Replace this block in both Create and Update methods
+                if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                {
+                    // Convert ICollection to List to maintain order
+                    var settlementFilesList = contractDto.SettlementFiles.ToList();
+
+                    // Process files in order, up to the number of payment rounds
+                    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                    {
+                        var file = settlementFilesList[i];
+
+                        if (file != null && file.Length > 0)
+                        {
+                            var upload = await _uploadService.UploadSettlementFileAsync(file);
+
+                            settlementRounds.Add(new
+                            {
+                                roundName = i + 1, // Round numbers start from 1
+                                settlementFileURL = upload.Url
+                            });
+                        }
+                    }
+                }
+
+                var settlementFilesJson = JsonSerializer.Serialize(new
+                {
+                    settlementRounds = settlementRounds.Count > 0 ? settlementRounds : null
+                });
+
+                contractDto.SettlementFilesJson = settlementFilesJson;
 
                 // Tính lại tổng Quantity và Value từ các ContractItemDto
                 double totalItemQuantity = contractDto.ContractItems

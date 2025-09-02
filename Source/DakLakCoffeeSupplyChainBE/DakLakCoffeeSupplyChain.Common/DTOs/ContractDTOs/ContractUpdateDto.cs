@@ -1,13 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
@@ -59,6 +53,21 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         public string? CancelReason { get; set; }
 
         public List<ContractItemUpdateDto> ContractItems { get; set; } = new();
+
+        public string ContractType { get; set; } = string.Empty;
+
+        public Guid? ParentContractID { get; set; }
+
+        public int PaymentRounds { get; set; }
+
+        public ICollection<IFormFile>? SettlementFiles { get; set; }
+        //[JsonPropertyName("settlementFiles")]
+        //public Dictionary<int, IFormFile>? SettlementFiles { get; set; }
+        public string? SettlementFileURL { get; set; }
+
+        public string? SettlementFilesJson { get; set; }
+
+        public string? SettlementNote { get; set; }
 
         // Validation nghiệp vụ
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
