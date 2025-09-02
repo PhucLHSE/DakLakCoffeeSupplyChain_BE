@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Common.Enum.InventoryLogEnums;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -946,6 +947,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (statusUpdateDto.DeliveryStatus == Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Delivered)
                 {
                     shipment.ReceivedAt = statusUpdateDto.ReceivedAt ?? DateHelper.NowVietnamTime();
+                    
+                    // Trừ số lượng từ inventory khi giao hàng thành công
+                    await UpdateInventoryOnDelivery(shipment);
                 }
 
                 // Tự động cập nhật Order status dựa trên Shipment status
@@ -984,12 +988,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         // Kiểm tra BusinessManager có tồn tại không và lấy UserId để gửi notification
                         var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
-                            predicate: bm => bm.ManagerId == shipment.Order.DeliveryBatch.Contract.SellerId && !bm.IsDeleted,
-                            include: bm => bm.Include(bm => bm.User),
+                            predicate: bm => 
+                               bm.ManagerId == shipment.Order.DeliveryBatch.Contract.SellerId && 
+                               !bm.IsDeleted,
+                            include: bm => bm
+                               .Include(bm => bm.User),
                             asNoTracking: true
                         );
 
-                        if (businessManager != null && businessManager.User != null)
+                        if (businessManager != null &&
+                            businessManager.User != null)
                         {
                             // Lấy tên DeliveryStaff
                             var deliveryStaffName = shipment.DeliveryStaff?.Name ?? shipment.DeliveryStaff?.Name ?? "Không rõ";
@@ -1031,6 +1039,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 try
                 {
                     await _unitOfWork.ShipmentRepository.UpdateAsync(shipment);
+
                     var result = await _unitOfWork.SaveChangesAsync();
 
                     if (result > 0)
@@ -1088,6 +1097,85 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Const.ERROR_EXCEPTION,
                     ex.ToString()
                 );
+            }
+        }
+
+        private async Task UpdateInventoryOnDelivery(Shipment shipment)
+        {
+            if (shipment.Order == null || 
+                shipment.Order.DeliveryBatch == null || 
+                shipment.Order.DeliveryBatch.Contract == null)
+            {
+                Console.WriteLine("Không thể cập nhật inventory vì thông tin đơn hàng không đầy đủ.");
+                return;
+            }
+
+            var contract = shipment.Order.DeliveryBatch.Contract;
+            
+            // Lấy danh sách OrderItem trong đơn hàng với Product và Inventory
+            var orderItems = await _unitOfWork.OrderItemRepository.GetAllAsync(
+                predicate: oi =>
+                    oi.OrderId == shipment.Order.OrderId &&
+                    !oi.IsDeleted &&
+                    oi.Product != null,
+                include: query => query
+                    .Include(oi => oi.Product)
+                        .ThenInclude(p => p.Inventory),
+                asNoTracking: true
+            );
+
+            foreach (var orderItem in orderItems)
+            {
+                var product = orderItem.Product;
+
+                if (product == null || product.Inventory == null) 
+                    continue;
+
+                // Tính số lượng cần trừ dựa trên số lượng giao trong shipment
+                var deliveredQuantity = shipment.ShipmentDetails
+                    .Where(sd => sd.OrderItemId == orderItem.OrderItemId && !sd.IsDeleted)
+                    .Sum(sd => sd.Quantity ?? 0);
+
+                if (deliveredQuantity > 0)
+                {
+                    var inventory = product.Inventory;
+                    
+                    // Kiểm tra số lượng tồn kho có đủ để trừ không
+                    if (inventory.Quantity < deliveredQuantity)
+                    {
+                        Console.WriteLine($"Warning: Inventory {inventory.InventoryCode} không đủ số lượng để trừ. " +
+                                        $"Hiện tại: {inventory.Quantity}, Cần trừ: {deliveredQuantity}");
+                        // Vẫn trừ nhưng ghi log cảnh báo
+                    }
+
+                    // Trừ số lượng từ inventory
+                    var oldQuantity = inventory.Quantity;
+                    inventory.Quantity = Math.Max(0, inventory.Quantity - deliveredQuantity);
+                    inventory.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật inventory
+                    await _unitOfWork.Inventories.UpdateAsync(inventory);
+
+                    // Tạo InventoryLog để ghi lại thay đổi
+                    var inventoryLog = new InventoryLog
+                    {
+                        LogId = Guid.NewGuid(),
+                        InventoryId = inventory.InventoryId,
+                        ActionType = InventoryLogActionType.decrease.ToString(),
+                        QuantityChanged = -deliveredQuantity, // Số âm vì đang trừ
+                        UpdatedBy = shipment.DeliveryStaffId,
+                        TriggeredBySystem = false,
+                        Note = $"Trừ số lượng do giao hàng thành công. Shipment: {shipment.ShipmentCode}, " +
+                               $"Order: {shipment.Order.OrderCode}, Số lượng trừ: {deliveredQuantity}",
+                        LoggedAt = DateHelper.NowVietnamTime(),
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.InventoryLogs.CreateAsync(inventoryLog);
+
+                    Console.WriteLine($"Đã trừ {deliveredQuantity} từ inventory {inventory.InventoryCode}. " +
+                                   $"Từ {oldQuantity} xuống {inventory.Quantity}");
+                }
             }
         }
     }
