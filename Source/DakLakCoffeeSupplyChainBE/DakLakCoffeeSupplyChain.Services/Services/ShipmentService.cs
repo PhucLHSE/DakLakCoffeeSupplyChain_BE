@@ -20,14 +20,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
+        private readonly INotificationService _notificationService;
 
-        public ShipmentService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
+        public ShipmentService(
+            IUnitOfWork unitOfWork, 
+            ICodeGenerator codeGenerator, 
+            INotificationService notificationService
+        )
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
 
             _codeGenerator = codeGenerator
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
+
+            _notificationService = notificationService
+                ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId)
@@ -905,6 +913,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Cập nhật trạng thái
+                var oldStatus = shipment.DeliveryStatus;
                 shipment.DeliveryStatus = statusUpdateDto.DeliveryStatus.ToString();
                 shipment.UpdatedAt = DateHelper.NowVietnamTime();
 
@@ -912,6 +921,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (statusUpdateDto.DeliveryStatus == Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Delivered)
                 {
                     shipment.ReceivedAt = statusUpdateDto.ReceivedAt ?? DateHelper.NowVietnamTime();
+                }
+
+                // Tự động cập nhật Order status dựa trên Shipment status
+                if (shipment.Order != null)
+                {
+                    switch (statusUpdateDto.DeliveryStatus)
+                    {
+                        case Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.InTransit:
+                            shipment.Order.Status = Common.Enum.OrderEnums.OrderStatus.Shipped.ToString();
+                            break;
+
+                        case Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Delivered:
+                            shipment.Order.Status = Common.Enum.OrderEnums.OrderStatus.Delivered.ToString();
+                            break;
+
+                        case Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Failed:
+                            shipment.Order.Status = Common.Enum.OrderEnums.OrderStatus.Failed.ToString();
+                            break;
+
+                        case Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Canceled:
+                            shipment.Order.Status = Common.Enum.OrderEnums.OrderStatus.Cancelled.ToString();
+                            break;
+                    }
+                    
+                    // Cập nhật thời gian của Order
+                    shipment.Order.UpdatedAt = DateHelper.NowVietnamTime();
+                    
+                    // Cập nhật Order trong repository
+                    await _unitOfWork.OrderRepository.UpdateAsync(shipment.Order);
+                }
+
+                // Gửi thông báo đến BusinessManager
+                try
+                {
+                    if (shipment.Order?.DeliveryBatch?.Contract?.SellerId != null)
+                    {
+                        await _notificationService.NotifyShipmentStatusUpdatedAsync(
+                            shipment.ShipmentId,
+                            shipment.Order.OrderId,
+                            shipment.ShipmentCode ?? "N/A",
+                            shipment.Order.OrderCode ?? "N/A",
+                            oldStatus,
+                            statusUpdateDto.DeliveryStatus.ToString(),
+                            shipment.Order.DeliveryBatch.Contract.SellerId
+                        );
+                    }
+                }
+                catch (Exception notificationEx)
+                {
+                    // Log lỗi notification nhưng không làm gián đoạn quá trình cập nhật chính
+                    // Có thể ghi log vào file hoặc database
                 }
 
                 // Cập nhật ghi chú nếu có
@@ -923,13 +983,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Lưu thay đổi
                 await _unitOfWork.ShipmentRepository.UpdateAsync(shipment);
+
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 if (result > 0)
                 {
                     // Trả về thông tin shipment đã cập nhật
                     var updatedShipment = await _unitOfWork.ShipmentRepository.GetByIdAsync(
-                        predicate: s => s.ShipmentId == shipmentId && !s.IsDeleted,
+                        predicate: s => 
+                           s.ShipmentId == shipmentId && 
+                           !s.IsDeleted,
                         include: query => query
                             .Include(s => s.Order)
                             .Include(s => s.DeliveryStaff)
