@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IInventoryRepository : IGenericRepository<Inventory>
     {
         Task<Inventory?> FindByWarehouseAndBatchAsync(Guid warehouseId, Guid batchId);
+
         Task<Inventory?> FindByWarehouseAndDetailAsync(Guid warehouseId, Guid detailId);
 
         Task<Inventory?> FindByIdAsync(Guid id);
