@@ -105,8 +105,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ContractDeliveryItemId = item.ContractDeliveryItemId,
                     Quantity = item.Quantity ?? 0,
                     UnitPrice = item.UnitPrice ?? 0,
+                    // Lưu discount dưới dạng % trực tiếp
                     DiscountAmount = item.DiscountAmount ?? 0,
-                    TotalPrice = (item.Quantity ?? 0) * (item.UnitPrice ?? 0) - (item.DiscountAmount ?? 0),
+                    TotalPrice = (item.Quantity ?? 0) * (item.UnitPrice ?? 0) * (1 - ((item.DiscountAmount ?? 0) / 100)),
                     Note = item.Note,
                     CreatedAt = DateHelper.NowVietnamTime(),
                     UpdatedAt = DateHelper.NowVietnamTime(),

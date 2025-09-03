@@ -50,6 +50,35 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // GET: api/<ShipmentsController>/orders-for-shipment
+        [HttpGet("orders-for-shipment")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff")]
+        public async Task<IActionResult> GetOrdersForShipmentAsync()
+        {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _shipmentService
+                .GetOrdersForShipment(userId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
         // GET api/<ShipmentsController>/{shipmentId}
         [HttpGet("{shipmentId}")]
         [Authorize(Roles = "BusinessManager,BusinessStaff,DeliveryStaff")]

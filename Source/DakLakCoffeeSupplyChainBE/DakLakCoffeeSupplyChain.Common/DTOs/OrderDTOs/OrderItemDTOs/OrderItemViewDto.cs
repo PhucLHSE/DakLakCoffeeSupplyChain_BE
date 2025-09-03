@@ -20,6 +20,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
 
         public double? UnitPrice { get; set; }
 
+        /// <summary>
+        /// Discount dưới dạng phần trăm (%)
+        /// </summary>
         public double? DiscountAmount { get; set; }
 
         public double? TotalPrice { get; set; }
