@@ -153,10 +153,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var monthsDiff = (dto.EndDate.Year - dto.StartDate.Year) * 12 + 
                                    (dto.EndDate.Month - dto.StartDate.Month);
                     
-                    if (monthsDiff < 11 || monthsDiff > 13) // Cho phép sai số 1 tháng
+                    if (monthsDiff < 11 || monthsDiff > 15) // Cho phép sai số 2 tháng để xử lý thiên tai
                     {
                         return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                            "Thời gian mùa vụ phải trong khoảng 11-12 tháng.");
+                            "Thời gian mùa vụ phải trong khoảng 11-15 tháng (có thể kéo dài thêm 2-3 tháng nếu gặp thiên tai).");
                     }
                 }
 
@@ -167,24 +167,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                if (commitmentDetails.Any())
-                {
-                    // Tối ưu: Sử dụng LINQ để tính toán hiệu quả hơn
-                    var harvestEndDates = commitmentDetails
-                        .Where(cd => cd.RegistrationDetail?.ExpectedHarvestEnd.HasValue == true || cd.EstimatedDeliveryEnd.HasValue)
-                        .Select(cd => cd.RegistrationDetail?.ExpectedHarvestEnd ?? cd.EstimatedDeliveryEnd ?? DateOnly.MinValue);
-                    
-                    if (harvestEndDates.Any())
-                    {
-                        var latestHarvestEnd = harvestEndDates.Max();
-                        if (latestHarvestEnd > dto.EndDate)
-                        {
-                            return new ServiceResult(Const.FAIL_CREATE_CODE, 
-                                $"Thời gian mùa vụ phải bao gồm thời gian thu hoạch. " +
-                                $"Vui lòng kéo dài mùa vụ đến ít nhất {latestHarvestEnd:dd/MM/yyyy}");
-                        }
-                    }
-                }
+                // Bỏ validation về thời gian thu hoạch dự kiến
+                // Cho phép nông dân tự do chọn thời gian mùa vụ không phụ thuộc vào thời gian thu hoạch dự kiến
 
                 string code = await _codeGenerator.GenerateCropSeasonCodeAsync(dto.StartDate.Year);
                 Guid cropSeasonId = Guid.NewGuid();
@@ -341,24 +325,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 asNoTracking: true
             );
 
-            if (commitmentDetails.Any())
-            {
-                // Tối ưu: Sử dụng LINQ để tính toán hiệu quả hơn
-                var harvestEndDates = commitmentDetails
-                    .Where(cd => cd.RegistrationDetail?.ExpectedHarvestEnd.HasValue == true || cd.EstimatedDeliveryEnd.HasValue)
-                    .Select(cd => cd.RegistrationDetail?.ExpectedHarvestEnd ?? cd.EstimatedDeliveryEnd ?? DateOnly.MinValue);
-                
-                if (harvestEndDates.Any())
-                {
-                    var latestHarvestEnd = harvestEndDates.Max();
-                    if (latestHarvestEnd > dto.EndDate)
-                    {
-                        return new ServiceResult(Const.FAIL_UPDATE_CODE, 
-                            $"Không thể cập nhật: Thời gian mùa vụ phải bao gồm thời gian thu hoạch. " +
-                            $"Vui lòng kéo dài mùa vụ đến ít nhất {latestHarvestEnd:dd/MM/yyyy}");
-                    }
-                }
-            }
+            // Bỏ validation về thời gian thu hoạch dự kiến
+            // Cho phép nông dân tự do chọn thời gian mùa vụ không phụ thuộc vào thời gian thu hoạch dự kiến
 
             dto.MapToExistingEntity(cropSeason);
             cropSeason.UpdatedAt = DateHelper.NowVietnamTime();

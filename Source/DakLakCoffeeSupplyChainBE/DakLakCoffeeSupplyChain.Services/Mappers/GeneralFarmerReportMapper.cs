@@ -16,7 +16,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Title = entity.Title,
                 ReportedAt = entity.ReportedAt,
                 ReportedByName = entity.ReportedByNavigation?.Name ?? string.Empty,
-                IsResolved = entity.IsResolved
+                IsResolved = entity.IsResolved,
+                SeverityLevel = entity.SeverityLevel
             };
         }
 
