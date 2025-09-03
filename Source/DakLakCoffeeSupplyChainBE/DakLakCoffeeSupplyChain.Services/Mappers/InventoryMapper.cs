@@ -22,8 +22,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchId = inv.BatchId,
                 BatchCode = inv.Batch?.BatchCode ?? "Không có",
                 ProductName = inv.BatchId != null 
-                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " (Sơ chế)" + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
-                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " (Tươi)" + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A"),
+                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
+                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A"),
                 CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "Không xác định",
                 
                 // Thông tin cho cà phê tươi
@@ -56,8 +56,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 BatchId = inv.BatchId,
                 BatchCode = inv.Batch?.BatchCode ?? "Không có",
                 ProductName = inv.BatchId != null 
-                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " (Sơ chế)" + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
-                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " (Tươi)" + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A"),
+                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
+                    : (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A"),
                 CoffeeTypeName = inv.Batch?.CoffeeType?.TypeName ?? "Không xác định",
                 
                 // Thông tin cho cà phê tươi
@@ -101,9 +101,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ? (inv.Batch?.BatchCode ?? "Không có mã lô")
                     : "Không áp dụng",
                 ProductName = isProcessedCoffee
-                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " (Sơ chế)" + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
+                    ? (inv.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế") + " - Batch: " + (inv.Batch?.BatchCode ?? "N/A")
                     : (isFreshCoffee 
-                        ? (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " (Tươi)" + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A")
+                        ? (inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Cà phê tươi") + " - Mùa vụ: " + (inv.Detail?.CropSeason?.SeasonName ?? "N/A")
                         : "Không xác định"),
                 CoffeeTypeName = isProcessedCoffee
                     ? (inv.Batch?.CoffeeType?.TypeName ?? "Không xác định loại cà phê")

@@ -23,6 +23,12 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .AsNoTracking()
                 .Include(r => r.Inventory)
                    .ThenInclude(inv => inv.Products)
+                .Include(r => r.Inventory)
+                   .ThenInclude(inv => inv.Batch)
+                       .ThenInclude(b => b.CoffeeType)
+                .Include(r => r.OrderItem)
+                    .ThenInclude(oi => oi.Product)
+                        .ThenInclude(p => p.CoffeeType)
                 .Include(r => r.Warehouse)
                 .Include(r => r.RequestedByNavigation)
                 .FirstOrDefaultAsync(r => r.OutboundRequestId == id && !r.IsDeleted);
