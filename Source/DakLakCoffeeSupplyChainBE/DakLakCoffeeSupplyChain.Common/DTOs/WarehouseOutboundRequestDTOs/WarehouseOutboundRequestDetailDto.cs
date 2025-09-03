@@ -16,6 +16,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
 
         public Guid InventoryId { get; set; }
         public string? InventoryName { get; set; }
+        public string? InventoryCode { get; set; }
+        public string? CoffeeTypeName { get; set; }
+        public string? BatchCode { get; set; }
+        public double? InventoryQuantity { get; set; }
+        public string? InventoryUnit { get; set; }
 
         public double RequestedQuantity { get; set; }
         public string Unit { get; set; }
@@ -23,6 +28,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public string Reason { get; set; }
 
         public Guid? OrderItemId { get; set; }
+        public string? OrderItemProductName { get; set; }
+        public string? OrderItemCoffeeTypeName { get; set; }
 
         public Guid RequestedBy { get; set; }
         public string? RequestedByName { get; set; }
@@ -32,6 +39,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
-
-
 }
