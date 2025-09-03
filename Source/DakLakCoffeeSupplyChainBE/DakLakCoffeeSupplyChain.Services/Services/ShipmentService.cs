@@ -1232,5 +1232,152 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
         }
+
+        public async Task<IServiceResult> GetOrdersForShipment(Guid userId)
+        {
+            try
+            {
+                Guid? managerId = null;
+
+                // Kiểm tra BusinessManager
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: m =>
+                       m.UserId == userId &&
+                       !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (manager != null)
+                {
+                    managerId = manager.ManagerId;
+                }
+                else
+                {
+                    // Nếu không phải Manager, kiểm tra BusinessStaff
+                    var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(
+                        predicate: s =>
+                           s.UserId == userId &&
+                           !s.IsDeleted,
+                        asNoTracking: true
+                    );
+
+                    if (staff != null)
+                    {
+                        managerId = staff.SupervisorId;
+                    }
+                }
+
+                if (managerId == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy Manager hoặc Staff tương ứng với tài khoản."
+                    );
+                }
+
+                // Lấy tất cả orders thuộc hợp đồng của Manager, có trạng thái cần giao hàng
+                var orders = await _unitOfWork.OrderRepository.GetAllAsync(
+                    predicate: o =>
+                        !o.IsDeleted &&
+                        o.DeliveryBatch != null &&
+                        o.DeliveryBatch.Contract != null &&
+                        o.DeliveryBatch.Contract.SellerId == managerId &&
+                        (o.Status == Common.Enum.OrderEnums.OrderStatus.Preparing.ToString() ||
+                         o.Status == Common.Enum.OrderEnums.OrderStatus.Shipped.ToString()),
+                    include: query => query
+                        .Include(o => o.OrderItems.Where(oi => !oi.IsDeleted))
+                            .ThenInclude(oi => oi.Product)
+                        .Include(o => o.DeliveryBatch)
+                            .ThenInclude(db => db.Contract),
+                    orderBy: query => query
+                        .OrderByDescending(o => o.CreatedAt),
+                    asNoTracking: true
+                );
+
+                if (orders == null || !orders.Any())
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không có đơn hàng nào cần tạo shipment.",
+                        new List<OrderForShipmentDto>()
+                    );
+                }
+
+                var ordersForShipment = new List<OrderForShipmentDto>();
+
+                foreach (var order in orders)
+                {
+                    var orderItemsInfo = new List<OrderItemForShipmentDto>();
+
+                    foreach (var orderItem in order.OrderItems)
+                    {
+                        // Tính số lượng đã giao cho từng OrderItem
+                        var deliveredQuantity = await _unitOfWork.ShipmentDetailRepository
+                            .GetDeliveredQuantityByOrderItemId(orderItem.OrderItemId);
+
+                        var remainingQuantity = orderItem.Quantity - deliveredQuantity;
+
+                        // Chỉ thêm vào danh sách nếu còn số lượng cần giao
+                        if (remainingQuantity > 0)
+                        {
+                            orderItemsInfo.Add(new OrderItemForShipmentDto
+                            {
+                                OrderItemId = orderItem.OrderItemId,
+                                ProductId = orderItem.Product?.ProductId,
+                                ProductName = orderItem.Product?.ProductName ?? "Không rõ tên sản phẩm",
+                                OrderQuantity = orderItem.Quantity ?? 0,
+                                DeliveredQuantity = deliveredQuantity,
+                                RemainingQuantity = remainingQuantity ?? 0,
+                                Unit = orderItem.Product?.Unit ?? "kg"
+                            });
+                        }
+                    }
+
+                    // Chỉ thêm order vào danh sách nếu còn ít nhất một item cần giao
+                    if (orderItemsInfo.Any())
+                    {
+                        // Tính tổng số lượng đã giao và còn lại
+                        var totalDelivered = orderItemsInfo.Sum(oi => oi.DeliveredQuantity);
+                        var totalRemaining = orderItemsInfo.Sum(oi => oi.RemainingQuantity);
+
+                        ordersForShipment.Add(new OrderForShipmentDto
+                        {
+                            OrderId = order.OrderId,
+                            OrderCode = order.OrderCode,
+                            OrderDate = order.CreatedAt,
+                            Status = order.Status,
+                            TotalOrderQuantity = order.OrderItems.Sum(oi => oi.Quantity ?? 0),
+                            TotalDeliveredQuantity = totalDelivered,
+                            TotalRemainingQuantity = totalRemaining,
+                            ContractCode = order.DeliveryBatch?.Contract?.ContractCode ?? string.Empty,
+                            DeliveryBatchCode = order.DeliveryBatch?.DeliveryBatchCode ?? string.Empty,
+                            OrderItems = orderItemsInfo
+                        });
+                    }
+                }
+
+                if (!ordersForShipment.Any())
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Tất cả đơn hàng đã được giao đủ số lượng.",
+                        new List<OrderForShipmentDto>()
+                    );
+                }
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    "Lấy danh sách orders cần tạo shipment thành công.",
+                    ordersForShipment
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi khi lấy danh sách orders: {ex.Message}"
+                );
+            }
+        }
     }
 }
