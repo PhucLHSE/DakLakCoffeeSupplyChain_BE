@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundReceiptDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.WarehouseOutboundRequestEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.InventoryLogEnums;
 using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -186,12 +188,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Tồn kho không đủ. Chỉ còn {inventory.Quantity:n0} {inventory.Unit}.");
 
-            // Trừ tồn kho + log
-            inventory.Quantity -= dto.ConfirmedQuantity;
-            inventory.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Inventories.Update(inventory);
-
-            var log = receipt.ToInventoryLogFromOutbound(inventory.InventoryId, dto.ConfirmedQuantity);
+            // ✅ BƯỚC 1: Xác nhận phiếu xuất kho - SẴN SÀNG GIAO HÀNG
+            // Tồn kho sẽ được trừ khi shipper thực sự đến lấy hàng (Shipment Delivery)
+            
+            // Ghi log phiếu xuất kho (không trừ inventory)
+            var log = new InventoryLog
+            {
+                LogId = Guid.NewGuid(),
+                InventoryId = inventory.InventoryId,
+                ActionType = InventoryLogActionType.decrease.ToString(),
+                QuantityChanged = 0, // Không thay đổi số lượng thực tế
+                UpdatedBy = receipt.ExportedBy,
+                TriggeredBySystem = false,
+                Note = $"Xác nhận phiếu xuất kho {receipt.OutboundReceiptCode} - Sẵn sàng giao hàng. Số lượng: {dto.ConfirmedQuantity}",
+                LoggedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
             await _unitOfWork.InventoryLogs.CreateAsync(log);
 
             // Append tag xác nhận vào Note
@@ -250,13 +262,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, "OK", new
             {
-                requestedQuantity = req.RequestedQuantity,
-                confirmedQuantity = confirmed,
-                createdQuantity = created,
-                draftQuantity = draft,
-                remainingByConfirm,
-                remainingHardCap,
-                inventoryAvailable
+                RequestedQuantity = req.RequestedQuantity,
+                ConfirmedQuantity = confirmed,
+                CreatedQuantity = created,
+                DraftQuantity = draft,
+                RemainingByConfirm = remainingByConfirm,
+                RemainingHardCap = remainingHardCap,
+                InventoryAvailable = inventoryAvailable
             });
         }
 

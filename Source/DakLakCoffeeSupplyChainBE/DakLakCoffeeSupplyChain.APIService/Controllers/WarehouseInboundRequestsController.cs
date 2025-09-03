@@ -80,7 +80,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "BusinessStaff,Administrator")]
+        [Authorize(Roles = "BusinessStaff,BusinessManager,Administrator")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -103,7 +103,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "BusinessStaff,Administrator,Farmer")]
+        [Authorize(Roles = "BusinessStaff,BusinessManager,Administrator,Farmer")]
         public async Task<IActionResult> GetDetail(Guid id)
         {
             var result = await _service
