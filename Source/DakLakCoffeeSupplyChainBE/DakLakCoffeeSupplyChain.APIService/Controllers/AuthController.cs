@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -99,6 +100,35 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             var result = await _authService
                 .ResendVerificationEmail(emailDto);
+
+            if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
+                return Ok(result.Message);
+
+            if (result.Status == Const.FAIL_VERIFY_OTP_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH api/verify-businessManager-account/{managerId}
+        [HttpPatch("verify-businessManager-account/{managerId}")]
+        public async Task<IActionResult> VerifyBusinessManagerAcount(
+            Guid managerId, VerifyAccountByAdminDto dto)
+        {
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _authService
+                .VerifyBusinessManagerAcount(managerId, dto, userId);
 
             if (result.Status == Const.SUCCESS_SEND_OTP_CODE)
                 return Ok(result.Message);

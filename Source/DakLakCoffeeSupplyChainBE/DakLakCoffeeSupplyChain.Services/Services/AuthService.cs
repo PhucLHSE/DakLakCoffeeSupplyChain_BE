@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.AuthDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Common.Helpers.Security;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -243,6 +244,54 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 return new ServiceResult(Const.SUCCESS_VERIFY_OTP_CODE, "Xác minh email thành công.");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+            }
+        }
+        public async Task<IServiceResult> VerifyBusinessManagerAcount(Guid managerId, VerifyAccountByAdminDto dto, Guid userId)
+        {
+            try
+            {
+                // Kiểm tra admin
+                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
+                    predicate: u => u.UserId == userId && !u.IsDeleted && u.Role.RoleName.Equals("Admin"),
+                    asNoTracking: true
+                    );
+                if (user == null)
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền hạn này");
+
+                // Tìm người dùng
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: b => b.ManagerId == managerId,
+                    include: b => b.Include(b => b.User));
+                if (manager == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+
+                // Kiểm tra đã xác minh chưa
+                if (manager.IsCompanyVerified == true)
+                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã được xác minh trước đó.");
+
+                // Cập nhật trạng thái người dùng
+                if (dto.Action == true)
+                {
+                    manager.IsCompanyVerified = true;
+                    manager.UpdatedAt = DateHelper.NowVietnamTime();
+                    _emailService.SendEmailAsync(manager.User.Email, $"[DLC]Tài khoản của bạn đã được quản trị viên của nền tảng phân phối chuỗi" +
+                        $" cung ứng cà phê Đắk Lắk duyệt", "Bây giờ bạn đã có thể truy cập các tính năng nền tảng.");
+                }
+                else
+                {
+                    _emailService.SendEmailAsync(manager.User.Email, $"[DLC]Tài khoản của bạn đã bị quản trị viên của nền tảng phân phối chuỗi" +
+                        $" cung ứng cà phê Đắk Lắk từ chối", dto.Reason);
+                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã bị từ chối");
+                }
+
+                await _unitOfWork.BusinessManagerRepository.UpdateAsync(manager);
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_VERIFY_OTP_CODE, "Xác minh tài khoản thành công.");
             }
             catch (Exception ex)
             {
