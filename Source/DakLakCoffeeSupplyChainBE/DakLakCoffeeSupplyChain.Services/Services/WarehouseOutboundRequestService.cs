@@ -59,12 +59,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Tồn khả dụng chỉ còn {available:n0} {inventory.Unit}, không thể yêu cầu xuất {dto.RequestedQuantity:n0}.");
 
-            // ✅ Luôn kiểm tra loại cà phê của tồn kho
-            var inventoryCoffeeTypeId = inventory.Batch?.CoffeeTypeId;
-            if (inventoryCoffeeTypeId == null)
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Không xác định được loại cà phê trong tồn kho.");
-
-            // Nếu gắn OrderItem → kiểm tra loại cà phê khớp với đơn hàng & hạn mức dựa trên receipts CONFIRMED
+            // Nếu gắn OrderItem → kiểm CoffeeType & hạn mức dựa trên receipts CONFIRMED
             if (dto.OrderItemId.HasValue)
             {
                 var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
@@ -79,6 +74,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
 
                 var productCoffeeTypeId = product.CoffeeTypeId;
+                var inventoryCoffeeTypeId = inventory.Batch?.CoffeeTypeId;
+                if (inventoryCoffeeTypeId == null)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không xác định được loại cà phê trong tồn kho.");
+
                 if (productCoffeeTypeId != inventoryCoffeeTypeId)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại cà phê trong tồn kho không khớp với sản phẩm trong đơn hàng.");
 
@@ -273,12 +272,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_UPDATE_CODE,
                     $"Tồn khả dụng chỉ còn {available:n0} {inventory.Unit}.");
 
-            // ✅ Kiểm tra loại cà phê của tồn kho
-            var inventoryCoffeeTypeId = inventory.Batch?.CoffeeTypeId;
-            if (inventoryCoffeeTypeId == null)
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không xác định được loại cà phê trong tồn kho.");
-
-            // Nếu gắn OrderItem → kiểm tra loại cà phê khớp với đơn hàng & hạn mức: confirmed + accepted (kể cả request này) ≤ OrderItem.Quantity
+            // Nếu gắn OrderItem → kiểm hạn mức: confirmed + accepted (kể cả request này) ≤ OrderItem.Quantity
             if (request.OrderItemId.HasValue)
             {
                 var orderItem = await _unitOfWork.OrderItemRepository.GetByIdAsync(
@@ -287,15 +281,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
                 if (orderItem == null)
                     return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy dòng đơn hàng tương ứng.");
-
-                // ✅ Kiểm tra loại cà phê khớp
-                var product = await _unitOfWork.ProductRepository.GetByIdAsync(orderItem.ProductId);
-                if (product == null)
-                    return new ServiceResult(Const.FAIL_UPDATE_CODE, "Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
-
-                var productCoffeeTypeId = product.CoffeeTypeId;
-                if (productCoffeeTypeId != inventoryCoffeeTypeId)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại cà phê trong tồn kho không khớp với sản phẩm trong đơn hàng.");
 
                 var receiptsByOrderItem = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItem.OrderItemId);
                 double totalConfirmedOrderItem = receiptsByOrderItem
