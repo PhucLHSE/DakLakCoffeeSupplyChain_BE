@@ -8,6 +8,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> LoginAsync(LoginRequestDto request);
         Task<IServiceResult> RegisterAccount(SignUpRequestDto request);
         Task<IServiceResult> VerifyEmail(Guid userId, string code);
+        Task<IServiceResult> VerifyBusinessManagerAcount(Guid managerId, VerifyAccountByAdminDto dto, Guid userId);
         Task<IServiceResult> ResendVerificationEmail(ResendEmailVerificationRequestDto emailDto);
         Task<IServiceResult> ForgotPasswordAsync(ForgotPasswordRequestDto request); // Thêm phương thức yêu cầu đặt lại mật khẩu
         Task<IServiceResult> ResetPasswordAsync(Guid userId, string token, ResetPasswordRequestDto request); // Thêm phương thức thay đổi mật khẩu

@@ -1,8 +1,9 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.SettlementDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 {
@@ -60,7 +61,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
 
         public int PaymentRounds { get; set; }
 
-        public ICollection<IFormFile>? SettlementFiles { get; set; }
+        //public ICollection<IFormFile>? SettlementFiles { get; set; }
+        public SettlementFilesWrapper SettlementFiles { get; set; } = new();
         //[JsonPropertyName("settlementFiles")]
         //public Dictionary<int, IFormFile>? SettlementFiles { get; set; }
         public string? SettlementFileURL { get; set; }

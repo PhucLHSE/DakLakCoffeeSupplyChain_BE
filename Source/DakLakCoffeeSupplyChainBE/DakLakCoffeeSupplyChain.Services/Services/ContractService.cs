@@ -296,26 +296,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 var settlementRounds = new List<object>();
 
-                if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                //if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                //{
+                //    // Convert ICollection to List to maintain order
+                //    var settlementFilesList = contractDto.SettlementFiles.ToList();
+
+                //    // Process files in order, up to the number of payment rounds
+                //    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                //    {
+                //        var file = settlementFilesList[i];
+
+                //        if (file != null && file.Length > 0)
+                //        {
+                //            var upload = await _uploadService.UploadSettlementFileAsync(file);
+
+                //            settlementRounds.Add(new
+                //            {
+                //                roundName = i + 1, // Round numbers start from 1
+                //                settlementFileURL = upload.Url
+                //            });
+                //        }
+                //    }
+                //}
+
+                if (contractDto.SettlementFiles?.SettlementRounds != null &&
+                    contractDto.SettlementFiles.SettlementRounds.Count > 0)
                 {
-                    // Convert ICollection to List to maintain order
-                    var settlementFilesList = contractDto.SettlementFiles.ToList();
-
-                    // Process files in order, up to the number of payment rounds
-                    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                    foreach (var settlementRound in contractDto.SettlementFiles.SettlementRounds)
                     {
-                        var file = settlementFilesList[i];
-
-                        if (file != null && file.Length > 0)
+                        var roundData = new
                         {
-                            var upload = await _uploadService.UploadSettlementFileAsync(file);
+                            roundName = settlementRound.RoundName,
+                            settlementFileURL = "",
+                            roundPrice = settlementRound.RoundPrice
+                        };
 
-                            settlementRounds.Add(new
+                        // Chỉ upload file nếu có file và file hợp lệ
+                        if (settlementRound.SettlementFile != null &&
+                            settlementRound.SettlementFile.Length > 0)
+                        {
+                            var upload = await _uploadService.UploadSettlementFileAsync(settlementRound.SettlementFile);
+                            roundData = new
                             {
-                                roundName = i + 1, // Round numbers start from 1
-                                settlementFileURL = upload.Url
-                            });
+                                roundName = settlementRound.RoundName,
+                                settlementFileURL = upload.Url,
+                                roundPrice = settlementRound.RoundPrice
+                            };
                         }
+
+                        settlementRounds.Add(roundData);
                     }
                 }
 
@@ -487,26 +516,67 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var settlementRounds = new List<object>();
 
                 // Replace this block in both Create and Update methods
-                if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                //if (contractDto.SettlementFiles != null && contractDto.SettlementFiles.Count > 0)
+                //{
+                //    // Convert ICollection to List to maintain order
+                //    var settlementFilesList = contractDto.SettlementFiles.ToList();
+
+                //    // Process files in order, up to the number of payment rounds
+                //    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                //    {
+                //        var file = settlementFilesList[i];
+
+                //        if (file != null && file.Length > 0)
+                //        {
+                //            var upload = await _uploadService.UploadSettlementFileAsync(file);
+
+                //            settlementRounds.Add(new
+                //            {
+                //                roundName = i + 1, // Round numbers start from 1
+                //                settlementFileURL = upload.Url
+                //            });
+                //        }
+                //    }
+                //}
+
+                if (contractDto.SettlementFiles?.SettlementRounds != null &&
+                    contractDto.SettlementFiles.SettlementRounds.Count > 0)
                 {
-                    // Convert ICollection to List to maintain order
-                    var settlementFilesList = contractDto.SettlementFiles.ToList();
-
-                    // Process files in order, up to the number of payment rounds
-                    for (int i = 0; i < Math.Min(contractDto.PaymentRounds, settlementFilesList.Count); i++)
+                    foreach (var settlementRound in contractDto.SettlementFiles.SettlementRounds)
                     {
-                        var file = settlementFilesList[i];
-
-                        if (file != null && file.Length > 0)
+                        var roundData = new
                         {
-                            var upload = await _uploadService.UploadSettlementFileAsync(file);
+                            roundName = settlementRound.RoundName,
+                            settlementFileURL = settlementRound.SettlementFileURL ?? "",
+                            roundPrice = settlementRound.RoundPrice
+                        };
 
-                            settlementRounds.Add(new
+                        // Kiểm tra nếu có file mới upload
+                        if (settlementRound.SettlementFile != null &&
+                            settlementRound.SettlementFile.Length > 0)
+                        {
+                            // Có file mới -> upload và lưu URL mới
+                            var upload = await _uploadService.UploadSettlementFileAsync(settlementRound.SettlementFile);
+                            roundData = new
                             {
-                                roundName = i + 1, // Round numbers start from 1
-                                settlementFileURL = upload.Url
-                            });
+                                roundName = settlementRound.RoundName,
+                                settlementFileURL = upload.Url,
+                                roundPrice = settlementRound.RoundPrice
+                            };
                         }
+                        else if (!string.IsNullOrEmpty(settlementRound.SettlementFileURL))
+                        {
+                            // Không có file mới nhưng có URL cũ -> giữ nguyên URL cũ
+                            roundData = new
+                            {
+                                roundName = settlementRound.RoundName,
+                                settlementFileURL = settlementRound.SettlementFileURL,
+                                roundPrice = settlementRound.RoundPrice
+                            };
+                        }
+                        // Nếu không có file mới và không có URL cũ -> chỉ lưu roundName và roundPrice
+
+                        settlementRounds.Add(roundData);
                     }
                 }
 
