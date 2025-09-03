@@ -90,6 +90,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Include(s => s.Order)
                             .ThenInclude(o => o.DeliveryBatch)
                                 .ThenInclude(db => db.Contract)
+                                    .ThenInclude(c => c.Buyer)
+                        .Include(s => s.Order)
+                            .ThenInclude(o => o.DeliveryBatch)
+                                .ThenInclude(db => db.Contract)
+                                    .ThenInclude(c => c.Seller)
+                                        .ThenInclude(sm => sm.Warehouses)
                         .Include(s => s.DeliveryStaff)
                         .Include(s => s.ShipmentDetails)
                             .ThenInclude(sd => sd.OrderItem)
@@ -112,6 +118,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Include(s => s.Order)
                             .ThenInclude(o => o.DeliveryBatch)
                                 .ThenInclude(db => db.Contract)
+                                    .ThenInclude(c => c.Buyer)
+                        .Include(s => s.Order)
+                            .ThenInclude(o => o.DeliveryBatch)
+                                .ThenInclude(db => db.Contract)
+                                    .ThenInclude(c => c.Seller)
+                                        .ThenInclude(sm => sm.Warehouses)
                         .Include(s => s.DeliveryStaff)
                         .Include(s => s.ShipmentDetails)
                             .ThenInclude(sd => sd.OrderItem)
@@ -202,6 +214,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(s => s.Order)
                        .ThenInclude(o => o.DeliveryBatch)
                           .ThenInclude(db => db.Contract)
+                              .ThenInclude(c => c.Buyer)
+                    .Include(s => s.Order)
+                       .ThenInclude(o => o.DeliveryBatch)
+                          .ThenInclude(db => db.Contract)
+                              .ThenInclude(c => c.Seller)
+                                  .ThenInclude(sm => sm.Warehouses)
                     .Include(s => s.DeliveryStaff)
                     .Include(s => s.CreatedByNavigation)
                     .Include(s => s.ShipmentDetails.Where(d => !d.IsDeleted))
@@ -1146,6 +1164,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     var inventory = product.Inventory;
                     
+                    // ✅ BƯỚC 2: Shipper đến lấy hàng - TRỪ TỒN KHO THỰC TẾ
                     // Kiểm tra số lượng tồn kho có đủ để trừ không
                     if (inventory.Quantity < deliveredQuantity)
                     {
@@ -1162,22 +1181,51 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Cập nhật inventory
                     await _unitOfWork.Inventories.UpdateAsync(inventory);
 
-                    // Tạo InventoryLog để ghi lại thay đổi
+                    // Tạo InventoryLog để ghi lại thay đổi thực tế
                     var inventoryLog = new InventoryLog
                     {
                         LogId = Guid.NewGuid(),
                         InventoryId = inventory.InventoryId,
                         ActionType = InventoryLogActionType.decrease.ToString(),
-                        QuantityChanged = -deliveredQuantity, // Số âm vì đang trừ
+                        QuantityChanged = -deliveredQuantity, // Số âm vì đang trừ thực tế
                         UpdatedBy = shipment.DeliveryStaffId,
                         TriggeredBySystem = false,
-                        Note = $"Trừ số lượng do giao hàng thành công. Shipment: {shipment.ShipmentCode}, " +
+                        Note = $"Shipper lấy hàng thành công. Shipment: {shipment.ShipmentCode}, " +
                                $"Order: {shipment.Order.OrderCode}, Số lượng trừ: {deliveredQuantity}",
                         LoggedAt = DateHelper.NowVietnamTime(),
                         IsDeleted = false
                     };
 
                     await _unitOfWork.InventoryLogs.CreateAsync(inventoryLog);
+
+                    // ✅ CẬP NHẬT TRẠNG THÁI PHIẾU XUẤT KHO
+                    // Tìm phiếu xuất kho tương ứng với orderItem này
+                    var outboundReceipts = await _unitOfWork.WarehouseOutboundReceipts.GetAllAsync(
+                        predicate: r => 
+                            r.OutboundRequest.OrderItemId == orderItem.OrderItemId && 
+                            !r.IsDeleted &&
+                            r.Note.Contains("[CONFIRMED:"), // Chỉ cập nhật những phiếu đã xác nhận
+                        include: query => query
+                            .Include(r => r.OutboundRequest),
+                        asNoTracking: true
+                    );
+
+                    foreach (var receipt in outboundReceipts)
+                    {
+                        // Cập nhật note để báo hiệu đã hoàn thành
+                        var originalNote = receipt.Note;
+                        var completedNote = originalNote.Replace(
+                            $"[CONFIRMED:{receipt.Quantity}]", 
+                            $"[COMPLETED:{receipt.Quantity}]"
+                        );
+                        
+                        receipt.Note = completedNote;
+                        receipt.UpdatedAt = DateTime.UtcNow;
+                        
+                        await _unitOfWork.WarehouseOutboundReceipts.UpdateAsync(receipt);
+                        
+                        Console.WriteLine($"Đã cập nhật phiếu xuất kho {receipt.OutboundReceiptCode} thành trạng thái hoàn thành");
+                    }
 
                     Console.WriteLine($"Đã trừ {deliveredQuantity} từ inventory {inventory.InventoryCode}. " +
                                    $"Từ {oldQuantity} xuống {inventory.Quantity}");

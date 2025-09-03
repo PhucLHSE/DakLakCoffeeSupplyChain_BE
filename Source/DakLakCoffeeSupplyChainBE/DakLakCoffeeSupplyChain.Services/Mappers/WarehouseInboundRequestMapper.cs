@@ -31,7 +31,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeType = request.BatchId != null 
                     ? request.Batch?.CoffeeType?.TypeName ?? "N/A"
                     : request.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A",
-                CropSeasonName = request.Detail?.CropSeason?.SeasonName,
+                CropSeasonName = request.BatchId != null 
+                    ? request.Batch?.CropSeason?.SeasonName ?? "N/A"  // ✅ SỬA: Lấy tên mùa vụ từ Batch cho cà phê đã sơ chế
+                    : request.Detail?.CropSeason?.SeasonName ?? "N/A", // Cho cà phê tươi
                 
                 RequestedQuantity = request.RequestedQuantity ?? 0
             };
@@ -69,7 +71,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 // Thông tin cho cà phê tươi
                 DetailId = r.DetailId,
                 DetailCode = r.Detail?.CropSeason?.CropSeasonCode ?? "N/A",
-                CropSeasonName = r.Detail?.CropSeason?.SeasonName ?? "N/A",
+                CropSeasonName = r.BatchId != null 
+                    ? r.Batch?.CropSeason?.SeasonName ?? "N/A"  // ✅ SỬA: Lấy tên mùa vụ từ Batch cho cà phê đã sơ chế
+                    : r.Detail?.CropSeason?.SeasonName ?? "N/A", // Cho cà phê tươi
                 CoffeeTypeDetail = r.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "N/A"
             };
         }
