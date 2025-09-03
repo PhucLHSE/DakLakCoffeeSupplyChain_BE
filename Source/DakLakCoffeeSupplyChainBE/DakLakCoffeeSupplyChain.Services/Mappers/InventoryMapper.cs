@@ -33,6 +33,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Không có",
                 
                 WarehouseName = inv.Warehouse?.Name ?? "Không có",
+                // Thêm thông tin vị trí kho
+                WarehouseLocation = inv.Warehouse?.Location,
                 Quantity = inv.Quantity,
                 Unit = inv.Unit,
                 
@@ -67,6 +69,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeNameDetail = inv.Detail?.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName ?? "Không có",
                 
                 WarehouseName = inv.Warehouse?.Name ?? "Không có",
+                // Thêm thông tin vị trí kho
+                WarehouseLocation = inv.Warehouse?.Location,
                 Quantity = inv.Quantity,
                 Unit = inv.Unit,
                 

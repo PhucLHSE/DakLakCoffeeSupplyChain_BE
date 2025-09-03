@@ -13,6 +13,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs
         public Guid WarehouseId { get; set; }
         public Guid? BatchId { get; set; }
         public string WarehouseName { get; set; } = default!;
+        // Thêm thông tin vị trí kho
+        public string? WarehouseLocation { get; set; }
         public string BatchCode { get; set; } = default!;
         public string ProductName { get; set; } = default!;
         public string CoffeeTypeName { get; set; } = default!;
