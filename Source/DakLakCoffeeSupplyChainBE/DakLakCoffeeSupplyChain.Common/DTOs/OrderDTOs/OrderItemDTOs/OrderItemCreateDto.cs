@@ -24,6 +24,9 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
         [Required(ErrorMessage = "Đơn giá là bắt buộc.")]
         public double? UnitPrice { get; set; }
 
+        /// <summary>
+        /// Discount dưới dạng phần trăm (%)
+        /// </summary>
         public double? DiscountAmount { get; set; } = 0.0;
 
         [MaxLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự.")]
@@ -58,12 +61,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs.OrderItemDTOs
                 );
             }
 
-            if (Quantity != null && 
-                UnitPrice != null && 
-                DiscountAmount > Quantity * UnitPrice)
+            if (DiscountAmount > 100)
             {
                 yield return new ValidationResult(
-                    "Giảm giá không được vượt quá tổng thành tiền.",
+                    "Giảm giá không được vượt quá 100%.",
                     new[] { nameof(DiscountAmount) }
                 );
             }

@@ -797,8 +797,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         // Cập nhật
                         existingItem.Quantity = itemDto.Quantity ?? 0;
                         existingItem.UnitPrice = itemDto.UnitPrice ?? 0;
+                        // Lưu discount dưới dạng % trực tiếp
                         existingItem.DiscountAmount = itemDto.DiscountAmount ?? 0;
-                        existingItem.TotalPrice = existingItem.Quantity * existingItem.UnitPrice - existingItem.DiscountAmount;
+                        existingItem.TotalPrice = existingItem.Quantity * existingItem.UnitPrice * (1 - (existingItem.DiscountAmount / 100));
                         existingItem.Note = itemDto.Note;
                         existingItem.IsDeleted = false;
                         existingItem.UpdatedAt = now;
@@ -817,8 +818,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ContractDeliveryItemId = itemDto.ContractDeliveryItemId,
                             Quantity = itemDto.Quantity ?? 0,
                             UnitPrice = itemDto.UnitPrice ?? 0,
+                            // Lưu discount dưới dạng % trực tiếp
                             DiscountAmount = itemDto.DiscountAmount ?? 0,
-                            TotalPrice = (itemDto.Quantity ?? 0) * (itemDto.UnitPrice ?? 0) - (itemDto.DiscountAmount ?? 0),
+                            TotalPrice = (itemDto.Quantity ?? 0) * (itemDto.UnitPrice ?? 0) * (1 - ((itemDto.DiscountAmount ?? 0) / 100)),
                             Note = itemDto.Note,
                             CreatedAt = now,
                             UpdatedAt = now,
@@ -867,7 +869,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Cập nhật lại tổng tiền đơn hàng
                 order.TotalAmount = orderUpdateDto.OrderItems
-                    .Sum(i => (i.Quantity ?? 0) * (i.UnitPrice ?? 0) - (i.DiscountAmount ?? 0));
+                    .Sum(i => {
+                        var quantity = i.Quantity ?? 0;
+                        var unitPrice = i.UnitPrice ?? 0;
+                        var discountPercent = i.DiscountAmount ?? 0;
+                        return quantity * unitPrice * (1 - (discountPercent / 100));
+                    });
 
                 order.UpdatedAt = now;
 
