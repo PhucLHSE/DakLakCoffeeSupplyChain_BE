@@ -1666,72 +1666,100 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 batch.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
 
-                // Tạo evaluation mới cho expert đánh giá lại
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating new evaluation");
+                // 🔧 MỚI: Cập nhật evaluation hiện có thay vì tạo mới
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Updating existing evaluation for re-evaluation");
                 
-                // 🔧 FIX: Retry logic để tránh UNIQUE constraint violation
-                string evaluationCode = null;
-                int retryCount = 0;
-                const int maxRetries = 5;
+                // Lấy evaluation hiện có để cập nhật (sử dụng GetAllAsync để có thể sắp xếp)
+                var existingEvaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                    e => e.BatchId == batchId && !e.IsDeleted,
+                    null,
+                    q => q.OrderByDescending(e => e.CreatedAt),
+                    false
+                );
                 
-                while (evaluationCode == null && retryCount < maxRetries)
+                var existingEvaluation = existingEvaluations.FirstOrDefault();
+                
+                if (existingEvaluation != null)
                 {
-                    try
+                    // Cập nhật evaluation hiện có để expert đánh giá lại
+                    existingEvaluation.EvaluationResult = null; // Reset kết quả để đánh giá lại
+                    existingEvaluation.EvaluatedBy = null; // Reset expert để đánh giá lại
+                    existingEvaluation.EvaluatedAt = null; // Reset thời gian đánh giá
+                    existingEvaluation.Comments = $"Đánh giá lại sau khi cải thiện batch - {existingEvaluation.Comments}";
+                    existingEvaluation.UpdatedAt = DateTime.UtcNow;
+                    
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(existingEvaluation);
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Updated existing evaluation: {existingEvaluation.EvaluationId}");
+                }
+                else
+                {
+                    // Fallback: tạo evaluation mới nếu không tìm thấy evaluation hiện có
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: No existing evaluation found, creating new one");
+                    
+                    // 🔧 FIX: Retry logic để tránh UNIQUE constraint violation
+                    string evaluationCode = null;
+                    int retryCount = 0;
+                    const int maxRetries = 5;
+                    
+                    while (evaluationCode == null && retryCount < maxRetries)
                     {
-                        var generatedCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
-                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Generated evaluation code: {generatedCode} (attempt {retryCount + 1})");
-                        
-                        // Kiểm tra xem evaluation code đã tồn tại chưa
-                        var existingEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByPredicateAsync(
-                            predicate: e => e.EvaluationCode == generatedCode && !e.IsDeleted,
-                            selector: e => e.EvaluationCode,
-                            asNoTracking: true
-                        );
-                        
-                        if (string.IsNullOrEmpty(existingEvaluation))
+                        try
                         {
-                            evaluationCode = generatedCode;
-                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {evaluationCode} is unique");
+                            var generatedCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year);
+                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Generated evaluation code: {generatedCode} (attempt {retryCount + 1})");
+                            
+                            // Kiểm tra xem evaluation code đã tồn tại chưa
+                            var existingEvaluationCode = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByPredicateAsync(
+                                predicate: e => e.EvaluationCode == generatedCode && !e.IsDeleted,
+                                selector: e => e.EvaluationCode,
+                                asNoTracking: true
+                            );
+                            
+                            if (string.IsNullOrEmpty(existingEvaluationCode))
+                            {
+                                evaluationCode = generatedCode;
+                                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {evaluationCode} is unique");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {generatedCode} already exists, retrying...");
+                                retryCount++;
+                                await Task.Delay(100); // Đợi 100ms trước khi thử lại
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation code {generatedCode} already exists, retrying...");
+                            Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Error generating evaluation code: {ex.Message}");
                             retryCount++;
-                            await Task.Delay(100); // Đợi 100ms trước khi thử lại
+                            await Task.Delay(100);
                         }
                     }
-                    catch (Exception ex)
+                    
+                    if (evaluationCode == null)
                     {
-                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Error generating evaluation code: {ex.Message}");
-                        retryCount++;
-                        await Task.Delay(100);
+                        return CreateValidationError("CannotGenerateUniqueEvaluationCode", new Dictionary<string, object>
+                        {
+                            ["MaxRetries"] = maxRetries
+                        });
                     }
-                }
-                
-                if (evaluationCode == null)
-                {
-                    return CreateValidationError("CannotGenerateUniqueEvaluationCode", new Dictionary<string, object>
+                    
+                    var newEvaluation = new ProcessingBatchEvaluation
                     {
-                        ["MaxRetries"] = maxRetries
-                    });
-                }
-                
-                var newEvaluation = new ProcessingBatchEvaluation
-                {
-                    EvaluationId = Guid.NewGuid(),
-                    EvaluationCode = evaluationCode,
-                    BatchId = batchId,
-                    EvaluatedBy = null,
-                    EvaluatedAt = null,
-                    EvaluationResult = null,
-                    Comments = $"Đánh giá lại sau khi cải thiện batch",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                };
+                        EvaluationId = Guid.NewGuid(),
+                        EvaluationCode = evaluationCode,
+                        BatchId = batchId,
+                        EvaluatedBy = null,
+                        EvaluatedAt = null,
+                        EvaluationResult = null,
+                        Comments = $"Đánh giá lại sau khi cải thiện batch",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
 
-                await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(newEvaluation);
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: New evaluation created successfully with code: {evaluationCode}");
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(newEvaluation);
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: New evaluation created successfully with code: {evaluationCode}");
+                }
 
                 // 🔧 QUAN TRỌNG: Lưu tất cả thay đổi một lần duy nhất
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: About to save changes...");
@@ -1750,10 +1778,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Successfully updated progress and created new evaluation");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Final batch status: {batch.Status}");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Progress created with ID: {progress.ProgressId}");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Evaluation created with code: {evaluationCode}");
+               
 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, 
-                    $"Đã cập nhật progress và chuyển sang chờ đánh giá lại batch.", 
+                    $"Đã cập nhật progress và chuyển sang chờ đánh giá lại batch trên cùng evaluation.", 
                     progress.ProgressId);
 
             }

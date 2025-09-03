@@ -147,6 +147,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             Console.WriteLine($"🔍 DEBUG: Calling service with userId: {userId}, isAdmin: {isAdmin}, isManagerOrExpert: {isManagerOrExpert}, isExpert: {isExpert}");
             var result = await _evaluationService.CreateAsync(dto, userId, isAdmin, isManagerOrExpert, isExpert);
+            
+            Console.WriteLine($"🔍 DEBUG: Service returned - Status: {result.Status}, Message: {result.Message}");
+            Console.WriteLine($"🔍 DEBUG: Expected SUCCESS_CREATE_CODE: {Const.SUCCESS_CREATE_CODE}");
 
             if (result.Status == Const.SUCCESS_CREATE_CODE) 
             {

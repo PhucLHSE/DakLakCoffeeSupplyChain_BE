@@ -10,6 +10,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
     public class EvaluationUpdateDto
     {
         public string EvaluationResult { get; set; } = default!;
+        public decimal? TotalScore { get; set; } // 🔧 MỚI: Điểm số đánh giá
         public string? Comments { get; set; }
         public DateTime? EvaluatedAt { get; set; }
         

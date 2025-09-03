@@ -17,6 +17,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             BatchId = e.BatchId,
             EvaluatedBy = e.EvaluatedBy,
             EvaluationResult = e.EvaluationResult,
+            TotalScore = e.TotalScore, // 🔧 MỚI: Map điểm số đánh giá
             Comments = e.Comments,
             EvaluatedAt = e.EvaluatedAt,
             CreatedAt = e.CreatedAt,
