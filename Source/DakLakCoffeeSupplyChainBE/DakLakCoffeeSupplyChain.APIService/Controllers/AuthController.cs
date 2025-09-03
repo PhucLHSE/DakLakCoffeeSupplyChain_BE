@@ -74,32 +74,32 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         // POST api/register - New endpoint for mobile app
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+        //[HttpPost("register")]
+        //public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+        //{
+        //    if (!ModelState.IsValid)
+        //        return BadRequest(ModelState);
 
-            // Convert mobile app request to SignUpRequestDto
-            var signUpRequest = new SignUpRequestDto
-            {
-                Email = request.Email,
-                Password = request.Password,
-                Name = request.FullName,
-                RoleId = request.RoleId,
-                Phone = request.Phone
-            };
+        //    // Convert mobile app request to SignUpRequestDto
+        //    var signUpRequest = new SignUpRequestDto
+        //    {
+        //        Email = request.Email,
+        //        Password = request.Password,
+        //        Name = request.FullName,
+        //        RoleId = request.RoleId,
+        //        Phone = request.Phone
+        //    };
 
-            var result = await _authService.RegisterAccount(signUpRequest);
+        //    var result = await _authService.RegisterAccount(signUpRequest);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return Ok(new { code = 200, message = "Đăng ký thành công", data = result.Data });
+        //    if (result.Status == Const.SUCCESS_CREATE_CODE)
+        //        return Ok(new { code = 200, message = "Đăng ký thành công", data = result.Data });
 
-            if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(new { code = 409, message = result.Message });
+        //    if (result.Status == Const.FAIL_CREATE_CODE)
+        //        return Conflict(new { code = 409, message = result.Message });
 
-            return StatusCode(500, new { code = 500, message = result.Message });
-        }
+        //    return StatusCode(500, new { code = 500, message = result.Message });
+        //}
 
         // GET api/verify-email/userId={userId}&code={verificationCode}
         [HttpGet("verify-email/userId={userId}&code={verificationCode}")]

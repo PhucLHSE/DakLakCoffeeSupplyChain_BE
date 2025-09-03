@@ -11,10 +11,11 @@ using System.Numerics;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class CultivationRegistrationService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator) : ICultivationRegistrationService
+    public class CultivationRegistrationService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator, INotificationService notify) : ICultivationRegistrationService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly ICodeGenerator _codeGenerator = codeGenerator;
+        private readonly INotificationService _notify = notify;
 
         public async Task<IServiceResult> DeleteById(Guid registrationId)
         {
@@ -76,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: c => c.IsDeleted != true,
                 include: c => c.
                 Include(c => c.Farmer).ThenInclude(c => c.User),
-                orderBy: c => c.OrderBy(c => c.RegistrationCode),
+                orderBy: c => c.OrderByDescending(c => c.CreatedAt),
                 asNoTracking: true);
 
             if (cultivationRegistrations == null || cultivationRegistrations.Count == 0)
@@ -268,13 +269,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             //Check trường hợp plan detail bắt buộc phải thuộc cái plan đang được chọn, ko được chọn plan detail không thuộc plan chính
             try
             {
-                var farmerId = await _unitOfWork.FarmerRepository.GetByPredicateAsync(
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                     predicate: f => f.UserId == userId,
-                    selector: f => f.FarmerId,
+                    include: f => f.Include(f => f.User),
                     asNoTracking: true
                 );
                 // Kiểm tra xem farmer có tồn tại không
-                if (farmerId == Guid.Empty)
+                if (farmer == null)
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
                         "Không tìm thấy nông dân tương ứng với tài khoản."
@@ -295,12 +296,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 string registrationCode = await _codeGenerator.GenerateCultivationRegistrationCodeAsync(); // ví dụ: "USR-YYYY-####" hoặc Guid, tuỳ bạn
 
                 // Map DTO to Entity
-                var newCultivationRegistration = registrationDto.MapToCultivationRegistrationCreateDto(registrationCode, farmerId);
+                var newCultivationRegistration = registrationDto.MapToCultivationRegistrationCreateDto(registrationCode, farmer.FarmerId);
 
                 var selectedProcurementPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                     predicate: p => p.PlanId == newCultivationRegistration.PlanId,
                     include: p => p.
                     Include(p => p.CultivationRegistrations).
+                    Include(p => p.CreatedByNavigation).
                     Include(p => p.ProcurementPlansDetails),
                     asNoTracking: true
                     );
@@ -337,13 +339,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else creationLimit = int.MaxValue;
 
                 var existingRegistrationCount = await _unitOfWork.CultivationRegistrationRepository.CountAsync(
-                    r => r.FarmerId == farmerId && r.PlanId == registrationDto.PlanId);
+                    r => r.FarmerId == farmer.FarmerId && r.PlanId == registrationDto.PlanId && !r.Status.Equals("Rejected"));
 
                 if (existingRegistrationCount >= creationLimit)
                 {
                     return new ServiceResult(
                         Const.FAIL_CREATE_CODE,
-                        $"Bạn chỉ được phép tạo tối đa {creationLimit} đơn đăng ký trên kế hoạch thu mua này."
+                        $"Bạn chỉ được phép tạo tối đa {creationLimit} đơn đăng ký trên kế hoạch thu mua này." +
+                        $"Các đơn bị từ chối sẽ không được tính."
                     );
                 }
 
@@ -419,6 +422,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Lưu thay đổi vào database
                 var result = await _unitOfWork.SaveChangesAsync();
 
+                //Gửi thông báo cho manager
+                await _notify.NotifyManagerNewRegistrationdAsync(
+                    selectedProcurementPlan.CreatedByNavigation.UserId,
+                    userId,
+                    farmer.User.Name,
+                    $"{selectedProcurementPlan.Title}"
+                    );
+
                 if (result > 0)
                 {
                     // Map the saved entity to a response DTO
@@ -475,7 +486,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 include: c => c.
                     Include(c => c.Registration).
                         ThenInclude(c => c.Farmer).
-                    Include(c => c.PlanDetail)
+                    Include(c => c.PlanDetail).
+                        ThenInclude(c => c.Plan)
                 );
                 if (registrationDetail == null)
                     return new ServiceResult(
@@ -483,7 +495,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không tìm thấy đơn đăng ký."
                     );
                 
-                // Kiểm tra người role, nếu là farmer thì chỉ được phép chọn hủy, không cho chọn option khác
+                // Kiểm tra role, nếu là farmer thì chỉ được phép chọn hủy, không cho chọn option khác
                 // Farmer khác nếu truy cập được api này vẫn có thể update được nhưng phía UI không cho có support chuyện đó
                 // Cách này tối ưu vòng lặp nhưng dở ở logic một xíu
                 if (registrationDetail.Registration.Farmer.UserId == userId
@@ -492,14 +504,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         Const.FAIL_UPDATE_CODE,
                         "Bạn không có quyền hạn này."
                     );
-                var businessManagerId = await _unitOfWork.BusinessManagerRepository.GetByPredicateAsync(
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: u => u.UserId == userId,
-                    selector: u => u.ManagerId,
                     asNoTracking: true
                 );
 
                 // Kiểm tra người role, nếu là business manager thì chỉ được phép chọn duyệt hoặc từ chối
-                if (businessManagerId == Guid.Empty)
+                if (manager == null)
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -556,10 +567,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 registrationDetail.Status = dto.Status.ToString();
                 registrationDetail.UpdatedAt = DateHelper.NowVietnamTime();
                 registrationDetail.ApprovedAt = DateHelper.NowVietnamTime();
-                registrationDetail.ApprovedBy = businessManagerId;
+                registrationDetail.ApprovedBy = manager.ManagerId;
 
                 await _unitOfWork.CultivationRegistrationsDetailRepository.UpdateAsync(registrationDetail);
                 var result = await _unitOfWork.SaveChangesAsync();
+
+                // Gửi notification cho farmer
+                if (dto.Status.ToString().Equals("Approved"))
+                    await _notify.NotifyFarmerApprovedRegistrationAsync(
+                    registrationDetail.Registration.Farmer.UserId,
+                    userId,
+                    manager.CompanyName,
+                    $"trong kế hoạch {registrationDetail.PlanDetail.Plan.Title}. Bạn có thể xem trong mục các đơn đã đăng ký kế hoạch." +
+                    $"Sau khi doanh nghiệp đã duyệt đơn đăng ký của bạn, họ sẽ tạo cam kết thu mua, bạn hãy vào mục cam kết kế hoạch để đồng" +
+                    $"ý hoặc từ chối cam kết của họ."
+                    );
+                if (dto.Status.ToString().Equals("Rejected"))
+                    await _notify.NotifyFarmerRejectedRegistrationAsync(
+                        registrationDetail.Registration.Farmer.UserId,
+                        userId,
+                        manager.CompanyName,
+                        $"trong kế hoạch {registrationDetail.PlanDetail.Plan.Title}. Bạn có thể xem trong mục các đơn đã đăng ký kế hoạch."
+                        );
+
                 if (result > 0)
                 {
                     var cultivation = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(

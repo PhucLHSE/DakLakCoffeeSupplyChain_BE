@@ -14,10 +14,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class FarmingCommitmentService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator) : IFarmingCommitmentService
+    public class FarmingCommitmentService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator, INotificationService notify) : IFarmingCommitmentService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly ICodeGenerator _codeGenerator = codeGenerator;
+        private readonly INotificationService _notify = notify;
         public async Task<IServiceResult> GetAllBusinessManagerCommitment(Guid userId)
         {
             // Kiểm tra BM có tồn tại không
@@ -44,7 +45,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(fm => fm.FarmingCommitmentsDetails).
                     ThenInclude(fm => fm.PlanDetail).
                         ThenInclude(fm => fm.CoffeeType),
-                orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
+                orderBy: fm => fm.OrderByDescending(fm => fm.CreatedAt),
                 asNoTracking: true
                 );
 
@@ -99,7 +100,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(fm => fm.FarmingCommitmentsDetails).
                     ThenInclude(fm => fm.PlanDetail).
                         ThenInclude(fm => fm.CoffeeType),
-                orderBy: fm => fm.OrderBy(fm => fm.CommitmentCode),
+                orderBy: fm => fm.OrderByDescending(fm => fm.CreatedAt),
                 asNoTracking: true
                 );
 
@@ -311,7 +312,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var selectedRegistration = await _unitOfWork.CultivationRegistrationRepository.GetByIdAsync(
                     predicate: r => r.RegistrationId == newCommitment.RegistrationId && r.FarmingCommitment == null,
                     include: r => r.
+                        Include(r => r.Farmer).
                         Include(r => r.Plan).
+                            ThenInclude(r => r.CreatedByNavigation).
                         Include(r => r.FarmingCommitment).
                         Include(r => r.CultivationRegistrationsDetails),
                     asNoTracking: true);
@@ -357,13 +360,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         selectedRegistrationDetail.PlanDetail.ProgressPercentage / 100;
 
                     // Kiểm tra xem sản lượng thống nhất có vượt tổng sản lượng của kế hoạch không
-                    //if (detail.CommittedQuantity > registeredQuantity || detail.CommittedQuantity < selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity)
-                    //    return new ServiceResult(
-                    //        Const.FAIL_CREATE_CODE,
-                    //        "Sản lượng thống nhất phải nằm trong phạm vi sản lượng kế hoạch đã đề ra. " +
-                    //        $"Cụ thể từ {selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity} kg đến {selectedRegistrationDetail.PlanDetail.TargetQuantity} kg"
-                    //    );
-
                     if (registeredQuantity + selectedRegistrationDetail.PlanDetail.MinimumRegistrationQuantity < 
                         selectedRegistrationDetail.PlanDetail.TargetQuantity)
                     {
@@ -466,6 +462,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Save data to database
                 await _unitOfWork.FarmingCommitmentRepository.CreateAsync(newCommitment);
                 var result = await _unitOfWork.SaveChangesAsync();
+
+                // Gửi notification đến farmer
+                await _notify.NotifyFarmerNewCommitmentAsync(
+                    selectedRegistration.Farmer.UserId,
+                    selectedRegistration.Plan.CreatedByNavigation.UserId,
+                    selectedRegistration.Plan.CreatedByNavigation.CompanyName,
+                    $"là '{newCommitment.CommitmentName}' cho kế hoạch '{selectedRegistration.Plan.Title}'. Bạn hãy vào mục Cam kết kế hoạch thu mua để xem. " +
+                    $"Nếu muốn đồng ý hoặc từ chối cam kết này, hãy vào trang chi tiết của cam kết. " +
+                    $"\n Lưu ý là doanh nghiệp chỉ có thể chỉnh sửa cam kết khi bạn chưa chấp nhận cam kết."
+                    );
 
                 if (result > 0)
                 {
@@ -585,6 +591,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
                     predicate: p => p.CommitmentId == commitmentId && !p.IsDeleted,
                     include: p => p.
+                        Include(p => p.Registration).
+                            ThenInclude(p => p.Farmer).
                         Include(p => p.Plan).
                             ThenInclude(p => p.CreatedByNavigation).
                         Include(p => p.FarmingCommitmentsDetails)
@@ -762,6 +770,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.FarmingCommitmentRepository.UpdateAsync(commitment);
                 var result = await _unitOfWork.SaveChangesAsync();
 
+                // Gửi notification cho farmer
+                await _notify.NotifyFarmerUpdatedCommitmentAsync(
+                    commitment.Farmer.UserId,
+                    commitment.Plan.CreatedByNavigation.UserId,
+                    commitment.Plan.CreatedByNavigation.CompanyName,
+                    $"là '{commitment.CommitmentName}' cho kế hoạch '{commitment.Plan.Title}'. Bạn hãy vào mục Cam kết kế hoạch thu mua để xem. " +
+                    $"Nếu muốn đồng ý hoặc từ chối cam kết này, hãy vào trang chi tiết của cam kết. " +
+                    $"\n Lưu ý là doanh nghiệp chỉ có thể chỉnh sửa cam kết khi bạn chưa chấp nhận cam kết."
+                    );
+
                 if (result > 0)
                 {
                     var updatedCommitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
@@ -814,7 +832,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                
+                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: f => f.UserId == userId && !f.IsDeleted,
+                    include: f => f.Include(f => f.User),
+                    asNoTracking: true
+                    );
+                if(farmer == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy nông dân."
+                    );
+
                 // Lấy commitment theo ID và kiểm tra quyền truy cập
                 var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
                     predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted
@@ -847,7 +875,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                             predicate: p => p.PlanId == commitment.PlanId && !p.IsDeleted,
-                            include: p => p.Include(p => p.ProcurementPlansDetails)
+                            include: p => p.
+                                Include(p => p.CreatedByNavigation).
+                                Include(p => p.ProcurementPlansDetails)
                         );
                 if (plan == null)
                     return new ServiceResult(
@@ -907,6 +937,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Cập nhật vào DB
                 await _unitOfWork.FarmingCommitmentRepository.UpdateAsync(commitment);
                 var result = await _unitOfWork.SaveChangesAsync();
+
+                // Gửi notification cho manager
+                if (dto.Status.ToString().Equals("Active"))
+                    await _notify.NotifyManagerApprovedCommitmentAsync(
+                    plan.CreatedByNavigation.UserId,
+                    userId,
+                    farmer.User.Name,
+                    $"là '{commitment.CommitmentName}' cho kế hoạch '{plan.Title}'. Bạn hãy vào mục Cam kết kế hoạch thu mua để xem. " +
+                    $"Sau khi nông dân đã đồng ý cam kế của bạn, bạn sẽ có thể nhận báo cáo tiến độ mùa vụ từ nông dân."
+                    );
+                if (dto.Status.ToString().Equals("Rejected"))
+                    await _notify.NotifyManagerRejectedCommitmentAsync(
+                    plan.CreatedByNavigation.UserId,
+                    userId,
+                    farmer.User.Name,
+                    $"là '{commitment.CommitmentName}' cho kế hoạch '{plan.Title}'. Bạn hãy vào mục Cam kết kế hoạch thu mua để xem lý do. " +
+                    $"Sau khi nông dân đã từ chối cam kế của bạn, bạn có thể tùy chỉnh lại cam kết để phù hợp hơn với mong muốn của cả hai bên."
+                    );
 
                 if (result > 0)
                 {
