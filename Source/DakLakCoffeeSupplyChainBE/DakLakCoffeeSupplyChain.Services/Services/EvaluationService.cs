@@ -70,10 +70,34 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (!batchExists)
                 return CreateValidationError("InvalidProcessingBatch");
 
-            // Validate EvaluationResult
-            var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary", "Pending" };
-            if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
-                return CreateValidationError("InvalidEvaluationResult");
+                                                   // 🔧 MỚI: Chỉ validate EvaluationResult nếu không có QualityCriteriaEvaluations
+              if (dto.QualityCriteriaEvaluations?.Any() != true && !string.IsNullOrEmpty(dto.EvaluationResult))
+              {
+                  var validResults = new[] { "Pass", "Fail", "NeedsImprovement", "Temporary" };
+                  if (!validResults.Contains(dto.EvaluationResult, StringComparer.OrdinalIgnoreCase))
+                      return CreateValidationError("InvalidEvaluationResult");
+              }
+                
+            // 🔧 MỚI: Validate TotalScore nếu có
+            if (dto.TotalScore.HasValue && (dto.TotalScore.Value < 0 || dto.TotalScore.Value > 100))
+            {
+                return CreateValidationError("InvalidTotalScore", new Dictionary<string, object>
+                {
+                    ["TotalScore"] = dto.TotalScore.Value,
+                    ["MinValue"] = 0,
+                    ["MaxValue"] = 100
+                });
+            }
+            
+            // 🔧 MỚI: Validate IsPassAllBatch
+            if (dto.IsPassAllBatch == true && dto.TotalScore.HasValue && dto.TotalScore.Value != 100)
+            {
+                return CreateValidationError("InvalidPassAllBatchScore", new Dictionary<string, object>
+                {
+                    ["TotalScore"] = dto.TotalScore.Value,
+                    ["ExpectedScore"] = 100
+                });
+            }
 
             // Kiểm tra batch status trước khi đánh giá
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
@@ -194,48 +218,283 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
 
+                         // 🔧 CẢI THIỆN: Logic tính điểm thông minh dựa trên tiêu chí
+             // Hệ thống sẽ tự động đánh giá dựa trên quality criteria mà không cần expert chọn thủ công
+             decimal? finalScore = null;
+             string finalResult = dto.EvaluationResult;
+            
+            Console.WriteLine($"DEBUG EVALUATION CREATE: dto.IsPassAllBatch = {dto.IsPassAllBatch}, dto.TotalScore = {dto.TotalScore}");
+            
+            // Nếu có nút "Đạt cả batch" từ FE
+            if (dto.IsPassAllBatch == true)
+            {
+                finalScore = 100.00m;
+                finalResult = "Pass";
+                // 🔧 CẢI THIỆN: Chỉ thêm comment nếu chưa có
+                if (!detailedComments.Contains("Đạt cả batch") && !detailedComments.Contains("Đánh giá BATCH thành công"))
+                {
+                    detailedComments = "Đánh giá: Đạt cả batch (100/100 điểm)\n\n" + detailedComments;
+                }
+                Console.WriteLine($"DEBUG EVALUATION CREATE: IsPassAllBatch = true, finalScore = {finalScore}, finalResult = {finalResult}");
+            }
+            // 🔧 FIX: Xử lý trường hợp có EvaluationResult từ DTO nhưng không có TotalScore
+            else if (!string.IsNullOrEmpty(dto.EvaluationResult) && !dto.TotalScore.HasValue)
+            {
+                if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                {
+                    finalScore = 100.00m;
+                }
+                else if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                {
+                    finalScore = 0.00m;
+                }
+                else
+                {
+                    finalScore = 50.00m; // Default cho các trường hợp khác
+                }
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Set score based on EvaluationResult: {dto.EvaluationResult}, finalScore = {finalScore}");
+            }
+                                      // 🔧 MỚI: Hệ thống tự động đánh giá dựa trên quality criteria (không cần expert chọn thủ công)
+             else if (dto.QualityCriteriaEvaluations?.Any() == true)
+             {
+                 // Tự động đánh giá dựa trên quality criteria
+                 var criteriaResults = QualityEvaluationHelper.AutoEvaluateCriteria(dto.QualityCriteriaEvaluations);
+                 var passCount = criteriaResults.Count(c => c.IsPassed);
+                 var failCount = criteriaResults.Count(c => !c.IsPassed);
+                 
+                 // 🔧 FIX: Tính điểm dựa trên tỷ lệ Pass/Fail
+                 if (criteriaResults.Count > 0)
+                 {
+                     // Tính điểm theo tỷ lệ: (PassCount / TotalCount) * 100
+                     finalScore = Math.Round((decimal)passCount / criteriaResults.Count * 100, 2);
+                     Console.WriteLine($"DEBUG EVALUATION CREATE: Auto calculated score: {passCount}/{criteriaResults.Count} = {finalScore}");
+                 }
+                 else
+                 {
+                     finalScore = 0.00m;
+                 }
+                 
+                                   // 🔧 MỚI: Logic đánh giá tự động dựa trên tỷ lệ Pass/Fail
+                  // - Pass > Fail: Tự động Pass
+                  // - Fail > Pass: Tự động Fail  
+                  // - Pass = Fail (50/50): Expert quyết định thủ công
+                  if (passCount > failCount)
+                 {
+                     // Nếu Pass > Fail: Đánh giá Pass + note cần cải thiện
+                     finalResult = "Pass";
+                     
+                     // Lấy danh sách các giai đoạn bị lỗi để ghi nhận (dù đã Pass)
+                     var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
+                     var failedStagesText = failedStages.Any() 
+                         ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages)}"
+                         : "";
+                     
+                     detailedComments = $"Đánh giá: Đạt. Tuy nhiên, cần cải thiện thêm một số vấn đề.\n{failedStagesText}\n\n" + detailedComments;
+                 }
+                 else if (failCount > passCount)
+                 {
+                     // Nếu Fail > Pass: Đánh giá Fail + lưu stages fail để farmer cập nhật
+                     finalResult = "Fail";
+                     
+                     // Lấy danh sách các giai đoạn bị lỗi để farmer cập nhật
+                     var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
+                     var failedStagesText = failedStages.Any() 
+                         ? $"Giai đoạn cần cập nhật: {string.Join(", ", failedStages)}"
+                         : "Các giai đoạn cần cập nhật: Không xác định";
+                     
+                     detailedComments = $"Đánh giá: Không đạt. Cần cải thiện các giai đoạn bị lỗi.\n{failedStagesText}\n\n" + detailedComments;
+                 }
+                                                     else // passCount == failCount (50/50)
+                   {
+                       // 🔧 MỚI: Khi 50/50, để expert quyết định thủ công
+                       if (!string.IsNullOrEmpty(dto.EvaluationResult))
+                       {
+                           // Expert đã chọn thủ công
+                           finalResult = dto.EvaluationResult;
+                           Console.WriteLine($"DEBUG EVALUATION CREATE: Expert manually chose {finalResult} for 50/50 case");
+                           
+                           // 🔧 MỚI: Nếu expert chọn Fail trong 50/50, lưu stages cần cập nhật
+                           if (finalResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                           {
+                               var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
+                               var failedStagesText = failedStages.Any() 
+                                   ? $"Giai đoạn cần cập nhật: {string.Join(", ", failedStages)}"
+                                   : "Các giai đoạn cần cập nhật: Không xác định";
+                               
+                               detailedComments = $"Đánh giá: Không đạt. Số tiêu chí đạt và không đạt bằng nhau (50/50). Expert đã quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
+                           }
+                           else if (finalResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                           {
+                               var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
+                               var failedStagesText = failedStages.Any() 
+                                   ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages)}"
+                                   : "";
+                               
+                               detailedComments = $"Đánh giá: Đạt. Số tiêu chí đạt và không đạt bằng nhau (50/50). Expert đã quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
+                           }
+                       }
+                       else
+                       {
+                           // Nếu expert chưa chọn, để NeedsImprovement để expert quyết định sau
+                           finalResult = "NeedsImprovement";
+                           Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 case - waiting for expert decision");
+                           
+                           var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
+                           var failedStagesText = failedStages.Any() 
+                               ? $"Giai đoạn cần cải thiện: {string.Join(", ", failedStages)}"
+                               : "";
+                           
+                           detailedComments = $"Đánh giá: Cần cải thiện. Số tiêu chí đạt và không đạt bằng nhau (50/50). Cần expert quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
+                       }
+                   }
+                 
+                 detailedComments = $"Tổng số tiêu chí: {criteriaResults.Count}, Đạt: {passCount}, Không đạt: {failCount}\n\n" + detailedComments;
+                 
+                 Console.WriteLine($"DEBUG EVALUATION CREATE: Auto evaluation - Pass: {passCount}, Fail: {failCount}, FinalResult: {finalResult}, FinalScore: {finalScore}");
+             }
+                         
+            else
+            {
+                // Sử dụng điểm số từ DTO nếu có
+                finalScore = dto.TotalScore;
+                
+                // 🔧 FIX: Nếu không có TotalScore từ DTO và không có quality criteria, set default score
+                if (!finalScore.HasValue)
+                {
+                    // Nếu có EvaluationResult từ DTO, set score tương ứng
+                    if (dto.EvaluationResult?.Equals("Pass", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        finalScore = 100.00m;
+                    }
+                    else if (dto.EvaluationResult?.Equals("Fail", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        finalScore = 0.00m;
+                    }
+                    else
+                    {
+                        finalScore = 0.00m; // Default score
+                    }
+                }
+            }
+
             var entity = new ProcessingBatchEvaluation
             {
                 EvaluationId = Guid.NewGuid(),
                 EvaluationCode = code,
                 BatchId = dto.BatchId,
                 EvaluatedBy = expertId, // Lưu ExpertId thay vì UserId
-                EvaluationResult = dto.EvaluationResult,
+                EvaluationResult = finalResult,
+                TotalScore = finalScore,
                 Comments = detailedComments.Trim(),
                 EvaluatedAt = dto.EvaluatedAt ?? DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
+            
+            // 🔧 FIX: Đảm bảo TotalScore được set đúng cách
+            if (finalScore.HasValue)
+            {
+                entity.TotalScore = finalScore.Value;
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Set TotalScore to entity: {entity.TotalScore}");
+            }
+            else
+            {
+                Console.WriteLine($"DEBUG EVALUATION CREATE: WARNING - finalScore is null!");
+            }
+            
+            Console.WriteLine($"DEBUG EVALUATION CREATE: Entity TotalScore = {entity.TotalScore}, EvaluationResult = {entity.EvaluationResult}");
+            Console.WriteLine($"DEBUG EVALUATION CREATE: Final calculated score = {finalScore}, Final result = {finalResult}");
 
-            // Nếu là farmer tạo đơn đánh giá, set EvaluationResult = "Pending"
+            // Nếu là farmer tạo đơn đánh giá, set EvaluationResult = null
             if (!isAdmin && !isManager && !isExpert)
             {
-                entity.EvaluationResult = "Pending"; // Đơn đánh giá chờ expert xử lý
+                entity.EvaluationResult = null; // 🔧 CẢI THIỆN: Để null thống nhất
                 entity.EvaluatedAt = null; // Chưa được đánh giá
             }
 
-            // Xóa evaluation tự động cũ (nếu có) trước khi tạo evaluation mới
-            var existingAutoEvaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
-                e => e.BatchId == dto.BatchId && e.EvaluatedBy == null && !e.IsDeleted
+            // 🔧 CẢI THIỆN: Kiểm tra xem có evaluation nào cần cập nhật không
+            var existingEvaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                e => e.BatchId == dto.BatchId && !e.IsDeleted,
+                orderBy: q => q.OrderByDescending(x => x.CreatedAt),
+                asNoTracking: false // 🔧 FIX: Bật tracking để có thể update
             );
+            var existingEvaluation = existingEvaluations.FirstOrDefault();
             
-            foreach (var autoEval in existingAutoEvaluations)
+            Console.WriteLine($"DEBUG EVALUATION CREATE: Found {existingEvaluations.Count()} existing evaluations for batch {dto.BatchId}");
+            if (existingEvaluation != null)
             {
-                autoEval.IsDeleted = true;
-                autoEval.UpdatedAt = DateTime.UtcNow;
-                await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(autoEval);
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Latest existing evaluation: {existingEvaluation.EvaluationId}, CreatedAt: {existingEvaluation.CreatedAt}");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation state - EvaluationResult: '{existingEvaluation.EvaluationResult}', TotalScore: {existingEvaluation.TotalScore}");
             }
-
+            
             int saved = 0;
+            ProcessingBatchEvaluation trackedEvaluation = null; // 🔧 FIX: Khai báo biến ở ngoài scope
             try
             {
-                await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
+                if (existingEvaluation != null)
+                {
+                    // Cập nhật evaluation hiện có thay vì tạo mới
+                    // 🔧 FIX: Lấy lại entity với tracking để đảm bảo update hoạt động
+                    trackedEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetByIdAsync(
+                        e => e.EvaluationId == existingEvaluation.EvaluationId && !e.IsDeleted,
+                        asNoTracking: false
+                    );
+                    
+                    if (trackedEvaluation != null)
+                    {
+                        trackedEvaluation.EvaluatedBy = expertId;
+                        trackedEvaluation.EvaluationResult = finalResult;
+                        trackedEvaluation.TotalScore = finalScore;
+                        trackedEvaluation.Comments = detailedComments.Trim();
+                        trackedEvaluation.EvaluatedAt = dto.EvaluatedAt ?? DateTime.UtcNow;
+                        trackedEvaluation.UpdatedAt = DateTime.UtcNow;
+                        
+                        // 🔧 FIX: Đảm bảo TotalScore được set đúng cách cho tracked entity
+                        if (finalScore.HasValue)
+                        {
+                            trackedEvaluation.TotalScore = finalScore.Value;
+                            Console.WriteLine($"DEBUG EVALUATION CREATE: Set TotalScore to tracked entity: {trackedEvaluation.TotalScore}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DEBUG EVALUATION CREATE: WARNING - finalScore is null for tracked entity!");
+                        }
+                        
+                        // 🔧 FIX: Đảm bảo comment được cập nhật đúng cách
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Updated comments length: {trackedEvaluation.Comments?.Length ?? 0}");
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Updated comments preview: {trackedEvaluation.Comments?.Substring(0, Math.Min(100, trackedEvaluation.Comments.Length))}...");
+                        
+                        // 🔧 FIX: Thêm debug log trước khi update
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Before update - EvaluationResult: '{trackedEvaluation.EvaluationResult}', TotalScore: {trackedEvaluation.TotalScore}");
+                        
+                        await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(trackedEvaluation);
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Updated existing evaluation: {trackedEvaluation.EvaluationId}");
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: After update - EvaluationResult: '{trackedEvaluation.EvaluationResult}', TotalScore: {trackedEvaluation.TotalScore}");
+                    }
+                    else
+                    {
+                        // Fallback: tạo mới nếu không lấy được entity tracked
+                        await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Created new evaluation (fallback): {entity.EvaluationId}");
+                    }
+                }
+                else
+                {
+                    // Tạo evaluation mới nếu không có evaluation nào
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(entity);
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Created new evaluation: {entity.EvaluationId}");
+                    
+                    // 🔧 FIX: Đảm bảo entity được track sau khi create
+                    trackedEvaluation = entity;
+                }
 
                 // Xử lý logic workflow theo kết quả đánh giá
-                if (dto.EvaluationResult.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                var evaluationToProcess = trackedEvaluation ?? existingEvaluation ?? entity;
+                
+                if (finalResult == null)
                 {
-                    // Nếu farmer tạo đơn đánh giá, chuyển batch sang AwaitingEvaluation
+                    // Nếu farmer tạo đơn đánh giá hoặc evaluation tự động, chuyển batch sang AwaitingEvaluation
                     if (batch.Status == "Completed")
                     {
                         batch.Status = "AwaitingEvaluation";
@@ -243,75 +502,126 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
                     }
                 }
-                else if (dto.EvaluationResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
-                {
-                    // 🔧 MỚI: Xử lý logic retry khi evaluation fail
-                    if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
-                    {
-                        // Chuyển batch về trạng thái InProgress để farmer cập nhật
-                        batch.Status = "InProgress";
-                        batch.UpdatedAt = DateTime.UtcNow;
-                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                        
-                        // 🔧 MỚI: Lưu thông tin về các stage cần cập nhật
-                        if (dto.ProblematicSteps?.Any() == true)
-                        {
-                            await SaveFailedStagesInfoAsync(dto.BatchId, dto.ProblematicSteps);
-                        }
-                        
-                        // Gửi notification cho Farmer (chỉ gửi 1 lần)
-                        try
-                        {
-                            var batchWithFarmer = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                                predicate: b => b.BatchId == dto.BatchId,
-                                include: b => b.Include(b => b.Farmer)
-                            );
-                            
-                            if (batchWithFarmer?.Farmer?.UserId != null)
-                            {
-                                await _notificationService.NotifyEvaluationFailedAsync(
-                                    dto.BatchId, 
-                                    batchWithFarmer.Farmer.UserId, 
-                                    detailedComments
-                                );
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log lỗi notification nhưng không ảnh hưởng đến việc tạo evaluation
-                            Console.WriteLine($"Lỗi gửi notification: {ex.Message}");
-                        }
-                    }
-                }
-                else if (dto.EvaluationResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
-                {
-                    bool statusChanged = false;
-                    
-                    // Nếu đánh giá Pass và batch đang AwaitingEvaluation, chuyển sang Completed
-                    if (batch.Status == "AwaitingEvaluation")
-                    {
-                        batch.Status = "Completed";
-                        batch.UpdatedAt = DateTime.UtcNow;
-                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                        statusChanged = true;
-                    }
-                    // Nếu đánh giá Pass và batch đang InProgress, chuyển sang Completed
-                    else if (batch.Status == "InProgress")
-                    {
-                        batch.Status = "Completed";
-                        batch.UpdatedAt = DateTime.UtcNow;
-                        await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
-                        statusChanged = true;
-                    }
+                                 else if (finalResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                 {
+                     // 🔧 MỚI: Xử lý logic retry khi evaluation fail
+                     if (batch.Status == "Completed" || batch.Status == "AwaitingEvaluation")
+                     {
+                         // Chuyển batch về trạng thái InProgress để farmer cập nhật các stages fail
+                         batch.Status = "InProgress";
+                         batch.UpdatedAt = DateTime.UtcNow;
+                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                         
+                         // 🔧 MỚI: Lưu thông tin stages cần cập nhật vào comment để farmer biết
+                         Console.WriteLine($"DEBUG EVALUATION CREATE: Batch status changed to InProgress for Fail evaluation");
+                         
+                         // Gửi notification cho Farmer (chỉ gửi 1 lần)
+                         try
+                         {
+                             var batchWithFarmer = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                                 predicate: b => b.BatchId == dto.BatchId,
+                                 include: b => b.Include(b => b.Farmer)
+                             );
+                             
+                             if (batchWithFarmer?.Farmer?.UserId != null)
+                             {
+                                 await _notificationService.NotifyEvaluationFailedAsync(
+                                     dto.BatchId, 
+                                     batchWithFarmer.Farmer.UserId, 
+                                     detailedComments
+                                 );
+                             }
+                         }
+                         catch (Exception ex)
+                         {
+                             // Log lỗi notification nhưng không ảnh hưởng đến việc tạo evaluation
+                             Console.WriteLine($"Lỗi gửi notification: {ex.Message}");
+                         }
+                     }
+                 }
+                                 else if (finalResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                 {
+                     bool statusChanged = false;
+                     
+                     // Nếu đánh giá Pass và batch đang AwaitingEvaluation, chuyển sang Completed
+                     if (batch.Status == "AwaitingEvaluation")
+                     {
+                         batch.Status = "Completed";
+                         batch.UpdatedAt = DateTime.UtcNow;
+                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                         statusChanged = true;
+                     }
+                     // Nếu đánh giá Pass và batch đang InProgress, chuyển sang Completed
+                     else if (batch.Status == "InProgress")
+                     {
+                         batch.Status = "Completed";
+                         batch.UpdatedAt = DateTime.UtcNow;
+                         await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                         statusChanged = true;
+                     }
+                     
+                     // �� XÓA: Không cần xóa SystemConfiguration nữa
+                     
+                     Console.WriteLine($"DEBUG EVALUATION CREATE: Pass evaluation - Batch status changed to Completed: {statusChanged}");
+                 }
 
-                    // 🔧 MỚI: Xóa thông tin retry khi batch được đánh giá thành công
-                    if (statusChanged)
-                    {
-                        await ClearRetryInfoAsync(dto.BatchId);
-                    }
+                // 🔧 MỚI: Log trước khi save để debug
+                Console.WriteLine($"DEBUG EVALUATION CREATE: About to save changes...");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity to save - EvaluationId: {entity.EvaluationId}, EvaluationResult: '{entity.EvaluationResult}', TotalScore: {entity.TotalScore}");
+                if (existingEvaluation != null)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation to update - EvaluationId: {existingEvaluation.EvaluationId}");
+                }
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Batch status before save: {batch.Status}");
+
+                // 🔧 FIX: Thêm debug log để kiểm tra entity state
+                if (trackedEvaluation != null)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Tracked evaluation before save - EvaluationResult: '{trackedEvaluation.EvaluationResult}', TotalScore: {trackedEvaluation.TotalScore}");
                 }
 
                 saved = await _unitOfWork.SaveChangesAsync();
+                Console.WriteLine($"DEBUG EVALUATION CREATE: SaveChangesAsync result: {saved}");
+                
+                // 🔧 FIX: Nếu SaveChangesAsync trả về 0, thử force save
+                if (saved == 0)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: SaveChangesAsync returned 0, trying to force save...");
+                    
+                    // Thử save lại với explicit tracking
+                    if (trackedEvaluation != null)
+                    {
+                        await _unitOfWork.ProcessingBatchEvaluationRepository.UpdateAsync(trackedEvaluation);
+                        saved = await _unitOfWork.SaveChangesAsync();
+                        Console.WriteLine($"DEBUG EVALUATION CREATE: Force save result: {saved}");
+                    }
+                }
+                
+                // 🔧 MỚI: Thêm logging chi tiết để debug
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - EvaluationId: {entity.EvaluationId}");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - EvaluationResult: '{entity.EvaluationResult}'");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - TotalScore: {entity.TotalScore}");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - Comments: '{entity.Comments}'");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - EvaluatedBy: {entity.EvaluatedBy}");
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Entity state before return - EvaluatedAt: {entity.EvaluatedAt}");
+                
+                if (existingEvaluation != null)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation state - EvaluationId: {existingEvaluation.EvaluationId}");
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation state - EvaluationResult: '{existingEvaluation.EvaluationResult}'");
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation state - TotalScore: {existingEvaluation.TotalScore}");
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Existing evaluation state - Comments: '{existingEvaluation.Comments}'");
+                }
+                
+                // 🔧 MỚI: Kiểm tra batch state
+                var batchAfterSave = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    b => b.BatchId == dto.BatchId && !b.IsDeleted
+                );
+                if (batchAfterSave != null)
+                {
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Batch state after save - Status: '{batchAfterSave.Status}'");
+                    Console.WriteLine($"DEBUG EVALUATION CREATE: Batch state after save - UpdatedAt: {batchAfterSave.UpdatedAt}");
+                }
             }
             catch (Exception ex)
             {
@@ -321,9 +631,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 throw; // Re-throw để controller có thể xử lý
             }
 
-            return saved > 0
-                ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, entity.MapToViewDto())
+            var result = saved > 0
+                ? new ServiceResult(Const.SUCCESS_CREATE_CODE, Const.SUCCESS_CREATE_MSG, (trackedEvaluation ?? existingEvaluation ?? entity).MapToViewDto())
                 : CreateValidationError("CreateEvaluationFailed");
+            
+            // 🔧 FIX: Thêm debug log để kiểm tra final result
+            Console.WriteLine($"DEBUG EVALUATION CREATE: Final result - Status: {result.Status}, Message: {result.Message}");
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            {
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Success! Evaluation created/updated successfully");
+            }
+            else
+            {
+                Console.WriteLine($"DEBUG EVALUATION CREATE: Failed! Error: {result.Message}");
+            }
+            
+            Console.WriteLine($"DEBUG EVALUATION CREATE: Returning result - Status: {result.Status}, Message: {result.Message}");
+            return result;
         }
 
         // ================== UPDATE ==================
@@ -353,6 +677,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG UPDATE EVALUATION: Invalid EvaluationResult: '{dto.EvaluationResult}'");
                 var parameters = new Dictionary<string, object> { ["result"] = dto.EvaluationResult };
                 return CreateValidationError("InvalidEvaluationResultForUpdate", parameters);
+            }
+            
+            // 🔧 MỚI: Validate TotalScore nếu có
+            if (dto.TotalScore.HasValue && (dto.TotalScore.Value < 0 || dto.TotalScore.Value > 100))
+            {
+                Console.WriteLine($"DEBUG UPDATE EVALUATION: Invalid TotalScore: '{dto.TotalScore.Value}'");
+                var parameters = new Dictionary<string, object> 
+                { 
+                    ["TotalScore"] = dto.TotalScore.Value,
+                    ["MinValue"] = 0,
+                    ["MaxValue"] = 100
+                };
+                return CreateValidationError("InvalidTotalScoreForUpdate", parameters);
             }
 
             // Lưu kết quả cũ để so sánh
@@ -417,6 +754,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             
             entity.EvaluationResult = dto.EvaluationResult;
+            // 🔧 MỚI: Cập nhật điểm số nếu có
+            if (dto.TotalScore.HasValue)
+            {
+                entity.TotalScore = dto.TotalScore.Value;
+            }
             entity.Comments = detailedComments.Trim();
             if (dto.EvaluatedAt.HasValue) entity.EvaluatedAt = dto.EvaluatedAt.Value;
             entity.UpdatedAt = DateTime.UtcNow;
@@ -753,6 +1095,44 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có đánh giá nào đã xóa.", new List<EvaluationViewDto>());
         }
 
+        // ================== GET FAILED STAGES FOR BATCH ==================
+        public async Task<List<string>> GetFailedStagesForBatchAsync(Guid batchId)
+        {
+            try
+            {
+                // Lấy evaluation cuối cùng của batch
+                var latestEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
+                    e => e.BatchId == batchId && !e.IsDeleted,
+                    orderBy: q => q.OrderByDescending(e => e.CreatedAt)
+                );
+
+                var evaluation = latestEvaluation.FirstOrDefault();
+                if (evaluation == null || evaluation.EvaluationResult != "Fail")
+                {
+                    return new List<string>();
+                }
+
+                // Parse failed stages từ comments
+                var failedStages = new List<string>();
+                var comments = evaluation.Comments ?? "";
+                
+                // Tìm pattern "Giai đoạn cần cập nhật: [danh sách]"
+                var match = System.Text.RegularExpressions.Regex.Match(comments, @"Giai đoạn cần cập nhật:\s*([^\n]+)");
+                if (match.Success)
+                {
+                    var stagesText = match.Groups[1].Value.Trim();
+                    failedStages = stagesText.Split(',').Select(s => s.Trim()).ToList();
+                }
+
+                return failedStages;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi lấy thông tin failed stages: {ex.Message}");
+                return new List<string>();
+            }
+        }
+
         // ========== HELPER METHODS CHO ĐÁNH GIÁ CHẤT LƯỢNG ==========
 
         /// <summary>
@@ -770,99 +1150,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return QualityEvaluationHelper.CreateQualityEvaluationComment(criteriaResults, expertNotes);
         }
 
-        // ========== HELPER METHODS CHO RETRY LOGIC ==========
-
-        /// <summary>
-        /// Lưu thông tin về các stage cần cập nhật khi evaluation fail
-        /// </summary>
-        /// <param name="batchId">ID của batch</param>
-        /// <param name="problematicSteps">Danh sách stage cần cập nhật</param>
-        private async Task SaveFailedStagesInfoAsync(Guid batchId, List<string> problematicSteps)
-        {
-            try
-            {
-                // Tạo một record trong SystemConfiguration để lưu thông tin retry
-                var retryInfo = new SystemConfiguration
-                {
-                    Name = $"RETRY_INFO_{batchId}",
-                    Description = string.Join("|", problematicSteps), // Lưu danh sách stages trong Description
-                    TargetEntity = "ProcessingBatch",
-                    TargetField = "FailedStages",
-                    IsActive = true,
-                    EffectedDateFrom = DateTime.UtcNow,
-                    EffectedDateTo = DateTime.UtcNow.AddDays(30), // Tự động xóa sau 30 ngày
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                };
-
-                await _unitOfWork.SystemConfigurationRepository.CreateAsync(retryInfo);
-                await _unitOfWork.SaveChangesAsync();
-                
-                Console.WriteLine($"✅ Đã lưu thông tin retry cho batch {batchId}: {string.Join(", ", problematicSteps)}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Lỗi lưu thông tin retry: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Lấy thông tin về các stage cần cập nhật cho batch
-        /// </summary>
-        /// <param name="batchId">ID của batch</param>
-        /// <returns>Danh sách stage cần cập nhật</returns>
-        public async Task<List<string>> GetFailedStagesForBatchAsync(Guid batchId)
-        {
-            try
-            {
-                var retryInfo = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
-                    predicate: c => c.Name == $"RETRY_INFO_{batchId}" && c.IsActive && !c.IsDeleted,
-                    asNoTracking: true
-                );
-
-                if (retryInfo != null && !string.IsNullOrEmpty(retryInfo.Description))
-                {
-                    return retryInfo.Description.Split('|').ToList();
-                }
-
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Lỗi lấy thông tin retry: {ex.Message}");
-                return new List<string>();
-            }
-        }
-
-        /// <summary>
-        /// Xóa thông tin retry khi batch được đánh giá thành công
-        /// </summary>
-        /// <param name="batchId">ID của batch</param>
-        private async Task ClearRetryInfoAsync(Guid batchId)
-        {
-            try
-            {
-                var retryInfo = await _unitOfWork.SystemConfigurationRepository.GetByIdAsync(
-                    predicate: c => c.Name == $"RETRY_INFO_{batchId}" && !c.IsDeleted,
-                    asNoTracking: false
-                );
-
-                if (retryInfo != null)
-                {
-                    retryInfo.IsDeleted = true;
-                    retryInfo.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.SystemConfigurationRepository.UpdateAsync(retryInfo);
-                    await _unitOfWork.SaveChangesAsync();
-                    
-                    Console.WriteLine($"✅ Đã xóa thông tin retry cho batch {batchId}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Lỗi xóa thông tin retry: {ex.Message}");
-            }
-        }
+                 // ========== HELPER METHODS CHO ĐÁNH GIÁ CHẤT LƯỢNG ==========
+         
+         /// <summary>
+         /// Lấy danh sách stage bị fail từ tiêu chí đánh giá
+         /// </summary>
+         /// <param name="criteria">Danh sách tiêu chí đánh giá</param>
+         /// <returns>Danh sách stage cần retry</returns>
+         private List<string> GetFailedStagesFromCriteria(List<QualityCriteriaEvaluationDto> criteria)
+         {
+             var failedStages = new List<string>();
+             
+             foreach (var criterion in criteria)
+             {
+                 if (!criterion.IsPassed && !string.IsNullOrEmpty(criterion.CriteriaName))
+                 {
+                     // Lấy stage từ tên tiêu chí (VD: PB.MoisturePercent -> PB)
+                     var stageName = criterion.CriteriaName.Split('.')[0];
+                     if (!failedStages.Contains(stageName))
+                     {
+                         failedStages.Add(stageName);
+                     }
+                 }
+             }
+             
+             return failedStages;
+         }
     }
 }
 

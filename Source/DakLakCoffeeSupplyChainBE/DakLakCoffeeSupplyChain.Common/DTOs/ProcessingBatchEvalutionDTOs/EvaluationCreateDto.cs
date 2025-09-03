@@ -21,6 +21,17 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
         [StringLength(2000, ErrorMessage = "Comments không được vượt quá 2000 ký tự")]
         public string? Comments { get; set; }
         
+        /// <summary>
+        /// Điểm số đánh giá (0-100)
+        /// Nếu = 100: Nút "Đạt cả batch" từ FE
+        /// </summary>
+        public decimal? TotalScore { get; set; }
+        
+        /// <summary>
+        /// Cờ đánh dấu nút "Đạt cả batch" từ frontend
+        /// </summary>
+        public bool? IsPassAllBatch { get; set; }
+        
         public DateTime? EvaluatedAt { get; set; }
         
         /// <summary>
