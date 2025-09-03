@@ -37,6 +37,29 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 DeliveryStatus = status,
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt,
+                
+                // Thông tin kho (có thể có nhiều kho)
+                Warehouses = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?
+                    .Where(w => !w.IsDeleted)
+                    .Select(w => new WarehouseInfoDto
+                    {
+                        WarehouseId = w.WarehouseId,
+                        WarehouseCode = w.WarehouseCode ?? string.Empty,
+                        Name = w.Name ?? string.Empty,
+                        Location = w.Location ?? string.Empty,
+                        Capacity = w.Capacity,
+                        CreatedAt = w.CreatedAt,
+                        UpdatedAt = w.UpdatedAt
+                    })
+                    .ToList() ?? new List<WarehouseInfoDto>(),
+                
+                // Thông tin bên nhận hàng (BusinessBuyer)
+                BuyerCompanyName = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyName ?? string.Empty,
+                BuyerContactPerson = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.ContactPerson ?? string.Empty,
+                BuyerCompanyAddress = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyAddress ?? string.Empty,
+                BuyerPhone = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Phone ?? string.Empty,
+                BuyerEmail = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Email ?? string.Empty,
+                
                 // Thêm shipmentDetails để hiển thị danh sách sản phẩm
                 ShipmentDetails = shipment.ShipmentDetails?
                     .Where(detail => !detail.IsDeleted)
@@ -86,6 +109,29 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt,
                 CreatedByName = shipment.CreatedByNavigation?.Name ?? string.Empty,
+                
+                // Thông tin kho (có thể có nhiều kho)
+                Warehouses = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?
+                    .Where(w => !w.IsDeleted)
+                    .Select(w => new WarehouseInfoDto
+                    {
+                        WarehouseId = w.WarehouseId,
+                        WarehouseCode = w.WarehouseCode ?? string.Empty,
+                        Name = w.Name ?? string.Empty,
+                        Location = w.Location ?? string.Empty,
+                        Capacity = w.Capacity,
+                        CreatedAt = w.CreatedAt,
+                        UpdatedAt = w.UpdatedAt
+                    })
+                    .ToList() ?? new List<WarehouseInfoDto>(),
+                
+                // Thông tin bên nhận hàng (BusinessBuyer)
+                BuyerCompanyName = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyName ?? string.Empty,
+                BuyerContactPerson = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.ContactPerson ?? string.Empty,
+                BuyerCompanyAddress = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyAddress ?? string.Empty,
+                BuyerPhone = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Phone ?? string.Empty,
+                BuyerEmail = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Email ?? string.Empty,
+                
                 ShipmentDetails = shipment.ShipmentDetails?
                     .Where(detail => !detail.IsDeleted)
                     .Select(detail =>

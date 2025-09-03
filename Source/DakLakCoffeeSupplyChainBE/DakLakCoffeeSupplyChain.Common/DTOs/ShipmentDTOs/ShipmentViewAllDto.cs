@@ -34,6 +34,16 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs
 
         public DateTime CreatedAt { get; set; }
 
+        // Thông tin kho (có thể có nhiều kho)
+        public List<WarehouseInfoDto> Warehouses { get; set; } = new List<WarehouseInfoDto>();
+        
+        // Thông tin bên nhận hàng (BusinessBuyer)
+        public string BuyerCompanyName { get; set; } = string.Empty;
+        public string BuyerContactPerson { get; set; } = string.Empty;
+        public string BuyerCompanyAddress { get; set; } = string.Empty;
+        public string BuyerPhone { get; set; } = string.Empty;
+        public string BuyerEmail { get; set; } = string.Empty;
+        
         // Thêm shipmentDetails để hiển thị danh sách sản phẩm
         public List<ShipmentDetailViewDto> ShipmentDetails { get; set; } = new();
     }
