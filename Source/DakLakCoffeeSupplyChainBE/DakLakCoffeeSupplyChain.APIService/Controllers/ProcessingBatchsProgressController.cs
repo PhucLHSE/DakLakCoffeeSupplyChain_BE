@@ -587,6 +587,124 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
         }
 
+        [HttpGet("{batchId}/retry-info")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> GetBatchInfoBeforeRetry(Guid batchId)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst("userId")?.Value 
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest(new { message = "Không thể lấy userId từ token." });
+
+                var isAdmin = User.IsInRole("Admin");
+                var isManager = User.IsInRole("BusinessManager");
+
+                // Lấy thông tin batch và progress cuối cùng
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    b => b.BatchId == batchId && !b.IsDeleted,
+                    include: q => q
+                        .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted).OrderByDescending(p => p.CreatedAt))
+                        .Include(b => b.Method)
+                        .ThenInclude(m => m.ProcessingStages.Where(s => !s.IsDeleted).OrderBy(s => s.OrderIndex))
+                );
+
+                Console.WriteLine($"DEBUG RETRY INFO: Batch found: {batch?.BatchId}");
+                Console.WriteLine($"DEBUG RETRY INFO: Method: {batch?.Method?.MethodCode}");
+                Console.WriteLine($"DEBUG RETRY INFO: Progresses count: {batch?.ProcessingBatchProgresses?.Count() ?? 0}");
+
+                if (batch == null)
+                    return NotFound(new { message = "Không tìm thấy lô chế biến." });
+
+                // Kiểm tra quyền truy cập
+                if (!isAdmin && !isManager)
+                {
+                    var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                        f => f.UserId == userId && !f.IsDeleted
+                    );
+                    if (farmer == null || batch.FarmerId != farmer.FarmerId)
+                        return Forbid();
+                }
+
+                // Lấy progress cuối cùng (không bị xóa)
+                var lastProgress = batch.ProcessingBatchProgresses.FirstOrDefault();
+                if (lastProgress == null)
+                    return NotFound(new { message = "Không tìm thấy tiến trình nào cho lô này." });
+
+                Console.WriteLine($"DEBUG RETRY INFO: LastProgress StageId = {lastProgress.StageId}");
+                Console.WriteLine($"DEBUG RETRY INFO: Available stages count = {batch.Method.ProcessingStages.Count()}");
+                foreach (var stage in batch.Method.ProcessingStages)
+                {
+                    Console.WriteLine($"DEBUG RETRY INFO: Stage {stage.StageId} - {stage.StageName}");
+                }
+
+                // Lấy stage hiện tại
+                var currentStage = batch.Method.ProcessingStages.FirstOrDefault(s => s.StageId == lastProgress.StageId);
+                if (currentStage == null)
+                {
+                    // 🔧 FIX: Fallback - sử dụng stage đầu tiên nếu không tìm thấy
+                    currentStage = batch.Method.ProcessingStages.FirstOrDefault();
+                    if (currentStage == null)
+                    {
+                        // 🔧 FIX: Thử lấy stage từ database trực tiếp
+                        var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                            s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                            q => q.OrderBy(s => s.OrderIndex)
+                        );
+                        currentStage = stages.FirstOrDefault();
+                        
+                        if (currentStage == null)
+                            return NotFound(new { message = "Không tìm thấy thông tin giai đoạn nào." });
+                        
+                        Console.WriteLine($"DEBUG RETRY INFO: Using direct query stage: {currentStage.StageId} - {currentStage.StageName}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG RETRY INFO: Using fallback stage: {currentStage.StageId} - {currentStage.StageName}");
+                    }
+                }
+
+                // Tính toán thông tin retry
+                var finalOutputBeforeRetry = lastProgress.OutputQuantity ?? 0;
+                var finalOutputUnit = lastProgress.OutputUnit ?? "kg";
+                var maxWastePercentage = GetMaxWastePercentageForStage(currentStage.StageName);
+
+                var retryInfo = new
+                {
+                    finalOutputBeforeRetry = finalOutputBeforeRetry,
+                    finalOutputUnit = finalOutputUnit,
+                    maxAllowedRetryQuantity = finalOutputBeforeRetry, // Không được vượt quá output cuối cùng
+                    calculatedWaste = 0, // Sẽ được tính khi user nhập
+                    wastePercentage = 0, // Sẽ được tính khi user nhập
+                    maxWastePercentage = maxWastePercentage,
+                    isValid = true,
+                    errorMessage = (string?)null
+                };
+
+                return Ok(retryInfo);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Đã xảy ra lỗi hệ thống: {ex.Message}" });
+            }
+        }
+
+        // 🔧 MỚI: Helper method để lấy tỷ lệ waste tối đa cho từng stage
+        private double GetMaxWastePercentageForStage(string stageName)
+        {
+            return stageName?.ToLower() switch
+            {
+                "thu hoạch" => 20.0,
+                "phơi" => 15.0,
+                "xay vỏ" => 10.0,
+                "phân loại" => 8.0,
+                "đóng gói" => 5.0,
+                _ => 15.0 // Default
+            };
+        }
+
         [HttpPost("{batchId}/update-after-evaluation")]
         [Consumes("multipart/form-data")]
         [Authorize(Roles = "Farmer,Admin,BusinessManager")]
@@ -649,6 +767,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 // Tạo progress trước
                 var dto = new ProcessingBatchProgressCreateDto
                 {
+                    StageId = request.StageId, // 🔧 MỚI: Truyền StageId từ frontend
                     ProgressDate = request.ProgressDate,
                     OutputQuantity = request.OutputQuantity,
                     OutputUnit = request.OutputUnit,
@@ -745,6 +864,93 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             catch (Exception ex)
             {
                 // Trả lỗi rõ ràng về FE
+                return StatusCode(500, new { message = $"Đã xảy ra lỗi hệ thống: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật progress cho các giai đoạn tiếp theo (không bị fail)
+        /// </summary>
+        [HttpPost("update-next-stages/{batchId}")]
+        [Authorize(Roles = "Farmer,Admin,BusinessManager")]
+        public async Task<IActionResult> UpdateNextStages(Guid batchId, [FromBody] ProcessingBatchProgressCreateRequest request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst("userId")?.Value 
+                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return BadRequest(new { message = "Không thể lấy userId từ token." });
+
+                var isAdmin = User.IsInRole("Admin");
+                var isManager = User.IsInRole("BusinessManager");
+
+                Console.WriteLine($"DEBUG CONTROLLER UPDATE NEXT STAGES: batchId: {batchId}, userId: {userId}");
+
+                // Validate input
+                if (request == null)
+                {
+                    return BadRequest(new { message = "Dữ liệu đầu vào không hợp lệ" });
+                }
+
+                // Tạo parameters - hỗ trợ nhiều parameter
+                var parameters = new List<ProcessingParameterInProgressDto>();
+                
+                // Single parameter
+                if (!string.IsNullOrEmpty(request.ParameterName))
+                {
+                    parameters.Add(new ProcessingParameterInProgressDto
+                    {
+                        ParameterName = request.ParameterName,
+                        ParameterValue = request.ParameterValue,
+                        Unit = request.Unit,
+                        RecordedAt = request.RecordedAt
+                    });
+                }
+                
+                // Multiple parameters từ JSON array
+                if (!string.IsNullOrEmpty(request.ParametersJson))
+                {
+                    try
+                    {
+                        var multipleParams = System.Text.Json.JsonSerializer.Deserialize<List<ProcessingParameterInProgressDto>>(request.ParametersJson);
+                        if (multipleParams != null)
+                        {
+                            parameters.AddRange(multipleParams);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing parameters JSON: {ex.Message}");
+                    }
+                }
+
+                var dto = new ProcessingBatchProgressCreateDto
+                {
+                    StageId = request.StageId, // 🔧 MỚI: Truyền StageId từ frontend
+                    ProgressDate = request.ProgressDate,
+                    OutputQuantity = request.OutputQuantity,
+                    OutputUnit = request.OutputUnit,
+                    PhotoUrl = null,
+                    VideoUrl = null,
+                    Parameters = parameters.Any() ? parameters : null
+                };
+
+                var result = await _processingBatchProgressService
+                    .UpdateNextStagesAsync(batchId, dto, userId, isAdmin, isManager);
+
+                if (result.Status != Const.SUCCESS_CREATE_CODE)
+                {
+                    if (result.Status == Const.FAIL_CREATE_CODE || result.Status == Const.FAIL_UPDATE_CODE || result.Status == Const.ERROR_VALIDATION_CODE)
+                        return BadRequest(new { message = result.Message });
+                    return StatusCode(500, new { message = result.Message });
+                }
+
+                return Ok(new { message = result.Message, progressId = result.Data });
+            }
+            catch (Exception ex)
+            {
                 return StatusCode(500, new { message = $"Đã xảy ra lỗi hệ thống: {ex.Message}" });
             }
         }
