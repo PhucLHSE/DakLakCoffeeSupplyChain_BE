@@ -107,28 +107,31 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     return Forbid("Bạn không có quyền truy cập lô chế biến này.");
             }
 
-            // Tính toán khối lượng còn lại
-            var totalProcessedQuantity = batch.ProcessingBatchProgresses
-                .Where(p => p.OutputQuantity.HasValue)
-                .Sum(p => p.OutputQuantity.Value);
+            // 🔧 FIX: Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+            // Vì bước cuối mới là sản lượng thực tế cuối cùng
+            var finalProgress = batch.ProcessingBatchProgresses
+                .Where(p => p.OutputQuantity.HasValue && p.OutputQuantity.Value > 0)
+                .OrderByDescending(p => p.StepIndex)  // Tìm StepIndex cao nhất
+                .FirstOrDefault();
+            var finalOutputQuantity = finalProgress?.OutputQuantity ?? 0;
 
-            var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
+            var remainingQuantity = batch.InputQuantity - finalOutputQuantity;
             var canCreateProgress = remainingQuantity > 0;
 
-            return Ok(new
-            {
-                BatchId = batch.BatchId,
-                BatchCode = batch.BatchCode,
-                Status = batch.Status,
-                CanCreateProgress = canCreateProgress,
-                TotalInputQuantity = batch.InputQuantity,
-                TotalProcessedQuantity = totalProcessedQuantity,
-                RemainingQuantity = remainingQuantity,
-                InputUnit = batch.InputUnit,
-                Message = canCreateProgress 
-                    ? $"Có thể tạo tiến độ. Còn lại {remainingQuantity} {batch.InputUnit}" 
-                    : $"Không thể tạo tiến độ. Đã chế biến hết khối lượng."
-            });
+                         return Ok(new
+             {
+                 BatchId = batch.BatchId,
+                 BatchCode = batch.BatchCode,
+                 Status = batch.Status,
+                 CanCreateProgress = canCreateProgress,
+                 TotalInputQuantity = batch.InputQuantity,
+                 TotalProcessedQuantity = finalOutputQuantity,
+                 RemainingQuantity = remainingQuantity,
+                 InputUnit = batch.InputUnit,
+                 Message = canCreateProgress 
+                     ? $"Có thể tạo tiến độ. Còn lại {remainingQuantity} {batch.InputUnit}" 
+                     : $"Không thể tạo tiến độ. Đã chế biến hết khối lượng."
+             });
         }
 
         [HttpGet]

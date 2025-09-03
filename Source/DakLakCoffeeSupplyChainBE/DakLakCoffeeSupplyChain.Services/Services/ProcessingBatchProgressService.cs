@@ -363,6 +363,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     p => p.BatchId == batchId && !p.IsDeleted,
                     q => q.OrderBy(p => p.StepIndex))).ToList();
 
+                // 🔧 VALIDATION: Kiểm tra ngày progress
+                var dateValidationResult = await ValidateProgressDate(batchId, input.ProgressDate, existingProgresses);
+                if (dateValidationResult.Status != Const.SUCCESS_READ_CODE)
+                {
+                    return dateValidationResult;
+                }
+
                 // 🔧 FIX: Bỏ logic tính remainingQuantity sai - không thể trừ InputQuantity với OutputQuantity
                 // Vì InputQuantity = cà phê tươi, OutputQuantity = cà phê đã chế biến (đơn vị khác nhau)
                 
@@ -389,23 +396,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         });
                     }
 
-                    // 🔧 VALIDATION MỚI: Khối lượng ra phải nhỏ hơn khối lượng vào của batch
-                    if (input.OutputQuantity.Value >= batch.InputQuantity)
+                    // 🔧 VALIDATION: Chỉ kiểm tra khối lượng ra với batch input cho tiến trình đầu tiên
+                    if (!existingProgresses.Any())
                     {
-                        return CreateValidationError("OutputQuantityExceedsInputQuantity", new Dictionary<string, object>
+                        // Chỉ kiểm tra nếu đơn vị giống nhau
+                        var batchInputUnit = string.IsNullOrWhiteSpace(batch.InputUnit) ? "kg" : batch.InputUnit.Trim().ToLower();
+                        var outputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit.Trim().ToLower();
+                        
+                        if (batchInputUnit == outputUnit && input.OutputQuantity.Value >= batch.InputQuantity)
                         {
-                            ["OutputQuantity"] = input.OutputQuantity.Value,
-                            ["OutputUnit"] = input.OutputUnit ?? "kg",
-                            ["InputQuantity"] = batch.InputQuantity,
-                            ["InputUnit"] = batch.InputUnit
-                        });
+                            return CreateValidationError("OutputQuantityExceedsInputQuantity", new Dictionary<string, object>
+                            {
+                                ["OutputQuantity"] = input.OutputQuantity.Value,
+                                ["OutputUnit"] = input.OutputUnit ?? "kg",
+                                ["InputQuantity"] = batch.InputQuantity,
+                                ["InputUnit"] = batch.InputUnit
+                            });
+                        }
                     }
 
                     // Kiểm tra đơn vị hợp lệ
                     var validUnits = new[] { "kg", "g", "tấn", "lít", "ml", "bao", "thùng", "khác" };
-                    var outputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit.Trim().ToLower();
+                    var currentOutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit.Trim().ToLower();
                     
-                    if (!validUnits.Contains(outputUnit))
+                    if (!validUnits.Contains(currentOutputUnit))
                     {
                         return CreateValidationError("InvalidOutputUnit", new Dictionary<string, object>
                         {
@@ -1091,8 +1105,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         });
                     }
 
-                    // 🔧 VALIDATION MỚI: Khối lượng ra phải nhỏ hơn khối lượng vào của batch
-                    if (input.OutputQuantity.Value >= batch.InputQuantity)
+                    // 🔧 VALIDATION: Chỉ kiểm tra khối lượng ra với batch input cho tiến trình đầu tiên (advance)
+                    // Vì advance luôn có progress trước đó nên không cần kiểm tra này
+                    // Chỉ kiểm tra nếu đơn vị giống nhau và là tiến trình đầu tiên
+                    var batchInputUnit = string.IsNullOrWhiteSpace(batch.InputUnit) ? "kg" : batch.InputUnit.Trim().ToLower();
+                    var advanceOutputUnit = string.IsNullOrWhiteSpace(input.OutputUnit) ? "kg" : input.OutputUnit.Trim().ToLower();
+                    
+                    if (batchInputUnit == advanceOutputUnit && input.OutputQuantity.Value >= batch.InputQuantity)
                     {
                         return CreateValidationError("OutputQuantityExceedsInputQuantity", new Dictionary<string, object>
                         {
@@ -1838,13 +1857,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var result = new List<AvailableBatchForProgressDto>();
                 foreach (var batch in availableBatches)
                 {
-                    // Tính tổng khối lượng đã chế biến
-                    var totalProcessedQuantity = batch.ProcessingBatchProgresses
-                        .Where(p => p.OutputQuantity.HasValue)
-                        .Sum(p => p.OutputQuantity.Value);
+                    // 🔧 FIX: Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                    // Vì bước cuối mới là sản lượng thực tế cuối cùng
+                    var finalProgress = batch.ProcessingBatchProgresses
+                        .Where(p => p.OutputQuantity.HasValue && p.OutputQuantity.Value > 0)
+                        .OrderByDescending(p => p.StepIndex)  // Tìm StepIndex cao nhất
+                        .FirstOrDefault();
+                    var finalOutputQuantity = finalProgress?.OutputQuantity ?? 0;
 
-                    // Khối lượng còn lại = InputQuantity - totalProcessedQuantity
-                    var remainingQuantity = batch.InputQuantity - totalProcessedQuantity;
+                    // Khối lượng còn lại = InputQuantity - finalOutputQuantity
+                    var remainingQuantity = batch.InputQuantity - finalOutputQuantity;
 
                     // Chỉ trả về batch có khối lượng còn lại > 0
                     if (remainingQuantity > 0)
@@ -1869,7 +1891,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             
                             // Thông tin khối lượng
                             TotalInputQuantity = batch.InputQuantity,
-                            TotalProcessedQuantity = totalProcessedQuantity,
+                            TotalProcessedQuantity = finalOutputQuantity,
                             RemainingQuantity = remainingQuantity,
                             InputUnit = batch.InputUnit,
                             
@@ -2400,7 +2422,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteNote: {input.WasteNote}");
                 Console.WriteLine($"🔍 ADVANCE SERVICE: Input WasteRecordedAt: {input.WasteRecordedAt}");
                 
-                // 1. 🔧 VALIDATION: Chỉ validate những gì người dùng nhập vào
+                // 1. 🔧 VALIDATION: Kiểm tra ngày progress cho advance
+                var existingProgresses = (await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderBy(p => p.StepIndex))).ToList();
+
+                var dateValidationResult = await ValidateProgressDate(batchId, input.ProgressDate, existingProgresses);
+                if (dateValidationResult.Status != Const.SUCCESS_READ_CODE)
+                {
+                    return dateValidationResult;
+                }
+
+                // 2. 🔧 VALIDATION: Chỉ validate những gì người dùng nhập vào
                 var hasOutputQuantity = input.OutputQuantity.HasValue && input.OutputQuantity.Value > 0;
                 var hasWasteData = (!string.IsNullOrEmpty(input.WasteType) && input.WasteQuantity > 0 && !string.IsNullOrEmpty(input.WasteUnit)) ||
                                    (input.Wastes?.Any() == true);
@@ -3002,6 +3035,149 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 Console.WriteLine($"🔍 ValidateWasteBeforeAdvanceProgress: Error during pre-validation: {ex.Message}");
                 return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi pre-validate waste: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 🔧 VALIDATION: Kiểm tra ngày progress hợp lệ
+        /// </summary>
+        private async Task<IServiceResult> ValidateProgressDate(Guid batchId, DateOnly? progressDate, List<ProcessingBatchProgress> existingProgresses)
+        {
+            try
+            {
+                // 1. Kiểm tra ngày progress có tồn tại
+                if (!progressDate.HasValue)
+                {
+                    return CreateFieldValidationError("ProgressDate", "ProgressDate");
+                }
+
+                var selectedDate = progressDate.Value;
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+                // 2. Không cho phép ngày trong tương lai
+                if (selectedDate > today)
+                {
+                    return CreateValidationError("ProgressDateInFuture", new Dictionary<string, object>
+                    {
+                        ["ProgressDate"] = selectedDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                        ["Today"] = today.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy")
+                    });
+                }
+
+                // 3. Không cho phép ngày quá xa trong quá khứ (tối đa 1 năm)
+                var minDatePast = today.AddDays(-365);
+                if (selectedDate < minDatePast)
+                {
+                    return CreateValidationError("ProgressDateTooPast", new Dictionary<string, object>
+                    {
+                        ["ProgressDate"] = selectedDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                        ["MinDate"] = minDatePast.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy")
+                    });
+                }
+
+                // 4. Lấy thông tin batch để kiểm tra ngày thu hoạch
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
+                {
+                    return CreateValidationError("BatchNotFound", new Dictionary<string, object>
+                    {
+                        ["BatchId"] = batchId.ToString()
+                    });
+                }
+
+                // 5. Nếu là progress đầu tiên (chưa có progress nào)
+                if (!existingProgresses.Any())
+                {
+                    // Lấy bước cuối cùng từ crop progress (không chỉ harvesting)
+                    var allCropProgress = await _unitOfWork.CropProgressRepository.GetAllAsync(
+                        p => p.CropSeasonDetail.CropSeasonId == batch.CropSeasonId && 
+                             p.CropSeasonDetail.CommitmentDetail.PlanDetail.CoffeeTypeId == batch.CoffeeTypeId && 
+                             p.ProgressDate.HasValue && 
+                             !p.IsDeleted && 
+                             !p.CropSeasonDetail.IsDeleted,
+                        include: q => q.Include(p => p.CropSeasonDetail)
+                                      .ThenInclude(d => d.CommitmentDetail)
+                                      .ThenInclude(cd => cd.PlanDetail)
+                                      .Include(p => p.Stage)
+                    );
+
+                    if (allCropProgress.Any())
+                    {
+                        // Lấy ngày của bước cuối cùng (ngày mới nhất)
+                        var lastProgressDate = allCropProgress.Max(p => p.ProgressDate.Value);
+                        
+                        // Debug log để kiểm tra
+                        Console.WriteLine($"🔍 DEBUG FirstProgressDateAfterHarvest:");
+                        Console.WriteLine($"  - Selected Date: {selectedDate} ({selectedDate.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy})");
+                        Console.WriteLine($"  - Last Progress Date: {lastProgressDate} ({lastProgressDate.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy})");
+                        Console.WriteLine($"  - Comparison: {selectedDate} < {lastProgressDate} = {selectedDate < lastProgressDate}");
+                        
+                        // Progress đầu tiên phải từ ngày bước cuối cùng trở đi (cho phép cùng ngày)
+                        if (selectedDate < lastProgressDate)
+                        {
+                            return CreateValidationError("FirstProgressDateAfterHarvest", new Dictionary<string, object>
+                            {
+                                ["ProgressDate"] = selectedDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                                ["HarvestDate"] = lastProgressDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                                ["MinDate"] = lastProgressDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy")
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // Nếu không có crop progress thu hoạch, fallback về crop season detail
+                        var cropSeasonDetail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
+                            d => d.CropSeasonId == batch.CropSeasonId && 
+                                 d.CommitmentDetail.PlanDetail.CoffeeTypeId == batch.CoffeeTypeId && 
+                                 !d.IsDeleted,
+                            include: q => q.Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail)
+                        );
+
+                        if (cropSeasonDetail?.ExpectedHarvestEnd.HasValue == true)
+                        {
+                            var harvestEndDate = cropSeasonDetail.ExpectedHarvestEnd.Value;
+                            
+                            // Debug log để kiểm tra fallback
+                            Console.WriteLine($"🔍 DEBUG FirstProgressDateAfterHarvest (Fallback):");
+                            Console.WriteLine($"  - Selected Date: {selectedDate} ({selectedDate.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy})");
+                            Console.WriteLine($"  - Expected Harvest End: {harvestEndDate} ({harvestEndDate.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy})");
+                            Console.WriteLine($"  - Comparison: {selectedDate} < {harvestEndDate} = {selectedDate < harvestEndDate}");
+                            
+                            // Progress đầu tiên phải từ ngày thu hoạch trở đi (cho phép cùng ngày thu hoạch)
+                            if (selectedDate < harvestEndDate)
+                            {
+                                return CreateValidationError("FirstProgressDateAfterHarvest", new Dictionary<string, object>
+                                {
+                                    ["ProgressDate"] = selectedDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                                    ["HarvestDate"] = harvestEndDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                                    ["MinDate"] = harvestEndDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy")
+                                });
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // 6. Nếu không phải progress đầu tiên, kiểm tra với progress trước đó
+                    var latestProgress = existingProgresses.OrderByDescending(p => p.StepIndex).First();
+                    
+                    // Progress mới phải từ ngày của progress trước đó trở đi (cho phép cùng ngày)
+                    if (selectedDate < latestProgress.ProgressDate.Value)
+                    {
+                        return CreateValidationError("ProgressDateAfterPrevious", new Dictionary<string, object>
+                        {
+                            ["ProgressDate"] = selectedDate.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                            ["PreviousProgressDate"] = latestProgress.ProgressDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy"),
+                            ["MinDate"] = latestProgress.ProgressDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy")
+                        });
+                    }
+                }
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi khi validate ngày progress: {ex.Message}");
             }
         }
 
