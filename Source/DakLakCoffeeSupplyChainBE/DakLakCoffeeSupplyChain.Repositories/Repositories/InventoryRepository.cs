@@ -72,7 +72,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(i => i.Batch)
                    .ThenInclude(b => b.Products)   // Nếu bạn cần ProductName
                 .Include(i => i.Batch)
-                   .ThenInclude(b => b.ProcessingBatchEvaluations)
+                   .ThenInclude(b => b.ProcessingBatchEvaluations.Where(p => !p.IsDeleted))
                  .Include(i => i.Batch)
                    .ThenInclude(b => b.Farmer)
                       .ThenInclude(f => f.User)
