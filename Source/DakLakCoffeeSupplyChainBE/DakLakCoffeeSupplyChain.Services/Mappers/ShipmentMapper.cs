@@ -37,6 +37,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 DeliveryStatus = status,
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt,
+                
                 // Thêm shipmentDetails để hiển thị danh sách sản phẩm
                 ShipmentDetails = shipment.ShipmentDetails?
                     .Where(detail => !detail.IsDeleted)
@@ -86,6 +87,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt,
                 CreatedByName = shipment.CreatedByNavigation?.Name ?? string.Empty,
+                
+                // Thông tin kho
+                WarehouseName = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?.FirstOrDefault()?.Name ?? string.Empty,
+                WarehouseLocation = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?.FirstOrDefault()?.Location ?? string.Empty,
+                
+                // Thông tin bên nhận hàng (BusinessBuyer)
+                BuyerCompanyName = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyName ?? string.Empty,
+                BuyerContactPerson = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.ContactPerson ?? string.Empty,
+                BuyerCompanyAddress = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.CompanyAddress ?? string.Empty,
+                BuyerPhone = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Phone ?? string.Empty,
+                BuyerEmail = shipment.Order?.DeliveryBatch?.Contract?.Buyer?.Email ?? string.Empty,
+                
                 ShipmentDetails = shipment.ShipmentDetails?
                     .Where(detail => !detail.IsDeleted)
                     .Select(detail =>
