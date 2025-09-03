@@ -17,6 +17,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public Guid InventoryId { get; set; }
         public string? InventoryName { get; set; }
 
+        // ✅ Chỉ xử lý cà phê sơ chế (Batch) - không còn cà phê tươi
+        public Guid? BatchId { get; set; }
+        public string? BatchCode { get; set; }
+        public string? CoffeeTypeName { get; set; }
+
         public double RequestedQuantity { get; set; }
         public string Unit { get; set; }
         public string Purpose { get; set; }
@@ -32,6 +37,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundRequestDTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
-
-
 }
