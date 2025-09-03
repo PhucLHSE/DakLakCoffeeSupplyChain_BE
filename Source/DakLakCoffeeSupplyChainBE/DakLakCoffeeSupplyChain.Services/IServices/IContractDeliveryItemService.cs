@@ -10,8 +10,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface IContractDeliveryItemService
     {
-        Task<IServiceResult> GetByDeliveryBatchId(Guid deliveryBatchId, Guid userId);
-
         Task<IServiceResult> Create(ContractDeliveryItemCreateDto contractDeliveryItemDto, Guid userId);
 
         Task<IServiceResult> Update(ContractDeliveryItemUpdateDto contractDeliveryItemDto, Guid userId);

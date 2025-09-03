@@ -25,16 +25,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ? parsedUnit
                 : ProductUnit.Kg;
 
-            // 🔧 FIX: Tính QuantityAvailable real-time thay vì dùng field static
-            double? realTimeQuantityAvailable = CalculateRealTimeQuantityAvailable(product);
-
             return new ProductViewAllDto
             {
                 ProductId = product.ProductId,
                 ProductCode = product.ProductCode,
                 ProductName = product.ProductName,
                 UnitPrice = product.UnitPrice,
-                QuantityAvailable = realTimeQuantityAvailable, // Sử dụng giá trị tính toán real-time
+                QuantityAvailable = product.QuantityAvailable,
                 Unit = unit,
                 OriginRegion = product.OriginRegion,
                 EvaluatedQuality = product.EvaluatedQuality,
@@ -60,9 +57,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ? parsedUnit
                 : ProductUnit.Kg;
 
-            // 🔧 FIX: Tính QuantityAvailable real-time thay vì dùng field static
-            double? realTimeQuantityAvailable = CalculateRealTimeQuantityAvailable(product);
-
             return new ProductViewDetailsDto
             {
                 ProductId = product.ProductId,
@@ -70,7 +64,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProductName = product.ProductName,
                 Description = product.Description,
                 UnitPrice = product.UnitPrice,
-                QuantityAvailable = realTimeQuantityAvailable, // Sử dụng giá trị tính toán real-time
+                QuantityAvailable = product.QuantityAvailable,
                 Unit = unit,
                 OriginRegion = product.OriginRegion,
                 OriginFarmLocation = product.OriginFarmLocation,
@@ -158,46 +152,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             }
 
             product.UpdatedAt = DateHelper.NowVietnamTime();
-        }
-
-        /// <summary>
-        /// Tính toán QuantityAvailable real-time dựa trên Inventory thực tế và OrderItems đã đặt
-        /// </summary>
-        /// <param name="product">Product entity</param>
-        /// <returns>Số lượng khả dụng thực tế</returns>
-        private static double? CalculateRealTimeQuantityAvailable(Product product)
-        {
-            try
-            {
-                // 1. Lấy số lượng tồn kho thực tế từ Inventory
-                double inventoryQuantity = 0;
-                if (product.Inventory != null)
-                {
-                    inventoryQuantity = product.Inventory.Quantity;
-                }
-
-                // 2. Nếu không có Inventory, sử dụng giá trị cũ (fallback)
-                if (inventoryQuantity <= 0)
-                {
-                    return product.QuantityAvailable;
-                }
-
-                // 3. Trừ đi số lượng đã đặt trong các order (nếu có)
-                // Lưu ý: Logic này cần được implement trong ProductService vì cần truy cập database
-                // Ở đây chỉ là placeholder, thực tế sẽ được tính trong service layer
-                
-                // 🔧 TODO: Cần implement logic trừ OrderItems trong ProductService
-                // double reservedQuantity = GetReservedQuantityFromOrders(product.ProductId);
-                // double realTimeAvailable = Math.Max(0, inventoryQuantity - reservedQuantity);
-                
-                // Tạm thời trả về inventory quantity thực tế
-                return inventoryQuantity;
-            }
-            catch (Exception)
-            {
-                // Nếu có lỗi, fallback về giá trị cũ
-                return product.QuantityAvailable;
-            }
         }
     }
 }
