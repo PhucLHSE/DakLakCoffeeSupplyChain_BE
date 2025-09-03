@@ -120,6 +120,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Khối lượng yêu cầu phải lớn hơn 0.");
 
             double remaining = 0;
+            DateOnly? lastProcessingStepDate = null;
 
             if (dto.BatchId.HasValue)
             {
@@ -146,6 +147,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Lô phải hoàn tất
                 if (!string.Equals(batch.Status, ProcessingStatus.Completed.ToString(), StringComparison.OrdinalIgnoreCase))
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ được gửi yêu cầu nhập kho cho lô đã hoàn tất sơ chế.");
+
+                // ✅ THÊM: Lấy ngày bước sơ chế cuối cùng
+                var lastProcessingProgress = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batch.BatchId && !p.IsDeleted,
+                    q => q.OrderByDescending(p => p.StepIndex)
+                );
+                
+                var latestProgress = lastProcessingProgress.FirstOrDefault();
+                if (latestProgress?.ProgressDate.HasValue == true)
+                {
+                    lastProcessingStepDate = latestProgress.ProgressDate.Value;
+                }
 
                 // Kiểm tra khối lượng còn lại
                 remaining = await CalcRemainingForBatchAsync(batch.BatchId);
@@ -183,6 +196,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Ngày giao dự kiến không nằm quá khứ
             if (dto.PreferredDeliveryDate < DateOnly.FromDateTime(DateTime.UtcNow))
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày giao dự kiến không được nằm trong quá khứ.");
+
+            // ✅ THÊM: Kiểm tra ngày giao phải sau ngày bước sơ chế cuối cùng (chỉ cho cà phê đã sơ chế)
+            if (dto.BatchId.HasValue && lastProcessingStepDate.HasValue && dto.PreferredDeliveryDate <= lastProcessingStepDate.Value)
+            {
+                return new ServiceResult(Const.FAIL_CREATE_CODE, 
+                    $"Ngày giao dự kiến phải sau ngày bước sơ chế cuối cùng ({lastProcessingStepDate.Value:dd/MM/yyyy}).");
+            }
 
             if (remaining <= 0)
                 return new ServiceResult(Const.FAIL_CREATE_CODE, "Sản phẩm này đã hết khối lượng có thể yêu cầu nhập kho.");
