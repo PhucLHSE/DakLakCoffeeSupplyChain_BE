@@ -71,6 +71,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs
         /// Ghi chú của expert về quyết định đánh giá
         /// </summary>
         public string? ExpertNotes { get; set; }
+        
+        /// <summary>
+        /// StageId được expert chọn khi đánh giá fail
+        /// Chỉ lưu StageId của stage có vấn đề cụ thể
+        /// </summary>
+        public int? ExpertSelectedStageId { get; set; }
     }
 
     /// <summary>

@@ -296,19 +296,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                      // Nếu Fail > Pass: Đánh giá Fail + lưu stages fail để farmer cập nhật
                      finalResult = "Fail";
                      
-                                      // Lấy danh sách các giai đoạn bị lỗi để farmer cập nhật
-                 var failedStages = await GetFailedStagesFromCriteriaAsync(dto.QualityCriteriaEvaluations, dto.BatchId);
-                                   Console.WriteLine($"DEBUG EVALUATION CREATE: GetFailedStagesFromCriteriaAsync returned: {string.Join(", ", failedStages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+                                      // 🔧 MỚI: Chỉ lấy StageId của stage được gửi từ expert, không lấy tất cả stages
+                 var expertSelectedStageId = dto.ExpertSelectedStageId; // Thêm field này vào DTO
+                 Console.WriteLine($"DEBUG EVALUATION CREATE: Expert selected StageId: {expertSelectedStageId}");
                  
-                     // 🔧 FIX: Tạo comment chi tiết với tiêu chí fail và StageId - ĐẢM BẢO LUÔN CÓ THÔNG TIN
-                     var failedCriteria = criteriaResults.Where(c => !c.IsPassed).ToList();
-                     var failedCriteriaText = failedCriteria.Any() 
-                         ? $"🔧 Tiêu chí không đạt: {string.Join(", ", failedCriteria.Select(c => $"{c.CriteriaName} (Giá trị: {c.ActualValue})"))}"
-                         : "🔧 Tiêu chí không đạt: Không xác định";
-                     
-                                      var failedStagesText = failedStages.Any() 
-                         ? $"🔧 Giai đoạn cần cập nhật: {string.Join(", ", failedStages.Select((stage, index) => $"StageId: {stage.StageId}"))}"
-                         : "🔧 Giai đoạn cần cập nhật: Không xác định";
+                 // 🔧 FIX: Tạo comment chi tiết với tiêu chí fail và StageId - CHỈ LƯU STAGEID ĐƯỢC CHỌN
+                 var failedCriteria = criteriaResults.Where(c => !c.IsPassed).ToList();
+                 var failedCriteriaText = failedCriteria.Any() 
+                     ? $"🔧 Tiêu chí không đạt: {string.Join(", ", failedCriteria.Select(c => $"{c.CriteriaName} (Giá trị: {c.ActualValue})"))}"
+                     : "🔧 Tiêu chí không đạt: Không xác định";
+                 
+                 // 🔧 MỚI: Chỉ lưu StageId được expert chọn
+                 var failedStagesText = expertSelectedStageId.HasValue 
+                     ? $"🔧 Giai đoạn cần cập nhật: StageId: {expertSelectedStageId.Value}"
+                     : "🔧 Giai đoạn cần cập nhật: Không xác định";
                      
                      // 🔧 FIX: Đảm bảo comment luôn có thông tin đầy đủ
                      detailedComments = $"Đánh giá: Không đạt.\n{failedCriteriaText}\n{failedStagesText}\n\n" + detailedComments;
