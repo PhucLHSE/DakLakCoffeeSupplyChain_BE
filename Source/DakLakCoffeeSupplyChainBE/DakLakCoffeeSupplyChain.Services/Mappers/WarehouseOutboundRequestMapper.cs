@@ -31,6 +31,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 WarehouseName = e.Warehouse?.Name,
                 InventoryId = e.InventoryId,
                 InventoryName = e.Inventory?.Products?.FirstOrDefault()?.ProductName,
+                
+                // ✅ Chỉ xử lý cà phê sơ chế (Batch) - không còn cà phê tươi
+                BatchId = e.Inventory?.BatchId,
+                BatchCode = e.Inventory?.Batch?.BatchCode,
+                CoffeeTypeName = e.Inventory?.Batch?.CoffeeType?.TypeName,
+                
                 RequestedQuantity = e.RequestedQuantity,
                 Unit = e.Unit,
                 Purpose = e.Purpose,

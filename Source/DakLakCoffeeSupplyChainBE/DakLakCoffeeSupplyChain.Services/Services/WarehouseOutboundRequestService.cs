@@ -74,12 +74,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy sản phẩm tương ứng trong đơn hàng.");
 
                 var productCoffeeTypeId = product.CoffeeTypeId;
+                
+                // ✅ Chỉ kiểm tra cà phê sơ chế (Batch) - không còn cà phê tươi
+                if (!inventory.BatchId.HasValue || inventory.BatchId == Guid.Empty)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Chỉ cho phép xuất cà phê sơ chế. Tồn kho này không có thông tin batch.");
+                }
+                
                 var inventoryCoffeeTypeId = inventory.Batch?.CoffeeTypeId;
+                var inventoryCoffeeTypeName = inventory.Batch?.CoffeeType?.TypeName ?? "Cà phê sơ chế";
+                
                 if (inventoryCoffeeTypeId == null)
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Không xác định được loại cà phê trong tồn kho.");
 
                 if (productCoffeeTypeId != inventoryCoffeeTypeId)
-                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại cà phê trong tồn kho không khớp với sản phẩm trong đơn hàng.");
+                {
+                    var productCoffeeTypeName = product.CoffeeType?.TypeName ?? "Không xác định";
+                    return new ServiceResult(Const.ERROR_VALIDATION_CODE, 
+                        $"Loại cà phê trong tồn kho ({inventoryCoffeeTypeName}) không khớp với sản phẩm trong đơn hàng ({productCoffeeTypeName}). " +
+                        $"Không thể xuất {inventoryCoffeeTypeName} cho đơn hàng yêu cầu {productCoffeeTypeName}.");
+                }
 
                 // ✅ Hạn mức theo confirmed receipts + accepted requests (chưa completed)
                 var receiptsByOrderItem = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItem.OrderItemId);
