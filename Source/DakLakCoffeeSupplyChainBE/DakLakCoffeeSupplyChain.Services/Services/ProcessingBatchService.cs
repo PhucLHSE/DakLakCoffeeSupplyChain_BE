@@ -303,7 +303,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .ThenInclude(cd => cd.Commitment)
             );
 
+            // Lấy tất cả processing batches của farmer để kiểm tra
+            var allFarmerBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                b => !b.IsDeleted && b.FarmerId == farmerId,
+                include: q => q.Include(b => b.CropSeason)
+            );
+
             // Nhóm theo CropSeason và tạo danh sách crop seasons có plan yêu cầu sơ chế
+            // CHỈ hiển thị mùa vụ có ít nhất 1 loại cà phê chưa có lô sơ chế
             var availableCropSeasons = cropSeasonsWithProcessingPlans
                 .GroupBy(d => d.CropSeasonId)
                 .Where(g => g.Any(d => 
@@ -313,12 +320,28 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 .Select(g => new
                 {
                     CropSeason = g.First().CropSeason,
-                    ProcessingMethodsCount = g.Count(d => 
+                    CoffeeTypes = g.Where(d => 
                         d.CommitmentDetail?.PlanDetail?.ProcessMethodId.HasValue == true &&
                         d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
-                    )
+                    ).Select(d => d.CommitmentDetail.PlanDetail.CoffeeTypeId).Distinct().ToList()
                 })
                 .Where(x => x.CropSeason != null && !x.CropSeason.IsDeleted)
+                .Where(x => {
+                    // Kiểm tra xem mùa vụ này có ít nhất 1 loại cà phê chưa có lô sơ chế không
+                    var existingBatchCoffeeTypeIds = allFarmerBatches
+                        .Where(b => b.CropSeasonId == x.CropSeason.CropSeasonId &&
+                                   (b.Status == ProcessingStatus.InProgress.ToString() || 
+                                    b.Status == ProcessingStatus.Completed.ToString()))
+                        .Select(b => b.CoffeeTypeId)
+                        .ToHashSet();
+
+                    // Có ít nhất 1 loại cà phê chưa có lô sơ chế
+                    var hasAvailableCoffeeType = x.CoffeeTypes.Any(coffeeTypeId => 
+                        !existingBatchCoffeeTypeIds.Contains(coffeeTypeId)
+                    );
+                    
+                    return hasAvailableCoffeeType; // Chỉ trả về mùa vụ có loại cà phê chưa có lô sơ chế
+                })
                 .Select(x => new
                 {
                     CropSeasonId = x.CropSeason.CropSeasonId,
@@ -326,7 +349,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     StartDate = x.CropSeason.StartDate,
                     EndDate = x.CropSeason.EndDate,
                     Status = x.CropSeason.Status,
-                    ProcessingMethodsCount = x.ProcessingMethodsCount
+                    ProcessingMethodsCount = x.CoffeeTypes.Count
                 })
                 .OrderByDescending(x => x.StartDate)
                 .ToList();
@@ -337,21 +360,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (cropSeasonId.HasValue)
             {
-                // Lấy các batch đang InProgress của farmer trong crop season này
-                var inProgressBatchCoffeeTypeIds = (await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
+                // Lấy các batch đã hoàn thành hoặc đang InProgress của farmer trong crop season này
+                var existingBatchCoffeeTypeIds = (await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     b => !b.IsDeleted &&
                          b.CropSeasonId == cropSeasonId.Value &&
                          b.FarmerId == farmerId &&
-                        b.Status == ProcessingStatus.InProgress.ToString()
+                         (b.Status == ProcessingStatus.InProgress.ToString() || 
+                          b.Status == ProcessingStatus.Completed.ToString())
                 )).Select(b => b.CoffeeTypeId).Distinct().ToHashSet();
 
                 // Lọc details cho crop season cụ thể
+                // LOẠI TRỪ những loại cà phê đã có batch hoàn thành hoặc đang xử lý
                 var detailsForCropSeason = cropSeasonsWithProcessingPlans
                     .Where(d => d.CropSeasonId == cropSeasonId.Value)
                     .Where(d =>
                         d.CommitmentDetail?.Commitment?.FarmerId == farmerId &&
                         d.CommitmentDetail?.PlanDetail?.CoffeeType != null &&
-                        !inProgressBatchCoffeeTypeIds.Contains(d.CommitmentDetail.PlanDetail.CoffeeTypeId) &&
+                        !existingBatchCoffeeTypeIds.Contains(d.CommitmentDetail.PlanDetail.CoffeeTypeId) &&
                         d.CommitmentDetail.PlanDetail.ProcessMethodId.HasValue && 
                         d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
                     )
@@ -396,7 +421,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ProcessingInfo = processingInfo
             };
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy thành công", response);
+            // Thêm thông tin về số lượng mùa vụ bị loại trừ
+            var excludedCropSeasonsCount = cropSeasonsWithProcessingPlans
+                .GroupBy(d => d.CropSeasonId)
+                .Where(g => g.Any(d => 
+                    d.CommitmentDetail?.PlanDetail?.ProcessMethodId.HasValue == true &&
+                    d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
+                ))
+                .Count(g => {
+                    var cropSeason = g.First().CropSeason;
+                    var coffeeTypes = g.Where(d => 
+                        d.CommitmentDetail?.PlanDetail?.ProcessMethodId.HasValue == true &&
+                        d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
+                    ).Select(d => d.CommitmentDetail.PlanDetail.CoffeeTypeId).Distinct().ToList();
+                    
+                    var existingBatchCoffeeTypeIds = allFarmerBatches
+                        .Where(b => b.CropSeasonId == cropSeason.CropSeasonId &&
+                                   (b.Status == ProcessingStatus.InProgress.ToString() || 
+                                    b.Status == ProcessingStatus.Completed.ToString()))
+                        .Select(b => b.CoffeeTypeId)
+                        .ToHashSet();
+
+                    // Tất cả loại cà phê đều đã có lô sơ chế
+                    var allCoffeeTypesHaveBatches = coffeeTypes.All(coffeeTypeId => 
+                        existingBatchCoffeeTypeIds.Contains(coffeeTypeId)
+                    );
+                    
+                    return allCoffeeTypesHaveBatches;
+                });
+
+            var message = excludedCropSeasonsCount > 0 
+                ? $"Lấy thành công. Đã loại trừ {excludedCropSeasonsCount} mùa vụ có tất cả loại cà phê đều đã có lô sơ chế."
+                : "Lấy thành công";
+
+            return new ServiceResult(Const.SUCCESS_READ_CODE, message, response);
         }
 
         public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin, bool isManager)

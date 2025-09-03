@@ -47,9 +47,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (dto.RequestedQuantity <= 0)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Số lượng yêu cầu phải lớn hơn 0.");
 
-            if (dto.RequestedQuantity > inventory.Quantity)
+            // ✅ Kiểm tra tồn khả dụng = tồn hiện tại - tổng Requested của các request Accepted chưa Completed
+            var acceptedSameInventory = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
+                r => r.InventoryId == dto.InventoryId
+                     && !r.IsDeleted
+                     && r.Status == WarehouseOutboundRequestStatus.Accepted.ToString());
+            var reserved = acceptedSameInventory.Sum(r => r.RequestedQuantity);
+            var available = inventory.Quantity - reserved;
+            
+            if (dto.RequestedQuantity > available)
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                    $"Tồn kho hiện tại chỉ còn {inventory.Quantity:n0} {inventory.Unit}, không thể yêu cầu xuất {dto.RequestedQuantity:n0}.");
+                    $"Tồn khả dụng chỉ còn {available:n0} {inventory.Unit}, không thể yêu cầu xuất {dto.RequestedQuantity:n0}.");
 
             // Nếu gắn OrderItem → kiểm CoffeeType & hạn mức dựa trên receipts CONFIRMED
             if (dto.OrderItemId.HasValue)
@@ -73,17 +81,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (productCoffeeTypeId != inventoryCoffeeTypeId)
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE, "Loại cà phê trong tồn kho không khớp với sản phẩm trong đơn hàng.");
 
-                // Hạn mức theo confirmed receipts (không dựa vào Completed requests)
+                // ✅ Hạn mức theo confirmed receipts + accepted requests (chưa completed)
                 var receiptsByOrderItem = await _unitOfWork.WarehouseOutboundReceipts.GetByOrderItemIdAsync(orderItem.OrderItemId);
                 double totalConfirmedOrderItem = receiptsByOrderItem
                     .SelectMany(r => ParseConfirmedFromNote(r.Note))
                     .Sum();
 
+                var acceptedSameOrderItem = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
+                    r => r.OrderItemId == dto.OrderItemId
+                         && !r.IsDeleted
+                         && r.Status == WarehouseOutboundRequestStatus.Accepted.ToString());
+                double totalAcceptedOutstanding = acceptedSameOrderItem.Sum(r => r.RequestedQuantity);
+
                 var allowedQuantity = orderItem.Quantity ?? 0.0;
-                if (totalConfirmedOrderItem + dto.RequestedQuantity > allowedQuantity)
+                if (totalConfirmedOrderItem + totalAcceptedOutstanding + dto.RequestedQuantity > allowedQuantity)
                 {
                     return new ServiceResult(Const.ERROR_VALIDATION_CODE,
-                        $"Số lượng yêu cầu vượt quá giới hạn đơn hàng ({allowedQuantity:n0}). Đã xác nhận: {totalConfirmedOrderItem:n0}, yêu cầu mới: {dto.RequestedQuantity:n0}.");
+                        $"Số lượng yêu cầu vượt quá giới hạn đơn hàng ({allowedQuantity:n0}). Đã xác nhận: {totalConfirmedOrderItem:n0}, đã duyệt khác: {totalAcceptedOutstanding:n0}, yêu cầu mới: {dto.RequestedQuantity:n0}.");
                 }
             }
 
@@ -246,7 +260,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             if (warehouse?.ManagerId != staff.SupervisorId)
                 return new ServiceResult(Const.FAIL_UPDATE_CODE, "Bạn không có quyền duyệt yêu cầu cho kho này.");
 
-            // Tồn khả dụng = tồn hiện tại - tổng Requested của các request Accepted chưa Completed cùng Inventory
+            // ✅ Tồn khả dụng = tồn hiện tại - tổng Requested của các request Accepted chưa Completed cùng Inventory
+            // (Bao gồm cả các phiếu xuất kho đã tạo nhưng chưa trừ tồn kho)
             var acceptedSameInventory = await _unitOfWork.WarehouseOutboundRequests.GetAllAsync(
                 r => r.InventoryId == request.InventoryId
                      && !r.IsDeleted

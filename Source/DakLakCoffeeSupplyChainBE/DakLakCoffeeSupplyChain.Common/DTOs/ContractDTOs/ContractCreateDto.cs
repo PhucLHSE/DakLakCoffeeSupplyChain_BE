@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.ContractItemDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs.SettlementDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
@@ -58,7 +59,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ContractDTOs
         public Guid? ParentContractID { get; set; }
 
         public int PaymentRounds { get; set; }
-        public ICollection<IFormFile>? SettlementFiles { get; set; }
+        //public ICollection<IFormFile>? SettlementFiles { get; set; }
+        public SettlementFilesWrapper SettlementFiles { get; set; } = new();
         public string? SettlementFileURL { get; set; }
 
         public string? SettlementFilesJson { get; set; }

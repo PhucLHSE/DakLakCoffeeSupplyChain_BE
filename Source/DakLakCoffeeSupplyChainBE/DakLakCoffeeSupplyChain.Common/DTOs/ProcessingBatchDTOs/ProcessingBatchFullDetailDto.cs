@@ -31,7 +31,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchDTOs
 
         // Số liệu đầu vào/đầu ra
         public double? TotalInputQuantity { get; set; }
-        public double? TotalOutputQuantity => Progresses?.Sum(p => p.OutputQuantity ?? 0) ?? 0;
+        public double? TotalOutputQuantity => Progresses?.OrderByDescending(p => p.StepIndex)?.FirstOrDefault()?.OutputQuantity ?? 0;
 
         // Các bước sơ chế (progresses)
         public List<ProcessingProgressWithStageDto> Progresses { get; set; }

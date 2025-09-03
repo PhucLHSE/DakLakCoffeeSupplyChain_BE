@@ -149,7 +149,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // GET: api/Inventories/warehouse/{warehouseId}/fifo
         [HttpGet("warehouse/{warehouseId}/fifo")]
         [Authorize(Roles = "BusinessManager,BusinessStaff")]
-        public async Task<IActionResult> GetByWarehouseIdWithFifo(Guid warehouseId, [FromQuery] double? requestedQuantity = null)
+        public async Task<IActionResult> GetByWarehouseIdWithFifo(
+            Guid warehouseId, [FromQuery] double? requestedQuantity = null)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
