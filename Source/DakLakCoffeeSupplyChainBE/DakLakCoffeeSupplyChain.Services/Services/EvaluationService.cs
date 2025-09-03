@@ -283,11 +283,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                      // Nếu Pass > Fail: Đánh giá Pass + note cần cải thiện
                      finalResult = "Pass";
                      
-                     // Lấy danh sách các giai đoạn bị lỗi để ghi nhận (dù đã Pass)
-                     var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
-                     var failedStagesText = failedStages.Any() 
-                         ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages)}"
-                         : "";
+                                           // Lấy danh sách các giai đoạn bị lỗi để ghi nhận (dù đã Pass)
+                      var failedStages = await GetFailedStagesFromCriteriaAsync(dto.QualityCriteriaEvaluations, dto.BatchId);
+                      var failedStagesText = failedStages.Any() 
+                          ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages.Select(s => s.StageName))}"
+                          : "";
                      
                      detailedComments = $"Đánh giá: Đạt. Tuy nhiên, cần cải thiện thêm một số vấn đề.\n{failedStagesText}\n\n" + detailedComments;
                  }
@@ -296,13 +296,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                      // Nếu Fail > Pass: Đánh giá Fail + lưu stages fail để farmer cập nhật
                      finalResult = "Fail";
                      
-                     // Lấy danh sách các giai đoạn bị lỗi để farmer cập nhật
-                     var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
-                     var failedStagesText = failedStages.Any() 
-                         ? $"Giai đoạn cần cập nhật: {string.Join(", ", failedStages)}"
-                         : "Các giai đoạn cần cập nhật: Không xác định";
+                                      // 🔧 MỚI: Chỉ lấy StageId của stage được gửi từ expert, không lấy tất cả stages
+                 var expertSelectedStageId = dto.ExpertSelectedStageId; // Thêm field này vào DTO
+                 Console.WriteLine($"DEBUG EVALUATION CREATE: Expert selected StageId: {expertSelectedStageId}");
+                 
+                 // 🔧 FIX: Tạo comment chi tiết với tiêu chí fail và StageId - CHỈ LƯU STAGEID ĐƯỢC CHỌN
+                 var failedCriteria = criteriaResults.Where(c => !c.IsPassed).ToList();
+                 var failedCriteriaText = failedCriteria.Any() 
+                     ? $"🔧 Tiêu chí không đạt: {string.Join(", ", failedCriteria.Select(c => $"{c.CriteriaName} (Giá trị: {c.ActualValue})"))}"
+                     : "🔧 Tiêu chí không đạt: Không xác định";
+                 
+                 // 🔧 MỚI: Chỉ lưu StageId được expert chọn
+                 var failedStagesText = expertSelectedStageId.HasValue 
+                     ? $"🔧 Giai đoạn cần cập nhật: StageId: {expertSelectedStageId.Value}"
+                     : "🔧 Giai đoạn cần cập nhật: Không xác định";
                      
-                     detailedComments = $"Đánh giá: Không đạt. Cần cải thiện các giai đoạn bị lỗi.\n{failedStagesText}\n\n" + detailedComments;
+                     // 🔧 FIX: Đảm bảo comment luôn có thông tin đầy đủ
+                     detailedComments = $"Đánh giá: Không đạt.\n{failedCriteriaText}\n{failedStagesText}\n\n" + detailedComments;
+                     
+                     Console.WriteLine($"DEBUG EVALUATION CREATE: Created Fail comment with criteria: {failedCriteriaText}");
+                     Console.WriteLine($"DEBUG EVALUATION CREATE: Created Fail comment with stages: {failedStagesText}");
                  }
                                                      else // passCount == failCount (50/50)
                    {
@@ -316,19 +329,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                            // 🔧 MỚI: Nếu expert chọn Fail trong 50/50, lưu stages cần cập nhật
                            if (finalResult.Equals("Fail", StringComparison.OrdinalIgnoreCase))
                            {
-                               var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
-                               var failedStagesText = failedStages.Any() 
-                                   ? $"Giai đoạn cần cập nhật: {string.Join(", ", failedStages)}"
-                                   : "Các giai đoạn cần cập nhật: Không xác định";
+                               var failedStages = await GetFailedStagesFromCriteriaAsync(dto.QualityCriteriaEvaluations, dto.BatchId);
+                                                               Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 Fail case - GetFailedStagesFromCriteriaAsync returned: {string.Join(", ", failedStages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+                                
+                               // 🔧 FIX: Tạo comment chi tiết với tiêu chí fail và StageId - ĐẢM BẢO LUÔN CÓ THÔNG TIN
+                               var failedCriteria = criteriaResults.Where(c => !c.IsPassed).ToList();
+                               var failedCriteriaText = failedCriteria.Any() 
+                                   ? $"🔧 Tiêu chí không đạt: {string.Join(", ", failedCriteria.Select(c => $"{c.CriteriaName} (Giá trị: {c.ActualValue})"))}"
+                                   : "🔧 Tiêu chí không đạt: Không xác định";
                                
-                               detailedComments = $"Đánh giá: Không đạt. Số tiêu chí đạt và không đạt bằng nhau (50/50). Expert đã quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
+                                                               var failedStagesText = failedStages.Any() 
+                                   ? $"🔧 Giai đoạn cần cập nhật: {string.Join(", ", failedStages.Select((stage, index) => $"StageId: {stage.StageId}"))}"
+                                   : "🔧 Giai đoạn cần cập nhật: Không xác định";
+                               
+                               detailedComments = $"Đánh giá: Không đạt. Số tiêu chí đạt và không đạt bằng nhau (50/50). Expert đã quyết định thủ công.\n{failedCriteriaText}\n{failedStagesText}\n\n" + detailedComments;
+                               
+                               Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 Fail - Created comment with criteria: {failedCriteriaText}");
+                               Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 Fail - Created comment with stages: {failedStagesText}");
                            }
-                           else if (finalResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
-                           {
-                               var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
-                               var failedStagesText = failedStages.Any() 
-                                   ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages)}"
-                                   : "";
+                                                       else if (finalResult.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var failedStages = await GetFailedStagesFromCriteriaAsync(dto.QualityCriteriaEvaluations, dto.BatchId);
+                                var failedStagesText = failedStages.Any() 
+                                    ? $"Giai đoạn cần cải thiện thêm: {string.Join(", ", failedStages.Select(s => s.StageName))}"
+                                    : "";
                                
                                detailedComments = $"Đánh giá: Đạt. Số tiêu chí đạt và không đạt bằng nhau (50/50). Expert đã quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
                            }
@@ -339,12 +363,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                            finalResult = "NeedsImprovement";
                            Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 case - waiting for expert decision");
                            
-                           var failedStages = GetFailedStagesFromCriteria(dto.QualityCriteriaEvaluations);
-                           var failedStagesText = failedStages.Any() 
-                               ? $"Giai đoạn cần cải thiện: {string.Join(", ", failedStages)}"
-                               : "";
+                           var failedStages = await GetFailedStagesFromCriteriaAsync(dto.QualityCriteriaEvaluations, dto.BatchId);
+                                                       Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 NeedsImprovement case - GetFailedStagesFromCriteriaAsync returned: {string.Join(", ", failedStages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+                            
+                           // 🔧 FIX: Tạo comment chi tiết với tiêu chí fail và StageId - ĐẢM BẢO LUÔN CÓ THÔNG TIN
+                           var failedCriteria = criteriaResults.Where(c => !c.IsPassed).ToList();
+                           var failedCriteriaText = failedCriteria.Any() 
+                               ? $"🔧 Tiêu chí không đạt: {string.Join(", ", failedCriteria.Select(c => $"{c.CriteriaName} (Giá trị: {c.ActualValue})"))}"
+                               : "🔧 Tiêu chí không đạt: Không xác định";
                            
-                           detailedComments = $"Đánh giá: Cần cải thiện. Số tiêu chí đạt và không đạt bằng nhau (50/50). Cần expert quyết định thủ công.\n{failedStagesText}\n\n" + detailedComments;
+                                                       var failedStagesText = failedStages.Any() 
+                               ? $"🔧 Giai đoạn cần cải thiện: {string.Join(", ", failedStages.Select((stage, index) => $"StageId: {stage.StageId}"))}"
+                               : "🔧 Giai đoạn cần cải thiện: Không xác định";
+                           
+                           detailedComments = $"Đánh giá: Cần cải thiện. Số tiêu chí đạt và không đạt bằng nhau (50/50). Cần expert quyết định thủ công.\n{failedCriteriaText}\n{failedStagesText}\n\n" + detailedComments;
+                           
+                           Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 NeedsImprovement - Created comment with criteria: {failedCriteriaText}");
+                           Console.WriteLine($"DEBUG EVALUATION CREATE: 50/50 NeedsImprovement - Created comment with stages: {failedStagesText}");
                        }
                    }
                  
@@ -1095,11 +1130,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có đánh giá nào đã xóa.", new List<EvaluationViewDto>());
         }
 
-        // ================== GET FAILED STAGES FOR BATCH ==================
-        public async Task<List<string>> GetFailedStagesForBatchAsync(Guid batchId)
+                 // ================== GET FAILED STAGES FOR BATCH ==================
+         public async Task<List<ProcessingStage>> GetFailedStagesForBatchAsync(Guid batchId)
         {
             try
             {
+                Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Starting for batchId: {batchId}");
+                
                 // Lấy evaluation cuối cùng của batch
                 var latestEvaluation = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync(
                     e => e.BatchId == batchId && !e.IsDeleted,
@@ -1107,30 +1144,183 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
 
                 var evaluation = latestEvaluation.FirstOrDefault();
-                if (evaluation == null || evaluation.EvaluationResult != "Fail")
-                {
-                    return new List<string>();
-                }
+                                 if (evaluation == null || evaluation.EvaluationResult != "Fail")
+                 {
+                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: No fail evaluation found for batch {batchId}");
+                     return new List<ProcessingStage>();
+                 }
 
-                // Parse failed stages từ comments
-                var failedStages = new List<string>();
-                var comments = evaluation.Comments ?? "";
+                Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found evaluation with comments: {evaluation.Comments}");
+
+                                 // Parse failed stages từ comments
+                 var failedStages = new List<ProcessingStage>();
+                 var comments = evaluation.Comments ?? "";
                 
-                // Tìm pattern "Giai đoạn cần cập nhật: [danh sách]"
-                var match = System.Text.RegularExpressions.Regex.Match(comments, @"Giai đoạn cần cập nhật:\s*([^\n]+)");
-                if (match.Success)
+                Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Full comments: {comments}");
+                
+                                 // 🔧 FIX: Tìm cả 3 pattern - cũ, mới và mới nhất
+                // Pattern 1: "Giai đoạn cần cập nhật: [danh sách]" (cũ)
+                var match1 = System.Text.RegularExpressions.Regex.Match(comments, @"Giai đoạn cần cập nhật:\s*([^\n]+)");
+                
+                // Pattern 2: "🔧 Giai đoạn cần cập nhật: [danh sách]" (mới)
+                var match2 = System.Text.RegularExpressions.Regex.Match(comments, @"🔧 Giai đoạn cần cập nhật:\s*([^\n]+)");
+                
+                 // Pattern 3: "🔧 Giai đoạn cần cập nhật: StageId: 1, StageId: 2, StageId: 3" (mới nhất)
+                 var match3 = System.Text.RegularExpressions.Regex.Match(comments, @"🔧 Giai đoạn cần cập nhật:\s*([^\n]+)");
+                 
+                 if (match3.Success)
+                 {
+                     // Ưu tiên pattern mới nhất (🔧 với StageId format)
+                     var stagesText = match3.Groups[1].Value.Trim();
+                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found NEWEST pattern stages text: {stagesText}");
+                     
+                     // Parse stages từ format "StageId: 1, StageId: 2, StageId: 3, StageId: 4"
+                     var stageIdMatches = System.Text.RegularExpressions.Regex.Matches(stagesText, @"StageId:\s*(\d+)");
+                     foreach (System.Text.RegularExpressions.Match stageIdMatch in stageIdMatches)
+                     {
+                         var stageIdStr = stageIdMatch.Groups[1].Value.Trim();
+                         
+                         if (int.TryParse(stageIdStr, out var stageId))
+                         {
+                             // Tìm stage từ database theo StageId
+                             var stageFromDb = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(stageId);
+                             if (stageFromDb != null && !stageFromDb.IsDeleted)
+                             {
+                                 if (!failedStages.Any(s => s.StageId == stageId))
+                                 {
+                                     failedStages.Add(stageFromDb);
+                                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Added stage from NEWEST pattern: {stageFromDb.StageName} (ID: {stageId})");
+                                 }
+                             }
+                             else
+                             {
+                                 Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Stage not found in database for ID: {stageId}");
+                             }
+                         }
+                     }
+                 }
+                 else if (match2.Success)
+                 {
+                     // Fallback về pattern mới (🔧 với tên stage)
+                     var stagesText = match2.Groups[1].Value.Trim();
+                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found NEW pattern stages text: {stagesText}");
+                     
+                                           // Parse stages từ format "Thu hoạch (StageId: xxx, Thứ tự: 1), Phơi (StageId: xxx, Thứ tự: 2)"
+                      var stageMatches = System.Text.RegularExpressions.Regex.Matches(stagesText, @"([^(]+)\s*\(StageId:\s*([^,]+),\s*Thứ tự:\s*(\d+)\)");
+                     foreach (System.Text.RegularExpressions.Match stageMatch in stageMatches)
+                     {
+                         var stageName = stageMatch.Groups[1].Value.Trim();
+                         var stageIdStr = stageMatch.Groups[2].Value.Trim();
+                         var orderIndexStr = stageMatch.Groups[3].Value.Trim();
+                         
+                                                                    if (!string.IsNullOrEmpty(stageName) && int.TryParse(stageIdStr, out var stageId))
+                      {
+                          // Tìm stage từ database theo StageId
+                          var stageFromDb = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(stageId);
+                          if (stageFromDb != null && !stageFromDb.IsDeleted)
+                          {
+                              if (!failedStages.Any(s => s.StageId == stageId))
+                              {
+                                  failedStages.Add(stageFromDb);
+                                  Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Added stage from database: {stageFromDb.StageName} (ID: {stageId})");
+                              }
+                          }
+                          else
+                          {
+                              // Fallback: tạo stage mới nếu không tìm thấy trong database
+                              var stage = new ProcessingStage
+                              {
+                                  StageId = stageId,
+                                  StageName = stageName,
+                                  OrderIndex = int.Parse(orderIndexStr)
+                              };
+                              
+                              if (!failedStages.Any(s => s.StageId == stageId))
+                              {
+                                  failedStages.Add(stage);
+                                  Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Added stage from NEW pattern (fallback): {stageName} (ID: {stageId})");
+                              }
+                          }
+                      }
+                     }
+                 }
+                                 else if (match1.Success)
+                 {
+                     // Fallback về pattern cũ - lấy stages từ database dựa trên tên
+                     var stagesText = match1.Groups[1].Value.Trim();
+                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found OLD pattern stages text: {stagesText}");
+                     
+                     var stageNames = stagesText.Split(',').Select(s => s.Trim()).ToList();
+                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Parsed stage names from OLD pattern: {string.Join(", ", stageNames)}");
+                     
+                     // 🔧 FIX: Nếu có "PB", thay thế bằng stages cụ thể
+                     if (stageNames.Contains("PB"))
+                     {
+                         Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found 'PB', replacing with specific stages");
+                         
+                         // Lấy batch để có MethodId
+                         var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                         if (batch != null)
+                         {
+                             // Lấy tất cả stages theo MethodId
+                             var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                                 s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                                 q => q.OrderBy(s => s.OrderIndex));
+                             
+                             Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found {allStages.Count()} stages for MethodId {batch.MethodId}");
+                             
+                             // Thay thế "PB" bằng stages cụ thể từ database
+                             stageNames.Remove("PB");
+                             failedStages.AddRange(allStages);
+                             
+                             Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: After replacing PB: {string.Join(", ", allStages.Select(s => s.StageName))}");
+                         }
+                         else
+                         {
+                             // Fallback: sử dụng stages mặc định từ database
+                             stageNames.Remove("PB");
+                             var defaultStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                                 s => !s.IsDeleted,
+                                 q => q.OrderBy(s => s.OrderIndex));
+                             failedStages.AddRange(defaultStages.Take(5));
+                             Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Using default stages: {string.Join(", ", defaultStages.Take(5).Select(s => s.StageName))}");
+                         }
+                     }
+                     else
+                     {
+                         // Tìm stages theo tên từ database
+                         var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                         if (batch != null)
+                         {
+                             var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                                 s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                                 q => q.OrderBy(s => s.OrderIndex));
+                             
+                             foreach (var stageName in stageNames)
+                             {
+                                 var stage = allStages.FirstOrDefault(s => s.StageName.Equals(stageName, StringComparison.OrdinalIgnoreCase));
+                                 if (stage != null && !failedStages.Any(s => s.StageId == stage.StageId))
+                                 {
+                                     failedStages.Add(stage);
+                                     Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Found stage by name: {stage.StageName} (ID: {stage.StageId})");
+                                 }
+                             }
+                         }
+                     }
+                 }
+                else
                 {
-                    var stagesText = match.Groups[1].Value.Trim();
-                    failedStages = stagesText.Split(',').Select(s => s.Trim()).ToList();
+                    Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: No 'Giai đoạn cần cập nhật' pattern found in comments");
                 }
 
-                return failedStages;
+                                 Console.WriteLine($"DEBUG GetFailedStagesForBatchAsync: Final result: {string.Join(", ", failedStages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+                 return failedStages;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Lỗi lấy thông tin failed stages: {ex.Message}");
-                return new List<string>();
-            }
+                         catch (Exception ex)
+             {
+                 Console.WriteLine($"❌ Lỗi lấy thông tin failed stages: {ex.Message}");
+                 return new List<ProcessingStage>();
+             }
         }
 
         // ========== HELPER METHODS CHO ĐÁNH GIÁ CHẤT LƯỢNG ==========
@@ -1152,30 +1342,204 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                  // ========== HELPER METHODS CHO ĐÁNH GIÁ CHẤT LƯỢNG ==========
          
-         /// <summary>
-         /// Lấy danh sách stage bị fail từ tiêu chí đánh giá
-         /// </summary>
-         /// <param name="criteria">Danh sách tiêu chí đánh giá</param>
-         /// <returns>Danh sách stage cần retry</returns>
-         private List<string> GetFailedStagesFromCriteria(List<QualityCriteriaEvaluationDto> criteria)
-         {
-             var failedStages = new List<string>();
+                   /// <summary>
+          /// Lấy danh sách stage bị fail từ tiêu chí đánh giá
+          /// </summary>
+          /// <param name="criteria">Danh sách tiêu chí đánh giá</param>
+          /// <param name="batchId">ID của batch để lấy MethodId</param>
+          /// <returns>Danh sách stage cần retry</returns>
+          private async Task<List<ProcessingStage>> GetFailedStagesFromCriteriaAsync(List<QualityCriteriaEvaluationDto> criteria, Guid batchId)
+                   {
+              var failedStages = new List<ProcessingStage>();
+              
+              Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Starting with {criteria.Count} criteria");
+              
+              // 🔧 CẢI THIỆN: Phân tích chi tiết các tiêu chí fail để xác định stages cụ thể
+              var failedCriteria = criteria.Where(c => !c.IsPassed).ToList();
+              
+              Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Found {failedCriteria.Count} failed criteria");
+              
+              if (failedCriteria.Any())
+              {
+                  // Phân tích từng tiêu chí fail để xác định stage có vấn đề
+                  foreach (var criterion in failedCriteria)
+                  {
+                      Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Processing failed criterion: {criterion.CriteriaName}");
+                       var stageId = await GetStageIdFromFailedCriteriaAsync(criterion, batchId);
+                       Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Stage ID for {criterion.CriteriaName}: {stageId}");
+                       
+                                              if (stageId.HasValue)
+                        {
+                            // Tìm stage từ database theo StageId
+                            var stage = await _unitOfWork.ProcessingStageRepository.GetByIdAsync(stageId.Value);
+                            if (stage != null && !stage.IsDeleted && !failedStages.Any(s => s.StageId == stage.StageId))
+                            {
+                                failedStages.Add(stage);
+                                Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Added stage: {stage.StageName} (ID: {stage.StageId})");
+                           }
+                       }
+                  }
+              }
              
-             foreach (var criterion in criteria)
-             {
-                 if (!criterion.IsPassed && !string.IsNullOrEmpty(criterion.CriteriaName))
+                           // 🔧 CẢI THIỆN: Nếu không xác định được stage cụ thể, lấy tất cả stages từ MethodId
+              if (!failedStages.Any())
+              {
+                  Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: No specific stages found, getting all stages from MethodId");
+                  
+                  // Lấy batch để có MethodId
+                  var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                  if (batch != null)
+                  {
+                      Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Found batch with MethodId: {batch.MethodId}");
+                      
+                      // Lấy tất cả stages theo MethodId
+                      var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                          s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                          q => q.OrderBy(s => s.OrderIndex));
+                      
+                      Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Found {allStages.Count()} stages in database");
+                      
+                      foreach (var stage in allStages)
+                      {
+                          Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Stage from DB: {stage.StageId} - {stage.StageName}");
+                      }
+                      
+                      failedStages.AddRange(allStages);
+                     
+                                           // 🔧 FIX: Nếu không lấy được stages từ database, thử lấy tất cả stages
+                      if (!allStages.Any())
+                      {
+                          Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: No stages found for MethodId {batch.MethodId}, trying to get all stages");
+                          
+                          var allStagesInSystem = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                              s => !s.IsDeleted,
+                              q => q.OrderBy(s => s.OrderIndex));
+                          
+                          Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Found {allStagesInSystem.Count()} total stages in system");
+                          
+                          foreach (var stage in allStagesInSystem)
+                          {
+                              Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: All stage from DB: {stage.StageId} - {stage.StageName} (MethodId: {stage.MethodId})");
+                          }
+                          
+                          // Lấy 3 stages đầu tiên làm default
+                          var defaultStages = allStagesInSystem.Take(3).ToList();
+                          failedStages.AddRange(defaultStages);
+                          Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Using default stages: {string.Join(", ", defaultStages.Select(s => s.StageName))}");
+                      }
+                 }
+                 else
                  {
-                     // Lấy stage từ tên tiêu chí (VD: PB.MoisturePercent -> PB)
-                     var stageName = criterion.CriteriaName.Split('.')[0];
-                     if (!failedStages.Contains(stageName))
-                     {
-                         failedStages.Add(stageName);
-                     }
+                     Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Batch not found for batchId: {batchId}");
                  }
              }
              
-             return failedStages;
+                           // 🔧 FIX: Nếu vẫn không có stages, sử dụng default stages dựa trên tiêu chí fail
+              if (!failedStages.Any())
+              {
+                  Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Still no stages, using default stages based on failed criteria");
+                  
+                                     // 🔧 LOẠI BỎ HOÀN TOÀN HARD CODE: Chỉ sử dụng StageId từ database
+                  // Lấy batch để có MethodId
+                  var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                  if (batch != null)
+                  {
+                      // Lấy tất cả stages theo MethodId
+                      var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                          s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                          q => q.OrderBy(s => s.OrderIndex));
+                      
+                      Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Found {allStages.Count()} stages for MethodId {batch.MethodId}");
+                      
+                       // 🔧 LOẠI BỎ HOÀN TOÀN HARD CODE: Chỉ sử dụng StageId từ database
+                       // Không phân tích tên tiêu chí nữa, chỉ dựa vào mapping từ SystemConfiguration
+                       Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: No specific stage mapping found, using all stages");
+                       
+                       // Nếu không có mapping cụ thể, lấy tất cả stages
+                       failedStages.AddRange(allStages);
+                       Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Using all stages: {string.Join(", ", allStages.Select(s => s.StageName))}");
+                  }
+              }
+             
+                           Console.WriteLine($"DEBUG GetFailedStagesFromCriteriaAsync: Final failed stages: {string.Join(", ", failedStages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+              return failedStages;
          }
+         
+                   /// <summary>
+          /// Xác định stage code từ tiêu chí fail
+          /// </summary>
+          /// <param name="criterion">Tiêu chí bị fail</param>
+          /// <returns>Stage code có vấn đề</returns>
+                     /// <summary>
+           /// Xác định stage ID từ tiêu chí fail - Sử dụng mapping động từ SystemConfiguration
+           /// </summary>
+           /// <param name="criterion">Tiêu chí bị fail</param>
+           /// <param name="batchId">ID của batch để lấy MethodId</param>
+           /// <returns>Stage ID có vấn đề</returns>
+           private async Task<int?> GetStageIdFromFailedCriteriaAsync(QualityCriteriaEvaluationDto criterion, Guid batchId)
+          {
+              if (string.IsNullOrEmpty(criterion.CriteriaName))
+                    return null;
+                
+                try
+                {
+                                         // 🔧 CẢI THIỆN: Lấy mapping từ SystemConfiguration thay vì hard code
+                     var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                     if (batch == null) return null;
+                     
+                     // Lấy tất cả criteria configurations từ SystemConfiguration
+                     var criteriaConfigs = await _unitOfWork.SystemConfigurationRepository.GetAllAsync(
+                         c => !c.IsDeleted && c.TargetEntity == "ProcessingBatch"
+                     );
+                     
+                     // Tìm criteria config tương ứng với criterion bị fail
+                     var matchingConfig = criteriaConfigs.FirstOrDefault(c => 
+                         c.Name?.Equals(criterion.CriteriaName, StringComparison.OrdinalIgnoreCase) == true);
+                     
+                     if (matchingConfig != null)
+                     {
+                         // 🔧 MỚI: Lấy StageId từ TargetField hoặc ScopeId nếu có
+                         if (!string.IsNullOrEmpty(matchingConfig.TargetField) && int.TryParse(matchingConfig.TargetField, out var stageId))
+                         {
+                             Console.WriteLine($"DEBUG GetStageIdFromFailedCriteriaAsync: Found mapping for {criterion.CriteriaName} -> StageId: {stageId}");
+                             return stageId;
+                         }
+                         
+                                                   // Fallback: Lấy từ ScopeId nếu có (ScopeId là Guid, không thể convert sang int)
+                          if (matchingConfig.ScopeId.HasValue)
+                          {
+                              Console.WriteLine($"DEBUG GetStageIdFromFailedCriteriaAsync: Found mapping for {criterion.CriteriaName} -> ScopeId: {matchingConfig.ScopeId}");
+                              // ScopeId là Guid, không thể convert sang int, bỏ qua
+                              return null;
+                          }
+                     }
+                    
+                    // 🔧 FALLBACK: Nếu không tìm thấy mapping, sử dụng logic phân tích từ tên tiêu chí
+                    Console.WriteLine($"DEBUG GetStageIdFromFailedCriteriaAsync: No mapping found for {criterion.CriteriaName}, using fallback logic");
+                    
+                    // Phân tích tên tiêu chí để xác định stage
+                    var criteriaName = criterion.CriteriaName.ToUpper();
+                    
+                    // Tìm stage có tên tương ứng với tiêu chí
+                    var allStages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                        s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                        q => q.OrderBy(s => s.OrderIndex)
+                    );
+                    
+                    // Logic phân tích thông minh dựa trên tên tiêu chí và thứ tự stage
+                                         // 🔧 LOẠI BỎ HOÀN TOÀN HARD CODE: Chỉ sử dụng StageId từ database
+                     // Không phân tích tên tiêu chí nữa, chỉ dựa vào mapping từ SystemConfiguration
+                     Console.WriteLine($"DEBUG GetStageIdFromFailedCriteriaAsync: No mapping found for {criterion.CriteriaName}, returning null");
+                     return null;
+                    
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"DEBUG GetStageIdFromFailedCriteriaAsync: Error getting stage mapping: {ex.Message}");
+                    return null;
+              }
+          }
     }
 }
 

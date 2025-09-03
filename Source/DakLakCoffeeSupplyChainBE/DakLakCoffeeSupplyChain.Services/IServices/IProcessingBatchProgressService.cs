@@ -23,5 +23,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> HardDeleteAsync(Guid progressId);
         Task<IServiceResult> AdvanceProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetAvailableBatchesForProgressAsync(Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> UpdateNextStagesAsync(Guid batchId, ProcessingBatchProgressCreateDto input, Guid userId, bool isAdmin, bool isManager);
     }
 }

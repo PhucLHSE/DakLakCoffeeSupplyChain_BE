@@ -96,7 +96,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try
             {
                 var failedStages = await _evaluationService.GetFailedStagesForBatchAsync(batchId);
-                return Ok(new { failedStages });
+                var failedStagesDto = failedStages.Select(s => new { 
+                    stageId = s.StageId, 
+                    stageName = s.StageName, 
+                    orderIndex = s.OrderIndex 
+                }).ToList();
+                return Ok(new { failedStages = failedStagesDto });
             }
             catch (Exception ex)
             {

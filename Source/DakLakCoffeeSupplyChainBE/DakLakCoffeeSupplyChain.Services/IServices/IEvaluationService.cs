@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.ProcessingBatchEvalutionDTOs;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.Base;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetByBatchAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert);
         Task<IServiceResult> GetSummaryByBatchAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert);
         Task<IServiceResult> GetDeletedByBatchAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager, bool isExpert);
-        Task<List<string>> GetFailedStagesForBatchAsync(Guid batchId);
+        Task<List<ProcessingStage>> GetFailedStagesForBatchAsync(Guid batchId);
     }
 }
