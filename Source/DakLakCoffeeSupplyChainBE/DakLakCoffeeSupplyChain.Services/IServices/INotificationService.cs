@@ -33,5 +33,26 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> MarkAllAsReadAsync(Guid userId);
 
         Task<IServiceResult> GetNotificationByIdAsync(Guid notificationId, Guid userId);
+
+        Task<SystemNotification> NotifyManagerNewRegistrationdAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content);
+
+        Task<SystemNotification> NotifyFarmerApprovedRegistrationAsync(
+        Guid recipientId, Guid senderId, string companyName, string content);
+
+        Task<SystemNotification> NotifyFarmerRejectedRegistrationAsync(
+        Guid recipientId, Guid senderId, string companyName, string content);
+
+        Task<SystemNotification> NotifyFarmerNewCommitmentAsync(
+        Guid recipientId, Guid senderId, string companyName, string content);
+
+        Task<SystemNotification> NotifyFarmerUpdatedCommitmentAsync(
+        Guid recipientId, Guid senderId, string companyName, string content);
+
+        Task<SystemNotification> NotifyManagerApprovedCommitmentAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content);
+
+        Task<SystemNotification> NotifyManagerRejectedCommitmentAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content);
     }
 }
