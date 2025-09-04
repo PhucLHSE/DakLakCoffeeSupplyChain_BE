@@ -224,7 +224,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Include(s => s.CreatedByNavigation)
                     .Include(s => s.ShipmentDetails.Where(d => !d.IsDeleted))
                         .ThenInclude(sd => sd.OrderItem)
-                            .ThenInclude(oi => oi.Product),
+                            .ThenInclude(oi => oi.Product)
+                                .ThenInclude(p => p.Inventory)
+                                    .ThenInclude(i => i.Warehouse),
                 asNoTracking: true
             );
 
@@ -1134,7 +1136,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return;
             }
 
-            var contract = shipment.Order.DeliveryBatch.Contract;
+            // var contract = shipment.Order.DeliveryBatch.Contract; // Removed unused variable
             
             // Lấy danh sách OrderItem trong đơn hàng với Product và Inventory
             var orderItems = await _unitOfWork.OrderItemRepository.GetAllAsync(
