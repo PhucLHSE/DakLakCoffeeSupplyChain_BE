@@ -24,5 +24,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ShipmentDTOs.ShipmentDetailDTOs
         public string Note { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; }
+
+        // Thông tin kho xuất hàng cho sản phẩm này
+        public WarehouseInfoDto? Warehouse { get; set; }
     }
 }

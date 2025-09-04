@@ -38,9 +38,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ReceivedAt = shipment.ReceivedAt,
                 CreatedAt = shipment.CreatedAt,
                 
-                // Thông tin kho (có thể có nhiều kho)
-                Warehouses = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?
-                    .Where(w => !w.IsDeleted)
+                // Thông tin kho (lấy từ các sản phẩm thực tế được giao)
+                Warehouses = shipment.ShipmentDetails?
+                    .Where(detail => !detail.IsDeleted && detail.OrderItem?.Product?.Inventory?.Warehouse != null)
+                    .Select(detail => detail.OrderItem.Product.Inventory.Warehouse)
+                    .DistinctBy(w => w.WarehouseId)
                     .Select(w => new WarehouseInfoDto
                     {
                         WarehouseId = w.WarehouseId,
@@ -78,7 +80,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                             Quantity = detail.Quantity,
                             Unit = unit,
                             Note = detail.Note ?? string.Empty,
-                            CreatedAt = detail.CreatedAt
+                            CreatedAt = detail.CreatedAt,
+                            // Thông tin kho xuất hàng cho sản phẩm này
+                            Warehouse = detail.OrderItem?.Product?.Inventory?.Warehouse != null ? new WarehouseInfoDto
+                            {
+                                WarehouseId = detail.OrderItem.Product.Inventory.Warehouse.WarehouseId,
+                                WarehouseCode = detail.OrderItem.Product.Inventory.Warehouse.WarehouseCode ?? string.Empty,
+                                Name = detail.OrderItem.Product.Inventory.Warehouse.Name ?? string.Empty,
+                                Location = detail.OrderItem.Product.Inventory.Warehouse.Location ?? string.Empty,
+                                Capacity = detail.OrderItem.Product.Inventory.Warehouse.Capacity,
+                                CreatedAt = detail.OrderItem.Product.Inventory.Warehouse.CreatedAt,
+                                UpdatedAt = detail.OrderItem.Product.Inventory.Warehouse.UpdatedAt
+                            } : null
                         };
                     })
                     .ToList() ?? new()
@@ -110,9 +123,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = shipment.CreatedAt,
                 CreatedByName = shipment.CreatedByNavigation?.Name ?? string.Empty,
                 
-                // Thông tin kho (có thể có nhiều kho)
-                Warehouses = shipment.Order?.DeliveryBatch?.Contract?.Seller?.Warehouses?
-                    .Where(w => !w.IsDeleted)
+                // Thông tin kho (lấy từ các sản phẩm thực tế được giao)
+                Warehouses = shipment.ShipmentDetails?
+                    .Where(detail => !detail.IsDeleted && detail.OrderItem?.Product?.Inventory?.Warehouse != null)
+                    .Select(detail => detail.OrderItem.Product.Inventory.Warehouse)
+                    .DistinctBy(w => w.WarehouseId)
                     .Select(w => new WarehouseInfoDto
                     {
                         WarehouseId = w.WarehouseId,
@@ -149,7 +164,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                             Quantity = detail.Quantity,
                             Unit = unit,
                             Note = detail.Note ?? string.Empty,
-                            CreatedAt = detail.CreatedAt
+                            CreatedAt = detail.CreatedAt,
+                            // Thông tin kho xuất hàng cho sản phẩm này
+                            Warehouse = detail.OrderItem?.Product?.Inventory?.Warehouse != null ? new WarehouseInfoDto
+                            {
+                                WarehouseId = detail.OrderItem.Product.Inventory.Warehouse.WarehouseId,
+                                WarehouseCode = detail.OrderItem.Product.Inventory.Warehouse.WarehouseCode ?? string.Empty,
+                                Name = detail.OrderItem.Product.Inventory.Warehouse.Name ?? string.Empty,
+                                Location = detail.OrderItem.Product.Inventory.Warehouse.Location ?? string.Empty,
+                                Capacity = detail.OrderItem.Product.Inventory.Warehouse.Capacity,
+                                CreatedAt = detail.OrderItem.Product.Inventory.Warehouse.CreatedAt,
+                                UpdatedAt = detail.OrderItem.Product.Inventory.Warehouse.UpdatedAt
+                            } : null
                         };
                     })
                     .ToList() ?? new()
