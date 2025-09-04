@@ -3391,7 +3391,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var allRetryProgresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
                     p => p.BatchId == batchId && 
                          p.StageDescription != null && 
-                         p.StageDescription.Contains("Khắc phục (Retry)") && 
+                         p.StageDescription.Contains("Làm lại (Retry)") && 
                          !p.IsDeleted
                 );
                 
@@ -3416,41 +3416,88 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Remaining stages to retry: {string.Join(", ", remainingFailedStageIds)}");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All failed stages retried: {allFailedStagesRetried}");
                 
-                // 🔧 MỚI: Tính toán stages còn lại sau khi retry
-                var maxRetriedStageId = retryStageIds.Any() ? retryStageIds.Max() : 0;
-                var remainingStagesAfterRetry = stages.Where(s => s.StageId > maxRetriedStageId).ToList();
+                // 🔧 MỚI: KIỂM TRA RETRY STAGE CUỐI CÙNG - ĐƠN GIẢN HÓA LOGIC
+                // Kiểm tra xem stage hiện tại có phải là stage cuối cùng trong method không
+                var currentStageOrderIndex = currentStage.OrderIndex;
+                var maxOrderIndex = stages.Max(s => s.OrderIndex);
+                var isCurrentStageLast = currentStageOrderIndex >= maxOrderIndex;
                 
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Max retried StageId: {maxRetriedStageId}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Current stage OrderIndex: {currentStageOrderIndex}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Max OrderIndex in method: {maxOrderIndex}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Is current stage last: {isCurrentStageLast}");
+                
+                // 🔧 MỚI: KIỂM TRA XEM TẤT CẢ STAGES ĐÃ HOÀN THÀNH CHƯA (KỂ CẢ KHI RETRY)
+                // Lấy tất cả progresses của batch này
+                var allBatchProgresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync();
+                var batchProgresses = allBatchProgresses.Where(p => p.BatchId == batchId && !p.IsDeleted).ToList();
+                
+                // Lấy tất cả evaluations của batch này
+                var allBatchEvaluations = await _unitOfWork.ProcessingBatchEvaluationRepository.GetAllAsync();
+                var batchEvaluations = allBatchEvaluations.Where(e => e.BatchId == batchId && !e.IsDeleted).ToList();
+                
+                // Kiểm tra xem tất cả stages đã có progress chưa (không cần evaluation PASS)
+                // Trong trường hợp retry, các stages đã có progress rồi, chỉ cần tạo evaluation mới
+                var allStagesHaveProgress = stages.All(stage => 
+                    batchProgresses.Any(p => p.StageId == stage.StageId));
+                
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All stages have progress: {allStagesHaveProgress}");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Total stages in method: {stages.Count}");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Remaining stages after retry: {string.Join(", ", remainingStagesAfterRetry.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All stages in method: {string.Join(", ", stages.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Stages with progress: {stages.Count(s => batchProgresses.Any(p => p.StageId == s.StageId))}");
                 
-                // 🔧 MỚI: Kiểm tra xem có cần tự động chuyển sang stages tiếp theo không
-                if (allFailedStagesRetried && remainingStagesAfterRetry.Any())
-                {
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All failed stages retried, but there are {remainingStagesAfterRetry.Count} stages remaining");
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Next stages to continue: {string.Join(", ", remainingStagesAfterRetry.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
-                    
-                    // Giữ status InProgress để farmer có thể tiếp tục với các stages tiếp theo
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Keeping status as InProgress to allow continuation with next stages");
-                }
+                // 🔧 MỚI: KIỂM TRA RETRY STAGE CUỐI CÙNG - TỰ ĐỘNG TẠO EVALUATION
+                // Tạo evaluation khi: retry stage cuối cùng (không cần đợi retry tất cả failed stages)
+                var isRetryingLastStage = isCurrentStageLast;
+                var shouldCreateEvaluation = isRetryingLastStage;
                 
-                // 🔧 MỚI: KHÔNG TẠO EVALUATION KHI RETRY - CHỈ TẠO KHI HOÀN THÀNH STAGE CUỐI
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Retry completed, NO evaluation created yet");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Is retrying last stage: {isRetryingLastStage}");
                 Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: All failed stages retried: {allFailedStagesRetried}");
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Remaining stages after retry: {remainingStagesAfterRetry.Count}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Is current stage last: {isCurrentStageLast}");
+                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Should create evaluation: {shouldCreateEvaluation}");
                 
-                // 🔧 MỚI: Luôn giữ status InProgress để farmer có thể tiếp tục với các stages tiếp theo
-                Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Keeping status as InProgress to allow continuation");
-                
-                if (remainingStagesAfterRetry.Any())
+                if (shouldCreateEvaluation)
                 {
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Next stages available: {string.Join(", ", remainingStagesAfterRetry.Select(s => $"{s.StageName} (ID: {s.StageId})"))}");
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Farmer can continue with next stages using UpdateNextStagesAsync");
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Creating evaluation and changing status to AwaitingEvaluation");
+                    
+                    // Chuyển status sang AwaitingEvaluation
+                    batch.Status = "AwaitingEvaluation";
+                    batch.UpdatedAt = DateTime.UtcNow;
+                    await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+                    
+                    // Tạo evaluation mới cho expert
+                    var newEvaluation = new ProcessingBatchEvaluation
+                    {
+                        EvaluationId = Guid.NewGuid(),
+                        EvaluationCode = await _codeGenerator.GenerateEvaluationCodeAsync(DateTime.UtcNow.Year),
+                        BatchId = batchId,
+                        EvaluatedBy = null,
+                        EvaluatedAt = null,
+                        EvaluationResult = null,
+                        Comments = $"Tự động tạo evaluation sau khi retry stage cuối cùng: {currentStage.StageName}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+                    
+                    await _unitOfWork.ProcessingBatchEvaluationRepository.CreateAsync(newEvaluation);
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Created new evaluation with code: {newEvaluation.EvaluationCode}");
                 }
                 else
                 {
-                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: No more stages available, batch completed");
+                    // 🔧 MỚI: Luôn giữ status InProgress để farmer có thể tiếp tục với các stages tiếp theo
+                    Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Keeping status as InProgress to allow continuation");
+                    
+                    if (!isCurrentStageLast)
+                    {
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Current stage is not last, farmer can continue with next stages");
+                    }
+                    else if (!allFailedStagesRetried)
+                    {
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Current stage is last but not all failed stages retried yet");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG UPDATE AFTER EVALUATION: Current stage is last and all failed stages retried, but logic didn't trigger");
+                    }
                 }
 
 
@@ -3492,10 +3539,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
 
 
-                var successMessage = allFailedStagesRetried 
-                    ? (remainingStagesAfterRetry.Any() 
-                        ? $"Đã cập nhật progress cho stage {currentStage.StageName} (StageId: {currentStage.StageId}). Đã retry xong các giai đoạn bị fail. Cần cập nhật tiếp {remainingStagesAfterRetry.Count} giai đoạn: {string.Join(", ", remainingStagesAfterRetry.Select(s => s.StageName))}"
-                        : $"Đã cập nhật progress cho stage {currentStage.StageName} (StageId: {currentStage.StageId}) và tạo đánh giá mới cho tất cả stages.")
+                var successMessage = isCurrentStageLast 
+                    ? $"Đã cập nhật progress cho stage {currentStage.StageName} (StageId: {currentStage.StageId}) và tạo đánh giá mới cho tất cả stages. Batch đã chuyển sang chờ đánh giá."
                     : $"Đã cập nhật progress cho stage {currentStage.StageName} (StageId: {currentStage.StageId}). Còn {remainingFailedStageIds.Count} stage(s) cần retry: {string.Join(", ", remainingFailedStageIds)}";
                 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, successMessage, progress.ProgressId);
