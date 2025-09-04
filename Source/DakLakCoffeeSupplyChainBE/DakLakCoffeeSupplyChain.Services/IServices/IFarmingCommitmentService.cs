@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAvailableForCropSeason(Guid userId);
         Task<IServiceResult> Update(FarmingCommitmentUpdateDto commitmentUpdateDto, Guid userId, Guid commitmentId);
         Task<IServiceResult> UpdateStatusByFarmer(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId);
+        Task<IServiceResult> UpdateStatusByManager(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId);
 
     }
 }
