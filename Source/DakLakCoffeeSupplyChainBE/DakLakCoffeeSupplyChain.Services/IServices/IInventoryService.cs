@@ -18,5 +18,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> GetAllByWarehouseIdAsync(Guid warehouseId, Guid userId);
         Task<IServiceResult> GetAllByWarehouseIdForDetailAsync(Guid warehouseId, Guid userId);
         Task<IServiceResult> GetInventoriesWithFifoRecommendationAsync(Guid warehouseId, Guid userId, double? requestedQuantity = null);
+        Task<IServiceResult> GetAvailableForProductAsync(Guid userId);
     }
 }
