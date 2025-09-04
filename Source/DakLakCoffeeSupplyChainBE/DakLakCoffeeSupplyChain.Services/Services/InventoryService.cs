@@ -444,5 +444,58 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 result
             );
         }
+
+        public async Task<IServiceResult> GetAvailableForProductAsync(Guid userId)
+        {
+            try
+            {
+                // Lấy tất cả inventory
+                var allInventoriesResult = await GetAllAsync(userId);
+                if (allInventoriesResult.Status != Const.SUCCESS_READ_CODE)
+                {
+                    return allInventoriesResult;
+                }
+
+                var allInventories = allInventoriesResult.Data as List<InventoryListItemDto>;
+                if (allInventories == null || !allInventories.Any())
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không có tồn kho nào.",
+                        new List<InventoryListItemDto>()
+                    );
+                }
+
+                // Lấy tất cả product để kiểm tra inventory nào đã có product
+                var allProducts = await _unitOfWork.ProductRepository.GetAllAsync(
+                    predicate: p => !p.IsDeleted,
+                    asNoTracking: true
+                );
+
+                // Lọc ra những inventory chưa có product
+                var availableInventories = allInventories.Where(inventory => 
+                {
+                    // Kiểm tra xem inventory này đã có product chưa
+                    var hasProduct = allProducts.Any(product => 
+                        product.InventoryId == inventory.InventoryId
+                    );
+                    
+                    return !hasProduct;
+                }).ToList();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    $"Tìm thấy {availableInventories.Count} tồn kho chưa được tạo sản phẩm.",
+                    availableInventories
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi khi lấy danh sách tồn kho khả dụng: {ex.Message}"
+                );
+            }
+        }
     }
 }
