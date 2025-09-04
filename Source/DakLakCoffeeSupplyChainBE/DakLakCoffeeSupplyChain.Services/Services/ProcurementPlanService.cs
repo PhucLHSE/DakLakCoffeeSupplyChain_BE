@@ -29,7 +29,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(d => d.CoffeeType).
                 Include(p => p.ProcurementPlansDetails).
                     ThenInclude(p => p.ProcessMethod),
-                orderBy: p => p.OrderBy(p => p.PlanCode),
+                orderBy: p => p.OrderByDescending(p => p.CreatedAt),
                 asNoTracking: true);
                         
             if (procurementPlans == null || procurementPlans.Count == 0)
@@ -76,7 +76,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(p => p.FarmingCommitments).
                     ThenInclude(p => p.Farmer).
                         ThenInclude(p => p.User),
-                orderBy: p => p.OrderBy(p => p.PlanCode),
+                orderBy: p => p.OrderByDescending(p => p.CreatedAt),
                 asNoTracking: true);
 
             if (procurementPlans == null || procurementPlans.Count == 0)

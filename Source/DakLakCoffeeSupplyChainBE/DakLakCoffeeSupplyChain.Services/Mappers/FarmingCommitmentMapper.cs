@@ -138,6 +138,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             f.CommitmentName = dto.CommitmentName.HasValue() ? dto.CommitmentName : f.CommitmentName;
             f.Note = dto.Note;
+            f.Status = FarmingCommitmentStatus.Pending.ToString();
             f.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }

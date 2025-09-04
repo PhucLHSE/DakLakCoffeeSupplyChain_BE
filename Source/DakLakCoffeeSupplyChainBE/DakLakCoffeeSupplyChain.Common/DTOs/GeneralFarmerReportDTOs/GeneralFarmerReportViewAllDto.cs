@@ -13,6 +13,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.GeneralFarmerReportDTOs
         public DateTime ReportedAt { get; set; }
         public string ReportedByName { get; set; }
         public bool? IsResolved { get; set; }
+        public int? SeverityLevel { get; set; }
     }
 
 }

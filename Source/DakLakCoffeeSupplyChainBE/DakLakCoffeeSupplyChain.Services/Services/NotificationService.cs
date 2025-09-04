@@ -39,7 +39,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -101,7 +101,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "EvaluationFailed",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -149,7 +149,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -194,7 +194,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseOutbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -240,7 +240,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "FarmerReport",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = farmerId
         };
 
@@ -277,6 +277,265 @@ public class NotificationService : INotificationService
         return notification;
     }
 
+    public async Task<SystemNotification> NotifyManagerNewRegistrationdAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content)
+    {
+        var title = "Có đơn đăng ký mới cho kế hoạch của bạn";
+        var message = $"Nông dân {farmerName} đã đăng ký vào kế hoạch {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "NewRegistration",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyFarmerApprovedRegistrationAsync(
+        Guid recipientId, Guid senderId, string companyName, string content)
+    {
+        var title = "Đơn đăng ký tham gia kế hoạch của bạn đã được duyệt";
+        var message = $"Doanh nghiệp {companyName} đã duyệt vào đơn đăng ký {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "ApprovedRegistration",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyFarmerRejectedRegistrationAsync(
+        Guid recipientId, Guid senderId, string companyName, string content)
+    {
+        var title = "Đơn đăng ký tham gia kế hoạch của bạn đã bị từ chối";
+        var message = $"Doanh nghiệp {companyName} đã từ chối đơn đăng ký {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "RejectedRegistration",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyFarmerNewCommitmentAsync(
+        Guid recipientId, Guid senderId, string companyName, string content)
+    {
+        var title = "Bạn có đơn cam kết mới";
+        var message = $"Doanh nghiệp {companyName} đã tạo cam kết với bạn {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "NewCommitment",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyFarmerUpdatedCommitmentAsync(
+        Guid recipientId, Guid senderId, string companyName, string content)
+    {
+        var title = "Cam kết của bạn đã được doanh nghiệp cập nhật";
+        var message = $"Doanh nghiệp {companyName} vừa cập nhật lại cam kết với bạn {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "UpdatedCommitment",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyManagerApprovedCommitmentAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content)
+    {
+        var title = "Cam kết của bạn đã được nông dân chấp nhận";
+        var message = $"Nông dân {farmerName} vừa đã chấp nhận cam kết với bạn {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "ApprovedCommitment",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<SystemNotification> NotifyManagerRejectedCommitmentAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content)
+    {
+        var title = "Cam kết của bạn đã được nông dân từ chối";
+        var message = $"Nông dân {farmerName} vừa đã từ chối cam kết với bạn {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "ApprovedCommitment",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
     public async Task<SystemNotification> NotifyExpertAdviceCreatedAsync(
         Guid reportId, Guid expertId, string expertName, string adviceText)
     {
@@ -290,7 +549,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ExpertAdvice",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = expertId
         };
 
@@ -480,7 +739,7 @@ public class NotificationService : INotificationService
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông báo.");
 
             recipient.IsRead = true;
-            recipient.ReadAt = DateTime.UtcNow;
+            recipient.ReadAt = DateHelper.NowVietnamTime();
 
             _unitOfWork.SystemNotificationRecipientRepository
                 .Update(recipient);
@@ -512,7 +771,7 @@ public class NotificationService : INotificationService
             foreach (var recipient in unreadRecipients)
             {
                 recipient.IsRead = true;
-                recipient.ReadAt = DateTime.UtcNow;
+                recipient.ReadAt = DateHelper.NowVietnamTime();
 
                 _unitOfWork.SystemNotificationRecipientRepository
                     .Update(recipient);
