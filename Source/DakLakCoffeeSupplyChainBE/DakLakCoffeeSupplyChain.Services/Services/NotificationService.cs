@@ -39,7 +39,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -101,7 +101,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "EvaluationFailed",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -149,7 +149,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseInbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -194,7 +194,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "WarehouseOutbound",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = null
         };
 
@@ -240,7 +240,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "FarmerReport",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = farmerId
         };
 
@@ -290,7 +290,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "NewRegistration",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -327,7 +327,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ApprovedRegistration",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -364,7 +364,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "RejectedRegistration",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -401,7 +401,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "NewCommitment",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -438,7 +438,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "UpdatedCommitment",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -475,7 +475,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ApprovedCommitment",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -512,7 +512,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ApprovedCommitment",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = senderId
         };
 
@@ -549,7 +549,7 @@ public class NotificationService : INotificationService
             Title = title,
             Message = message,
             Type = "ExpertAdvice",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateHelper.NowVietnamTime(),
             CreatedBy = expertId
         };
 
@@ -739,7 +739,7 @@ public class NotificationService : INotificationService
                 return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông báo.");
 
             recipient.IsRead = true;
-            recipient.ReadAt = DateTime.UtcNow;
+            recipient.ReadAt = DateHelper.NowVietnamTime();
 
             _unitOfWork.SystemNotificationRecipientRepository
                 .Update(recipient);
@@ -771,7 +771,7 @@ public class NotificationService : INotificationService
             foreach (var recipient in unreadRecipients)
             {
                 recipient.IsRead = true;
-                recipient.ReadAt = DateTime.UtcNow;
+                recipient.ReadAt = DateHelper.NowVietnamTime();
 
                 _unitOfWork.SystemNotificationRecipientRepository
                     .Update(recipient);
