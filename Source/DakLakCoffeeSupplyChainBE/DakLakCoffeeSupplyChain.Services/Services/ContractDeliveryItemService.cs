@@ -630,28 +630,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             double totalPlanned = await _unitOfWork.ContractDeliveryItemRepository
                 .SumPlannedQuantityByBatchAsync(deliveryBatchId);
 
-            // Chỉ cập nhật status thành Fulfilled khi đã hoàn thành 100%
-            if (totalPlanned > 0 &&
-                totalFulfilled >= totalPlanned)
+            // Chỉ cập nhật khối lượng đã giao, không cập nhật status
+            if (totalPlanned > 0)
             {
-                // Fetch batch với tracking để có thể update
-                var batchToUpdate = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                // Fetch batch để kiểm tra thông tin
+                var batchToCheck = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
                     predicate: b => 
                        b.DeliveryBatchId == deliveryBatchId && 
                        !b.IsDeleted,
-                    asNoTracking: false  // Fetch với tracking để update
+                    asNoTracking: true  // Chỉ đọc để kiểm tra
                 );
 
-                if (batchToUpdate != null && 
-                    batchToUpdate.Status != "Fulfilled")
+                if (batchToCheck != null)
                 {
-                    batchToUpdate.Status = "Fulfilled";
-                    batchToUpdate.UpdatedAt = DateHelper.NowVietnamTime();
-
-                    await _unitOfWork.ContractDeliveryBatchRepository
-                        .UpdateAsync(batchToUpdate);
-
-                    await _unitOfWork.SaveChangesAsync();
+                    // Log thông tin khối lượng đã giao
+                    var completionPercentage = (totalFulfilled / totalPlanned) * 100;
+                    Console.WriteLine($"📊 DeliveryBatch {deliveryBatchId}: " +
+                                   $"Tiến độ giao hàng: {completionPercentage:F1}% " +
+                                   $"({totalFulfilled}/{totalPlanned})");
                 }
             }
         }
