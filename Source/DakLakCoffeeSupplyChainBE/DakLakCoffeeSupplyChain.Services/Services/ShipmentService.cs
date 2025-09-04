@@ -926,7 +926,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                                 .ThenInclude(db => db.Contract)
                         .Include(s => s.DeliveryStaff)
                         .Include(s => s.ShipmentDetails.Where(sd => !sd.IsDeleted)),
-                    asNoTracking: false
+                    asNoTracking: false // Cần tracking để có thể cập nhật
                 );
 
                 if (shipment == null)
@@ -970,10 +970,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Nếu status là Delivered, cập nhật ReceivedAt
                 if (statusUpdateDto.DeliveryStatus == Common.Enum.ShipmentEnums.ShipmentDeliveryStatus.Delivered)
                 {
-                    shipment.ReceivedAt = statusUpdateDto.ReceivedAt ?? DateHelper.NowVietnamTime();
+                    shipment.ReceivedAt = DateHelper.NowVietnamTime();
                     
                     // Trừ số lượng từ inventory khi giao hàng thành công
                     await UpdateInventoryOnDelivery(shipment);
+                    
+                    // Cập nhật khối lượng đã giao trong ContractDeliveryItem
+                    await UpdateContractDeliveryItemQuantity(shipment);
                 }
 
                 // Tự động cập nhật Order status dựa trên Shipment status
@@ -999,7 +1002,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                     
                     // Cập nhật thời gian của Order
-                    shipment.Order.UpdatedAt = DateHelper.NowVietnamTime();
+                    var orderUpdateTime = DateHelper.NowVietnamTime();
+                    
+                    // Cập nhật Order entity đã được track
+                    shipment.Order.Status = shipment.Order.Status;
+                    shipment.Order.UpdatedAt = orderUpdateTime;
                     
                     // Cập nhật Order trong repository
                     await _unitOfWork.OrderRepository.UpdateAsync(shipment.Order);
@@ -1062,8 +1069,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Lưu thay đổi
                 try
                 {
+                    // Cập nhật entity đã được track
                     await _unitOfWork.ShipmentRepository.UpdateAsync(shipment);
 
+                    // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
 
                     if (result > 0)
@@ -1178,8 +1187,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     inventory.Quantity = Math.Max(0, inventory.Quantity - deliveredQuantity);
                     inventory.UpdatedAt = DateHelper.NowVietnamTime();
 
-                    // Cập nhật inventory
-                    await _unitOfWork.Inventories.UpdateAsync(inventory);
+                    // Chuẩn bị cập nhật inventory
+                    _unitOfWork.Inventories.PrepareUpdate(inventory);
 
                     // Tạo InventoryLog để ghi lại thay đổi thực tế
                     var inventoryLog = new InventoryLog
@@ -1196,7 +1205,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         IsDeleted = false
                     };
 
-                    await _unitOfWork.InventoryLogs.CreateAsync(inventoryLog);
+                    _unitOfWork.InventoryLogs.PrepareCreate(inventoryLog);
 
                     // ✅ CẬP NHẬT TRẠNG THÁI PHIẾU XUẤT KHO
                     // Tìm phiếu xuất kho tương ứng với orderItem này
@@ -1222,14 +1231,233 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         receipt.Note = completedNote;
                         receipt.UpdatedAt = DateTime.UtcNow;
                         
-                        await _unitOfWork.WarehouseOutboundReceipts.UpdateAsync(receipt);
+                        _unitOfWork.WarehouseOutboundReceipts.PrepareUpdate(receipt);
                         
-                        Console.WriteLine($"Đã cập nhật phiếu xuất kho {receipt.OutboundReceiptCode} thành trạng thái hoàn thành");
+                        Console.WriteLine($"Đã chuẩn bị cập nhật phiếu xuất kho {receipt.OutboundReceiptCode} thành trạng thái hoàn thành");
                     }
 
                     Console.WriteLine($"Đã trừ {deliveredQuantity} từ inventory {inventory.InventoryCode}. " +
                                    $"Từ {oldQuantity} xuống {inventory.Quantity}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật khối lượng đã giao trong ContractDeliveryItem khi shipment được giao thành công
+        /// </summary>
+        private async Task UpdateContractDeliveryItemQuantity(Shipment shipment)
+        {
+            if (shipment.Order == null || 
+                shipment.Order.DeliveryBatch == null || 
+                shipment.Order.DeliveryBatch.Contract == null)
+            {
+                Console.WriteLine("❌ Không thể cập nhật ContractDeliveryItem vì thông tin đơn hàng không đầy đủ.");
+                return;
+            }
+
+            try
+            {
+                var contract = shipment.Order.DeliveryBatch.Contract;
+                var deliveryBatchId = shipment.Order.DeliveryBatch.DeliveryBatchId; // Chỉ lấy ID, không lấy entity
+
+                Console.WriteLine($"🔄 Bắt đầu cập nhật ContractDeliveryItem cho:");
+                Console.WriteLine($"   📋 Contract: {contract.ContractCode}");
+                Console.WriteLine($"   🚚 DeliveryBatch ID: {deliveryBatchId}");
+                Console.WriteLine($"   📦 Shipment: {shipment.ShipmentCode}");
+
+                // Lấy danh sách ContractDeliveryItem của đợt giao hàng này
+                var contractDeliveryItems = await _unitOfWork.ContractDeliveryItemRepository.GetAllAsync(
+                    predicate: cdi => 
+                        cdi.DeliveryBatchId == deliveryBatchId &&
+                        !cdi.IsDeleted,
+                    include: query => query
+                        .Include(cdi => cdi.ContractItem)
+                            .ThenInclude(ci => ci.CoffeeType),
+                    asNoTracking: false
+                );
+
+                if (!contractDeliveryItems.Any())
+                {
+                    Console.WriteLine($"❌ Không tìm thấy ContractDeliveryItem cho DeliveryBatch {deliveryBatchId}");
+                    return;
+                }
+
+                Console.WriteLine($"📦 Tìm thấy {contractDeliveryItems.Count()} ContractDeliveryItem cần cập nhật");
+
+                // Lấy danh sách OrderItem của đơn hàng này
+                var orderItems = await _unitOfWork.OrderItemRepository.GetAllAsync(
+                    predicate: oi => 
+                        oi.OrderId == shipment.Order.OrderId &&
+                        !oi.IsDeleted,
+                    include: query => query
+                        .Include(oi => oi.Product)
+                            .ThenInclude(p => p.CoffeeType),
+                    asNoTracking: true
+                );
+
+                Console.WriteLine($"📋 Tìm thấy {orderItems.Count()} OrderItem trong đơn hàng");
+
+                // Cập nhật từng ContractDeliveryItem
+                foreach (var contractDeliveryItem in contractDeliveryItems)
+                {
+                    var coffeeTypeName = contractDeliveryItem.ContractItem?.CoffeeType?.TypeName ?? "Không rõ";
+                    var plannedQuantity = contractDeliveryItem.PlannedQuantity;
+                    var oldFulfilledQuantity = contractDeliveryItem.FulfilledQuantity ?? 0;
+
+                    Console.WriteLine($"\n☕ Đang xử lý CoffeeType: {coffeeTypeName}");
+                    Console.WriteLine($"   📋 Số lượng dự kiến: {plannedQuantity}");
+                    Console.WriteLine($"   📦 Số lượng đã giao (cũ): {oldFulfilledQuantity}");
+
+                    // Tìm OrderItem tương ứng với CoffeeType
+                    var relatedOrderItems = orderItems
+                        .Where(oi => oi.Product?.CoffeeTypeId == contractDeliveryItem.ContractItem?.CoffeeTypeId)
+                        .ToList();
+
+                    if (!relatedOrderItems.Any()) 
+                    {
+                        Console.WriteLine($"   ⚠️ Không tìm thấy OrderItem tương ứng với CoffeeType {coffeeTypeName}");
+                        continue;
+                    }
+
+                    Console.WriteLine($"   🔗 Tìm thấy {relatedOrderItems.Count()} OrderItem tương ứng");
+
+                    // Tính tổng số lượng đã giao cho CoffeeType này trong đơn hàng
+                    var totalDeliveredQuantity = 0.0;
+
+                    foreach (var orderItem in relatedOrderItems)
+                    {
+                        // Tính số lượng đã giao cho OrderItem này (bao gồm cả shipment hiện tại)
+                        var deliveredQuantity = await _unitOfWork.ShipmentDetailRepository
+                            .GetDeliveredQuantityByOrderItemId(orderItem.OrderItemId);
+
+                        totalDeliveredQuantity += deliveredQuantity;
+                        
+                        Console.WriteLine($"      📦 OrderItem {orderItem.OrderItemId}: {deliveredQuantity} (Product: {orderItem.Product?.ProductName})");
+                    }
+
+                    Console.WriteLine($"   📊 Tổng số lượng đã giao: {totalDeliveredQuantity}");
+
+                    // Cập nhật số lượng đã giao trong ContractDeliveryItem
+                    contractDeliveryItem.FulfilledQuantity = totalDeliveredQuantity;
+                    contractDeliveryItem.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Chuẩn bị cập nhật vào repository
+                    _unitOfWork.ContractDeliveryItemRepository.PrepareUpdate(contractDeliveryItem);
+
+                    Console.WriteLine($"   ✅ Đã cập nhật ContractDeliveryItem {contractDeliveryItem.DeliveryItemId}: " +
+                                   $"Từ {oldFulfilledQuantity} thành {totalDeliveredQuantity}");
+
+                    // Kiểm tra nếu đã giao đủ số lượng
+                    if (totalDeliveredQuantity >= plannedQuantity)
+                    {
+                        Console.WriteLine($"   🎉 CoffeeType {coffeeTypeName} đã được giao đủ số lượng " +
+                                       $"({totalDeliveredQuantity}/{plannedQuantity})");
+                    }
+                    else
+                    {
+                        var remaining = plannedQuantity - totalDeliveredQuantity;
+                        Console.WriteLine($"   ⏳ CoffeeType {coffeeTypeName} còn thiếu: {remaining} " +
+                                       $"({totalDeliveredQuantity}/{plannedQuantity})");
+                    }
+                }
+
+                Console.WriteLine($"✅ Hoàn thành cập nhật ContractDeliveryItem cho Contract {contract.ContractCode}, " +
+                               $"DeliveryBatch ID {deliveryBatchId}");
+                
+                // Không lưu thay đổi ở đây, để lưu cùng với các thay đổi khác
+                Console.WriteLine($"💾 Đã chuẩn bị {contractDeliveryItems.Count()} thay đổi ContractDeliveryItem");
+                
+                Console.WriteLine($"\n🔄 Bắt đầu kiểm tra và cập nhật status của ContractDeliveryBatch...");
+
+                // Kiểm tra và cập nhật status của ContractDeliveryBatch - truyền ID thay vì entity
+                await UpdateContractDeliveryBatchStatus(deliveryBatchId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi khi cập nhật ContractDeliveryItem: {ex.Message}");
+                Console.WriteLine($"📋 StackTrace: {ex.StackTrace}");
+                // Không throw exception để không làm gián đoạn quá trình cập nhật trạng thái chính
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật khối lượng đã giao cho ContractDeliveryBatch (không cập nhật status)
+        /// </summary>
+        private async Task UpdateContractDeliveryBatchStatus(Guid deliveryBatchId)
+        {
+            try
+            {
+                Console.WriteLine($"🔄 Bắt đầu kiểm tra khối lượng đã giao cho DeliveryBatch ID: {deliveryBatchId}");
+
+                // Lấy lại dữ liệu mới nhất từ database để đảm bảo FulfilledQuantity đã được cập nhật
+                Console.WriteLine($"🔄 Đang lấy dữ liệu mới nhất từ database cho DeliveryBatch {deliveryBatchId}...");
+                
+                var freshDeliveryBatch = await _unitOfWork.ContractDeliveryBatchRepository.GetByIdAsync(
+                    predicate: db => db.DeliveryBatchId == deliveryBatchId && !db.IsDeleted,
+                    asNoTracking: false
+                );
+
+                if (freshDeliveryBatch == null)
+                {
+                    Console.WriteLine($"❌ Không tìm thấy DeliveryBatch {deliveryBatchId} trong database");
+                    return;
+                }
+
+                Console.WriteLine($"✅ Đã lấy dữ liệu mới nhất từ database");
+                Console.WriteLine($"📋 Status hiện tại: {freshDeliveryBatch.Status}");
+
+                // Lấy tất cả ContractDeliveryItem của đợt giao hàng này
+                var contractDeliveryItems = await _unitOfWork.ContractDeliveryItemRepository.GetAllAsync(
+                    predicate: cdi => 
+                        cdi.DeliveryBatchId == freshDeliveryBatch.DeliveryBatchId &&
+                        !cdi.IsDeleted,
+                    include: query => query
+                        .Include(cdi => cdi.ContractItem)
+                            .ThenInclude(ci => ci.CoffeeType),
+                    asNoTracking: false
+                );
+
+                if (!contractDeliveryItems.Any())
+                {
+                    Console.WriteLine($"❌ Không tìm thấy ContractDeliveryItem cho DeliveryBatch {deliveryBatchId}");
+                    return;
+                }
+
+                Console.WriteLine($"📦 Tìm thấy {contractDeliveryItems.Count()} ContractDeliveryItem");
+
+                // Tính tổng khối lượng đã giao
+                var totalPlannedQuantity = 0.0;
+                var totalFulfilledQuantity = 0.0;
+
+                foreach (var item in contractDeliveryItems)
+                {
+                    var plannedQuantity = item.PlannedQuantity;
+                    var fulfilledQuantity = item.FulfilledQuantity ?? 0;
+                    
+                    totalPlannedQuantity += plannedQuantity;
+                    totalFulfilledQuantity += fulfilledQuantity;
+
+                    var coffeeTypeName = item.ContractItem?.CoffeeType?.TypeName ?? "Không rõ";
+                    var completionStatus = fulfilledQuantity >= plannedQuantity ? "✅ HOÀN THÀNH" : "⏳ CHƯA HOÀN THÀNH";
+                    
+                    Console.WriteLine($"   ☕ {coffeeTypeName}: {fulfilledQuantity}/{plannedQuantity} {completionStatus}");
+                }
+
+                Console.WriteLine($"📊 Tổng kết khối lượng đã giao:");
+                Console.WriteLine($"   📋 Số lượng dự kiến: {totalPlannedQuantity}");
+                Console.WriteLine($"   📦 Số lượng đã giao: {totalFulfilledQuantity}");
+                
+                var completionPercentage = totalPlannedQuantity > 0 ? (totalFulfilledQuantity / totalPlannedQuantity) * 100 : 0;
+                Console.WriteLine($"📊 DeliveryBatch {deliveryBatchId}: " +
+                               $"Tiến độ giao hàng: {completionPercentage:F1}% " +
+                               $"({totalFulfilledQuantity}/{totalPlannedQuantity})");
+                
+                Console.WriteLine($"✅ Đã cập nhật khối lượng đã giao cho ContractDeliveryBatch {freshDeliveryBatch.DeliveryBatchCode}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi khi cập nhật khối lượng đã giao cho ContractDeliveryBatch: {ex.Message}");
+                Console.WriteLine($"📋 StackTrace: {ex.StackTrace}");
             }
         }
 
