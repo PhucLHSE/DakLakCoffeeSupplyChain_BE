@@ -207,6 +207,42 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
+        // PATCH api/FarmingCommitment/UpdateStatusByFarmer/{commitmentId}
+        [HttpPatch("UpdateStatusByManager/{commitmentId}")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> UpdateStatusByManagerAsync(Guid commitmentId,
+            [FromBody] FarmingCommitmentUpdateStatusDto updateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Guid userId;
+
+            try
+            {
+                // Lấy userId từ token qua ClaimsHelper
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _service
+                .UpdateStatusByManager(updateDto, userId, commitmentId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy cam kết.");
+
+            return StatusCode(500, result.Message);
+        }
+
         // PATCH api/FarmingCommitment/Update/{commitmentId}
         [HttpPatch("Update/{commitmentId}")]
         [Authorize(Roles = "BusinessManager")]

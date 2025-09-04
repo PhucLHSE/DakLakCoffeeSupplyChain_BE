@@ -26,7 +26,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ProgressPercentage = fm.ProgressPercentage,
                 Status = EnumHelper.ParseEnumFromString(fm.Status, FarmingCommitmentStatus.Unknown),
                 ApprovedAt = fm.ApprovedAt,
-                farmingCommitmentDetails = fm.FarmingCommitmentsDetails
+                FarmingCommitmentDetails = fm.FarmingCommitmentsDetails
                     ?.Select(detail => new FarmingCommitmentsDetailsViewAllDto
                     {
                         CommitmentDetailId = detail.CommitmentDetailId,

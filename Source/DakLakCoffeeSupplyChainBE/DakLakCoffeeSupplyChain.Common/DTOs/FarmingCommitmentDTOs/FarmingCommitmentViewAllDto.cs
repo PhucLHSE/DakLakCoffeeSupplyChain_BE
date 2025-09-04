@@ -20,8 +20,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs
         public double? ProgressPercentage { get; set; }
         public DateTime CommitmentDate { get; set; }
         public DateTime? ApprovedAt { get; set; }
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public FarmingCommitmentStatus Status { get; set; } = FarmingCommitmentStatus.Unknown;
-        public ICollection<FarmingCommitmentsDetailsViewAllDto> farmingCommitmentDetails { get; set; } = [];
+
+        public ICollection<FarmingCommitmentsDetailsViewAllDto> FarmingCommitmentDetails { get; set; } = [];
     }
 }

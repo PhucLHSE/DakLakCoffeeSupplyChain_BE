@@ -828,6 +828,130 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> UpdateStatusByManager(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId)
+        {
+            try
+            {
+                var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
+                    predicate: f => f.UserId == userId && !f.IsDeleted,
+                    include: f => f.Include(f => f.User),
+                    asNoTracking: true
+                    );
+                if (manager == null)
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy doanh nghiệp."
+                    );
+
+                // Lấy commitment theo ID và kiểm tra quyền truy cập
+                var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted,
+                    include: c => c.Include(c => c.CropSeasons)
+                );
+                if (commitment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy cam kết tương ứng."
+                    );
+                }
+
+                // Cập nhật trạng thái và lý do từ DTO
+                commitment.Status = dto.Status.ToString();
+                // Nếu trạng thái là Completed thì cập nhật cam kết
+                foreach(var cropSeason in commitment.CropSeasons)
+                {
+                    if (commitment.CropSeasons == null || commitment.CropSeasons.Count == 0)
+                        return new ServiceResult(Const.FAIL_UPDATE_CODE,
+                                "Cam kết này chưa có mùa vụ nào nên không thể hoàn thành được.");
+
+                    bool hasUnfinishedSeason = commitment.CropSeasons.Any(c => !c.IsDeleted && !c.Status.Equals("Completed"));
+
+                    if (hasUnfinishedSeason)
+                        if (dto.Status == FarmingCommitmentStatus.Completed)
+                            return new ServiceResult(Const.FAIL_UPDATE_CODE, 
+                                "Cam kết này chưa có mùa vụ nào hoặc vẫn còn mùa vụ chưa hoàn thành nên không thể hoàn thành được.");
+                }
+                if (dto.Status == FarmingCommitmentStatus.Completed)
+                    commitment.ApprovedAt = DateTime.UtcNow;
+
+                var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
+                    predicate: d => d.CommitmentId == commitmentId && !d.IsDeleted
+                );
+                // Cập nhật trạng thái cho từng chi tiết cam kết
+                if (commitmentDetails == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy chi tiết cam kết tương ứng."
+                    );
+                }
+
+                foreach (var detail in commitmentDetails)
+                {
+                    // Nếu trạng thái là Completed thì cập nhật chi tiết cam kết
+                    if (dto.Status == FarmingCommitmentStatus.Completed)
+                    {
+                        detail.Status = FarmingCommitmentStatus.Completed.ToString();                        
+                    }
+                    else detail.Status = dto.Status.ToString();
+                    detail.UpdatedAt = DateHelper.NowVietnamTime();
+                    await _unitOfWork.FarmingCommitmentsDetailRepository.UpdateAsync(detail);
+                }
+
+                commitment.UpdatedAt = DateHelper.NowVietnamTime();
+
+                // Cập nhật vào DB
+                await _unitOfWork.FarmingCommitmentRepository.UpdateAsync(commitment);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    var response = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
+                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted,
+                    include: fm => fm.
+                        Include(fm => fm.Plan).
+                            ThenInclude(fm => fm.CreatedByNavigation).
+                        Include(fm => fm.Farmer).
+                            ThenInclude(fm => fm.User).
+                        Include(fm => fm.ApprovedByNavigation).
+                            ThenInclude(fm => fm.User).
+                        Include(p => p.FarmingCommitmentsDetails).
+                            ThenInclude(fm => fm.PlanDetail).
+                                ThenInclude(fm => fm.CoffeeType)
+                    );
+                    if (response == null)
+                    {
+                        return new ServiceResult(
+                            Const.WARNING_NO_DATA_CODE,
+                            Const.WARNING_NO_DATA_MSG,
+                            new FarmingCommitmentViewDetailsDto() //Trả về DTO rỗng
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE,
+                        Const.SUCCESS_UPDATE_MSG,
+                        response.MapToFarmingCommitmentViewDetailsDto()
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> UpdateStatusByFarmer(FarmingCommitmentUpdateStatusDto dto, Guid userId, Guid commitmentId)
         {
             try
