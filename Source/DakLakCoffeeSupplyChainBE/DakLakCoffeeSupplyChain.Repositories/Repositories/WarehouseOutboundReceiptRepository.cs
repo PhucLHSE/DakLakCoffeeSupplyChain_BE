@@ -46,6 +46,21 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                 .Include(r => r.Warehouse)
                 .Include(r => r.ExportedByNavigation).ThenInclude(u => u.User)
                 .Include(r => r.Batch)
+                    .ThenInclude(b => b.CoffeeType)
+                .Include(r => r.Batch)
+                    .ThenInclude(b => b.ProcessingBatchEvaluations)
+                .Include(r => r.Batch)
+                    .ThenInclude(b => b.ProcessingBatchProgresses)
+                        .ThenInclude(p => p.ProcessingParameters)
+                .Include(r => r.Inventory)
+                    .ThenInclude(i => i.Products)
+                .Include(r => r.OutboundRequest)
+                    .ThenInclude(or => or.OrderItem)
+                        .ThenInclude(oi => oi.Product)
+                .Include(r => r.OutboundRequest)
+                    .ThenInclude(or => or.OrderItem)
+                        .ThenInclude(oi => oi.Order)
+                            .ThenInclude(o => o.CreatedByNavigation)
                 .FirstOrDefaultAsync(r => r.OutboundReceiptId == receiptId && !r.IsDeleted);
         }
 

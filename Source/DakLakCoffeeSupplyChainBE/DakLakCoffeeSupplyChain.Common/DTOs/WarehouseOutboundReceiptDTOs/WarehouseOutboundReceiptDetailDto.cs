@@ -19,5 +19,28 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.WarehouseOutboundReceiptDTOs
         public string? StaffName { get; set; }
         public string? Note { get; set; }
         public string? DestinationNote { get; set; }
+        
+        // Thông tin sản phẩm
+        public string? InventoryName { get; set; }
+        public string? CoffeeType { get; set; }
+        public string? Quality { get; set; }
+        public string? Origin { get; set; }
+        public DateTime? ProductionDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public double? MoistureContent { get; set; }
+        public double? NetWeight { get; set; }
+        
+        // Thông tin đơn hàng liên kết
+        public object? OrderInfo { get; set; }
+        
+        // Thông tin người tạo
+        public string? CreatedByName { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        
+        // Chữ ký tự động
+        public string? InspectorSignature { get; set; }
+        public string? StaffSignature { get; set; }
+        public string? RecipientSignature { get; set; }
     }
 }
