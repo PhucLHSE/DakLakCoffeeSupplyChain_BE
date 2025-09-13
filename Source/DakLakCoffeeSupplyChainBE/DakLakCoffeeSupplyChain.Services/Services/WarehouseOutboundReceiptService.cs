@@ -188,35 +188,51 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_VALIDATION_CODE,
                     $"Tồn kho không đủ. Chỉ còn {inventory.Quantity:n0} {inventory.Unit}.");
 
-            // ✅ BƯỚC 1: Xác nhận phiếu xuất kho - SẴN SÀNG GIAO HÀNG
-            // Tồn kho sẽ được trừ khi shipper thực sự đến lấy hàng (Shipment Delivery)
+            // ✅ BƯỚC 1: Xác nhận phiếu xuất kho - TRỪ TỒN KHO NGAY LẬP TỨC
+            // Khôi phục chức năng trừ tồn kho khi confirm phiếu xuất kho
             
-            // Ghi log phiếu xuất kho (không trừ inventory)
+            // Trừ số lượng từ inventory ngay khi confirm
+            var oldQuantity = inventory.Quantity;
+            inventory.Quantity = Math.Max(0, inventory.Quantity - dto.ConfirmedQuantity);
+            inventory.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Inventories.Update(inventory);
+            
+            // Ghi log phiếu xuất kho (có trừ inventory thực tế)
             var log = new InventoryLog
             {
                 LogId = Guid.NewGuid(),
                 InventoryId = inventory.InventoryId,
                 ActionType = InventoryLogActionType.decrease.ToString(),
-                QuantityChanged = 0, // Không thay đổi số lượng thực tế
+                QuantityChanged = -dto.ConfirmedQuantity, // Trừ số lượng thực tế
                 UpdatedBy = receipt.ExportedBy,
                 TriggeredBySystem = false,
-                Note = $"Xác nhận phiếu xuất kho {receipt.OutboundReceiptCode} - Sẵn sàng giao hàng. Số lượng: {dto.ConfirmedQuantity}",
+                Note = $"Xác nhận phiếu xuất kho {receipt.OutboundReceiptCode} - Đã trừ tồn kho. Số lượng: {dto.ConfirmedQuantity}",
                 LoggedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
             await _unitOfWork.InventoryLogs.CreateAsync(log);
+            
+            Console.WriteLine($"Đã trừ {dto.ConfirmedQuantity} từ inventory {inventory.InventoryCode}. " +
+                           $"Từ {oldQuantity} xuống {inventory.Quantity}");
 
-            // Append tag xác nhận vào Note
-            receipt.UpdateAfterConfirm(dto.ConfirmedQuantity, dto.DestinationNote);
+            // ✅ BƯỚC 2: Chuyển trạng thái hoàn thành khi khách hàng đã lấy hàng
+            // Thay thế trạng thái "Chờ lấy hàng" bằng "Đã xác nhận" và "Hoàn thành"
+            var originalNote = receipt.Note ?? "";
+            var updatedNote = originalNote
+                .Replace("[WAITING_FOR_PICKUP]", "") // Xóa trạng thái "Chờ lấy hàng"
+                .Trim();
+            
+            // Append tag xác nhận và hoàn thành
+            receipt.Note = updatedNote + $" [CONFIRMED:{dto.ConfirmedQuantity}] [COMPLETED:{dto.ConfirmedQuantity}]";
+            receipt.DestinationNote = dto.DestinationNote ?? receipt.DestinationNote;
+            receipt.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.WarehouseOutboundReceipts.Update(receipt);
 
-            // Update trạng thái request
-            if (Math.Abs((request.RequestedQuantity - totalAfterThis)) < 1e-9)
-                request.MarkAsCompleted();
-            else
-                request.UpdatedAt = DateTime.UtcNow;
-
+            // Update trạng thái request - luôn chuyển về Completed khi confirm
+            request.MarkAsCompleted();
             _unitOfWork.WarehouseOutboundRequests.Update(request);
+            
+            Console.WriteLine($"Đã chuyển phiếu xuất kho {receipt.OutboundReceiptCode} sang trạng thái hoàn thành");
 
             await _unitOfWork.SaveChangesAsync();
 
