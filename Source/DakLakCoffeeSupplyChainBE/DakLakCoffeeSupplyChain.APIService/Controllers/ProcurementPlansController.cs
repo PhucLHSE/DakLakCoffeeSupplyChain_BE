@@ -242,5 +242,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        // GET api/<ProcurementPlans>/{planId}/payment-status
+        [HttpGet("{planId}/payment-status")]
+        [Authorize(Roles = "BusinessManager")]
+        public async Task<IActionResult> CheckPaymentStatusAsync(Guid planId)
+        {
+            var result = await _procurementPlanService.CheckPaymentStatus(planId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
     }
 }

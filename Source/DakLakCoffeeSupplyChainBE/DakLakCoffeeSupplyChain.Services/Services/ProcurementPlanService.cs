@@ -523,6 +523,49 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        // Kiểm tra trạng thái thanh toán của kế hoạch
+        public async Task<IServiceResult> CheckPaymentStatus(Guid planId)
+        {
+            try
+            {
+                var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
+                    .OrderByDescending(p => p.CreatedAt)
+                    .FirstOrDefault();
+                
+                if (payment == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Chưa có giao dịch thanh toán nào cho kế hoạch này.",
+                        new { 
+                            hasPayment = false, 
+                            paymentStatus = "None",
+                            message = "Vui lòng thanh toán để mở kế hoạch."
+                        }
+                    );
+                }
+
+                var isPaid = payment.PaymentStatus == "Success";
+                var message = isPaid ? "Kế hoạch đã được thanh toán thành công." : "Kế hoạch chưa được thanh toán thành công.";
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    message,
+                    new { 
+                        hasPayment = true, 
+                        paymentStatus = payment.PaymentStatus,
+                        paymentTime = payment.PaymentTime,
+                        message = isPaid ? "Có thể mở kế hoạch." : "Vui lòng thanh toán để mở kế hoạch."
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
         public async Task<IServiceResult> UpdateStatus(ProcurementPlanUpdateStatusDto dto, Guid userId, Guid planId)
         {
             try
@@ -541,7 +584,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
                     );
 
-                
+                // Kiểm tra thanh toán nếu muốn mở kế hoạch
+                if (dto.Status.ToString() == "Open")
+                {
+                    var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
+                        .OrderByDescending(p => p.CreatedAt)
+                        .FirstOrDefault();
+                    
+                    if (payment == null || payment.PaymentStatus != "Success")
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_READ_CODE,
+                            "Kế hoạch chưa được thanh toán. Vui lòng thanh toán trước khi mở kế hoạch."
+                        );
+                    }
+                }
+
                 plan.StartDate = dto.Status.ToString() == "Open" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.StartDate;
                 // Sau khi cập nhật StartDate, nếu như StartDate sau endDate thì nên set EndDate về null)
                 if (dto.Status.ToString() == "Open" && plan.StartDate > plan.EndDate)
