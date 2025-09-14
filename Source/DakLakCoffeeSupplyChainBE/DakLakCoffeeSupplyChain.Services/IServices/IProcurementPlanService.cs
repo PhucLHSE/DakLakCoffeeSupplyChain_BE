@@ -13,5 +13,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Create(ProcurementPlanCreateDto procurementPlanDto, Guid userId);
         Task<IServiceResult> Update(ProcurementPlanUpdateDto procurementPlanDto, Guid userId, Guid planId);
         Task<IServiceResult> UpdateStatus(ProcurementPlanUpdateStatusDto dto, Guid userId, Guid planId);
+        Task<IServiceResult> CheckPaymentStatus(Guid planId);
     }
 }

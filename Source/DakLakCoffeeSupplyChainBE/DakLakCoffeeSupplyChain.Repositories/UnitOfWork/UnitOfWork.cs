@@ -59,6 +59,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         private IWalletTransactionRepository? walletTransactionRepository;
         private IMediaFileRepository? mediaFileRepository;
         private IProcessingBatchEvaluationRepository? processingBatchEvaluationRepository;
+        private IPaymentRepository? paymentRepository;
+        private IPaymentConfigurationRepository? paymentConfigurationRepository;
         public UnitOfWork()
             => context ??= new DakLakCoffee_SCMContext();
 
@@ -454,6 +456,22 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             get
             {
                 return processingBatchEvaluationRepository ??= new ProcessingBatchEvaluationRepository(context);
+            }
+        }
+
+        public IPaymentRepository PaymentRepository
+        {
+            get
+            {
+                return paymentRepository ??= new PaymentRepository(context);
+            }
+        }
+
+        public IPaymentConfigurationRepository PaymentConfigurationRepository
+        {
+            get
+            {
+                return paymentConfigurationRepository ??= new PaymentConfigurationRepository(context);
             }
         }
 
