@@ -95,7 +95,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
 builder.Services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
-
+builder.Services.AddScoped<IPaymentConfigurationService, PaymentConfigurationService>();
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
@@ -166,6 +166,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
     odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Shipment>("Shipment");
+    odataBuilder.EntitySet<PaymentConfiguration>("PaymentConfiguration");
 
     return odataBuilder.GetEdmModel();
 }
