@@ -66,5 +66,20 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 IsDeleted = false
             };
         }
+
+        // Mapper PaymentConfigurationUpdateDto -> PaymentConfiguration
+        public static void MapToUpdatedPaymentConfiguration(
+            this PaymentConfigurationUpdateDto dto,
+            PaymentConfiguration paymentConfiguration)
+        {
+            paymentConfiguration.RoleId = dto.RoleId;
+            paymentConfiguration.FeeType = dto.FeeType;
+            paymentConfiguration.Amount = dto.Amount;
+            paymentConfiguration.Description = dto.Description;
+            paymentConfiguration.EffectiveFrom = dto.EffectiveFrom;
+            paymentConfiguration.EffectiveTo = dto.EffectiveTo;
+            paymentConfiguration.IsActive = dto.IsActive ?? paymentConfiguration.IsActive;
+            paymentConfiguration.UpdatedAt = DateHelper.NowVietnamTime();
+        }
     }
 }

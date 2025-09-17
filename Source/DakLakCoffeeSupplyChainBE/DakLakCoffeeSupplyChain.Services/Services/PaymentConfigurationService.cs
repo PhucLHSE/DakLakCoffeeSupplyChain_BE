@@ -167,6 +167,91 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Update(PaymentConfigurationUpdateDto paymentConfigurationUpdateDto)
+        {
+            try
+            {
+                // Tìm PaymentConfiguration theo ID
+                var paymentConfiguration = await _unitOfWork.PaymentConfigurationRepository
+                    .GetByIdAsync(paymentConfigurationUpdateDto.ConfigId);
+
+                if (paymentConfiguration == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Loại phí không tồn tại hoặc đã bị xoá."
+                    );
+                }
+
+                // Kiểm tra Role có tồn tại không
+                var role = await _unitOfWork.RoleRepository
+                    .GetByIdAsync(paymentConfigurationUpdateDto.RoleId);
+
+                if (role == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Vai trò được chọn không tồn tại trong hệ thống."
+                    );
+                }
+
+                // Ánh xạ dữ liệu từ DTO vào entity
+                paymentConfigurationUpdateDto.MapToUpdatedPaymentConfiguration(paymentConfiguration);
+
+                // Cập nhật loại phí ở repository
+                await _unitOfWork.PaymentConfigurationRepository
+                    .UpdateAsync(paymentConfiguration);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu sau khi update để trả về đầy đủ thông tin
+                    var updatedConfig = await _unitOfWork.PaymentConfigurationRepository.GetByIdAsync(
+                        predicate: pc => 
+                           pc.ConfigId == paymentConfiguration.ConfigId && 
+                           !pc.IsDeleted,
+                        include: query => query
+                           .Include(pc => pc.Role),
+                        asNoTracking: true
+                    );
+
+                    if (updatedConfig != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = updatedConfig.MapToPaymentConfigurationViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            Const.SUCCESS_UPDATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Cập nhật thành công nhưng không thể truy xuất dữ liệu để trả về."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        Const.FAIL_UPDATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeletePaymentConfigurationById(Guid configId)
         {
             try
