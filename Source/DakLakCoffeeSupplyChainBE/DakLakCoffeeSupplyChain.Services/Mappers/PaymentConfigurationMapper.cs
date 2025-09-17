@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDtos;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
@@ -43,6 +44,26 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = config.CreatedAt,
                 UpdatedAt = config.UpdatedAt,
                 IsActive = config.IsActive
+            };
+        }
+
+        // Mapper PaymentConfigurationCreateDto -> PaymentConfiguration
+        public static PaymentConfiguration MapToNewPaymentConfiguration(
+            this PaymentConfigurationCreateDto dto)
+        {
+            return new PaymentConfiguration
+            {
+                ConfigId = Guid.NewGuid(),
+                RoleId = dto.RoleId,
+                FeeType = dto.FeeType,
+                Amount = dto.Amount,
+                Description = dto.Description,
+                EffectiveFrom = dto.EffectiveFrom,
+                EffectiveTo = dto.EffectiveTo,
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
+                IsActive = dto.IsActive ?? true,
+                IsDeleted = false
             };
         }
     }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDtos
+namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
 {
     public class PaymentConfigurationViewAllDto
     {

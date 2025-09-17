@@ -1,4 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
@@ -52,6 +54,29 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
+        }
+
+        // POST api/<PaymentConfigurationsController>
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreatePaymentConfigurationAsync(
+            [FromBody] PaymentConfigurationCreateDto paymentConfigurationCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _paymentConfigurationService
+                .Create(paymentConfigurationCreateDto);
+
+            if (result.Status == Const.SUCCESS_CREATE_CODE)
+                return CreatedAtAction(nameof(GetById),
+                    new { configId = ((PaymentConfigurationViewDetailsDto)result.Data).ConfigId },
+                    result.Data);
+
+            if (result.Status == Const.FAIL_CREATE_CODE)
+                return Conflict(result.Message);
+
+            return StatusCode(500, result.Message);
         }
 
         // DELETE api/<PaymentConfigurationsController>/{configId}
