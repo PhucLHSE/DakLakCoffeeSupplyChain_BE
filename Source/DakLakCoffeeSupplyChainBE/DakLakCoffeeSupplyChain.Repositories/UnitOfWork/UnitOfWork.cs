@@ -442,6 +442,13 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
             }
         }
 
+        public IWalletTransactionRepository WalletTransactionRepository
+        {
+            get
+            {
+                return walletTransactionRepository ??= new WalletTransactionRepository(context);
+            }
+        }
 
         public IMediaFileRepository MediaFileRepository
         {

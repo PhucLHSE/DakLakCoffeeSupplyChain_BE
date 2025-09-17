@@ -278,5 +278,183 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+
+        public async Task<IServiceResult> CreateTopupPaymentAsync(WalletTopupRequestDto request, Guid userId)
+        {
+            try
+            {
+                // Kiểm tra ví có tồn tại và thuộc về user không
+                var wallet = await _unitOfWork.WalletRepository.GetByIdAsync(request.WalletId);
+                if (wallet == null || wallet.IsDeleted)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy ví.");
+                }
+
+                if (wallet.UserId != userId)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền nạp tiền vào ví này.");
+                }
+
+                // Tạo transaction ID
+                var transactionId = Guid.NewGuid().ToString("N");
+                var now = DateHelper.NowVietnamTime();
+
+                // Tạo payment record
+                var cfg = (await _unitOfWork.PaymentConfigurationRepository.GetAllAsync()).FirstOrDefault();
+                if (cfg == null)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Hệ thống thanh toán chưa được cấu hình.");
+                }
+
+                var payment = new Payment
+                {
+                    PaymentId = Guid.NewGuid(),
+                    Email = string.Empty,
+                    ConfigId = cfg.ConfigId,
+                    UserId = userId,
+                    PaymentCode = transactionId,
+                    PaymentAmount = (int)request.Amount,
+                    PaymentMethod = "VNPay",
+                    PaymentPurpose = "WalletTopup",
+                    PaymentStatus = "Pending",
+                    PaymentTime = null,
+                    AdminVerified = false,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    RelatedEntityId = request.WalletId,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.PaymentRepository.CreateAsync(payment);
+                await _unitOfWork.SaveChangesAsync();
+
+                var response = new WalletTopupResponseDto
+                {
+                    TransactionId = transactionId,
+                    Amount = request.Amount,
+                    Message = "Tạo giao dịch nạp tiền thành công"
+                };
+
+                return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo giao dịch nạp tiền thành công", response);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+        public async Task<IServiceResult> ProcessTopupPaymentAsync(string transactionId, double amount, Guid userId)
+        {
+            try
+            {
+                // Tìm payment record - cắt 20 ký tự đầu để match với PaymentCode
+                var paymentCode = transactionId.Length > 20 ? transactionId[..20] : transactionId;
+                var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.PaymentCode == paymentCode)).FirstOrDefault();
+                if (payment == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy giao dịch.");
+                }
+
+                if (payment.UserId != userId)
+                {
+                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền xử lý giao dịch này.");
+                }
+
+                if (payment.PaymentStatus == "Success")
+                {
+                    return new ServiceResult(Const.SUCCESS_READ_CODE, "Giao dịch đã được xử lý thành công.");
+                }
+
+                // Cập nhật payment status
+                var now = DateHelper.NowVietnamTime();
+                payment.PaymentStatus = "Success";
+                payment.PaymentTime = now;
+                payment.UpdatedAt = now;
+                payment.AdminVerified = true;
+
+                await _unitOfWork.PaymentRepository.UpdateAsync(payment);
+
+                // Cập nhật số dư ví
+                var wallet = await _unitOfWork.WalletRepository.GetByIdAsync(payment.RelatedEntityId ?? Guid.Empty);
+                if (wallet != null && !wallet.IsDeleted)
+                {
+                    wallet.TotalBalance += amount;
+                    wallet.LastUpdated = now;
+                    await _unitOfWork.WalletRepository.UpdateAsync(wallet);
+
+                    // Tạo wallet transaction record
+                    var walletTransaction = new WalletTransaction
+                    {
+                        TransactionId = Guid.NewGuid(),
+                        WalletId = wallet.WalletId,
+                        PaymentId = payment.PaymentId,
+                        Amount = amount,
+                        TransactionType = "Topup",
+                        Description = "Nạp tiền vào ví qua VNPay",
+                        CreatedAt = now,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.WalletTransactionRepository.CreateAsync(walletTransaction);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Nạp tiền vào ví thành công", new { 
+                    Amount = amount,
+                    NewBalance = wallet?.TotalBalance ?? 0
+                });
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
+        public async Task<IServiceResult> DirectTopupAsync(Guid userId, double amount, string? description)
+        {
+            try
+            {
+                // Lấy ví của user
+                var allWallets = await _unitOfWork.WalletRepository.GetAllAsync();
+                var wallet = allWallets.FirstOrDefault(w => w.UserId == userId && !w.IsDeleted);
+
+                if (wallet == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy ví của người dùng.");
+                }
+
+                // Cập nhật số dư ví
+                var now = DateHelper.NowVietnamTime();
+                wallet.TotalBalance += amount;
+                wallet.LastUpdated = now;
+                await _unitOfWork.WalletRepository.UpdateAsync(wallet);
+
+                // Tạo wallet transaction record
+                var walletTransaction = new WalletTransaction
+                {
+                    TransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    PaymentId = null, // Không có payment cho direct topup
+                    Amount = amount,
+                    TransactionType = "DirectTopup",
+                    Description = description ?? "Nạp tiền trực tiếp (Test)",
+                    CreatedAt = now,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.WalletTransactionRepository.CreateAsync(walletTransaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Nạp tiền trực tiếp thành công", new { 
+                    Amount = amount,
+                    NewBalance = wallet.TotalBalance
+                });
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
     }
 }
