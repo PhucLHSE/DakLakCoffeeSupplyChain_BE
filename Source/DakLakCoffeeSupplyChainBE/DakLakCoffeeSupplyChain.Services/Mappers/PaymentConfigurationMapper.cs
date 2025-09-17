@@ -25,5 +25,25 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 EffectiveTo = config.EffectiveTo
             };
         }
+
+        // Mapper PaymentConfigurationViewDetailsDto
+        public static PaymentConfigurationViewDetailsDto MapToPaymentConfigurationViewDetailsDto(
+            this PaymentConfiguration config)
+        {
+            return new PaymentConfigurationViewDetailsDto
+            {
+                ConfigId = config.ConfigId,
+                RoleId = config.RoleId,
+                RoleName = config.Role?.RoleName ?? "N/A",
+                FeeType = config.FeeType,
+                Amount = config.Amount,
+                Description = config.Description,
+                EffectiveFrom = config.EffectiveFrom,
+                EffectiveTo = config.EffectiveTo,
+                CreatedAt = config.CreatedAt,
+                UpdatedAt = config.UpdatedAt,
+                IsActive = config.IsActive
+            };
+        }
     }
 }
