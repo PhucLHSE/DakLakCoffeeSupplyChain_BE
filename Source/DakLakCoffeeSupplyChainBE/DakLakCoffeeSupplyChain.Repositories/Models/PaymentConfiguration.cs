@@ -29,6 +29,8 @@ public partial class PaymentConfiguration
 
     public bool? IsActive { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual Role Role { get; set; }
