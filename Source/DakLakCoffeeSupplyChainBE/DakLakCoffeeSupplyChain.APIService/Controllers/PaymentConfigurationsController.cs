@@ -53,5 +53,25 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
+
+        // DELETE api/<PaymentConfigurationsController>/{configId}
+        [HttpDelete("{configId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeletePaymentConfigurationByIdAsync(Guid configId)
+        {
+            var result = await _paymentConfigurationService
+                .DeletePaymentConfigurationById(configId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy loại phí cần xóa.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
     }
 }

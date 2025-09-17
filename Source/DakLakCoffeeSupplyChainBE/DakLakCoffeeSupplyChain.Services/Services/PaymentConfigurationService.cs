@@ -93,5 +93,57 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> DeletePaymentConfigurationById(Guid configId)
+        {
+            try
+            {
+                // Tìm PaymentConfiguration theo ID
+                var paymentConfiguration = await _unitOfWork.PaymentConfigurationRepository
+                    .GetByIdAsync(configId);
+
+                // Kiểm tra nếu không tồn tại
+                if (paymentConfiguration == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Xóa paymentConfiguration khỏi repository
+                    await _unitOfWork.PaymentConfigurationRepository
+                        .RemoveAsync(paymentConfiguration);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }
