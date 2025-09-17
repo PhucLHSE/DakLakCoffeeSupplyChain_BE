@@ -60,7 +60,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 RoleName = dto.RoleName,
                 Description = dto.Description,
-                Status = dto.Status.ToString(), // enum → string
+                Status = dto.Status.ToString(), // enum -> string
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 IsDeleted = false
@@ -74,7 +74,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             role.RoleName = dto.RoleName;
             role.Description = dto.Description;
-            role.Status = dto.Status.ToString();  // enum → string
+            role.Status = dto.Status.ToString();  // enum -> string
             role.UpdatedAt = DateHelper.NowVietnamTime();
         }
     }

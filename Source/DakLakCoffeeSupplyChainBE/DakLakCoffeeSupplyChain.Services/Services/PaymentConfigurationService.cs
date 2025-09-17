@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDtos;
+using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -95,6 +96,77 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+        public async Task<IServiceResult> Create(PaymentConfigurationCreateDto paymentConfigurationCreateDto)
+        {
+            try
+            {
+                // Kiểm tra Role có tồn tại không
+                var role = await _unitOfWork.RoleRepository
+                    .GetByIdAsync(paymentConfigurationCreateDto.RoleId);
+
+                if (role == null)
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Vai trò được chọn không tồn tại trong hệ thống."
+                    );
+                }
+
+                // Ánh xạ dữ liệu từ DTO vào entity
+                var newConfig = paymentConfigurationCreateDto.MapToNewPaymentConfiguration();
+
+                // Tạo loại phí ở repository
+                await _unitOfWork.PaymentConfigurationRepository
+                    .CreateAsync(newConfig);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu để trả về
+                    var createdConfig = await _unitOfWork.PaymentConfigurationRepository.GetByIdAsync(
+                        predicate: pc => pc.ConfigId == newConfig.ConfigId,
+                        include: query => query
+                           .Include(pc => pc.Role),
+                        asNoTracking: true
+                    );
+
+                    if (createdConfig != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = createdConfig.MapToPaymentConfigurationViewDetailsDto();
+
+                        return new ServiceResult(
+                            Const.SUCCESS_CREATE_CODE,
+                            Const.SUCCESS_CREATE_MSG,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Tạo thành công nhưng không truy xuất được dữ liệu để trả về."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        Const.FAIL_CREATE_MSG
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Xử lý ngoại lệ nếu có lỗi xảy ra trong quá trình
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
         public async Task<IServiceResult> DeletePaymentConfigurationById(Guid configId)
         {
             try
@@ -170,7 +242,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     paymentConfiguration.UpdatedAt = DateHelper.NowVietnamTime();
 
                     // Cập nhật xoá mềm loại phí ở repository
-                    await _unitOfWork.PaymentConfigurationRepository.UpdateAsync(paymentConfiguration);
+                    await _unitOfWork.PaymentConfigurationRepository
+                        .UpdateAsync(paymentConfiguration);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
