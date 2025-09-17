@@ -73,5 +73,33 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
+        // PATCH: api/<PaymentConfigurationsController>/soft-delete/{configId}
+        [HttpPatch("soft-delete/{configId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SoftDeletePaymentConfigurationByIdAsync(Guid configId)
+        {
+            var result = await _paymentConfigurationService
+                .SoftDeletePaymentConfigurationById(configId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok("Xóa mềm thành công.");
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound("Không tìm thấy loại phí cần xóa.");
+
+            if (result.Status == Const.FAIL_DELETE_CODE)
+                return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        private async Task<bool> PaymentConfigurationExistsAsync(Guid configId)
+        {
+            var result = await _paymentConfigurationService
+                .GetById(configId);
+
+            return result.Status == Const.SUCCESS_READ_CODE;
+        }
     }
 }

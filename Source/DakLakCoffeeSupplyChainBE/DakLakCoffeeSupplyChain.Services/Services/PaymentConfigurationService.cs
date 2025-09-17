@@ -1,5 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDtos;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
@@ -115,6 +116,61 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Xóa paymentConfiguration khỏi repository
                     await _unitOfWork.PaymentConfigurationRepository
                         .RemoveAsync(paymentConfiguration);
+
+                    // Lưu thay đổi
+                    var result = await _unitOfWork.SaveChangesAsync();
+
+                    // Kiểm tra kết quả
+                    if (result > 0)
+                    {
+                        return new ServiceResult(
+                            Const.SUCCESS_DELETE_CODE,
+                            Const.SUCCESS_DELETE_MSG
+                        );
+                    }
+                    else
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_DELETE_CODE,
+                            Const.FAIL_DELETE_MSG
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
+
+        public async Task<IServiceResult> SoftDeletePaymentConfigurationById(Guid configId)
+        {
+            try
+            {
+                // Tìm paymentConfiguration theo ID
+                var paymentConfiguration = await _unitOfWork.PaymentConfigurationRepository
+                    .GetByIdAsync(configId);
+
+                // Kiểm tra nếu không tồn tại
+                if (paymentConfiguration == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+                else
+                {
+                    // Đánh dấu xoá mềm bằng IsDeleted
+                    paymentConfiguration.IsDeleted = true;
+                    paymentConfiguration.UpdatedAt = DateHelper.NowVietnamTime();
+
+                    // Cập nhật xoá mềm loại phí ở repository
+                    await _unitOfWork.PaymentConfigurationRepository.UpdateAsync(paymentConfiguration);
 
                     // Lưu thay đổi
                     var result = await _unitOfWork.SaveChangesAsync();
