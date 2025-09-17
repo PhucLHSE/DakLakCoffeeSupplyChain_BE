@@ -16,6 +16,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<IServiceResult> Create(PaymentConfigurationCreateDto paymentConfigurationCreateDto);
 
+        Task<IServiceResult> Update(PaymentConfigurationUpdateDto paymentConfigurationUpdateDto);
+
         Task<IServiceResult> DeletePaymentConfigurationById(Guid configId);
 
         Task<IServiceResult> SoftDeletePaymentConfigurationById(Guid configId);
