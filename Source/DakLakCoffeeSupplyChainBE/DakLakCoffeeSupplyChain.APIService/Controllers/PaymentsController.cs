@@ -197,6 +197,96 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             await _unitOfWork.SaveChangesAsync();
             return Ok(new { message = "Mock IPN applied", txnRef });
         }
+
+        public class WalletTopupVnPayRequest
+        {
+            public Guid WalletId { get; set; }
+            public int Amount { get; set; } = 100000; // VND
+            public string? ReturnUrl { get; set; }
+            public string? Locale { get; set; } = "vn";
+            public string? Description { get; set; }
+        }
+
+        [HttpPost("wallet-topup/vnpay/create-url")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff,Farmer")]
+        public async Task<IActionResult> CreateWalletTopupVnPayUrl([FromBody] WalletTopupVnPayRequest req)
+        {
+            var tmnCode = _config["VnPay:TmnCode"] ?? string.Empty;
+            var secret = _config["VnPay:HashSecret"] ?? string.Empty;
+            var baseUrl = _config["VnPay:BaseUrl"] ?? _config["VnPay:PaymentUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+            var returnUrl = req.ReturnUrl ?? _config["VnPay:ReturnUrl"] ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(tmnCode) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(returnUrl))
+                return BadRequest("VNPay chưa cấu hình đầy đủ.");
+
+            // VNPay yêu cầu amount * 100
+            var amount = (long)req.Amount * 100;
+            var txnRef = Guid.NewGuid().ToString("N"); // 32 chars như endpoint cũ
+
+            string ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+            var vnp = new SortedDictionary<string, string>
+            {
+                ["vnp_Version"] = "2.1.0",
+                ["vnp_Command"] = "pay",
+                ["vnp_TmnCode"] = tmnCode,
+                ["vnp_Amount"] = amount.ToString(),
+                ["vnp_CreateDate"] = DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
+                ["vnp_CurrCode"] = "VND",
+                ["vnp_IpAddr"] = ip,
+                ["vnp_Locale"] = req.Locale ?? "vn",
+                ["vnp_OrderInfo"] = $"WalletTopup:{txnRef}",
+                ["vnp_OrderType"] = "other",
+                ["vnp_ReturnUrl"] = returnUrl,
+                ["vnp_TxnRef"] = txnRef
+            };
+
+            // VNPay signature: build hash string với URL encoding như endpoint cũ
+            var encodedForHash = string.Join('&', vnp.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            var secureHash = CreateHmac512(secret, encodedForHash);
+            var query = string.Join('&', vnp.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            
+            // Debug logging
+            _logger.LogInformation($"VNPay Encoded For Hash: {encodedForHash}");
+            _logger.LogInformation($"VNPay Secret: {secret}");
+            _logger.LogInformation($"VNPay Hash: {secureHash}");
+            
+            // Tạo URL với hash
+            var url = $"{baseUrl}?{query}&vnp_SecureHashType=HmacSHA512&vnp_SecureHash={secureHash}";
+
+            // Lấy email của user từ JWT token
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+            // Lưu payment record
+            var cfg = (await _unitOfWork.PaymentConfigurationRepository.GetAllAsync()).FirstOrDefault();
+            if (cfg != null)
+            {
+                var now = DateTime.UtcNow;
+                var payment = new DakLakCoffeeSupplyChain.Repositories.Models.Payment
+                {
+                    PaymentId = Guid.NewGuid(),
+                    Email = userEmail,
+                    ConfigId = cfg.ConfigId,
+                    UserId = !string.IsNullOrEmpty(userId) ? Guid.Parse(userId) : null,
+                    PaymentCode = txnRef[..20], // Cắt 20 ký tự đầu để fit vào PaymentCode
+                    PaymentAmount = req.Amount,
+                    PaymentMethod = "VNPay",
+                    PaymentPurpose = "WalletTopup",
+                    PaymentStatus = "Pending",
+                    PaymentTime = null,
+                    AdminVerified = false,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    RelatedEntityId = req.WalletId,
+                    IsDeleted = false
+                };
+                await _unitOfWork.PaymentRepository.CreateAsync(payment);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return Ok(new VnPayCreateResponse { Url = url });
+        }
     }
 }
 

@@ -17,5 +17,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteAsync(Guid walletId, Guid userId);
         Task<IServiceResult> GetMyWalletAsync(Guid userId);
         Task<IServiceResult> GetWalletBalanceAsync(Guid walletId, Guid userId);
+        Task<IServiceResult> CreateTopupPaymentAsync(WalletTopupRequestDto request, Guid userId);
+        Task<IServiceResult> ProcessTopupPaymentAsync(string transactionId, double amount, Guid userId);
+        Task<IServiceResult> DirectTopupAsync(Guid userId, double amount, string? description);
     }
 }
