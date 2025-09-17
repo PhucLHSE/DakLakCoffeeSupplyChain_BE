@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -34,6 +35,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return NotFound(result.Message);
 
             return StatusCode(500, result.Message);
+        }
+
+        // GET api/<PaymentConfigurationsController>/{configId}
+        [HttpGet("{configId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetById(Guid configId)
+        {
+            var result = await _paymentConfigurationService
+                .GetById(configId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);              // Trả object chi tiết
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);     // Trả 404 nếu không tìm thấy
+
+            return StatusCode(500, result.Message);  // Lỗi hệ thống
         }
     }
 }
