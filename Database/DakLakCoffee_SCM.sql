@@ -72,6 +72,7 @@ CREATE TABLE PaymentConfigurations (
   CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   IsActive BIT DEFAULT 1,                                        -- Có đang được áp dụng không
+  IsDeleted BIT NOT NULL DEFAULT 0,                              -- Xoá mềm: 0 = còn hoạt động, 1 = đã xoá
 
   -- Foreign Keys
   CONSTRAINT FK_PaymentConfigurations_Role                       -- FK tới bảng Roles
