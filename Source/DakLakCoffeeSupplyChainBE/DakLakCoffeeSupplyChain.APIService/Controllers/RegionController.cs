@@ -12,7 +12,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
     {
         [HttpGet("wards")]
         [EnableQuery]
-        [Authorize(Roles = "BusinessManager, Farmer")]
         public async Task<IActionResult> GetAllRegionsAsync()
         {
             using var http = new HttpClient();
