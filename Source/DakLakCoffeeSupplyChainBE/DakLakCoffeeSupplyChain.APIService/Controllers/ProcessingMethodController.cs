@@ -54,6 +54,29 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message); // Trả 500 nếu exception
         }
 
+        [HttpPut("{methodId}")]
+        [Authorize(Roles = "Admin,Farmer,BusinessManager")]
+        public async Task<IActionResult> Update(
+            int methodId,
+            [FromBody] ProcessingMethodUpdateDto dto)
+        {
+            if (methodId != dto.MethodId)
+                return BadRequest("ID trong URL không khớp với dữ liệu gửi lên.");
+
+            var result = await _procesingMethodService
+                .UpdateAsync(dto);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.ERROR_VALIDATION_CODE)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
 
         [HttpGet("{methodId}")]
         [Authorize(Roles = "Admin,Farmer,BusinessManager")]

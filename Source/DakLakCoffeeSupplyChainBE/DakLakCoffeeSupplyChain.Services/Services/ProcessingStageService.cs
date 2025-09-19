@@ -77,6 +77,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> GetByMethodIdAsync(int methodId)
         {
+            Console.WriteLine($"🔍 DEBUG: GetByMethodIdAsync called with methodId: {methodId}");
+            
             var stages = await _unitOfWork.ProcessingStageRepository
                 .GetAllQueryable()
                 .Include(x => x.Method)
@@ -84,8 +86,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 .OrderBy(x => x.OrderIndex)
                 .ToListAsync();
 
+            Console.WriteLine($"🔍 DEBUG: Found {stages?.Count ?? 0} stages in database");
+            if (stages != null && stages.Any())
+            {
+                Console.WriteLine($"🔍 DEBUG: First stage: {stages.First().StageName}");
+            }
+
             if (stages == null || !stages.Any())
             {
+                Console.WriteLine($"🔍 DEBUG: No stages found, returning WARNING_NO_DATA_CODE");
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
@@ -96,6 +105,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var result = stages
                 .Select(stage => stage.MapToProcessingStageViewAllDto())
                 .ToList();
+
+            Console.WriteLine($"🔍 DEBUG: Mapped {result.Count} stages to DTOs");
 
             return new ServiceResult(
                 Const.SUCCESS_READ_CODE,

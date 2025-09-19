@@ -58,15 +58,35 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         //[Authorize(Roles = "Admin,BusinessManager,BusinessStaff,Farmer")]
         public async Task<IActionResult> GetByMethodId(int methodId)
         {
+            Console.WriteLine($"🔍 DEBUG: GetByMethodId controller called with methodId: {methodId}");
+            
             var result = await _processingStageService
                 .GetByMethodIdAsync(methodId);
 
+            Console.WriteLine($"🔍 DEBUG: Service result status: {result.Status}");
+            Console.WriteLine($"🔍 DEBUG: Service result data type: {result.Data?.GetType()}");
+            
+            if (result.Data is List<ProcessingStageViewAllDto> dataList)
+            {
+                Console.WriteLine($"🔍 DEBUG: Service result data count: {dataList.Count}");
+            }
+
             if (result.Status == Const.SUCCESS_READ_CODE)
+            {
+                if (result.Data is List<ProcessingStageViewAllDto> successDataList)
+                {
+                    Console.WriteLine($"🔍 DEBUG: Returning OK with {successDataList.Count} stages");
+                }
                 return Ok(result.Data);
+            }
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
+            {
+                Console.WriteLine($"🔍 DEBUG: Returning NotFound - no data");
                 return NotFound(result.Message); 
+            }
 
+            Console.WriteLine($"🔍 DEBUG: Returning 500 error: {result.Message}");
             return StatusCode(500, result.Message); 
         }
 

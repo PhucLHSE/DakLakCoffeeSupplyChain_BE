@@ -8102,6 +8102,211 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+
+        public async Task<IServiceResult> GetBatchInfoBeforeRetryAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // Lấy thông tin batch và progress cuối cùng
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    b => b.BatchId == batchId && !b.IsDeleted,
+                    include: q => q
+                        .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted).OrderByDescending(p => p.CreatedAt))
+                        .Include(b => b.Method)
+                        .ThenInclude(m => m.ProcessingStages.Where(s => !s.IsDeleted).OrderBy(s => s.OrderIndex))
+                );
+
+                if (batch == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô chế biến.");
+
+                // Kiểm tra quyền truy cập
+                if (!isAdmin && !isManager)
+                {
+                    var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                        f => f.UserId == userId && !f.IsDeleted
+                    );
+                    if (farmer == null || batch.FarmerId != farmer.FarmerId)
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không có quyền truy cập lô này.");
+                }
+
+                // Lấy progress cuối cùng (không bị xóa)
+                var lastProgress = batch.ProcessingBatchProgresses.FirstOrDefault();
+                if (lastProgress == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy tiến trình nào cho lô này.");
+
+                // Lấy stage hiện tại
+                var currentStage = batch.Method.ProcessingStages.FirstOrDefault(s => s.StageId == lastProgress.StageId);
+                if (currentStage == null)
+                {
+                    // Fallback - sử dụng stage đầu tiên nếu không tìm thấy
+                    currentStage = batch.Method.ProcessingStages.FirstOrDefault();
+                    if (currentStage == null)
+                    {
+                        // Thử lấy stage từ database trực tiếp
+                        var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                            s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                            q => q.OrderBy(s => s.OrderIndex)
+                        );
+                        currentStage = stages.FirstOrDefault();
+                        
+                        if (currentStage == null)
+                            return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin giai đoạn nào.");
+                    }
+                }
+
+                // Tính toán thông tin retry
+                var finalOutputBeforeRetry = lastProgress.OutputQuantity ?? 0;
+                var finalOutputUnit = lastProgress.OutputUnit ?? "kg";
+                var maxWastePercentage = ProcessingHelper.GetMaxWastePercentageForStage(currentStage.StageName);
+
+                var retryInfo = new
+                {
+                    finalOutputBeforeRetry = finalOutputBeforeRetry,
+                    finalOutputUnit = finalOutputUnit,
+                    maxAllowedRetryQuantity = finalOutputBeforeRetry, // Không được vượt quá output cuối cùng
+                    calculatedWaste = 0, // Sẽ được tính khi user nhập
+                    wastePercentage = 0, // Sẽ được tính khi user nhập
+                    maxWastePercentage = maxWastePercentage,
+                    isValid = true,
+                    errorMessage = (string?)null
+                };
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy thông tin retry thành công", retryInfo);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Đã xảy ra lỗi hệ thống: {ex.Message}");
+            }
+        }
+
+        public async Task<IServiceResult> CheckBatchCanCreateProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // Lấy thông tin batch
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
+                    b => b.BatchId == batchId && !b.IsDeleted,
+                    include: q => q
+                        .Include(b => b.Method)
+                        .Include(b => b.CropSeason)
+                        .Include(b => b.CoffeeType)
+                        .Include(b => b.Farmer).ThenInclude(f => f.User)
+                        .Include(b => b.ProcessingBatchProgresses.Where(p => !p.IsDeleted))
+                );
+
+                if (batch == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy lô chế biến.");
+
+                // Kiểm tra quyền truy cập
+                if (!isAdmin && !isManager)
+                {
+                    var farmer = await _unitOfWork.FarmerRepository
+                        .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+
+                    if (farmer == null)
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy thông tin nông hộ.");
+
+                    if (batch.FarmerId != farmer.FarmerId)
+                        return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Bạn không có quyền truy cập lô chế biến này.");
+                }
+
+                // Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                var finalProgress = batch.ProcessingBatchProgresses
+                    .Where(p => p.OutputQuantity.HasValue && p.OutputQuantity.Value > 0)
+                    .OrderByDescending(p => p.StepIndex)  // Tìm StepIndex cao nhất
+                    .FirstOrDefault();
+                var finalOutputQuantity = finalProgress?.OutputQuantity ?? 0;
+
+                var remainingQuantity = batch.InputQuantity - finalOutputQuantity;
+                var canCreateProgress = remainingQuantity > 0;
+
+                var result = new
+                {
+                    BatchId = batch.BatchId,
+                    BatchCode = batch.BatchCode,
+                    Status = batch.Status,
+                    CanCreateProgress = canCreateProgress,
+                    TotalInputQuantity = batch.InputQuantity,
+                    TotalProcessedQuantity = finalOutputQuantity,
+                    RemainingQuantity = remainingQuantity,
+                    InputUnit = batch.InputUnit,
+                    Message = canCreateProgress 
+                        ? $"Có thể tạo tiến độ. Còn lại {remainingQuantity} {batch.InputUnit}" 
+                        : $"Không thể tạo tiến độ. Đã chế biến hết khối lượng."
+                };
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Kiểm tra batch thành công", result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Đã xảy ra lỗi hệ thống: {ex.Message}");
+            }
+        }
+
+        public async Task<IServiceResult> DebugAdvanceAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        {
+            try
+            {
+                // Lấy thông tin batch và stages
+                var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(batchId);
+                if (batch == null)
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Batch không tồn tại.");
+
+                var stages = await _unitOfWork.ProcessingStageRepository.GetAllAsync(
+                    s => s.MethodId == batch.MethodId && !s.IsDeleted,
+                    q => q.OrderBy(s => s.OrderIndex)
+                );
+
+                var progresses = await _unitOfWork.ProcessingBatchProgressRepository.GetAllAsync(
+                    p => p.BatchId == batchId && !p.IsDeleted,
+                    q => q.OrderByDescending(p => p.StepIndex)
+                );
+
+                var latestProgress = progresses.FirstOrDefault();
+
+                var debugInfo = new
+                {
+                    message = "Debug advance info",
+                    batchId,
+                    userId,
+                    batchStatus = batch.Status,
+                    roles = new
+                    {
+                        isAdmin,
+                        isManager,
+                        isFarmer = !isAdmin && !isManager
+                    },
+                    stages = stages.Select(s => new
+                    {
+                        stageId = s.StageId,
+                        stageName = s.StageName,
+                        orderIndex = s.OrderIndex
+                    }).ToList(),
+                    totalStages = stages.Count(),
+                    progresses = progresses.Select(p => new
+                    {
+                        progressId = p.ProgressId,
+                        stepIndex = p.StepIndex,
+                        stageId = p.StageId,
+                        progressDate = p.ProgressDate
+                    }).ToList(),
+                    totalProgresses = progresses.Count(),
+                    latestProgress = latestProgress != null ? new
+                    {
+                        progressId = latestProgress.ProgressId,
+                        stepIndex = latestProgress.StepIndex,
+                        stageId = latestProgress.StageId
+                    } : null,
+                    note = "Chỉ Farmer mới được phép advance progress"
+                };
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Debug info retrieved successfully", debugInfo);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi debug: {ex.Message}");
+            }
+        }
     }
 
 }
