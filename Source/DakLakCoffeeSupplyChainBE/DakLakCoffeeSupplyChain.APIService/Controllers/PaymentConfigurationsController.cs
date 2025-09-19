@@ -1,5 +1,4 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.OrderDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
@@ -144,6 +143,26 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             if (result.Status == Const.FAIL_DELETE_CODE)
                 return Conflict("Xóa mềm thất bại.");
+
+            return StatusCode(500, result.Message);
+        }
+
+        // PATCH: api/<PaymentConfigurationsController>/toggle-status/{configId}
+        [HttpPatch("toggle-status/{configId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ToggleActiveStatusAsync(Guid configId)
+        {
+            var result = await _paymentConfigurationService
+                .ToggleActiveStatus(configId);
+
+            if (result.Status == Const.SUCCESS_UPDATE_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_UPDATE_CODE)
+                return Conflict(result.Message);
 
             return StatusCode(500, result.Message);
         }

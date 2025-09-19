@@ -360,5 +360,112 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> ToggleActiveStatus(Guid configId)
+        {
+            try
+            {
+                // Tìm PaymentConfiguration theo ID
+                var paymentConfiguration = await _unitOfWork.PaymentConfigurationRepository.GetByIdAsync(
+                    predicate: pc => 
+                        pc.ConfigId == configId && 
+                        !pc.IsDeleted
+                    );
+
+                if (paymentConfiguration == null)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Không tìm thấy cấu hình phí cần thay đổi trạng thái."
+                    );
+                }
+
+                // Kiểm tra nếu đang kích hoạt (set IsActive = true)
+                if (!paymentConfiguration.IsActive.HasValue || 
+                    !paymentConfiguration.IsActive.Value) // Đang từ null/false -> true
+                {
+                    var currentDate = DateOnly.FromDateTime(DateTime.Now);
+                    
+                    // Kiểm tra ngày hiện tại có nằm trong khoảng hiệu lực không
+                    if (currentDate < paymentConfiguration.EffectiveFrom)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Không thể kích hoạt cấu hình phí. Ngày hiệu lực bắt đầu là {paymentConfiguration.EffectiveFrom:dd/MM/yyyy}."
+                        );
+                    }
+                    
+                    // Nếu có effectiveTo, kiểm tra ngày hiện tại có vượt quá không
+                    if (paymentConfiguration.EffectiveTo.HasValue && 
+                        currentDate > paymentConfiguration.EffectiveTo.Value)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Không thể kích hoạt cấu hình phí. Cấu hình đã hết hiệu lực từ ngày {paymentConfiguration.EffectiveTo.Value:dd/MM/yyyy}."
+                        );
+                    }
+                }
+
+                // Toggle trạng thái IsActive
+                paymentConfiguration.IsActive = !paymentConfiguration.IsActive;
+                paymentConfiguration.UpdatedAt = DateTime.Now;
+
+                // Cập nhật trong repository
+                await _unitOfWork.PaymentConfigurationRepository
+                    .UpdateAsync(paymentConfiguration);
+
+                // Lưu thay đổi vào database
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                if (result > 0)
+                {
+                    // Truy xuất lại dữ liệu sau khi update để trả về đầy đủ thông tin
+                    var updatedConfig = await _unitOfWork.PaymentConfigurationRepository.GetByIdAsync(
+                        predicate: pc => 
+                           pc.ConfigId == configId && 
+                           !pc.IsDeleted,
+                        include: query => query
+                           .Include(pc => pc.Role),
+                        asNoTracking: true
+                    );
+
+                    if (updatedConfig != null)
+                    {
+                        // Ánh xạ thực thể đã lưu sang DTO phản hồi
+                        var responseDto = updatedConfig.MapToPaymentConfigurationViewDetailsDto();
+
+                        var statusMessage = updatedConfig.IsActive == true 
+                            ? "Kích hoạt cấu hình phí thành công." 
+                            : "Vô hiệu hóa cấu hình phí thành công.";
+
+                        return new ServiceResult(
+                            Const.SUCCESS_UPDATE_CODE,
+                            statusMessage,
+                            responseDto
+                        );
+                    }
+
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Thay đổi trạng thái thành công nhưng không thể truy xuất dữ liệu để trả về."
+                    );
+                }
+                else
+                {
+                    return new ServiceResult(
+                        Const.FAIL_UPDATE_CODE,
+                        "Thay đổi trạng thái thất bại."
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // Trả về lỗi nếu có exception
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
+            }
+        }
     }
 }
