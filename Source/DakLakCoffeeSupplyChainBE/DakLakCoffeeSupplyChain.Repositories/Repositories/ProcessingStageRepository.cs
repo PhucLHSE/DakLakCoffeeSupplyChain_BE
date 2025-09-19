@@ -22,13 +22,19 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 
         public async Task<List<ProcessingStage>> GetAllStagesAsync()
         {
-            return await _context.ProcessingStages
+            Console.WriteLine($"🔍 DEBUG: GetAllStagesAsync called");
+            Console.WriteLine($"🔍 DEBUG: Context is null: {_context == null}");
+            
+            var stages = await _context.ProcessingStages
                 .Include(s => s.Method)
                 .Where(s => !s.IsDeleted)
                 .OrderBy(s => s.MethodId)
                 .ThenBy(s => s.OrderIndex)
                 .AsNoTracking()
                 .ToListAsync();
+                
+            Console.WriteLine($"🔍 DEBUG: Found {stages.Count} stages in repository");
+            return stages;
         }
 
         public async Task CreateAsync(ProcessingStage entity)

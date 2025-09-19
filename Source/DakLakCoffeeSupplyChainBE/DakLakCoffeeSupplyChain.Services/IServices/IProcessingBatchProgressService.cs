@@ -24,5 +24,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> AdvanceProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> GetAvailableBatchesForProgressAsync(Guid userId, bool isAdmin, bool isManager);
         Task<IServiceResult> UpdateNextStagesAsync(Guid batchId, ProcessingBatchProgressCreateDto input, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> GetBatchInfoBeforeRetryAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> CheckBatchCanCreateProgressAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
+        Task<IServiceResult> DebugAdvanceAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager);
     }
 }

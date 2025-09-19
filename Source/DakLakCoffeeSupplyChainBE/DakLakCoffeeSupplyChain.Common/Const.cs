@@ -12,6 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common
 
         public static int ERROR_EXCEPTION = -4;
         public static int ERROR_VALIDATION_CODE = -2;
+        
 
         #endregion
 

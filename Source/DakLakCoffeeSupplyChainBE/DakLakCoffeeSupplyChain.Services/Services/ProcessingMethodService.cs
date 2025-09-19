@@ -145,6 +145,55 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
             }
         }
+
+        public async Task<IServiceResult> UpdateAsync(ProcessingMethodUpdateDto input)
+        {
+            try
+            {
+                var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(input.MethodId);
+
+                if (method == null || method.IsDeleted)
+                {
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
+                }
+
+                // Check if methodCode is unique (excluding current method)
+                var existing = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(
+                    predicate: m => m.MethodCode == input.MethodCode && m.MethodId != input.MethodId && !m.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (existing != null)
+                {
+                    var parameters = new Dictionary<string, object>
+                    {
+                        ["methodCode"] = input.MethodCode
+                    };
+                    return CreateValidationError("ProcessingMethodCodeExists", parameters);
+                }
+
+                // Update method properties
+                method.MethodCode = input.MethodCode.Trim();
+                method.Name = input.Name.Trim();
+                method.Description = input.Description?.Trim();
+                method.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.ProcessingMethodRepository.UpdateAsync(method);
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                return result > 0
+                    ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG)
+                    : CreateValidationError("UpdateProcessingMethodFailed");
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+            }
+        }
+
         public async Task<IServiceResult> SoftDeleteAsync(int methodId)
         {
             try
