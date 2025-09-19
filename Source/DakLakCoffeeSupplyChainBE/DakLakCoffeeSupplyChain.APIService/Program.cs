@@ -32,6 +32,12 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Service gửi mail
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// HttpContextAccessor for PaymentService
+builder.Services.AddHttpContextAccessor();
+
+// Payment service
+builder.Services.AddScoped<IPaymentService, DakLakCoffeeSupplyChain.Services.Services.PaymentService>();
+
 // Cấu hình Cloudinary
 builder.Services.Configure<CloudinarySettings>(
 builder.Configuration.GetSection("CloudinarySettings"));
@@ -97,7 +103,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
 builder.Services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
-builder.Services.AddScoped<IPaymentConfigurationService, PaymentConfigurationService>();
+
 
 //Add MemoryCache
 builder.Services.AddMemoryCache();
@@ -168,7 +174,6 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
     odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Shipment>("Shipment");
-    odataBuilder.EntitySet<PaymentConfiguration>("PaymentConfiguration");
 
     return odataBuilder.GetEdmModel();
 }
