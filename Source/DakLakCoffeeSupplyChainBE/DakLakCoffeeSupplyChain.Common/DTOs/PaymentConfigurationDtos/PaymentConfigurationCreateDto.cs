@@ -1,8 +1,10 @@
-﻿using System;
+﻿using DakLakCoffeeSupplyChain.Common.Enum.PaymentConfigurationEnums;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
@@ -14,8 +16,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
         public int RoleId { get; set; }
 
         [Required(ErrorMessage = "FeeType là bắt buộc.")]
-        [StringLength(50, ErrorMessage = "FeeType không được vượt quá 50 ký tự.")]
-        public string FeeType { get; set; } = string.Empty;
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public FeeType FeeType { get; set; } = FeeType.Other;
 
         [Required(ErrorMessage = "Amount là bắt buộc.")]
         [Range(0, double.MaxValue, ErrorMessage = "Amount phải là số không âm.")]
