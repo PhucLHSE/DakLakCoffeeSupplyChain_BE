@@ -1,7 +1,10 @@
-﻿using System;
+﻿using DakLakCoffeeSupplyChain.Common.Enum.PaymentConfigurationEnums;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
@@ -12,7 +15,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
 
         public string RoleName { get; set; } = string.Empty;
 
-        public string FeeType { get; set; } = string.Empty;
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public FeeType FeeType { get; set; } = FeeType.Other;
 
         public double Amount { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.RoleDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.IRepositories;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -32,6 +31,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             // Lấy danh sách PaymentConfiguration từ repository
             var paymentConfigurations = await _unitOfWork.PaymentConfigurationRepository.GetAllAsync(
+                predicate: pc => !pc.IsDeleted,
                 include: query => query
                    .Include(pc => pc.Role),
                 orderBy: query => query.OrderBy(bb => bb.EffectiveFrom),
@@ -68,9 +68,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm PaymentConfiguration theo ID
             var paymentConfiguration = await _unitOfWork.PaymentConfigurationRepository.GetByIdAsync(
                 predicate: pc =>
-                   pc.ConfigId == configId,
+                   pc.ConfigId == configId &&
+                   !pc.IsDeleted,
                 include: query => query
-                   .Include(o => o.Role),
+                   .Include(pc => pc.Role),
                 asNoTracking: true
             );
 

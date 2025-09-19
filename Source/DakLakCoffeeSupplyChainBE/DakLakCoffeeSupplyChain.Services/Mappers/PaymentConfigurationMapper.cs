@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.PaymentConfigurationEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
@@ -15,11 +16,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static PaymentConfigurationViewAllDto MapToPaymentConfigurationsViewAllDto(
             this PaymentConfiguration config)
         {
+            // Parse string to enum
+            FeeType feeType = Enum.TryParse<FeeType>(config.FeeType, ignoreCase: true, out var parsedFeeType)
+                ? parsedFeeType
+                : FeeType.Other;
+
             return new PaymentConfigurationViewAllDto
             {
                 ConfigId = config.ConfigId,
                 RoleName = config.Role?.RoleName ?? "N/A",
-                FeeType = config.FeeType,
+                FeeType = feeType,
                 Amount = config.Amount,
                 IsActive = config.IsActive,
                 EffectiveFrom = config.EffectiveFrom,
@@ -31,12 +37,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         public static PaymentConfigurationViewDetailsDto MapToPaymentConfigurationViewDetailsDto(
             this PaymentConfiguration config)
         {
+            // Parse string to enum
+            FeeType feeType = Enum.TryParse<FeeType>(config.FeeType, ignoreCase: true, out var parsedFeeType)
+                ? parsedFeeType
+                : FeeType.Other;
+
             return new PaymentConfigurationViewDetailsDto
             {
                 ConfigId = config.ConfigId,
                 RoleId = config.RoleId,
                 RoleName = config.Role?.RoleName ?? "N/A",
-                FeeType = config.FeeType,
+                FeeType = feeType,
                 Amount = config.Amount,
                 Description = config.Description,
                 EffectiveFrom = config.EffectiveFrom,
@@ -55,7 +66,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             {
                 ConfigId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
-                FeeType = dto.FeeType,
+                FeeType = dto.FeeType.ToString(), // enum to string
                 Amount = dto.Amount,
                 Description = dto.Description,
                 EffectiveFrom = dto.EffectiveFrom,
@@ -73,7 +84,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             PaymentConfiguration paymentConfiguration)
         {
             paymentConfiguration.RoleId = dto.RoleId;
-            paymentConfiguration.FeeType = dto.FeeType;
+            paymentConfiguration.FeeType = dto.FeeType.ToString(); // enum to string
             paymentConfiguration.Amount = dto.Amount;
             paymentConfiguration.Description = dto.Description;
             paymentConfiguration.EffectiveFrom = dto.EffectiveFrom;
