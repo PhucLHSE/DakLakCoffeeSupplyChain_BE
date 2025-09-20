@@ -16,6 +16,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs
         public ProcurementPlanStatus Status { get; set; } = ProcurementPlanStatus.Draft;
 
         public ICollection<ProcurementPlanDetailsUpdateDto> ProcurementPlansDetailsUpdateDto { get; set; } = [];
-        public ICollection<ProcurementPlanDetailsCreateDto> ProcurementPlansDetailsCreateDto { get; set; } = [];
+        //public ICollection<ProcurementPlanDetailsCreateDto> ProcurementPlansDetailsCreateDto { get; set; } = [];
     }
 }

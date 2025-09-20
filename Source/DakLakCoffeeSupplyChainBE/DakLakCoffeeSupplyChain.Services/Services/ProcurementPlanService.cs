@@ -31,7 +31,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(p => p.ProcessMethod),
                 orderBy: p => p.OrderByDescending(p => p.CreatedAt),
                 asNoTracking: true);
-                        
+
             if (procurementPlans == null || procurementPlans.Count == 0)
             {
                 return new ServiceResult(
@@ -109,7 +109,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(p => p.ProcurementPlansDetails.Where(p => !p.IsDeleted)).    //Order ProcurementPlansDetails bên mapper
                     ThenInclude(d => d.CoffeeType).
                 Include(p => p.ProcurementPlansDetails).
-                    ThenInclude(p => p.ProcessMethod), 
+                    ThenInclude(p => p.ProcessMethod),
                 asNoTracking: true
                 );
 
@@ -177,19 +177,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                //Nếu status là open
-                    //Start date là null thì Start date sẽ tự động cập nhật thành thời điểm hiện tại
-                    //Start date không phải null thì không được phép trong quá khứ, không được sau EndDate và chỉ hiển thị lên public khi đến ngày đó
-                //Nếu status là draft
-                    //Start date là null thì Bỏ qua toàn bộ logic kiểm tra
-                    //Start date không phải null thì không đuọc phép trong quá khứ, không được sau EndDate
-
-                //Logic cho TotalQuantity/TargetQuantity/MinimumRegistrationQuantity (plan/detail) đã xong
-                //Logic cho StartDate/EndDate (plan) đã xong
-                //Logic cho MinPriceRange/MaxPriceRange (detail) đã xong
-
-                //Logic chỉ hiển thị lên public khi đến ngày StartDate và active chưa xong
-
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: m => m.UserId == userId,
                     asNoTracking: true
@@ -208,18 +195,37 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Map dto to model
                 var newPlan = procurementPlanDto.MapToProcurementPlanCreateDto(procurementPlanCode, businessManager.ManagerId);
 
-                //Nếu như BM để status kế hoạch là open nhưng chưa set StartDate thì kế hoạch sẽ tự động mở đăng ký luôn
-                //Nếu BM để status open và đã set StartDate thì kế hoạch mới mở đăng ký khi đến ngày đó thôi.
-                //if(newPlan.Status == "Open" && !newPlan.StartDate.HasValue)
-                //    newPlan.StartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+                // Validate chi tiết kế hoạch khi chọn combo loại cà phê và phương pháp sơ chế bị trùng
+                var duplicateCombo = newPlan.ProcurementPlansDetails
+                    .GroupBy(d => new { d.CoffeeTypeId, d.ProcessMethodId })
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                if (duplicateCombo != null)
+                {
+                    var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
+                        predicate: c => c.CoffeeTypeId == duplicateCombo.CoffeeTypeId,
+                        asNoTracking: true
+                    );
+                    var processMethod = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(
+                        predicate: p => p.MethodId == duplicateCombo.ProcessMethodId,
+                        asNoTracking: true
+                    );
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Đã có sự trùng lặp trong chi tiết kế hoạch: {coffeeType?.TypeName} - {processMethod?.Name}"
+                    );
+                }
 
                 // Logic TotalQuantity/TargetQuantity
                 // Tạo code hàng loạt
-                foreach(var item in newPlan.ProcurementPlansDetails)
+                foreach (var item in newPlan.ProcurementPlansDetails)
                 {
                     item.PlanDetailCode = $"PLD-{DateTime.UtcNow.Year}-{count:D4}";
                     count++;
-                    newPlan.TotalQuantity += item.TargetQuantity;                    
+                    newPlan.TotalQuantity += item.TargetQuantity;
                 }
 
                 // Save data to database
@@ -388,7 +394,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: p => p.PlanId == planId && !p.IsDeleted,
                     include: p => p.
                         Include(p => p.CreatedByNavigation).
-                        Include(p => p.ProcurementPlansDetails)
+                        Include(p => p.ProcurementPlansDetails),
+                    asNoTracking: false
                         );
 
                 if (plan == null || plan.CreatedByNavigation.UserId != userId)
@@ -404,8 +411,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var planDetailsIds = dto.ProcurementPlansDetailsUpdateDto.Select(i => i.PlanDetailsId).ToHashSet();
                 var now = DateHelper.NowVietnamTime();
 
+                // Validate chi tiết kế hoạch khi chọn combo loại cà phê và phương pháp sơ chế bị trùng
+                var duplicateComboExisting = dto.ProcurementPlansDetailsUpdateDto
+                    .GroupBy(d => new { d.CoffeeTypeId, d.ProcessMethodId })
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                if (duplicateComboExisting != null)
+                {
+                    var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
+                        predicate: c => c.CoffeeTypeId == duplicateComboExisting.CoffeeTypeId,
+                        asNoTracking: true
+                    );
+                    var processMethod = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(
+                        predicate: p => p.MethodId == duplicateComboExisting.ProcessMethodId,
+                        asNoTracking: true
+                    );
+
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Đã có sự trùng lặp trong chi tiết kế hoạch: {coffeeType?.TypeName} - {processMethod?.Name}"
+                    );
+                }
+
                 // Xóa mềm planDetails
-                foreach(var oldItem in plan.ProcurementPlansDetails)
+                foreach (var oldItem in plan.ProcurementPlansDetails)
                 {
                     if (!planDetailsIds.Contains(oldItem.PlanDetailsId) && !oldItem.IsDeleted)
                     {
@@ -421,7 +452,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     var existingPlanDetail = plan.ProcurementPlansDetails.
                         FirstOrDefault(p => p.PlanDetailsId == itemDto.PlanDetailsId);
-                    
+
                     if (existingPlanDetail != null)
                     {
                         plan.TotalQuantity = plan.TotalQuantity - existingPlanDetail.TargetQuantity + (itemDto.TargetQuantity ?? 0);
@@ -438,42 +469,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
                         existingPlanDetail.UpdatedAt = now;
 
-                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(existingPlanDetail);
+                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(existingPlanDetail);                        
                     }
-                }
 
-                // Tạo plan detail mới nếu có
-                if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
-                {
-                    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
-                    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
-                    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
+                    // Tạo plan detail mới nếu có
+                    if(itemDto.PlanDetailsId  == Guid.Empty || !itemDto.PlanDetailsId.HasValue)
                     {
+                        string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+                        var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
                         var newDetail = new ProcurementPlansDetail
                         {
                             PlanDetailsId = Guid.NewGuid(),
                             PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
-                            CoffeeTypeId = detailDto.CoffeeTypeId,
-                            ProcessMethodId = detailDto.ProcessMethodId,
-                            TargetQuantity = detailDto.TargetQuantity,
-                            TargetRegion = detailDto.TargetRegion,
-                            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
-                            MinPriceRange = detailDto.MinPriceRange,
-                            MaxPriceRange = detailDto.MaxPriceRange,
-                            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
-                            Note = detailDto.Note,
+                            CoffeeTypeId = itemDto.CoffeeTypeId,
+                            ProcessMethodId = itemDto.ProcessMethodId,
+                            TargetQuantity = itemDto.TargetQuantity,
+                            TargetRegion = itemDto.TargetRegion,
+                            MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity,
+                            MinPriceRange = itemDto.MinPriceRange,
+                            MaxPriceRange = itemDto.MaxPriceRange,
+                            ExpectedYieldPerHectare = itemDto.ExpectedYieldPerHectare,
+                            Note = itemDto.Note,
                             Status = ProcurementPlanDetailsStatus.Active.ToString(),
-                            ContractItemId = detailDto.ContractItemId,
+                            ContractItemId = itemDto.ContractItemId,
                             CreatedAt = now,
                             UpdatedAt = now
                         };
 
                         count++;
+                        plan.TotalQuantity += itemDto.TargetQuantity;
                         plan.ProcurementPlansDetails.Add(newDetail);
-                        plan.TotalQuantity += detailDto.TargetQuantity;
-
                         await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
                     }
+
+                // Tạo plan detail mới nếu có
+                //if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
+                //{
+                //    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+                //    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
+                //    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
+                //    {
+                //        var newDetail = new ProcurementPlansDetail
+                //        {
+                //            PlanDetailsId = Guid.NewGuid(),
+                //            PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
+                //            CoffeeTypeId = detailDto.CoffeeTypeId,
+                //            ProcessMethodId = detailDto.ProcessMethodId,
+                //            TargetQuantity = detailDto.TargetQuantity,
+                //            TargetRegion = detailDto.TargetRegion,
+                //            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
+                //            MinPriceRange = detailDto.MinPriceRange,
+                //            MaxPriceRange = detailDto.MaxPriceRange,
+                //            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
+                //            Note = detailDto.Note,
+                //            Status = ProcurementPlanDetailsStatus.Active.ToString(),
+                //            ContractItemId = detailDto.ContractItemId,
+                //            CreatedAt = now,
+                //            UpdatedAt = now
+                //        };
+
+                //        count++;
+                //        plan.ProcurementPlansDetails.Add(newDetail);
+                //        plan.TotalQuantity += detailDto.TargetQuantity;
+
+                //        await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
+                //    }
                 }
 
                 // Save data to database
@@ -532,14 +592,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
                     .OrderByDescending(p => p.CreatedAt)
                     .FirstOrDefault();
-                
+
                 if (payment == null)
                 {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
                         "Chưa có giao dịch thanh toán nào cho kế hoạch này.",
-                        new { 
-                            hasPayment = false, 
+                        new
+                        {
+                            hasPayment = false,
                             paymentStatus = "None",
                             message = "Vui lòng thanh toán để mở kế hoạch."
                         }
@@ -552,8 +613,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
                     message,
-                    new { 
-                        hasPayment = true, 
+                    new
+                    {
+                        hasPayment = true,
                         paymentStatus = payment.PaymentStatus,
                         paymentTime = payment.PaymentTime,
                         message = isPaid ? "Có thể mở kế hoạch." : "Vui lòng thanh toán để mở kế hoạch."
@@ -590,7 +652,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
                         .OrderByDescending(p => p.CreatedAt)
                         .FirstOrDefault();
-                    
+
                     if (payment == null || payment.PaymentStatus != "Success")
                     {
                         return new ServiceResult(

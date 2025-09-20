@@ -141,7 +141,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     ThenInclude(fm => fm.User).
                 Include(fm => fm.ApprovedByNavigation).
                     ThenInclude(fm => fm.User).
-                Include(p => p.FarmingCommitmentsDetails).
+                Include(p => p.FarmingCommitmentsDetails.Where(p => !p.IsDeleted).OrderBy(p => p.CommitmentDetailCode)).
                     ThenInclude(fm => fm.PlanDetail).
                         ThenInclude(fm => fm.CoffeeType),
                 asNoTracking: true
@@ -595,7 +595,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             ThenInclude(p => p.Farmer).
                         Include(p => p.Plan).
                             ThenInclude(p => p.CreatedByNavigation).
-                        Include(p => p.FarmingCommitmentsDetails)
+                        Include(p => p.FarmingCommitmentsDetails),
+                    asNoTracking: false
                         );
 
                 if (commitment == null || commitment.Plan.CreatedByNavigation.UserId != userId)
@@ -655,7 +656,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         predicate: f => f.CultivationRegistrationDetailId == itemDto.RegistrationDetailId,
                         include: f => f.
                             Include(f => f.PlanDetail),
-                        asNoTracking: true
+                        asNoTracking: false
                         );
                     if (selectedRegistrationDetail == null)
                         return new ServiceResult(
@@ -698,12 +699,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         }
                     }
 
-                        // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
-                        if (itemDto.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
-                        return new ServiceResult(Const.FAIL_CREATE_CODE,
-                            "Ngày dự kiến bắt đầu giao hàng phải sau ngày dự kiến kết thúc thu hoạch. Cụ thể là từ " +
-                            $"{selectedRegistrationDetail.ExpectedHarvestEnd}"
-                            );
+                    // Kiểm tra xem ngày bắt đầu giao có sau ngày kết thúc thu hoạch không
+                    if (itemDto.EstimatedDeliveryStart < selectedRegistrationDetail.ExpectedHarvestEnd)
+                    return new ServiceResult(Const.FAIL_CREATE_CODE,
+                        "Ngày dự kiến bắt đầu giao hàng phải sau ngày dự kiến kết thúc thu hoạch. Cụ thể là từ " +
+                        $"{selectedRegistrationDetail.ExpectedHarvestEnd}"
+                        );
 
                     if (existingCommitmentDetails != null)
                     {
@@ -740,6 +741,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             CommitmentDetailId = Guid.NewGuid(),
                             CommitmentDetailCode = $"FCD-{now.Year}-{count:D4}",
                             RegistrationDetailId = itemDto.RegistrationDetailId,
+                            PlanDetailId = selectedRegistrationDetail.PlanDetailId,
                             ConfirmedPrice = itemDto.ConfirmedPrice,
                             AdvancePayment =  itemDto.AdvancePayment,
                             TaxPrice = 0,
@@ -748,6 +750,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             EstimatedDeliveryEnd = itemDto.EstimatedDeliveryEnd,
                             Note = itemDto.Note,
                             ContractDeliveryItemId = itemDto.ContractDeliveryItemId,
+                            CreatedAt = now,
+                            UpdatedAt = now
                         };
                         //if (taxCode != null)
                         //    if (newDetail.ConfirmedPrice.HasValue && taxCode.MinValue.HasValue)
@@ -763,6 +767,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             );
                         commitment.TotalAdvancePayment += newDetail.AdvancePayment;
                         commitment.FarmingCommitmentsDetails.Add(newDetail);
+                        await _unitOfWork.FarmingCommitmentsDetailRepository.CreateAsync(newDetail);
                     }
                 }
 
@@ -772,7 +777,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Gửi notification cho farmer
                 await _notify.NotifyFarmerUpdatedCommitmentAsync(
-                    commitment.Farmer.UserId,
+                    commitment.Registration.Farmer.UserId,
                     commitment.Plan.CreatedByNavigation.UserId,
                     commitment.Plan.CreatedByNavigation.CompanyName,
                     $"là '{commitment.CommitmentName}' cho kế hoạch '{commitment.Plan.Title}'. Bạn hãy vào mục Cam kết kế hoạch thu mua để xem. " +
