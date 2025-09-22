@@ -100,5 +100,23 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="description">Mô tả</param>
         /// <returns>Task</returns>
         Task AddToSystemWalletAsync(Guid paymentId, double amount, string description);
+
+        /// <summary>
+        /// Tạo Wallet Transaction cho cả Admin và User khi thanh toán phí đăng ký kế hoạch
+        /// </summary>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Số tiền</param>
+        /// <param name="userId">User ID của người trả phí</param>
+        /// <param name="planId">Plan ID</param>
+        /// <param name="description">Mô tả</param>
+        /// <returns>Task</returns>
+        Task CreatePlanPostingFeeTransactionsAsync(Guid paymentId, double amount, Guid userId, Guid planId, string description);
+
+        /// <summary>
+        /// Lấy hoặc tạo ví của User
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>User wallet</returns>
+        Task<Wallet> GetOrCreateUserWalletAsync(Guid userId);
     }
 }

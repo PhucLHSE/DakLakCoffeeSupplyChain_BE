@@ -246,13 +246,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             if (payment == null)
             {
+                // Lấy UserId từ plan
+                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+                var userId = plan?.CreatedBy;
+
                 // Create new payment
                 payment = new DakLakCoffeeSupplyChain.Repositories.Models.Payment
                 {
                     PaymentId = Guid.NewGuid(),
                     Email = string.Empty,
                     ConfigId = paymentConfig.ConfigId,
-                    UserId = null,
+                    UserId = userId, // Lưu UserId từ plan
                     PaymentCode = paymentCode, // Sử dụng paymentCode đã cắt
                     PaymentAmount = (int)paymentConfig.Amount,
                     PaymentMethod = "VNPay",
@@ -278,14 +282,31 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            // Cộng tiền vào ví System khi thanh toán thành công
+            // Tạo Wallet Transactions cho cả Admin và User khi thanh toán thành công
             if (isNewPayment || payment.PaymentStatus == "Paid")
             {
-                await AddToSystemWalletAsync(
-                    payment.PaymentId, 
-                    payment.PaymentAmount, 
-                    $"Thu phí đăng ký kế hoạch thu mua - Plan ID: {planId}"
-                );
+                // Lấy thông tin user từ payment
+                var userId = payment.UserId ?? Guid.Empty;
+
+                if (userId != Guid.Empty)
+                {
+                    await CreatePlanPostingFeeTransactionsAsync(
+                        payment.PaymentId,
+                        payment.PaymentAmount,
+                        userId,
+                        planId,
+                        $"Plan ID: {planId}"
+                    );
+                }
+                else
+                {
+                    // Fallback: chỉ cộng vào ví System nếu không tìm thấy user
+                    await AddToSystemWalletAsync(
+                        payment.PaymentId, 
+                        payment.PaymentAmount, 
+                        $"Thu phí đăng ký kế hoạch thu mua - Plan ID: {planId}"
+                    );
+                }
             }
         }
 
@@ -341,8 +362,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             await _unitOfWork.WalletRepository.UpdateAsync(systemWallet);
 
-            // Tạo giao dịch ví
-            var walletTransaction = new WalletTransaction
+            // Tạo giao dịch ví cho System (Admin)
+            var systemTransaction = new WalletTransaction
             {
                 TransactionId = Guid.NewGuid(),
                 WalletId = systemWallet.WalletId,
@@ -354,8 +375,96 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 IsDeleted = false
             };
 
-            await _unitOfWork.WalletTransactionRepository.CreateAsync(walletTransaction);
+            await _unitOfWork.WalletTransactionRepository.CreateAsync(systemTransaction);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Tạo Wallet Transaction cho cả Admin và User khi thanh toán phí đăng ký kế hoạch
+        /// </summary>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Số tiền</param>
+        /// <param name="userId">User ID của người trả phí</param>
+        /// <param name="planId">Plan ID</param>
+        /// <param name="description">Mô tả</param>
+        /// <returns>Task</returns>
+        public async Task CreatePlanPostingFeeTransactionsAsync(Guid paymentId, double amount, Guid userId, Guid planId, string description)
+        {
+            var now = DateTime.UtcNow;
+
+            // 1. Tạo transaction cho ví System (Admin) - Thu phí
+            var systemWallet = await GetOrCreateSystemWalletAsync();
+            systemWallet.TotalBalance += amount;
+            systemWallet.LastUpdated = now;
+            await _unitOfWork.WalletRepository.UpdateAsync(systemWallet);
+
+            var systemTransaction = new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = systemWallet.WalletId,
+                PaymentId = paymentId,
+                Amount = amount,
+                TransactionType = "Fee", // Thu phí
+                Description = $"Thu phí đăng ký kế hoạch thu mua - {description}",
+                CreatedAt = now,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.WalletTransactionRepository.CreateAsync(systemTransaction);
+
+            // 2. Tạo transaction cho ví User - Chi phí
+            var userWallet = await GetOrCreateUserWalletAsync(userId);
+            userWallet.TotalBalance -= amount; // Trừ tiền từ ví user
+            userWallet.LastUpdated = now;
+            await _unitOfWork.WalletRepository.UpdateAsync(userWallet);
+
+            var userTransaction = new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = userWallet.WalletId,
+                PaymentId = paymentId,
+                Amount = -amount, // Số âm vì là chi phí
+                TransactionType = "Payment", // Thanh toán phí
+                Description = $"Thanh toán phí đăng ký kế hoạch thu mua - {description}",
+                CreatedAt = now,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.WalletTransactionRepository.CreateAsync(userTransaction);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Lấy hoặc tạo ví của User
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        /// <returns>User wallet</returns>
+        public async Task<Wallet> GetOrCreateUserWalletAsync(Guid userId)
+        {
+            // Tìm ví của user
+            var userWallet = (await _unitOfWork.WalletRepository.GetAllAsync(
+                predicate: w => w.UserId == userId && !w.IsDeleted,
+                asNoTracking: false
+            )).FirstOrDefault();
+
+            if (userWallet == null)
+            {
+                // Tạo ví mới cho user
+                userWallet = new Wallet
+                {
+                    WalletId = Guid.NewGuid(),
+                    UserId = userId,
+                    WalletType = "Personal",
+                    TotalBalance = 0,
+                    LastUpdated = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.WalletRepository.CreateAsync(userWallet);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return userWallet;
         }
     }
 }
