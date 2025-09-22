@@ -37,7 +37,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// Lấy thông tin phí thanh toán cho PlanPosting
         /// </summary>
         [HttpGet("plan-posting-fee")]
-        [Authorize(Roles = "BusinessManager")]
+        [Authorize(Roles = "BusinessManager,Admin")]
         public async Task<IActionResult> GetPlanPostingFee()
         {
             var userRoleId = _paymentService.GetCurrentUserRoleId();
@@ -62,7 +62,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
 
         [HttpPost("vnpay/create-url")]
-        [Authorize(Roles = "BusinessManager")]
+        [Authorize(Roles = "BusinessManager,Admin")]
         public async Task<IActionResult> CreateVnPayUrl([FromBody] VnPayCreateRequest req)
         {
             // Validate VNPay configuration
@@ -102,8 +102,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             // Create VNPay URL
             var url = PaymentHelper.CreateVnPayUrl(baseUrl, vnpParameters, secret);
 
-            // Create and save payment record
-            var payment = _paymentService.CreatePaymentRecord(req.PlanId, paymentConfig, userEmail, userId);
+            // Create and save payment record with the same txnRef
+            var payment = _paymentService.CreatePaymentRecordWithTxnRef(req.PlanId, paymentConfig, userEmail, userId, txnRef);
             await _paymentService.SavePaymentAsync(payment);
 
             return Ok(new VnPayCreateResponse { Url = url });
@@ -136,9 +136,137 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return Ok(new { message = "Mock IPN applied", txnRef });
         }
 
+        /// <summary>
+        /// VNPay IPN endpoint - xử lý thông báo thanh toán từ VNPay
+        /// </summary>
+        [HttpPost("vnpay/ipn")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VnPayIpn()
+        {
+            try
+            {
+                // Lấy tất cả parameters từ VNPay
+                var vnpParams = new Dictionary<string, string>();
+                foreach (var key in Request.Form.Keys)
+                {
+                    vnpParams[key] = Request.Form[key];
+                }
+
+                // Lấy thông tin cần thiết
+                var vnp_ResponseCode = vnpParams.GetValueOrDefault("vnp_ResponseCode");
+                var vnp_TxnRef = vnpParams.GetValueOrDefault("vnp_TxnRef");
+                var vnp_Amount = vnpParams.GetValueOrDefault("vnp_Amount");
+                var vnp_OrderInfo = vnpParams.GetValueOrDefault("vnp_OrderInfo");
+
+                // Kiểm tra thanh toán thành công
+                if (vnp_ResponseCode == "00" && !string.IsNullOrEmpty(vnp_TxnRef))
+                {
+                    // Xác định loại thanh toán từ OrderInfo
+                    if (vnp_OrderInfo?.StartsWith("PlanPosting:") == true)
+                    {
+                        // Xử lý thanh toán phí kế hoạch thu mua
+                        var planIdStr = vnp_OrderInfo.Replace("PlanPosting:", "").Split(':')[0];
+                        if (Guid.TryParse(planIdStr, out var planId))
+                        {
+                            // Lấy PaymentConfiguration cho PlanPosting
+                            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(2, "PlanPosting"); // RoleID = 2 cho BusinessManager
+                            if (paymentConfig != null)
+                            {
+                                await _paymentService.ProcessMockIpnAsync(planId, vnp_TxnRef, paymentConfig);
+                                return Ok(new { RspCode = "00", Message = "Success" });
+                            }
+                        }
+                    }
+                    else if (vnp_OrderInfo?.StartsWith("WalletTopup:") == true)
+                    {
+                        // Xử lý nạp tiền ví - logic này đã có trong WalletService
+                        // Không cần xử lý ở đây vì WalletService đã handle
+                        return Ok(new { RspCode = "00", Message = "Success" });
+                    }
+                }
+
+                return Ok(new { RspCode = "01", Message = "Order not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing VNPay IPN");
+                return Ok(new { RspCode = "99", Message = "Unknown error" });
+            }
+        }
+
+        /// <summary>
+        /// Xử lý thanh toán thành công từ frontend
+        /// </summary>
+        [HttpPost("process-payment-success")]
+        [Authorize(Roles = "BusinessManager,Admin")]
+        public async Task<IActionResult> ProcessPaymentSuccess([FromBody] ProcessPaymentSuccessRequest req)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(req.TxnRef) || string.IsNullOrEmpty(req.OrderInfo))
+                {
+                    return BadRequest("Thiếu thông tin giao dịch");
+                }
+
+                // Xác định loại thanh toán từ OrderInfo
+                if (req.OrderInfo.StartsWith("PlanPosting:"))
+                {
+                    // Xử lý thanh toán phí kế hoạch thu mua
+                    var planIdStr = req.OrderInfo.Replace("PlanPosting:", "").Split(':')[0];
+                    if (Guid.TryParse(planIdStr, out var planId))
+                    {
+                        // Lấy PaymentConfiguration cho PlanPosting
+                        var userRoleId = _paymentService.GetCurrentUserRoleId();
+                        if (userRoleId == null)
+                        {
+                            return BadRequest("Không thể xác định vai trò của người dùng.");
+                        }
+
+                        var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting");
+                        if (paymentConfig != null)
+                        {
+                            await _paymentService.ProcessMockIpnAsync(planId, req.TxnRef, paymentConfig);
+                            return Ok(new { message = "Thanh toán đã được xử lý thành công", planId });
+                        }
+                    }
+                }
+
+                return BadRequest("Không thể xử lý loại thanh toán này");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment success");
+                return StatusCode(500, "Có lỗi xảy ra khi xử lý thanh toán");
+            }
+        }
+
+        /// <summary>
+        /// Lấy thông tin ví System (Admin wallet)
+        /// </summary>
+        [HttpGet("system-wallet")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSystemWallet()
+        {
+            try
+            {
+                var systemWallet = await _paymentService.GetOrCreateSystemWalletAsync();
+                return Ok(new
+                {
+                    walletId = systemWallet.WalletId,
+                    walletType = systemWallet.WalletType,
+                    totalBalance = systemWallet.TotalBalance,
+                    lastUpdated = systemWallet.LastUpdated
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi khi lấy thông tin ví System: {ex.Message}");
+            }
+        }
+
 
         [HttpPost("wallet-topup/vnpay/create-url")]
-        [Authorize(Roles = "BusinessManager,BusinessStaff,Farmer")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff,Farmer,Admin")]
         public async Task<IActionResult> CreateWalletTopupVnPayUrl([FromBody] WalletTopupVnPayRequest req)
         {
             // Validate VNPay configuration

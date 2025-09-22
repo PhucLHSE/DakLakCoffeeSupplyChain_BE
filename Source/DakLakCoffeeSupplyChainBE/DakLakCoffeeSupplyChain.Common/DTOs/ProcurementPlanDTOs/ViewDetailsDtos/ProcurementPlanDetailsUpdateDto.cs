@@ -6,8 +6,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 {
     public class ProcurementPlanDetailsUpdateDto : IValidatableObject
     {
-        [Required(ErrorMessage = "ID Chi tiết kế hoạch không xác định")]
-        public Guid PlanDetailsId { get; set; }
+        public Guid? PlanDetailsId { get; set; }
         [Required(ErrorMessage = "Loại cà phê không được để trống.")]
         public Guid CoffeeTypeId { get; set; }
 

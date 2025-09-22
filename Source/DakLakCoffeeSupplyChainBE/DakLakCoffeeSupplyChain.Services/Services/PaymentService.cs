@@ -102,7 +102,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public Payment CreatePaymentRecord(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId)
         {
             var now = DateTime.UtcNow;
-            var paymentCode = PaymentHelper.GeneratePaymentCode();
+            // Sử dụng txnRef làm PaymentCode để dễ dàng tìm kiếm sau này
+            var txnRef = PaymentHelper.GenerateTxnRef(planId);
 
             return new Payment
             {
@@ -110,13 +111,46 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Email = userEmail,
                 ConfigId = paymentConfig.ConfigId,
                 UserId = !string.IsNullOrEmpty(userId) ? Guid.Parse(userId) : null,
-                PaymentCode = paymentCode,
+                PaymentCode = txnRef, // Sử dụng txnRef làm PaymentCode
                 PaymentAmount = (int)paymentConfig.Amount,
                 PaymentMethod = "VNPay",
                 PaymentPurpose = "PlanPosting",
-                PaymentStatus = "Success", // Tự động thành Success
-                PaymentTime = now,
-                AdminVerified = true, // Tự động xác thực
+                PaymentStatus = "Pending", // Để Pending, sẽ update thành Success khi IPN
+                PaymentTime = null, // Chưa thanh toán
+                AdminVerified = false, // Chưa xác thực
+                CreatedAt = now,
+                UpdatedAt = now,
+                RelatedEntityId = planId,
+                IsDeleted = false
+            };
+        }
+
+        /// <summary>
+        /// Tạo Payment record với txnRef cụ thể
+        /// </summary>
+        /// <param name="planId">Plan ID</param>
+        /// <param name="paymentConfig">Payment configuration</param>
+        /// <param name="userEmail">User email</param>
+        /// <param name="userId">User ID</param>
+        /// <param name="txnRef">Transaction reference</param>
+        /// <returns>Payment object</returns>
+        public Payment CreatePaymentRecordWithTxnRef(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId, string txnRef)
+        {
+            var now = DateTime.UtcNow;
+
+            return new Payment
+            {
+                PaymentId = Guid.NewGuid(),
+                Email = userEmail,
+                ConfigId = paymentConfig.ConfigId,
+                UserId = !string.IsNullOrEmpty(userId) ? Guid.Parse(userId) : null,
+                PaymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef, // Cắt 20 ký tự đầu để fit vào PaymentCode
+                PaymentAmount = (int)paymentConfig.Amount,
+                PaymentMethod = "VNPay",
+                PaymentPurpose = "PlanPosting",
+                PaymentStatus = "Pending", // Để Pending, sẽ update thành Success khi IPN
+                PaymentTime = null, // Chưa thanh toán
+                AdminVerified = false, // Chưa xác thực
                 CreatedAt = now,
                 UpdatedAt = now,
                 RelatedEntityId = planId,
@@ -196,7 +230,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
-        /// Xử lý MockIpn - tạo hoặc cập nhật payment record
+        /// Xử lý MockIpn - tạo hoặc cập nhật payment record và cộng tiền vào ví System
         /// </summary>
         /// <param name="planId">Plan ID</param>
         /// <param name="txnRef">Transaction reference</param>
@@ -204,8 +238,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         /// <returns>Task</returns>
         public async Task ProcessMockIpnAsync(Guid planId, string txnRef, PaymentConfiguration paymentConfig)
         {
-            var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.PaymentCode == txnRef)).FirstOrDefault();
+            // Cắt txnRef xuống 20 ký tự để match với PaymentCode trong database
+            var paymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef;
+            var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.PaymentCode == paymentCode)).FirstOrDefault();
             var now = DateTime.UtcNow;
+            var isNewPayment = false;
 
             if (payment == null)
             {
@@ -216,7 +253,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Email = string.Empty,
                     ConfigId = paymentConfig.ConfigId,
                     UserId = null,
-                    PaymentCode = txnRef,
+                    PaymentCode = paymentCode, // Sử dụng paymentCode đã cắt
                     PaymentAmount = (int)paymentConfig.Amount,
                     PaymentMethod = "VNPay",
                     PaymentPurpose = "PlanPosting",
@@ -228,6 +265,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     IsDeleted = false
                 };
                 await _unitOfWork.PaymentRepository.CreateAsync(payment);
+                isNewPayment = true;
             }
             else
             {
@@ -238,6 +276,85 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 await _unitOfWork.PaymentRepository.UpdateAsync(payment);
             }
 
+            await _unitOfWork.SaveChangesAsync();
+
+            // Cộng tiền vào ví System khi thanh toán thành công
+            if (isNewPayment || payment.PaymentStatus == "Paid")
+            {
+                await AddToSystemWalletAsync(
+                    payment.PaymentId, 
+                    payment.PaymentAmount, 
+                    $"Thu phí đăng ký kế hoạch thu mua - Plan ID: {planId}"
+                );
+            }
+        }
+
+        /// <summary>
+        /// Lấy hoặc tạo ví System (Admin wallet)
+        /// </summary>
+        /// <returns>System wallet</returns>
+        public async Task<Wallet> GetOrCreateSystemWalletAsync()
+        {
+            // Tìm ví System (UserID = null, WalletType = "System")
+            var systemWallet = (await _unitOfWork.WalletRepository.GetAllAsync(
+                predicate: w => w.UserId == null && 
+                               w.WalletType == "System" && 
+                               !w.IsDeleted,
+                asNoTracking: false
+            )).FirstOrDefault();
+
+            if (systemWallet == null)
+            {
+                // Tạo ví System mới
+                systemWallet = new Wallet
+                {
+                    WalletId = Guid.NewGuid(),
+                    UserId = null, // System wallet không có UserID
+                    WalletType = "System",
+                    TotalBalance = 0,
+                    LastUpdated = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.WalletRepository.CreateAsync(systemWallet);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return systemWallet;
+        }
+
+        /// <summary>
+        /// Cộng tiền vào ví System khi thanh toán phí thành công
+        /// </summary>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Số tiền</param>
+        /// <param name="description">Mô tả</param>
+        /// <returns>Task</returns>
+        public async Task AddToSystemWalletAsync(Guid paymentId, double amount, string description)
+        {
+            // Lấy ví System
+            var systemWallet = await GetOrCreateSystemWalletAsync();
+
+            // Cập nhật số dư ví System
+            systemWallet.TotalBalance += amount;
+            systemWallet.LastUpdated = DateTime.UtcNow;
+
+            await _unitOfWork.WalletRepository.UpdateAsync(systemWallet);
+
+            // Tạo giao dịch ví
+            var walletTransaction = new WalletTransaction
+            {
+                TransactionId = Guid.NewGuid(),
+                WalletId = systemWallet.WalletId,
+                PaymentId = paymentId,
+                Amount = amount,
+                TransactionType = "Fee", // Thu phí
+                Description = description,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.WalletTransactionRepository.CreateAsync(walletTransaction);
             await _unitOfWork.SaveChangesAsync();
         }
     }
