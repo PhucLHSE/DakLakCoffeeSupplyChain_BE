@@ -241,6 +241,66 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         /// <summary>
+        /// Xử lý thanh toán qua ví nội bộ
+        /// </summary>
+        [HttpPost("wallet-payment")]
+        [Authorize(Roles = "BusinessManager,Admin")]
+        public async Task<IActionResult> ProcessWalletPayment([FromBody] WalletPaymentRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.PlanId) || request.Amount <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Thông tin thanh toán không hợp lệ" });
+                }
+
+                // Lấy thông tin user hiện tại
+                var (email, userId) = _paymentService.GetCurrentUserInfo();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { success = false, message = "Không thể xác định người dùng" });
+                }
+
+                if (!Guid.TryParse(userId, out var userGuid))
+                {
+                    return BadRequest(new { success = false, message = "ID người dùng không hợp lệ" });
+                }
+
+                if (!Guid.TryParse(request.PlanId, out var planId))
+                {
+                    return BadRequest(new { success = false, message = "ID kế hoạch không hợp lệ" });
+                }
+
+                // Xử lý thanh toán qua ví
+                var result = await _paymentService.ProcessWalletPaymentAsync(planId, request.Amount, userGuid, request.Description);
+                
+                if (result.Success)
+                {
+                    return Ok(new { 
+                        success = true, 
+                        message = "Thanh toán thành công", 
+                        transactionId = result.TransactionId 
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = result.Message 
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing wallet payment");
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "Có lỗi xảy ra khi xử lý thanh toán" 
+                });
+            }
+        }
+
+        /// <summary>
         /// Lấy thông tin ví System (Admin wallet)
         /// </summary>
         [HttpGet("system-wallet")]

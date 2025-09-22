@@ -102,6 +102,7 @@ builder.Services.AddScoped<IPaymentConfigurationService, PaymentConfigurationSer
 builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IWalletTransactionService, WalletTransactionService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IProgressDeviationAnalysisService, ProgressDeviationAnalysisService>();
 builder.Services.AddScoped<ISystemConfigurationService, SystemConfigurationService>();
