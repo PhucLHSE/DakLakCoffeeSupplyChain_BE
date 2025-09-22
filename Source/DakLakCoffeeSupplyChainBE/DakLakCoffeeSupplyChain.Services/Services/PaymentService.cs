@@ -257,7 +257,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     PaymentAmount = (int)paymentConfig.Amount,
                     PaymentMethod = "VNPay",
                     PaymentPurpose = "PlanPosting",
-                    PaymentStatus = "Paid",
+                    PaymentStatus = "Success", // Sử dụng "Success" để match với logic check
                     PaymentTime = now,
                     CreatedAt = now,
                     UpdatedAt = now,
@@ -270,7 +270,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 // Update existing payment
-                payment.PaymentStatus = "Paid";
+                payment.PaymentStatus = "Success"; // Sử dụng "Success" để match với logic check
                 payment.PaymentTime = now;
                 payment.UpdatedAt = now;
                 await _unitOfWork.PaymentRepository.UpdateAsync(payment);
@@ -279,7 +279,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             await _unitOfWork.SaveChangesAsync();
 
             // Cộng tiền vào ví System khi thanh toán thành công
-            if (isNewPayment || payment.PaymentStatus == "Paid")
+            if (isNewPayment || payment.PaymentStatus == "Success")
             {
                 await AddToSystemWalletAsync(
                     payment.PaymentId, 
