@@ -34,9 +34,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 {
                     // Kiểm tra nếu user là BusinessManager, BusinessStaff hoặc Admin
                     var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                    if (user == null || (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                                        !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                                        !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+                    if (user == null || user.Role == null || 
+                        (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                         !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                         !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
                     {
                         return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập ví này.");
                     }
@@ -107,9 +108,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (transaction.Wallet.UserId != userId)
                 {
                     var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                    if (user == null || (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                                        !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                                        !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+                    if (user == null || user.Role == null || 
+                        (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                         !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                         !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
                     {
                         return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập giao dịch này.");
                     }
@@ -138,9 +140,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (wallet.UserId != userId)
                 {
                     var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                    if (user == null || (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                                        !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                                        !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+                    if (user == null || user.Role == null || 
+                        (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                         !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                         !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
                     {
                         return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền truy cập ví này.");
                     }
@@ -178,9 +181,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (wallet.UserId != userId)
                 {
                     var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                    if (user == null || (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                                        !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                                        !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+                    if (user == null || user.Role == null || 
+                        (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                         !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                         !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
                     {
                         return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền cập nhật giao dịch này.");
                     }
@@ -220,9 +224,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (wallet.UserId != userId)
                 {
                     var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                    if (user == null || (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                                        !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                                        !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+                    if (user == null || user.Role == null || 
+                        (!user.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                         !user.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                         !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
                     {
                         return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xóa giao dịch này.");
                     }
@@ -247,7 +252,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Chỉ Admin mới có quyền hard delete
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
-                if (user == null || !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                if (user == null || user.Role == null || !user.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
                 {
                     return new ServiceResult(Const.FAIL_DELETE_CODE, "Chỉ Admin mới có quyền xóa vĩnh viễn giao dịch.");
                 }
@@ -379,6 +384,69 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         /// <summary>
+        /// Lấy giao dịch System Wallet (Admin)
+        /// </summary>
+        public async Task<IServiceResult> GetSystemWalletTransactionsAsync(int pageNumber, int pageSize, Guid currentUserId)
+        {
+            try
+            {
+                // Kiểm tra quyền Admin - Sử dụng method đã include Role
+                var currentUser = await _unitOfWork.UserAccountRepository.GetUserAccountByIdAsync(currentUserId);
+                if (currentUser == null || currentUser.Role == null || 
+                    !currentUser.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult(Const.FAIL_READ_CODE, "Chỉ Admin mới có quyền xem giao dịch System Wallet.");
+                }
+
+                // Tìm System Wallet (UserId = null, WalletType = "System")
+                var systemWallet = (await _unitOfWork.WalletRepository.GetAllAsync(
+                    predicate: w => w.UserId == null && 
+                                   w.WalletType == "System" && 
+                                   !w.IsDeleted,
+                    asNoTracking: true
+                )).FirstOrDefault();
+
+                if (systemWallet == null)
+                {
+                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "System Wallet chưa được tạo.");
+                }
+
+                // Lấy giao dịch của System Wallet
+                var transactions = await _unitOfWork.WalletTransactionRepository.GetByWalletIdAsync(systemWallet.WalletId);
+                
+                // Sắp xếp theo thời gian tạo (mới nhất trước)
+                var sortedTransactions = transactions
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToList();
+
+                // Phân trang
+                var totalCount = sortedTransactions.Count;
+                var pagedTransactions = sortedTransactions
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var transactionList = pagedTransactions.Select(MapToListDto).ToList();
+                var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+                var result = new WalletTransactionSearchResultDto
+                {
+                    Data = transactionList,
+                    TotalRecords = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalPages = totalPages
+                };
+
+                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy giao dịch System Wallet thành công.", result);
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult(Const.FAIL_READ_CODE, $"Lỗi khi lấy giao dịch System Wallet: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Lấy giao dịch theo User ID (đơn giản hóa)
         /// </summary>
         public async Task<IServiceResult> GetTransactionsByUserIdAsync(Guid targetUserId, int pageNumber, int pageSize, Guid currentUserId)
@@ -393,9 +461,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 // Nếu không phải Admin/BM/BS và không phải xem giao dịch của chính mình
-                if (!currentUser.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
-                    !currentUser.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
-                    !currentUser.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase) &&
+                if (currentUser.Role == null || 
+                    (!currentUser.Role.RoleName.Equals("BusinessManager", StringComparison.OrdinalIgnoreCase) && 
+                     !currentUser.Role.RoleName.Equals("BusinessStaff", StringComparison.OrdinalIgnoreCase) &&
+                     !currentUser.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)) &&
                     targetUserId != currentUserId)
                 {
                     return new ServiceResult(Const.FAIL_READ_CODE, "Bạn chỉ có thể xem giao dịch của chính mình.");

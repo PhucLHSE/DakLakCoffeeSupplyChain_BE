@@ -17,6 +17,9 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         // 4. READ - Lấy giao dịch theo User ID
         Task<IServiceResult> GetTransactionsByUserIdAsync(Guid targetUserId, int pageNumber, int pageSize, Guid currentUserId);
         
+        // 5. READ - Lấy giao dịch System Wallet (Admin)
+        Task<IServiceResult> GetSystemWalletTransactionsAsync(int pageNumber, int pageSize, Guid currentUserId);
+        
         // 5. UPDATE - Cập nhật giao dịch
         Task<IServiceResult> UpdateAsync(Guid transactionId, WalletTransactionUpdateDto updateDto, Guid userId);
         

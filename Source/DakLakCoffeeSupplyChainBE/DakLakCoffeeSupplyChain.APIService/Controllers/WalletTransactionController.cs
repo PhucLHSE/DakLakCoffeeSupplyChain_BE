@@ -145,6 +145,37 @@ namespace DakLakCoffeeSupplyChain.API.Controllers
         }
 
         /// <summary>
+        /// Lấy giao dịch System Wallet (chỉ Admin)
+        /// </summary>
+        [HttpGet("system-wallet")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSystemWalletTransactionsAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            Guid currentUserId;
+            try
+            {
+                currentUserId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized("Không xác định được userId từ token.");
+            }
+
+            var result = await _walletTransactionService.GetSystemWalletTransactionsAsync(pageNumber, pageSize, currentUserId);
+
+            if (result.Status == Const.SUCCESS_READ_CODE)
+                return Ok(result.Data);
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.FAIL_READ_CODE)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        /// <summary>
         /// Cập nhật giao dịch (chỉ cho phép cập nhật description)
         /// </summary>
         [HttpPut("{id}")]
