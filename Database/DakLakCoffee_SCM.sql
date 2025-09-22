@@ -251,9 +251,15 @@ CREATE TABLE CoffeeTypes (
   TypicalRegion NVARCHAR(255),                                    -- Vùng trồng phổ biến: Buôn Ma Thuột, Lâm Đồng,...
   SpecialtyLevel NVARCHAR(50),                                    -- Specialty, Fine Robusta,...
   DefaultYieldPerHectare FLOAT,                                   -- Năng suất trung bình mặc định (Kg/ha)
+  Status NVARCHAR(50) DEFAULT 'InActive',                         -- Status active hoặc inActive để admin có thể bật tắt cà phê này trong hệ thống
+  CoffeeTypeCategory NVARCHAR(255),                               -- phân loại này là cha hay con, trường này chỉ có 2 option đó
+  CoffeeTypeParentID UNIQUEIDENTIFIER NULL,                       -- CoffeeType cha
   CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
+
+  CONSTRAINT FK_CoffeeTypes_CoffeeTypeParentID FOREIGN KEY (CoffeeTypeParentID) 
+      REFERENCES CoffeeTypes(CoffeeTypeID),
 );
 
 GO
@@ -1573,6 +1579,12 @@ VALUES
 ((SELECT RoleID FROM Roles WHERE RoleName = 'Farmer'), 'AnnualMaintenanceFee', 300000, 
  N'Phí duy trì tài khoản theo năm cho nông hộ. Không bắt buộc ngay, nhưng cần để tiếp tục đăng ký kế hoạch với doanh nghiệp.', 
  '2025-07-01');
+
+ -- BusinessManager: Phí đăng bài
+ INSERT INTO PaymentConfigurations (RoleID, FeeType, Amount, Description, EffectiveFrom)
+VALUES 
+((SELECT RoleID FROM Roles WHERE RoleName = 'BusinessManager'), 'PlanPosting', 100000, 
+ N'Phí áp dụng cho Quản lý doanh nghiệp khi đăng tải kế hoạch thu mua cafe trên hệ thống.', '2025-06-01');
 
 GO
 

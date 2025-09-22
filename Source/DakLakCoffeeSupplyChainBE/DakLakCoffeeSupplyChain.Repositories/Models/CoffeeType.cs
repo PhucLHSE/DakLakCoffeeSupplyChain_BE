@@ -25,13 +25,23 @@ public partial class CoffeeType
 
     public double? DefaultYieldPerHectare { get; set; }
 
+    public string Status { get; set; }
+
+    public string CoffeeTypeCategory { get; set; }
+
+    public Guid? CoffeeTypeParentId { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
     public bool IsDeleted { get; set; }
 
+    public virtual CoffeeType CoffeeTypeParent { get; set; }
+
     public virtual ICollection<ContractItem> ContractItems { get; set; } = new List<ContractItem>();
+
+    public virtual ICollection<CoffeeType> InverseCoffeeTypeParent { get; set; } = new List<CoffeeType>();
 
     public virtual ICollection<ProcessingBatch> ProcessingBatches { get; set; } = new List<ProcessingBatch>();
 
