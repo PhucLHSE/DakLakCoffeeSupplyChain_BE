@@ -16,5 +16,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs
         public string Description { get; set; } = string.Empty;
         public string TypicalRegion { get; set; } = string.Empty;
         public string SpecialtyLevel { get; set; } = string.Empty;
+        public string CoffeeTypeCategory { get; set; } = string.Empty;
+        public Guid? CoffeeTypeParentId { get; set; }
     }
 }
