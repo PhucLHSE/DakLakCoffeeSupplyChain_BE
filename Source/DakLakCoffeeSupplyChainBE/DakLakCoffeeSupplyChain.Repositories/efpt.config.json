@@ -4,6 +4,7 @@
    "ContextNamespace": null,
    "FilterSchemas": false,
    "IncludeConnectionString": true,
+   "MinimumProductVersion": "2.6.0",
    "ModelNamespace": null,
    "OutputContextPath": "DBContext",
    "OutputPath": "Models",
@@ -52,6 +53,10 @@
       },
       {
          "Name": "[dbo].[CropProgresses]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Crops]",
          "ObjectType": 0
       },
       {

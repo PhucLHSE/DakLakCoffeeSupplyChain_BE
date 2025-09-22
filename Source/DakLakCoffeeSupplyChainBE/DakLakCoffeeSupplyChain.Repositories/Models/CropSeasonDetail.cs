@@ -15,6 +15,8 @@ public partial class CropSeasonDetail
 
     public Guid CommitmentDetailId { get; set; }
 
+    public Guid? CropId { get; set; }
+
     public DateOnly? ExpectedHarvestStart { get; set; }
 
     public DateOnly? ExpectedHarvestEnd { get; set; }
@@ -38,6 +40,8 @@ public partial class CropSeasonDetail
     public bool IsDeleted { get; set; }
 
     public virtual FarmingCommitmentsDetail CommitmentDetail { get; set; }
+
+    public virtual Crop Crop { get; set; }
 
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 
