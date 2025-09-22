@@ -424,31 +424,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy ví của người dùng.");
                 }
 
-                // Cập nhật số dư ví
-                var now = DateHelper.NowVietnamTime();
-                wallet.TotalBalance += amount;
-                wallet.LastUpdated = now;
-                await _unitOfWork.WalletRepository.UpdateAsync(wallet);
+                // Sử dụng WalletTransactionService để tự động tạo transaction
+                var walletTransactionService = new WalletTransactionService(_unitOfWork);
+                var transactionResult = await walletTransactionService.CreateAutoTransactionAsync(
+                    wallet.WalletId, 
+                    amount, 
+                    "DirectTopup", 
+                    description ?? "Nạp tiền trực tiếp (Test)"
+                );
 
-                // Tạo wallet transaction record
-                var walletTransaction = new WalletTransaction
+                if (transactionResult.Status != Const.SUCCESS_CREATE_CODE)
                 {
-                    TransactionId = Guid.NewGuid(),
-                    WalletId = wallet.WalletId,
-                    PaymentId = null, // Không có payment cho direct topup
-                    Amount = amount,
-                    TransactionType = "DirectTopup",
-                    Description = description ?? "Nạp tiền trực tiếp (Test)",
-                    CreatedAt = now,
-                    IsDeleted = false
-                };
+                    return transactionResult;
+                }
 
-                await _unitOfWork.WalletTransactionRepository.CreateAsync(walletTransaction);
-                await _unitOfWork.SaveChangesAsync();
+                // Lấy lại ví để có số dư mới nhất
+                var updatedWallet = await _unitOfWork.WalletRepository.GetByIdAsync(wallet.WalletId);
 
                 return new ServiceResult(Const.SUCCESS_UPDATE_CODE, "Nạp tiền trực tiếp thành công", new { 
                     Amount = amount,
-                    NewBalance = wallet.TotalBalance
+                    NewBalance = updatedWallet?.TotalBalance ?? wallet.TotalBalance,
+                    Transaction = transactionResult.Data
                 });
             }
             catch (Exception ex)

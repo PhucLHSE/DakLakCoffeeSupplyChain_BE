@@ -10,8 +10,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
 {
     public interface IWalletTransactionRepository : IGenericRepository<WalletTransaction>
     {
+        // Specific methods only
         Task<IEnumerable<WalletTransaction>> GetByWalletIdAsync(Guid walletId);
-        Task<double> GetTotalAmountByWalletIdAsync(Guid walletId);
-        Task<IEnumerable<WalletTransaction>> GetByWalletIdAndTypeAsync(Guid walletId, string transactionType);
     }
 }
