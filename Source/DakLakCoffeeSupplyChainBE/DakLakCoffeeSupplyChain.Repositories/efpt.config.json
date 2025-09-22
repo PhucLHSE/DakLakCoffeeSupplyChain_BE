@@ -56,6 +56,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[Crops]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[CropSeasonDetails]",
          "ObjectType": 0
       },

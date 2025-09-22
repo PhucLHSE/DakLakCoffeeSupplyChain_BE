@@ -15,6 +15,10 @@ public partial class CultivationRegistrationsDetail
 
     public Guid PlanDetailId { get; set; }
 
+    public Guid? CropId { get; set; }
+
+    public double? RegisteredArea { get; set; }
+
     public double? EstimatedYield { get; set; }
 
     public DateOnly? ExpectedHarvestStart { get; set; }
@@ -40,6 +44,8 @@ public partial class CultivationRegistrationsDetail
     public bool IsDeleted { get; set; }
 
     public virtual BusinessManager ApprovedByNavigation { get; set; }
+
+    public virtual Crop Crop { get; set; }
 
     public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetails { get; set; } = new List<FarmingCommitmentsDetail>();
 

@@ -31,9 +31,13 @@ public partial class Farmer
 
     public bool IsDeleted { get; set; }
 
+    public virtual ICollection<Crop> CropCreatedByNavigations { get; set; } = new List<Crop>();
+
     public virtual ICollection<CropProgress> CropProgresses { get; set; } = new List<CropProgress>();
 
     public virtual ICollection<CropSeason> CropSeasons { get; set; } = new List<CropSeason>();
+
+    public virtual ICollection<Crop> CropUpdatedByNavigations { get; set; } = new List<Crop>();
 
     public virtual ICollection<CultivationRegistration> CultivationRegistrations { get; set; } = new List<CultivationRegistration>();
 

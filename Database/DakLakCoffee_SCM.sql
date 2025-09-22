@@ -264,6 +264,36 @@ CREATE TABLE CoffeeTypes (
 
 GO
 
+-- Bảng Crops (Nguồn gốc cho từng loại cà phê)
+CREATE TABLE Crops (
+    CropID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    CropCode VARCHAR(20) UNIQUE,                              -- CROP-2025-0001
+    
+    -- Địa chỉ DakLak
+    Address NVARCHAR(500),                                    -- Địa chỉ cụ thể
+    
+    -- Thông tin nguồn gốc bổ sung
+    FarmName NVARCHAR(200),                                   -- Tên trang trại
+    CropArea DECIMAL(10, 2),                                  -- Diện tích crop (ha)
+    
+    -- Trạng thái
+    Status NVARCHAR(50) DEFAULT 'Active',                     -- Active, Inactive, Harvested, Processed, Sold
+
+    -- Metadata
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+    CreatedBy UNIQUEIDENTIFIER,                               -- FK đến Farmers
+    UpdatedBy UNIQUEIDENTIFIER,                               -- FK đến Farmers
+    IsDeleted BIT DEFAULT 0,
+    
+    CONSTRAINT FK_Crops_CreatedBy 
+        FOREIGN KEY (CreatedBy) REFERENCES Farmers(FarmerID),
+    CONSTRAINT FK_Crops_UpdatedBy 
+        FOREIGN KEY (UpdatedBy) REFERENCES Farmers(FarmerID)
+);
+
+GO
+
 -- Contracts – Hợp đồng B2B giữa doanh nghiệp bán và bên mua
 CREATE TABLE Contracts (
   ContractID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),          -- Mã hợp đồng
@@ -406,7 +436,7 @@ CREATE TABLE ProcurementPlansDetails (
 	CoffeeTypeID UNIQUEIDENTIFIER NOT NULL,                                            -- Liên kết loại cà phê chính xác
 	ProcessMethodID INT,													           -- Phương thức sơ chế
     TargetQuantity FLOAT,                                                              -- Sản lượng mong muốn (Kg hoặc tấn)
-    TargetRegion NVARCHAR(100),                                                        -- Khu vực thu mua chính: ví dụ "Cư M’gar"
+    TargetRegion NVARCHAR(2000),                                                       -- Khu vực thu mua chính: ví dụ "Cư M’gar"
     MinimumRegistrationQuantity FLOAT,                                                 -- Số lượng tối thiểu để nông dân đăng ký (Kg)
     MinPriceRange FLOAT,                                                               -- Giá tối thiểu có thể thương lượng
     MaxPriceRange FLOAT,                                                               -- Giá tối đa có thể thương lượng
@@ -441,7 +471,7 @@ CREATE TABLE CultivationRegistrations (
 	RegistrationCode VARCHAR(20) UNIQUE,                           -- REG-2025-0001
     PlanID UNIQUEIDENTIFIER NOT NULL,                              -- Kế hoạch thu mua
     FarmerID UNIQUEIDENTIFIER NOT NULL,                            -- Nông dân nộp đơn
-    RegisteredArea FLOAT,                                          -- Diện tích đăng ký (Hecta)
+    RegisteredArea FLOAT,                                          -- Tổng Diện tích đăng ký (Hecta)
     RegisteredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,      -- Thời điểm nộp đơn
     TotalWantedPrice FLOAT,                                        -- Tổng mức giá mong muốn
     Status NVARCHAR(50) DEFAULT 'Pending',                         -- Trạng thái: Pending, Approved,...
@@ -466,6 +496,8 @@ CREATE TABLE CultivationRegistrationsDetail (
     CultivationRegistrationDetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(), -- ID chi tiết đơn đăng ký
     RegistrationID UNIQUEIDENTIFIER NOT NULL,                                     -- FK đến đơn chính
     PlanDetailID UNIQUEIDENTIFIER NOT NULL,                                       -- FK đến loại cây cụ thể
+    CropID UNIQUEIDENTIFIER NULL,
+    RegisteredArea FLOAT,
     EstimatedYield FLOAT,                                                         -- Sản lượng ước tính (Kg)
     ExpectedHarvestStart DATE,                                                    -- Ngày bắt đầu thu hoạch
     ExpectedHarvestEnd DATE,                                                      -- Ngày kết thúc thu hoạch
@@ -487,7 +519,10 @@ CREATE TABLE CultivationRegistrationsDetail (
         FOREIGN KEY (PlanDetailID) REFERENCES ProcurementPlansDetails(PlanDetailsID),
 
     CONSTRAINT FK_CultivationRegistrationsDetail_ApprovedBy 
-        FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID)
+        FOREIGN KEY (ApprovedBy) REFERENCES BusinessManagers(ManagerID),
+
+    CONSTRAINT FK_CultivationRegistrationsDetail_CropID 
+    FOREIGN KEY (CropID) REFERENCES Crops(CropID)
 );
 
 GO
@@ -618,6 +653,7 @@ CREATE TABLE CropSeasonDetails (
     DetailID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),             -- ID chi tiết mùa vụ
     CropSeasonID UNIQUEIDENTIFIER NOT NULL,                            -- FK đến mùa vụ
     CommitmentDetailID UNIQUEIDENTIFIER NOT NULL,                      -- FK đến chi tiết cam kết, lấy coffeeTypeID từ đây
+    CropID UNIQUEIDENTIFIER NULL,                                           -- FK đến vùng trồng
     ExpectedHarvestStart DATE,                                         -- Ngày bắt đầu thu hoạch dự kiến
     ExpectedHarvestEnd DATE,                                           -- Ngày kết thúc thu hoạch dự kiến
     EstimatedYield FLOAT,                                              -- Sản lượng dự kiến
@@ -635,7 +671,10 @@ CREATE TABLE CropSeasonDetails (
 	    FOREIGN KEY (CropSeasonID) REFERENCES CropSeasons(CropSeasonID),
 
     CONSTRAINT FK_CropSeasonDetails_CommitmentDetailID
-        FOREIGN KEY (CommitmentDetailID) REFERENCES FarmingCommitmentsDetails (CommitmentDetailID)
+        FOREIGN KEY (CommitmentDetailID) REFERENCES FarmingCommitmentsDetails (CommitmentDetailID),
+
+    CONSTRAINT FK_CropSeasonDetails_CropID 
+        FOREIGN KEY (CropID) REFERENCES Crops(CropID)
 );
 
 GO
