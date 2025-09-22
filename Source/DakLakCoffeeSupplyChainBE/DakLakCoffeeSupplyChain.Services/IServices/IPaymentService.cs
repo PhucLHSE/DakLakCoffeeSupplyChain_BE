@@ -39,6 +39,17 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="userId">User ID</param>
         /// <returns>Payment object</returns>
         Payment CreatePaymentRecord(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId);
+        
+        /// <summary>
+        /// Tạo Payment record với txnRef cụ thể
+        /// </summary>
+        /// <param name="planId">Plan ID</param>
+        /// <param name="paymentConfig">Payment configuration</param>
+        /// <param name="userEmail">User email</param>
+        /// <param name="userId">User ID</param>
+        /// <param name="txnRef">Transaction reference</param>
+        /// <returns>Payment object</returns>
+        Payment CreatePaymentRecordWithTxnRef(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId, string txnRef);
 
         /// <summary>
         /// Lưu Payment vào database
@@ -74,5 +85,20 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="paymentConfig">Payment configuration</param>
         /// <returns>Task</returns>
         Task ProcessMockIpnAsync(Guid planId, string txnRef, PaymentConfiguration paymentConfig);
+        
+        /// <summary>
+        /// Lấy hoặc tạo ví System (Admin wallet)
+        /// </summary>
+        /// <returns>System wallet</returns>
+        Task<Wallet> GetOrCreateSystemWalletAsync();
+        
+        /// <summary>
+        /// Cộng tiền vào ví System khi thanh toán phí thành công
+        /// </summary>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="amount">Số tiền</param>
+        /// <param name="description">Mô tả</param>
+        /// <returns>Task</returns>
+        Task AddToSystemWalletAsync(Guid paymentId, double amount, string description);
     }
 }

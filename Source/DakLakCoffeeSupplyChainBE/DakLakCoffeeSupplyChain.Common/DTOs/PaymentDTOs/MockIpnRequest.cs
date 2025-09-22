@@ -19,3 +19,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs
         public string? TxnRef { get; set; }
     }
 }
+
