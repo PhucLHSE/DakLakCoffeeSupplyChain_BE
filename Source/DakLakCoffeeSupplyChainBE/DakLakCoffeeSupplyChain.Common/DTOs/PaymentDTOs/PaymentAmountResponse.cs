@@ -21,3 +21,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs
         public string Description { get; set; } = string.Empty;
     }
 }
+

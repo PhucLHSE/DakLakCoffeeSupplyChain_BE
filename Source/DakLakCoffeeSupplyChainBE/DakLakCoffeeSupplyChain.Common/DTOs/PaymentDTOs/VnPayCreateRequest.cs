@@ -24,3 +24,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs
         public string? Locale { get; set; } = "vn";
     }
 }
+
