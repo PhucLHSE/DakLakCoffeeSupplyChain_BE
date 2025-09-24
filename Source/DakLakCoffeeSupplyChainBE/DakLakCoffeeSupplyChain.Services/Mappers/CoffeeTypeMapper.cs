@@ -21,7 +21,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 SpecialtyLevel = entity.SpecialtyLevel,
                 Status = EnumHelper.ParseEnumFromString(entity.Status,CoffeeTypeStatus.Unknown),
                 CoffeeTypeCategory = entity.CoffeeTypeCategory,
-                CoffeeTypeParentId = entity.CoffeeTypeParentId
+                CoffeeTypeParentId = entity.CoffeeTypeParentId,
+                CoffeeTypeParentName = entity.CoffeeTypeParent?.TypeName
             };
         }
         // Mapper CoffeeTypeCreateDto
