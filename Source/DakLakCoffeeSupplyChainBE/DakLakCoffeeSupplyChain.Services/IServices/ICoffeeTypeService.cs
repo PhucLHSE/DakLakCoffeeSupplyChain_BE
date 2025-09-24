@@ -11,5 +11,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> DeleteById(Guid typeId);
         Task<IServiceResult> Create(CoffeeTypeCreateDto coffeeTypeDto);
         Task<IServiceResult> Update(CoffeeTypeUpdateDto coffeeTypeDto);
+        Task<IServiceResult> UpdateStatus(CoffeeTypeUpdateStatusDto coffeeTypeDto);
     }
 }
