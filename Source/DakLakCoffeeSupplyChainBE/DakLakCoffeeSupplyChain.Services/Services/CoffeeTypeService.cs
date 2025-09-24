@@ -6,6 +6,7 @@ using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
+using Microsoft.EntityFrameworkCore;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -19,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Truy vấn tất cả coffee type từ repository
             var coffeeTypes = await _unitOfWork.CoffeeTypeRepository.GetAllAsync(
                 predicate: u => u.IsDeleted != true,
+                include: c => c.Include(c => c.CoffeeTypeParent),
                 orderBy: u => u.OrderBy(u => u.TypeCode),
                 asNoTracking: true
             );
@@ -52,6 +54,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm tài coffee type theo ID
             var type = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
                 predicate: u => u.CoffeeTypeId == typeId,
+                include: c => c.Include ( c => c.CoffeeTypeParent),
                 asNoTracking: true
             );
 
@@ -245,6 +248,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         "Coffee type không tồn tại."
                     );
                 }
+
+                // Đây là trường hợp nếu coffee có category là general thì set null cho parentID
+                if (coffeeTypeDto.CoffeeTypeParentId == Guid.Empty)
+                    coffeeTypeDto.CoffeeTypeParentId = null;
 
                 //Map DTO to Entity
                 coffeeTypeDto.MapToUpdateCoffeeType(coffeeType);
