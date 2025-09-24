@@ -118,5 +118,7 @@ namespace DakLakCoffeeSupplyChain.Repositories.UnitOfWork
         IPaymentRepository PaymentRepository { get; }
 
         IPaymentConfigurationRepository PaymentConfigurationRepository { get; }
+
+        ICropRepository CropRepository { get; }
     }
 }
