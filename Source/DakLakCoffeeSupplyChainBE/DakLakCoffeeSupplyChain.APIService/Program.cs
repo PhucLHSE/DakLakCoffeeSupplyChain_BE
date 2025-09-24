@@ -97,7 +97,7 @@ builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IProcessingWasteService, ProcessingWasteService>();
 builder.Services.AddScoped<IProcessingWasteDisposalService, ProcessingWasteDisposalService>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
-
+builder.Services.AddScoped<ICropService, CropService>();
 builder.Services.AddScoped<IPaymentConfigurationService, PaymentConfigurationService>();
 builder.Services.AddScoped<IShipmentDetailService, ShipmentDetailService>();
 builder.Services.AddScoped<IUploadService, UploadService>();
@@ -178,6 +178,7 @@ static IEdmModel GetEdmModel()
     odataBuilder.EntitySet<WarehouseOutboundRequest>("WarehouseOutboundRequest");
     odataBuilder.EntitySet<WarehouseOutboundReceipt>("WarehouseOutboundReceipt");
     odataBuilder.EntitySet<Shipment>("Shipment");
+    odataBuilder.EntitySet<Crop>("Crop");
 
     return odataBuilder.GetEdmModel();
 }

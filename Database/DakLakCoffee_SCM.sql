@@ -258,6 +258,7 @@ CREATE TABLE CoffeeTypes (
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   IsDeleted BIT NOT NULL DEFAULT 0                                -- 0 = chưa xoá, 1 = đã xoá mềm
 
+  -- FOREIGN KEYS
   CONSTRAINT FK_CoffeeTypes_CoffeeTypeParentID FOREIGN KEY (CoffeeTypeParentID) 
       REFERENCES CoffeeTypes(CoffeeTypeID),
 );
@@ -274,7 +275,7 @@ CREATE TABLE Crops (
     
     -- Thông tin nguồn gốc bổ sung
     FarmName NVARCHAR(200),                                   -- Tên trang trại
-    CropArea DECIMAL(10, 2),                                  -- Diện tích crop (ha)
+    CropArea DECIMAL(10,2),                                   -- Diện tích crop (ha)
     
     -- Trạng thái
     Status NVARCHAR(50) DEFAULT 'Active',                     -- Active, Inactive, Harvested, Processed, Sold
@@ -284,10 +285,12 @@ CREATE TABLE Crops (
     UpdatedAt DATETIME DEFAULT GETDATE(),
     CreatedBy UNIQUEIDENTIFIER,                               -- FK đến Farmers
     UpdatedBy UNIQUEIDENTIFIER,                               -- FK đến Farmers
-    IsDeleted BIT DEFAULT 0,
+    IsDeleted BIT DEFAULT 0,                                  -- 0 = chưa xoá, 1 = đã xoá mềm
     
+	-- FOREIGN KEYS
     CONSTRAINT FK_Crops_CreatedBy 
         FOREIGN KEY (CreatedBy) REFERENCES Farmers(FarmerID),
+
     CONSTRAINT FK_Crops_UpdatedBy 
         FOREIGN KEY (UpdatedBy) REFERENCES Farmers(FarmerID)
 );
