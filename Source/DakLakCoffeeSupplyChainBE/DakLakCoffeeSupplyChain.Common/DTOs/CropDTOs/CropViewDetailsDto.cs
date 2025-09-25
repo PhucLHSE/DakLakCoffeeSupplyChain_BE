@@ -1,4 +1,4 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,8 +31,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         public Guid? UpdatedBy { get; set; }
 
-        public string CreatedByName { get; set; } = "N/A";
+        public bool? IsDeleted { get; set; }
 
-        public string UpdatedByName { get; set; } = "N/A";
+        // Navigation properties
+        public string? CreatedByName { get; set; }
+
+        public string? UpdatedByName { get; set; }
     }
 }

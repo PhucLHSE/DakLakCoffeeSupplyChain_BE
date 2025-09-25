@@ -49,9 +49,41 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = crop.UpdatedAt,
                 CreatedBy = crop.CreatedBy,
                 UpdatedBy = crop.UpdatedBy,
-                CreatedByName = crop.CreatedByNavigation?.User?.Name ?? "N/A",
-                UpdatedByName = crop.UpdatedByNavigation?.User?.Name ?? "N/A"
+                IsDeleted = crop.IsDeleted,
+                CreatedByName = crop.CreatedByNavigation?.User?.Name,
+                UpdatedByName = crop.UpdatedByNavigation?.User?.Name
             };
+        }
+
+        // Mapper CropCreateDto -> Crop
+        public static Crop MapToCrop(this CropCreateDto dto, Guid createdBy, string cropCode)
+        {
+            return new Crop
+            {
+                CropId = Guid.NewGuid(),
+                CropCode = cropCode, // Được truyền từ service
+                Address = dto.Address,
+                FarmName = dto.FarmName,
+                CropArea = dto.CropArea,
+                Status = dto.Status.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = createdBy,
+                UpdatedBy = createdBy,
+                IsDeleted = false
+            };
+        }
+
+        // Mapper CropUpdateDto -> Crop (for update)
+        public static void MapToCrop(this CropUpdateDto dto, Crop crop, Guid updatedBy)
+        {
+            crop.CropCode = dto.CropCode;
+            crop.Address = dto.Address;
+            crop.FarmName = dto.FarmName;
+            crop.CropArea = dto.CropArea;
+            crop.Status = dto.Status.ToString();
+            crop.UpdatedAt = DateTime.UtcNow;
+            crop.UpdatedBy = updatedBy;
         }
     }
 }
