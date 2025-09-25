@@ -158,8 +158,6 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
         public async Task<string> GenerateProcurementPlanDetailsCodeAsync()
         {
             // Đếm số procurement plan detail tạo trong năm
-            //var count = await _unitOfWork.ProcurementPlanDetailsRepository
-                //.CountProcurementPlanDetailsInYearAsync(CurrentYear);
 
             string prefix = $"PLD-{CurrentYear}-";
 
@@ -482,8 +480,9 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
             var next = 1;
             if (!string.IsNullOrWhiteSpace(lastCode))
             {
-                var seg = lastCode.Split('-').Last();
-                if (int.TryParse(seg, out var n)) next = n + 1;
+                var parts = lastCode.Split('-');
+                if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out var n)) 
+                    next = n + 1;
             }
             return $"{prefix}{next:0000}";
         }
@@ -495,6 +494,17 @@ namespace DakLakCoffeeSupplyChain.Services.Generators
                 .CountExpertsRegisteredInYearAsync(CurrentYear);
 
             return $"EXP-{CurrentYear}-{(count + 1):D4}";
+        }
+
+        public async Task<string> GenerateCropCodeAsync()
+        {
+            // Đếm số crop tạo trong năm hiện tại
+            var count = await _unitOfWork.CropRepository
+                .GetAllQueryable()
+                .CountAsync(c => c.CreatedAt.Value.Year == CurrentYear && c.IsDeleted != true);
+
+            // Trả về mã có dạng: CROP-2025-0001
+            return $"CROP-{CurrentYear}-{(count + 1):D4}";
         }
     }
 }

@@ -63,5 +63,7 @@
         Task<string> GenerateProcessingWasteDisposalCodeAsync();
 
         Task<string> GenerateEvaluationCodeAsync(int year);
+
+        Task<string> GenerateCropCodeAsync();
     }
 }
