@@ -28,5 +28,30 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = status
             };
         }
+
+        // Mapper Crop -> CropViewDetailsDto
+        public static CropViewDetailsDto MapToCropViewDetailsDto(this Crop crop)
+        {
+            // Parse string to enum
+            CropStatus status = Enum.TryParse<CropStatus>(crop.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : CropStatus.Other;
+
+            return new CropViewDetailsDto
+            {
+                CropId = crop.CropId,
+                CropCode = crop.CropCode ?? string.Empty,
+                Address = crop.Address ?? string.Empty,
+                FarmName = crop.FarmName ?? string.Empty,
+                CropArea = crop.CropArea,
+                Status = status,
+                CreatedAt = crop.CreatedAt,
+                UpdatedAt = crop.UpdatedAt,
+                CreatedBy = crop.CreatedBy,
+                UpdatedBy = crop.UpdatedBy,
+                CreatedByName = crop.CreatedByNavigation?.User?.Name ?? "N/A",
+                UpdatedByName = crop.UpdatedByNavigation?.User?.Name ?? "N/A"
+            };
+        }
     }
 }

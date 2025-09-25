@@ -75,5 +75,59 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
         }
+
+        public async Task<IServiceResult> GetById(Guid cropId, Guid userId)
+        {
+            // Lấy Farmer hiện tại từ userId
+            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                predicate: f =>
+                   f.UserId == userId &&
+                   !f.IsDeleted,
+                asNoTracking: true
+            );
+
+            if (farmer == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Farmer tương ứng với tài khoản."
+                );
+            }
+
+            // Tìm Crop theo ID
+            var crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                predicate: c =>
+                   c.CropId == cropId &&
+                   c.CreatedBy == farmer.FarmerId &&
+                   c.IsDeleted == false,
+                include: query => query
+                   .Include(c => c.CreatedByNavigation)
+                      .ThenInclude(cbn => cbn.User)
+                   .Include(c => c.UpdatedByNavigation)
+                      .ThenInclude(cbn => cbn.User),
+                asNoTracking: true
+            );
+
+            // Kiểm tra nếu không tìm thấy crop
+            if (crop == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    Const.WARNING_NO_DATA_MSG,
+                    new CropViewDetailsDto()  // Trả về DTO rỗng
+                );
+            }
+            else
+            {
+                // Map sang DTO chi tiết để trả về
+                var cropDto = crop.MapToCropViewDetailsDto();
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    Const.SUCCESS_READ_MSG,
+                    cropDto
+                );
+            }
+        }
     }
 }
