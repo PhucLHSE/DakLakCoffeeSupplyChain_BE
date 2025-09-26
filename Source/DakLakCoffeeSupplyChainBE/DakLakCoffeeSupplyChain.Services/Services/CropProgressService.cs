@@ -18,14 +18,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICropSeasonService _cropSeasonService;
+        private readonly ICropService _cropService;
         
         // Constants for stage codes
         private const string HARVESTING_STAGE_CODE = "harvesting";
 
-        public CropProgressService(IUnitOfWork unitOfWork, ICropSeasonService cropSeasonService)
+        public CropProgressService(IUnitOfWork unitOfWork, ICropSeasonService cropSeasonService, ICropService cropService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _cropSeasonService = cropSeasonService ?? throw new ArgumentNullException(nameof(cropSeasonService));
+            _cropService = cropService ?? throw new ArgumentNullException(nameof(cropService));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false)
@@ -596,6 +598,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     // Auto update CropSeason status
                     await _cropSeasonService.AutoUpdateCropSeasonStatusAsync(detail.CropSeasonId);
+
+                    // Auto transition Crop status when crop season detail is completed
+                    if (newStatus == CropDetailStatus.Completed)
+                    {
+                        await AutoTransitionCropStatusAsync(cropSeasonDetailId);
+                    }
                 }
             }
             catch (Exception ex)
@@ -624,6 +632,30 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // TODO: Replace with proper logging framework
                 Console.WriteLine($"Error updating media URLs: {ex.Message}");
                 throw; // Re-throw as this is a public method
+            }
+        }
+
+        // Auto update crop status khi detail hoàn thành
+        private async Task AutoTransitionCropStatusAsync(Guid cropSeasonDetailId)
+        {
+            try
+            {
+                // Get crop ID từ detail
+                var cropSeasonDetail = await _unitOfWork.CropSeasonDetailRepository.GetByIdAsync(
+                    predicate: d => d.DetailId == cropSeasonDetailId && !d.IsDeleted,
+                    include: q => q.Include(d => d.Crop),
+                    asNoTracking: true
+                );
+
+                if (cropSeasonDetail?.Crop == null) return;
+
+                // Auto update crop status
+                await _cropService.AutoTransitionStatus(cropSeasonDetail.Crop.CropId);
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to avoid affecting progress creation
+                Console.WriteLine($"Error auto transitioning crop status: {ex.Message}");
             }
         }
 

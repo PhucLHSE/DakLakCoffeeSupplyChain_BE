@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = crop.Address ?? string.Empty,
                 FarmName = crop.FarmName ?? string.Empty,
                 CropArea = crop.CropArea,
-                Status = crop.Status
+                Status = crop.Status ?? "Active"
             };
         }
 
@@ -35,7 +35,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = crop.Address ?? string.Empty,
                 FarmName = crop.FarmName ?? string.Empty,
                 CropArea = crop.CropArea,
-                Status = crop.Status,
+                Status = crop.Status ?? "Active",
                 CreatedAt = crop.CreatedAt,
                 UpdatedAt = crop.UpdatedAt,
                 CreatedBy = crop.CreatedBy,
@@ -52,11 +52,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             return new Crop
             {
                 CropId = Guid.NewGuid(),
-                CropCode = cropCode, // Được truyền từ service
+                CropCode = cropCode, // From service
                 Address = dto.Address,
                 FarmName = dto.FarmName,
                 CropArea = dto.CropArea,
-                Status = dto.Status,
+                Status = "Active", // Auto set Active khi tạo mới
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy,
@@ -72,7 +72,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             crop.Address = dto.Address;
             crop.FarmName = dto.FarmName;
             crop.CropArea = dto.CropArea;
-            crop.Status = dto.Status;
+            // Status không update thủ công, auto transition theo workflow
+            // crop.Status = dto.Status;
             crop.UpdatedAt = DateTime.UtcNow;
             crop.UpdatedBy = updatedBy;
         }
