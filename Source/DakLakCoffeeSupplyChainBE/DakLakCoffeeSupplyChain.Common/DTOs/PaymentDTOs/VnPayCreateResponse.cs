@@ -9,6 +9,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs
         /// URL thanh toán VNPay
         /// </summary>
         public string Url { get; set; } = string.Empty;
+        public string PaymentId { get; set; }
     }
 }
 
