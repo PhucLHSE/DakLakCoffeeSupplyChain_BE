@@ -139,53 +139,43 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// <summary>
         /// VNPay IPN endpoint - xử lý thông báo thanh toán từ VNPay
         /// </summary>
-        [HttpPost("vnpay/ipn")]
+        [HttpGet("vnpay/ipn")]
         [AllowAnonymous]
         public async Task<IActionResult> VnPayIpn()
         {
             try
             {
-                // Lấy tất cả parameters từ VNPay
-                var vnpParams = new Dictionary<string, string>();
-                foreach (var key in Request.Form.Keys)
+                var secret = _config["VnPay:HashSecret"] ?? string.Empty;
+                var vnpParams = Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString());
+                var receivedHash = vnpParams.GetValueOrDefault("vnp_SecureHash");
+
+                if (string.IsNullOrEmpty(receivedHash))
                 {
-                    vnpParams[key] = Request.Form[key];
+                    return Ok(new { RspCode = "97", Message = "Invalid Signature" });
                 }
 
-                // Lấy thông tin cần thiết
-                var vnp_ResponseCode = vnpParams.GetValueOrDefault("vnp_ResponseCode");
-                var vnp_TxnRef = vnpParams.GetValueOrDefault("vnp_TxnRef");
-                var vnp_Amount = vnpParams.GetValueOrDefault("vnp_Amount");
-                var vnp_OrderInfo = vnpParams.GetValueOrDefault("vnp_OrderInfo");
+                vnpParams.Remove("vnp_SecureHash");
+                vnpParams.Remove("vnp_SecureHashType");
 
-                // Kiểm tra thanh toán thành công
-                if (vnp_ResponseCode == "00" && !string.IsNullOrEmpty(vnp_TxnRef))
+                var sortedParams = new SortedDictionary<string, string>(vnpParams, StringComparer.Ordinal);
+
+                // <<< THAY ĐỔI DUY NHẤT Ở DÒNG NÀY >>>
+                // Chúng ta thêm Uri.EscapeDataString(kvp.Value) để mã hóa lại các giá trị
+                var dataToHash = string.Join('&', sortedParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+
+                _logger.LogInformation("VNPay raw data to hash (re-encoded): {data}", dataToHash);
+
+                var calculatedHash = PaymentHelper.CreateHmac512(secret, dataToHash);
+
+                if (!string.Equals(receivedHash, calculatedHash, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    // Xác định loại thanh toán từ OrderInfo
-                    if (vnp_OrderInfo?.StartsWith("PlanPosting:") == true)
-                    {
-                        // Xử lý thanh toán phí kế hoạch thu mua
-                        var planIdStr = vnp_OrderInfo.Replace("PlanPosting:", "").Split(':')[0];
-                        if (Guid.TryParse(planIdStr, out var planId))
-                        {
-                            // Lấy PaymentConfiguration cho PlanPosting
-                            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(2, "PlanPosting"); // RoleID = 2 cho BusinessManager
-                            if (paymentConfig != null)
-                            {
-                                await _paymentService.ProcessMockIpnAsync(planId, vnp_TxnRef, paymentConfig);
-                                return Ok(new { RspCode = "00", Message = "Success" });
-                            }
-                        }
-                    }
-                    else if (vnp_OrderInfo?.StartsWith("WalletTopup:") == true)
-                    {
-                        // Xử lý nạp tiền ví - logic này đã có trong WalletService
-                        // Không cần xử lý ở đây vì WalletService đã handle
-                        return Ok(new { RspCode = "00", Message = "Success" });
-                    }
+                    _logger.LogWarning("VNPay IPN Invalid signature. Received: {ReceivedHash}, Calculated: {CalculatedHash}", receivedHash, calculatedHash);
+                    return Ok(new { RspCode = "97", Message = "Invalid Signature" });
                 }
 
-                return Ok(new { RspCode = "01", Message = "Order not found" });
+                var (rspCode, message) = await _paymentService.ProcessRealIpnAsync(vnpParams);
+
+                return Ok(new { RspCode = rspCode, Message = message });
             }
             catch (Exception ex)
             {
@@ -193,7 +183,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok(new { RspCode = "99", Message = "Unknown error" });
             }
         }
-
         /// <summary>
         /// Xử lý thanh toán thành công từ frontend
         /// </summary>

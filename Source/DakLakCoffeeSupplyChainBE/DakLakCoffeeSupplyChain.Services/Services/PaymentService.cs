@@ -137,6 +137,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public Payment CreatePaymentRecordWithTxnRef(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId, string txnRef)
         {
             var now = DateTime.UtcNow;
+            var paymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef;
 
             return new Payment
             {
@@ -144,19 +145,84 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Email = userEmail,
                 ConfigId = paymentConfig.ConfigId,
                 UserId = !string.IsNullOrEmpty(userId) ? Guid.Parse(userId) : null,
-                PaymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef, // Cắt 20 ký tự đầu để fit vào PaymentCode
+                PaymentCode = paymentCode,
                 PaymentAmount = (int)paymentConfig.Amount,
                 PaymentMethod = "VNPay",
                 PaymentPurpose = "PlanPosting",
-                PaymentStatus = "Success", // Chuyển thành Success ngay lập tức
-                PaymentTime = now, // Thời gian thanh toán
-                AdminVerified = false, // Chưa xác thực
+                PaymentStatus = "Pending", // <<< THAY ĐỔI TỪ "Success"
+                PaymentTime = null,      // <<< THAY ĐỔI: null vì chưa thanh toán
+                AdminVerified = false,
                 CreatedAt = now,
                 UpdatedAt = now,
                 RelatedEntityId = planId,
                 IsDeleted = false
             };
         }
+        public async Task<(string RspCode, string Message)> ProcessRealIpnAsync(Dictionary<string, string> vnpParams)
+        {
+            var vnp_TxnRef = vnpParams.GetValueOrDefault("vnp_TxnRef");
+            var vnp_ResponseCode = vnpParams.GetValueOrDefault("vnp_ResponseCode");
+            var vnp_Amount = vnpParams.GetValueOrDefault("vnp_Amount"); // Amount * 100
+            var vnp_OrderInfo = vnpParams.GetValueOrDefault("vnp_OrderInfo");
+
+            // PaymentCode được lưu trong DB có thể bị cắt ngắn
+            var paymentCode = vnp_TxnRef.Length > 20 ? vnp_TxnRef[..20] : vnp_TxnRef;
+
+            // 1. Kiểm tra đơn hàng trong DB
+            var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.PaymentCode == paymentCode && !p.IsDeleted)).FirstOrDefault();
+            if (payment == null)
+            {
+                return ("01", "Order not found");
+            }
+
+            // 2. Kiểm tra trạng thái đơn hàng (chỉ xử lý nếu đang "Pending")
+            if (payment.PaymentStatus != "Pending")
+            {
+                return ("02", "Order already confirmed");
+            }
+
+            // 3. Kiểm tra số tiền
+            var requiredAmount = (long)payment.PaymentAmount * 100;
+            if (long.Parse(vnp_Amount) != requiredAmount)
+            {
+                return ("04", "Invalid amount");
+            }
+
+            // 4. Cập nhật trạng thái giao dịch
+            if (vnp_ResponseCode == "00") // Thanh toán thành công
+            {
+                payment.PaymentStatus = "Success";
+                payment.PaymentTime = DateTime.UtcNow;
+
+                // Xử lý logic nghiệp vụ sau khi thanh toán thành công (ví dụ: cộng tiền vào ví system)
+                if (vnp_OrderInfo?.StartsWith("PlanPosting:") == true && payment.RelatedEntityId.HasValue && payment.UserId.HasValue)
+                {
+                    var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(payment.RelatedEntityId.Value);
+                    var planName = plan?.Title ?? $"Plan ID: {payment.RelatedEntityId.Value}";
+
+                    await CreatePlanPostingFeeTransactionsByMethodAsync(
+                       payment.PaymentId,
+                       payment.PaymentAmount,
+                       payment.UserId.Value,
+                       payment.RelatedEntityId.Value,
+                       planName,
+                       "VNPay"
+                   );
+                }
+            }
+            else // Thanh toán thất bại
+            {
+                payment.PaymentStatus = "Failed";
+            }
+
+            payment.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.PaymentRepository.UpdateAsync(payment);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Dù thành công hay thất bại, vẫn trả về "00" để VNPay không gửi lại IPN
+            return ("00", "Confirm Success");
+        }
+
 
         /// <summary>
         /// Lưu Payment vào database
