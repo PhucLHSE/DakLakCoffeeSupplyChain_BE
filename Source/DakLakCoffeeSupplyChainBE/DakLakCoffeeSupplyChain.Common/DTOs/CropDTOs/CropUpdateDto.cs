@@ -33,3 +33,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public CropStatus Status { get; set; } = CropStatus.Active;
     }
 }
+

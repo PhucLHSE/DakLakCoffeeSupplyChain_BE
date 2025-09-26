@@ -13,3 +13,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public Guid CropId { get; set; }
     }
 }
+
