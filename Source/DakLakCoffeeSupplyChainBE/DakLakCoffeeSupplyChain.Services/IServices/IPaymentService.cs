@@ -151,5 +151,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="description">Mô tả giao dịch</param>
         /// <returns>Kết quả thanh toán</returns>
         Task<(bool Success, string Message, string? TransactionId)> ProcessWalletPaymentAsync(Guid planId, double amount, Guid userId, string? description = null);
+        Task<(string RspCode, string Message)> ProcessRealIpnAsync(Dictionary<string, string> vnpParams);
     }
 }
