@@ -96,7 +96,11 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
         /// <returns>Transaction reference</returns>
         public static string GenerateTxnRef(Guid planId)
         {
-            return planId.ToString("N"); // 32 chars
+            // 17 ký tự thời gian (UTC tới mili giây) + 3 ký tự ngẫu nhiên + planId
+            // => 20 ký tự đầu (timestamp + random) luôn khác nhau giữa các lần gọi
+            var ts17 = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff"); // 17
+            var rand3 = Guid.NewGuid().ToString("N").Substring(0, 3); // 3
+            return $"{ts17}{rand3}{planId:N}"; // ví dụ: 20250202143015999abc439852bb9ddb4b50950f...
         }
 
         /// <summary>

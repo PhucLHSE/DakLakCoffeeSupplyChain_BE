@@ -106,7 +106,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var payment = _paymentService.CreatePaymentRecordWithTxnRef(req.PlanId, paymentConfig, userEmail, userId, txnRef);
             await _paymentService.SavePaymentAsync(payment);
 
-            return Ok(new VnPayCreateResponse { Url = url });
+            return Ok(new VnPayCreateResponse { Url = url, PaymentId = payment.PaymentId.ToString() });
         }
 
 
@@ -114,27 +114,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
         // DEV-ONLY: mock IPN to test locally without public URL
 
-        [HttpPost("vnpay/mock-ipn")]
-        [AllowAnonymous]
-        public async Task<IActionResult> MockIpn([FromBody] MockIpnRequest req)
-        {
-            // Only allow in Development or when explicitly enabled
-            var allow = _env.IsDevelopment() || string.Equals(_config["VnPay:AllowMockIpn"], "true", StringComparison.OrdinalIgnoreCase);
-            if (!allow) return Forbid();
+        //[HttpPost("vnpay/mock-ipn")]
+        //[AllowAnonymous]
+        //public async Task<IActionResult> MockIpn([FromBody] MockIpnRequest req)
+        //{
+        //    // Only allow in Development or when explicitly enabled
+        //    var allow = _env.IsDevelopment() || string.Equals(_config["VnPay:AllowMockIpn"], "true", StringComparison.OrdinalIgnoreCase);
+        //    if (!allow) return Forbid();
 
-            var txnRef = string.IsNullOrWhiteSpace(req.TxnRef) ? req.PlanId.ToString("N") : req.TxnRef!;
+        //    var txnRef = string.IsNullOrWhiteSpace(req.TxnRef) ? req.PlanId.ToString("N") : req.TxnRef!;
 
-            // Lấy PaymentConfiguration cho PlanPosting (MockIpn thường dùng cho BusinessManager)
-            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(2, "PlanPosting"); // RoleID = 2 cho BusinessManager
-            if (paymentConfig == null)
-            {
-                return BadRequest("Không tìm thấy cấu hình phí cho việc đăng ký kế hoạch thu mua.");
-            }
+        //    // Lấy PaymentConfiguration cho PlanPosting (MockIpn thường dùng cho BusinessManager)
+        //    var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(2, "PlanPosting"); // RoleID = 2 cho BusinessManager
+        //    if (paymentConfig == null)
+        //    {
+        //        return BadRequest("Không tìm thấy cấu hình phí cho việc đăng ký kế hoạch thu mua.");
+        //    }
 
-            // Process MockIpn using service
-            await _paymentService.ProcessMockIpnAsync(req.PlanId, txnRef, paymentConfig);
-            return Ok(new { message = "Mock IPN applied", txnRef });
-        }
+        //    // Process MockIpn using service
+        //    await _paymentService.ProcessMockIpnAsync(req.PlanId, txnRef, paymentConfig);
+        //    return Ok(new { message = "Mock IPN applied", txnRef });
+        //}
 
         /// <summary>
         /// VNPay IPN endpoint - xử lý thông báo thanh toán từ VNPay
@@ -146,35 +146,28 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             try
             {
                 var secret = _config["VnPay:HashSecret"] ?? string.Empty;
-                var vnpParams = Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString());
-                var receivedHash = vnpParams.GetValueOrDefault("vnp_SecureHash");
 
+                // CHỈ LẤY THAM SỐ BẮT ĐẦU BẰNG "vnp_"
+                var all = Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString());
+                var vnpParams = all
+                    .Where(kv => kv.Key.StartsWith("vnp_", StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(k => k.Key, v => v.Value);
+
+                var receivedHash = vnpParams.GetValueOrDefault("vnp_SecureHash");
                 if (string.IsNullOrEmpty(receivedHash))
-                {
                     return Ok(new { RspCode = "97", Message = "Invalid Signature" });
-                }
 
                 vnpParams.Remove("vnp_SecureHash");
                 vnpParams.Remove("vnp_SecureHashType");
 
-                var sortedParams = new SortedDictionary<string, string>(vnpParams, StringComparer.Ordinal);
+                var sorted = new SortedDictionary<string, string>(vnpParams, StringComparer.Ordinal);
+                var dataToHash = string.Join('&', sorted.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+                var calc = PaymentHelper.CreateHmac512(secret, dataToHash);
 
-                // <<< THAY ĐỔI DUY NHẤT Ở DÒNG NÀY >>>
-                // Chúng ta thêm Uri.EscapeDataString(kvp.Value) để mã hóa lại các giá trị
-                var dataToHash = string.Join('&', sortedParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
-
-                _logger.LogInformation("VNPay raw data to hash (re-encoded): {data}", dataToHash);
-
-                var calculatedHash = PaymentHelper.CreateHmac512(secret, dataToHash);
-
-                if (!string.Equals(receivedHash, calculatedHash, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    _logger.LogWarning("VNPay IPN Invalid signature. Received: {ReceivedHash}, Calculated: {CalculatedHash}", receivedHash, calculatedHash);
+                if (!string.Equals(receivedHash, calc, StringComparison.InvariantCultureIgnoreCase))
                     return Ok(new { RspCode = "97", Message = "Invalid Signature" });
-                }
 
                 var (rspCode, message) = await _paymentService.ProcessRealIpnAsync(vnpParams);
-
                 return Ok(new { RspCode = rspCode, Message = message });
             }
             catch (Exception ex)
@@ -186,48 +179,48 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         /// <summary>
         /// Xử lý thanh toán thành công từ frontend
         /// </summary>
-        [HttpPost("process-payment-success")]
-        [Authorize(Roles = "BusinessManager,Admin")]
-        public async Task<IActionResult> ProcessPaymentSuccess([FromBody] ProcessPaymentSuccessRequest req)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(req.TxnRef) || string.IsNullOrEmpty(req.OrderInfo))
-                {
-                    return BadRequest("Thiếu thông tin giao dịch");
-                }
+        //[HttpPost("process-payment-success")]
+        //[Authorize(Roles = "BusinessManager,Admin")]
+        //public async Task<IActionResult> ProcessPaymentSuccess([FromBody] ProcessPaymentSuccessRequest req)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrEmpty(req.TxnRef) || string.IsNullOrEmpty(req.OrderInfo))
+        //        {
+        //            return BadRequest("Thiếu thông tin giao dịch");
+        //        }
 
-                // Xác định loại thanh toán từ OrderInfo
-                if (req.OrderInfo.StartsWith("PlanPosting:"))
-                {
-                    // Xử lý thanh toán phí kế hoạch thu mua
-                    var planIdStr = req.OrderInfo.Replace("PlanPosting:", "").Split(':')[0];
-                    if (Guid.TryParse(planIdStr, out var planId))
-                    {
-                        // Lấy PaymentConfiguration cho PlanPosting
-                        var userRoleId = _paymentService.GetCurrentUserRoleId();
-                        if (userRoleId == null)
-                        {
-                            return BadRequest("Không thể xác định vai trò của người dùng.");
-                        }
+        //        // Xác định loại thanh toán từ OrderInfo
+        //        if (req.OrderInfo.StartsWith("PlanPosting:"))
+        //        {
+        //            // Xử lý thanh toán phí kế hoạch thu mua
+        //            var planIdStr = req.OrderInfo.Replace("PlanPosting:", "").Split(':')[0];
+        //            if (Guid.TryParse(planIdStr, out var planId))
+        //            {
+        //                // Lấy PaymentConfiguration cho PlanPosting
+        //                var userRoleId = _paymentService.GetCurrentUserRoleId();
+        //                if (userRoleId == null)
+        //                {
+        //                    return BadRequest("Không thể xác định vai trò của người dùng.");
+        //                }
 
-                        var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting");
-                        if (paymentConfig != null)
-                        {
-                            await _paymentService.ProcessMockIpnAsync(planId, req.TxnRef, paymentConfig);
-                            return Ok(new { message = "Thanh toán đã được xử lý thành công", planId });
-                        }
-                    }
-                }
+        //                var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting");
+        //                if (paymentConfig != null)
+        //                {
+        //                    await _paymentService.ProcessMockIpnAsync(planId, req.TxnRef, paymentConfig);
+        //                    return Ok(new { message = "Thanh toán đã được xử lý thành công", planId });
+        //                }
+        //            }
+        //        }
 
-                return BadRequest("Không thể xử lý loại thanh toán này");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing payment success");
-                return StatusCode(500, "Có lỗi xảy ra khi xử lý thanh toán");
-            }
-        }
+        //        return BadRequest("Không thể xử lý loại thanh toán này");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error processing payment success");
+        //        return StatusCode(500, "Có lỗi xảy ra khi xử lý thanh toán");
+        //    }
+        //}
 
         /// <summary>
         /// Xử lý thanh toán qua ví nội bộ
@@ -346,6 +339,74 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return Ok(new VnPayCreateResponse { Url = url });
         }
+        [HttpGet("{planId}/payment-status")]
+        [Authorize(Roles = "BusinessManager,Admin")]
+        public async Task<IActionResult> GetPaymentStatus(Guid planId)
+        {
+            // Tìm bản ghi thanh toán tương ứng trong database
+            var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p =>
+                p.RelatedEntityId == planId &&
+                p.PaymentPurpose == "PlanPosting"
+            )).FirstOrDefault();
+
+            if (payment == null)
+            {
+                // Nếu không tìm thấy, tức là chưa có thanh toán nào được tạo
+                return Ok(new
+                {
+                    hasPayment = false,
+                    paymentStatus = "Not Found",
+                    message = "Chưa có thanh toán nào cho kế hoạch này."
+                });
+            }
+
+            // Nếu tìm thấy, trả về trạng thái của thanh toán đó
+            return Ok(new
+            {
+                hasPayment = true,
+                paymentStatus = payment.PaymentStatus, // "Pending", "Success", hoặc "Failed"
+                message = "Đã tìm thấy thông tin thanh toán.",
+                paymentTime = payment.PaymentTime
+            });
+        }
+        [HttpGet("vnpay/return")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VnPayReturn()
+        {
+            try
+            {
+                var secret = _config["VnPay:HashSecret"] ?? string.Empty;
+
+                // CHỈ LẤY THAM SỐ vnp_
+                var all = Request.Query.ToDictionary(k => k.Key, v => v.Value.ToString());
+                var vnpParams = all
+                    .Where(kv => kv.Key.StartsWith("vnp_", StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(k => k.Key, v => v.Value);
+
+                var receivedHash = vnpParams.GetValueOrDefault("vnp_SecureHash");
+                if (string.IsNullOrEmpty(receivedHash))
+                    return BadRequest(new { code = "97", message = "Invalid Signature" });
+
+                vnpParams.Remove("vnp_SecureHash");
+                vnpParams.Remove("vnp_SecureHashType");
+
+                var sorted = new SortedDictionary<string, string>(vnpParams, StringComparer.Ordinal);
+                var dataToHash = string.Join('&', sorted.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+                var calc = PaymentHelper.CreateHmac512(secret, dataToHash);
+
+                if (!string.Equals(receivedHash, calc, StringComparison.InvariantCultureIgnoreCase))
+                    return BadRequest(new { code = "97", message = "Invalid Signature" });
+
+                var (rspCode, message) = await _paymentService.ProcessRealIpnAsync(vnpParams);
+                return Ok(new { code = rspCode, message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing VNPay return");
+                return StatusCode(500, new { code = "99", message = "Unknown error" });
+            }
+        }
+
     }
 }
 

@@ -1,4 +1,5 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
+using DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
@@ -9,13 +10,15 @@ using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class ProcurementPlanService(IUnitOfWork unitOfWork, ICodeGenerator planCodeGenerator) : IProcurementPlanService
+    public class ProcurementPlanService(IUnitOfWork unitOfWork, ICodeGenerator planCodeGenerator, ILogger<ProcurementPlanService> logger) : IProcurementPlanService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         private readonly ICodeGenerator _planCode = planCodeGenerator ?? throw new ArgumentNullException(nameof(planCodeGenerator));
+        private readonly ILogger<ProcurementPlanService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         //Hiển thị toàn bộ plan đang mở ở màn hình public
         public async Task<IServiceResult> GetAllProcurementPlansAvailable()
@@ -469,11 +472,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         existingPlanDetail.Status = itemDto.Status.ToString() != "Unknown" ? itemDto.Status.ToString() : existingPlanDetail.Status;
                         existingPlanDetail.UpdatedAt = now;
 
-                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(existingPlanDetail);                        
+                        await _unitOfWork.ProcurementPlanDetailsRepository.UpdateAsync(existingPlanDetail);
                     }
 
                     // Tạo plan detail mới nếu có
-                    if(itemDto.PlanDetailsId  == Guid.Empty || !itemDto.PlanDetailsId.HasValue)
+                    if (itemDto.PlanDetailsId == Guid.Empty || !itemDto.PlanDetailsId.HasValue)
                     {
                         string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
                         var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
@@ -502,38 +505,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
                     }
 
-                // Tạo plan detail mới nếu có
-                //if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
-                //{
-                //    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
-                //    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
-                //    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
-                //    {
-                //        var newDetail = new ProcurementPlansDetail
-                //        {
-                //            PlanDetailsId = Guid.NewGuid(),
-                //            PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
-                //            CoffeeTypeId = detailDto.CoffeeTypeId,
-                //            ProcessMethodId = detailDto.ProcessMethodId,
-                //            TargetQuantity = detailDto.TargetQuantity,
-                //            TargetRegion = detailDto.TargetRegion,
-                //            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
-                //            MinPriceRange = detailDto.MinPriceRange,
-                //            MaxPriceRange = detailDto.MaxPriceRange,
-                //            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
-                //            Note = detailDto.Note,
-                //            Status = ProcurementPlanDetailsStatus.Active.ToString(),
-                //            ContractItemId = detailDto.ContractItemId,
-                //            CreatedAt = now,
-                //            UpdatedAt = now
-                //        };
+                    // Tạo plan detail mới nếu có
+                    //if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
+                    //{
+                    //    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
+                    //    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
+                    //    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
+                    //    {
+                    //        var newDetail = new ProcurementPlansDetail
+                    //        {
+                    //            PlanDetailsId = Guid.NewGuid(),
+                    //            PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
+                    //            CoffeeTypeId = detailDto.CoffeeTypeId,
+                    //            ProcessMethodId = detailDto.ProcessMethodId,
+                    //            TargetQuantity = detailDto.TargetQuantity,
+                    //            TargetRegion = detailDto.TargetRegion,
+                    //            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
+                    //            MinPriceRange = detailDto.MinPriceRange,
+                    //            MaxPriceRange = detailDto.MaxPriceRange,
+                    //            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
+                    //            Note = detailDto.Note,
+                    //            Status = ProcurementPlanDetailsStatus.Active.ToString(),
+                    //            ContractItemId = detailDto.ContractItemId,
+                    //            CreatedAt = now,
+                    //            UpdatedAt = now
+                    //        };
 
-                //        count++;
-                //        plan.ProcurementPlansDetails.Add(newDetail);
-                //        plan.TotalQuantity += detailDto.TargetQuantity;
+                    //        count++;
+                    //        plan.ProcurementPlansDetails.Add(newDetail);
+                    //        plan.TotalQuantity += detailDto.TargetQuantity;
 
-                //        await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
-                //    }
+                    //        await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
+                    //    }
                 }
 
                 // Save data to database
@@ -585,12 +588,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         // Kiểm tra trạng thái thanh toán của kế hoạch
+        // Thay toàn bộ method CheckPaymentStatus bằng bản dưới:
         public async Task<IServiceResult> CheckPaymentStatus(Guid planId)
         {
             try
             {
-                var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
-                    .OrderByDescending(p => p.CreatedAt)
+                _logger.LogInformation("Checking payment status for PlanId: {PlanId}", planId);
+
+                // Lấy tất cả payment của PlanPosting cho plan này
+                var payments = await _unitOfWork.PaymentRepository.GetAllAsync(
+                    p => p.RelatedEntityId == planId
+                         && p.PaymentPurpose == "PlanPosting"
+                         && !p.IsDeleted,
+                    asNoTracking: true
+                );
+
+                // Ưu tiên bản ghi Success, sau đó theo thời điểm cập nhật/thanh toán
+                var payment = payments
+                    .OrderByDescending(p => p.PaymentStatus == "Success") // true > false
+                    .ThenByDescending(p => p.PaymentTime ?? p.UpdatedAt)   // PaymentTime có thể null
+                    .ThenByDescending(p => p.CreatedAt)
                     .FirstOrDefault();
 
                 if (payment == null)
@@ -598,28 +615,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
                         "Chưa có giao dịch thanh toán nào cho kế hoạch này.",
-                        new
-                        {
-                            hasPayment = false,
-                            paymentStatus = "None",
-                            message = "Vui lòng thanh toán để mở kế hoạch."
-                        }
+                        new PaymentResponseDto()
                     );
                 }
 
-                var isPaid = payment.PaymentStatus == "Success";
-                var message = isPaid ? "Kế hoạch đã được thanh toán thành công." : "Kế hoạch chưa được thanh toán thành công.";
+                var responseDto = new PaymentResponseDto
+                {
+                    PaymentID = payment.PaymentId,
+                    Email = payment.Email,
+                    PaymentPurpose = payment.PaymentPurpose,
+                    PaymentStatus = payment.PaymentStatus,
+                    PaymentCode = payment.PaymentCode,
+                    CheckoutUrl = string.Empty
+                };
 
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
-                    message,
-                    new
-                    {
-                        hasPayment = true,
-                        paymentStatus = payment.PaymentStatus,
-                        paymentTime = payment.PaymentTime,
-                        message = isPaid ? "Có thể mở kế hoạch." : "Vui lòng thanh toán để mở kế hoạch."
-                    }
+                    "Lấy trạng thái thanh toán thành công.",
+                    responseDto
                 );
             }
             catch (Exception ex)
@@ -628,32 +641,39 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
+
         public async Task<IServiceResult> UpdateStatus(ProcurementPlanUpdateStatusDto dto, Guid userId, Guid planId)
         {
             try
             {
-                //Lấy plan
+                // Lấy plan
                 var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                     predicate: p => p.PlanId == planId && !p.IsDeleted,
-                    include: p => p.
-                        Include(p => p.CreatedByNavigation).
-                        Include(p => p.ProcurementPlansDetails)
-                        );
+                    include: p => p
+                        .Include(p => p.CreatedByNavigation)
+                        .Include(p => p.ProcurementPlansDetails)
+                );
 
                 if (plan == null || plan.CreatedByNavigation.UserId != userId)
+                {
                     return new ServiceResult(
                         Const.WARNING_NO_DATA_CODE,
                         "Không tìm thấy kế hoạch hoặc không thuộc quyền quản lý."
                     );
+                }
 
-                // Kiểm tra thanh toán nếu muốn mở kế hoạch
+                // Chỉ cho phép mở khi đã có ÍT NHẤT một thanh toán PlanPosting thành công
                 if (dto.Status.ToString() == "Open")
                 {
-                    var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => p.RelatedEntityId == planId))
-                        .OrderByDescending(p => p.CreatedAt)
-                        .FirstOrDefault();
+                    var isPaid = (await _unitOfWork.PaymentRepository.GetAllAsync(
+                        predicate: p => p.RelatedEntityId == planId
+                                     && p.PaymentPurpose == "PlanPosting"
+                                     && p.PaymentStatus == "Success"
+                                     && !p.IsDeleted,
+                        asNoTracking: true
+                    )).Any();
 
-                    if (payment == null || payment.PaymentStatus != "Success")
+                    if (!isPaid)
                     {
                         return new ServiceResult(
                             Const.FAIL_READ_CODE,
@@ -662,36 +682,46 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                 }
 
-                plan.StartDate = dto.Status.ToString() == "Open" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.StartDate;
-                // Sau khi cập nhật StartDate, nếu như StartDate sau endDate thì nên set EndDate về null)
+                // Cập nhật mốc thời gian theo trạng thái
+                plan.StartDate = dto.Status.ToString() == "Open"
+                    ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime()
+                    : plan.StartDate;
+
                 if (dto.Status.ToString() == "Open" && plan.StartDate > plan.EndDate)
                     plan.EndDate = null;
-                plan.EndDate = dto.Status.ToString() == "Closed" ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime() : plan.EndDate;
+
+                plan.EndDate = dto.Status.ToString() == "Closed"
+                    ? DateHelper.ParseDateOnlyFormatVietNamCurrentTime()
+                    : plan.EndDate;
 
                 plan.Status = dto.Status.ToString();
                 plan.UpdatedAt = DateHelper.NowVietnamTime();
 
                 await _unitOfWork.ProcurementPlanRepository.UpdateAsync(plan);
                 var result = await _unitOfWork.SaveChangesAsync();
+
                 if (result > 0)
                 {
                     var updatedPlan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
                         predicate: p => p.PlanId == plan.PlanId,
-                        include: p => p.
-                        Include(p => p.CreatedByNavigation).
-                        Include(p => p.ProcurementPlansDetails).
-                            ThenInclude(d => d.CoffeeType).
-                        Include(p => p.ProcurementPlansDetails).
-                            ThenInclude(d => d.ProcessMethod),
+                        include: p => p
+                            .Include(p => p.CreatedByNavigation)
+                            .Include(p => p.ProcurementPlansDetails)
+                                .ThenInclude(d => d.CoffeeType)
+                            .Include(p => p.ProcurementPlansDetails)
+                                .ThenInclude(d => d.ProcessMethod),
                         asNoTracking: true
-                        );
+                    );
 
                     if (updatedPlan == null)
+                    {
                         return new ServiceResult(
-                                Const.WARNING_NO_DATA_CODE,
-                                Const.WARNING_NO_DATA_MSG,
-                                new ProcurementPlanViewDetailsSumaryDto() //Trả về DTO rỗng
-                            );
+                            Const.WARNING_NO_DATA_CODE,
+                            Const.WARNING_NO_DATA_MSG,
+                            new ProcurementPlanViewDetailsSumaryDto()
+                        );
+                    }
+
                     var responseDto = updatedPlan.MapToProcurementPlanViewDetailsDto();
 
                     return new ServiceResult(
@@ -700,21 +730,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         responseDto
                     );
                 }
-                else
-                {
-                    return new ServiceResult(
-                        Const.FAIL_UPDATE_CODE,
-                        Const.FAIL_UPDATE_MSG
-                    );
-                }
+
+                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
             }
             catch (Exception ex)
             {
-                return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    ex.ToString()
-                );
+                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
             }
         }
     }
-}
+    }

@@ -302,101 +302,101 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         /// <param name="txnRef">Transaction reference</param>
         /// <param name="paymentConfig">Payment configuration</param>
         /// <returns>Task</returns>
-        public async Task ProcessMockIpnAsync(Guid planId, string txnRef, PaymentConfiguration paymentConfig)
-        {
-            // Tìm payment bằng RelatedEntityId (planId) thay vì PaymentCode để tránh conflict
-            var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => 
-                p.RelatedEntityId == planId && 
-                p.PaymentPurpose == "PlanPosting" && 
-                !p.IsDeleted)).FirstOrDefault();
-            var now = DateTime.UtcNow;
-            var isNewPayment = false;
+        //public async Task ProcessMockIpnAsync(Guid planId, string txnRef, PaymentConfiguration paymentConfig)
+        //{
+        //    // Tìm payment bằng RelatedEntityId (planId) thay vì PaymentCode để tránh conflict
+        //    var payment = (await _unitOfWork.PaymentRepository.GetAllAsync(p => 
+        //        p.RelatedEntityId == planId && 
+        //        p.PaymentPurpose == "PlanPosting" && 
+        //        !p.IsDeleted)).FirstOrDefault();
+        //    var now = DateTime.UtcNow;
+        //    var isNewPayment = false;
 
-            if (payment == null)
-            {
-                // Lấy UserId từ plan
-                var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-                var userId = plan?.CreatedBy;
+        //    if (payment == null)
+        //    {
+        //        // Lấy UserId từ plan
+        //        var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+        //        var userId = plan?.CreatedBy;
 
-                // Cắt txnRef xuống 20 ký tự để fit vào PaymentCode
-                var paymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef;
+        //        // Cắt txnRef xuống 20 ký tự để fit vào PaymentCode
+        //        var paymentCode = txnRef.Length > 20 ? txnRef[..20] : txnRef;
 
-                // Create new payment
-                payment = new DakLakCoffeeSupplyChain.Repositories.Models.Payment
-                {
-                    PaymentId = Guid.NewGuid(),
-                    Email = string.Empty,
-                    ConfigId = paymentConfig.ConfigId,
-                    UserId = userId, // Lưu UserId từ plan
-                    PaymentCode = paymentCode, // Sử dụng paymentCode đã cắt
-                    PaymentAmount = (int)paymentConfig.Amount,
-                    PaymentMethod = "VNPay",
-                    PaymentPurpose = "PlanPosting",
-                    PaymentStatus = "Success", // Sử dụng "Success" để match với logic check
-                    PaymentTime = now,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                    RelatedEntityId = planId,
-                    IsDeleted = false
-                };
-                await _unitOfWork.PaymentRepository.CreateAsync(payment);
-                isNewPayment = true;
-            }
-            else
-            {
-                // Update existing payment
-                payment.PaymentStatus = "Success"; // Sử dụng "Success" để match với logic check
-                payment.PaymentTime = now;
-                payment.UpdatedAt = now;
-                await _unitOfWork.PaymentRepository.UpdateAsync(payment);
-            }
+        //        // Create new payment
+        //        payment = new DakLakCoffeeSupplyChain.Repositories.Models.Payment
+        //        {
+        //            PaymentId = Guid.NewGuid(),
+        //            Email = string.Empty,
+        //            ConfigId = paymentConfig.ConfigId,
+        //            UserId = userId, // Lưu UserId từ plan
+        //            PaymentCode = paymentCode, // Sử dụng paymentCode đã cắt
+        //            PaymentAmount = (int)paymentConfig.Amount,
+        //            PaymentMethod = "VNPay",
+        //            PaymentPurpose = "PlanPosting",
+        //            PaymentStatus = "Success", // Sử dụng "Success" để match với logic check
+        //            PaymentTime = now,
+        //            CreatedAt = now,
+        //            UpdatedAt = now,
+        //            RelatedEntityId = planId,
+        //            IsDeleted = false
+        //        };
+        //        await _unitOfWork.PaymentRepository.CreateAsync(payment);
+        //        isNewPayment = true;
+        //    }
+        //    else
+        //    {
+        //        // Update existing payment
+        //        payment.PaymentStatus = "Success"; // Sử dụng "Success" để match với logic check
+        //        payment.PaymentTime = now;
+        //        payment.UpdatedAt = now;
+        //        await _unitOfWork.PaymentRepository.UpdateAsync(payment);
+        //    }
 
-            await _unitOfWork.SaveChangesAsync();
+        //    await _unitOfWork.SaveChangesAsync();
 
-            // Tạo Wallet Transactions dựa trên phương thức thanh toán
-            if (isNewPayment || payment.PaymentStatus == "Success")
-            {
-                // Lấy thông tin user từ payment hoặc từ plan
-                var userId = payment.UserId ?? Guid.Empty;
+        //    // Tạo Wallet Transactions dựa trên phương thức thanh toán
+        //    if (isNewPayment || payment.PaymentStatus == "Success")
+        //    {
+        //        // Lấy thông tin user từ payment hoặc từ plan
+        //        var userId = payment.UserId ?? Guid.Empty;
                 
-                // Nếu không có userId từ payment, lấy từ plan
-                if (userId == Guid.Empty)
-                {
-                    var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-                    userId = plan?.CreatedBy ?? Guid.Empty;
-                }
+        //        // Nếu không có userId từ payment, lấy từ plan
+        //        if (userId == Guid.Empty)
+        //        {
+        //            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+        //            userId = plan?.CreatedBy ?? Guid.Empty;
+        //        }
 
-                if (userId != Guid.Empty)
-                {
-                    // Lấy tên kế hoạch để hiển thị
-                    var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-                    var planName = plan?.Title ?? $"Plan ID: {planId}";
+        //        if (userId != Guid.Empty)
+        //        {
+        //            // Lấy tên kế hoạch để hiển thị
+        //            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+        //            var planName = plan?.Title ?? $"Plan ID: {planId}";
                     
-                    // Tạo transaction cho cả Admin và User (nếu cần)
-                    await CreatePlanPostingFeeTransactionsByMethodAsync(
-                        payment.PaymentId,
-                        payment.PaymentAmount,
-                        userId,
-                        planId,
-                        planName,
-                        payment.PaymentMethod // Truyền phương thức thanh toán
-                    );
-                }
-                else
-                {
-                    // Lấy tên kế hoạch để hiển thị
-                    var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
-                    var planName = plan?.Title ?? $"Plan ID: {planId}";
+        //            // Tạo transaction cho cả Admin và User (nếu cần)
+        //            await CreatePlanPostingFeeTransactionsByMethodAsync(
+        //                payment.PaymentId,
+        //                payment.PaymentAmount,
+        //                userId,
+        //                planId,
+        //                planName,
+        //                payment.PaymentMethod // Truyền phương thức thanh toán
+        //            );
+        //        }
+        //        else
+        //        {
+        //            // Lấy tên kế hoạch để hiển thị
+        //            var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(planId);
+        //            var planName = plan?.Title ?? $"Plan ID: {planId}";
                     
-                    // Fallback: chỉ cộng vào ví System nếu không tìm thấy user
-                    await AddToSystemWalletAsync(
-                        payment.PaymentId, 
-                        payment.PaymentAmount, 
-                        $"Thu phí đăng ký kế hoạch thu mua - {planName}"
-                    );
-                }
-            }
-        }
+        //            // Fallback: chỉ cộng vào ví System nếu không tìm thấy user
+        //            await AddToSystemWalletAsync(
+        //                payment.PaymentId, 
+        //                payment.PaymentAmount, 
+        //                $"Thu phí đăng ký kế hoạch thu mua - {planName}"
+        //            );
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// Lấy hoặc tạo ví System (Admin wallet)
