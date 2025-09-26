@@ -21,7 +21,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public decimal? CropArea { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public CropStatus Status { get; set; } = CropStatus.Other;
+        public CropStatus Status { get; set; } = CropStatus.Active;
 
         public DateTime? CreatedAt { get; set; }
 
@@ -33,7 +33,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         public bool? IsDeleted { get; set; }
 
-        // Navigation properties
         public string? CreatedByName { get; set; }
 
         public string? UpdatedByName { get; set; }

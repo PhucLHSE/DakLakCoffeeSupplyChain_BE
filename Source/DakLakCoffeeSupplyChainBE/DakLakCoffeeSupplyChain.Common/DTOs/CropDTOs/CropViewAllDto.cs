@@ -14,11 +14,13 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         public string CropCode { get; set; } = string.Empty;
 
+        public string Address { get; set; } = string.Empty;
+
         public string FarmName { get; set; } = string.Empty;
 
         public decimal? CropArea { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public CropStatus Status { get; set; } = CropStatus.Other;
+        public CropStatus Status { get; set; } = CropStatus.Active;
     }
 }

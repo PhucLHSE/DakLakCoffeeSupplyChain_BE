@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Models;
 
@@ -19,7 +20,7 @@ public partial class Crop
 
     public decimal? CropArea { get; set; }
 
-    public string Status { get; set; }
+    public CropStatus Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
