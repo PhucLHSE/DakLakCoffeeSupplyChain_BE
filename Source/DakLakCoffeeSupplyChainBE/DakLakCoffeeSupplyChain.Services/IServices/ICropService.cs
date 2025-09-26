@@ -15,5 +15,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> Create(CropCreateDto dto, Guid userId);
         Task<IServiceResult> Update(CropUpdateDto dto, Guid userId);
         Task<IServiceResult> Delete(Guid cropId, Guid userId);
+        Task<IServiceResult> TransitionStatus(Guid cropId, string targetStatus);
+        Task<IServiceResult> AutoTransitionStatus(Guid cropId);
     }
 }
