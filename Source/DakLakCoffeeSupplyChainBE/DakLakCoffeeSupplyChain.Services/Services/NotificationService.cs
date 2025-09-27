@@ -536,6 +536,43 @@ public class NotificationService : INotificationService
         return notification;
     }
 
+    public async Task<SystemNotification> NotifyManagerCommitmentCouldNotBeAcceptAsync(
+        Guid recipientId, Guid senderId, string farmerName, string content)
+    {
+        var title = "Nông dân không thể chấp nhận cam kết của bạn";
+        var message = $"Nông dân {farmerName} đã đồng ý cam kết với bạn {content}";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "CouldNotAcceptCommitment",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = senderId
+        };
+
+        await _unitOfWork.SystemNotificationRepository
+            .CreateAsync(notification);
+
+        var recipient = new SystemNotificationRecipient
+        {
+            Id = Guid.NewGuid(),
+            NotificationId = notification.NotificationId,
+            RecipientId = recipientId,
+            IsRead = false,
+            ReadAt = null
+        };
+
+        await _unitOfWork.SystemNotificationRecipientRepository
+            .CreateAsync(recipient);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
     public async Task<SystemNotification> NotifyExpertAdviceCreatedAsync(
         Guid reportId, Guid expertId, string expertName, string adviceText)
     {

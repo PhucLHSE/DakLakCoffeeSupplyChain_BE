@@ -864,21 +864,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Cập nhật trạng thái và lý do từ DTO
                 commitment.Status = dto.Status.ToString();
                 // Nếu trạng thái là Completed thì cập nhật cam kết
-                foreach(var cropSeason in commitment.CropSeasons)
-                {
-                    if (commitment.CropSeasons == null || commitment.CropSeasons.Count == 0)
+                if (commitment.CropSeasons == null || commitment.CropSeasons.Count == 0)
+                    return new ServiceResult(Const.FAIL_UPDATE_CODE,
+                            "Cam kết này chưa có mùa vụ nào nên không thể hoàn thành được.");
+
+                bool hasUnfinishedSeason = commitment.CropSeasons.Any(c => !c.IsDeleted && !c.Status.Equals("Completed"));
+
+                if (hasUnfinishedSeason)
+                    if (dto.Status == FarmingCommitmentStatus.Completed)
                         return new ServiceResult(Const.FAIL_UPDATE_CODE,
-                                "Cam kết này chưa có mùa vụ nào nên không thể hoàn thành được.");
-
-                    bool hasUnfinishedSeason = commitment.CropSeasons.Any(c => !c.IsDeleted && !c.Status.Equals("Completed"));
-
-                    if (hasUnfinishedSeason)
-                        if (dto.Status == FarmingCommitmentStatus.Completed)
-                            return new ServiceResult(Const.FAIL_UPDATE_CODE, 
-                                "Cam kết này chưa có mùa vụ nào hoặc vẫn còn mùa vụ chưa hoàn thành nên không thể hoàn thành được.");
-                }
-                if (dto.Status == FarmingCommitmentStatus.Completed)
-                    commitment.ApprovedAt = DateTime.UtcNow;
+                            "Cam kết này vẫn còn mùa vụ chưa hoàn thành nên không thể hoàn thành được.");
 
                 var commitmentDetails = await _unitOfWork.FarmingCommitmentsDetailRepository.GetAllAsync(
                     predicate: d => d.CommitmentId == commitmentId && !d.IsDeleted
@@ -974,7 +969,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Lấy commitment theo ID và kiểm tra quyền truy cập
                 var commitment = await _unitOfWork.FarmingCommitmentRepository.GetByIdAsync(
-                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted
+                    predicate: c => c.CommitmentId == commitmentId && !c.IsDeleted,
+                    include: fc => fc.Include(fc => fc.Registration).ThenInclude(fc => fc.CultivationRegistrationsDetails)
                 );
                 if (commitment == null)
                 {
@@ -1013,6 +1009,86 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         Const.WARNING_NO_DATA_CODE,
                         "Không tìm thấy kế hoạch tương ứng."
                     );
+
+                var cropIdsInDetails = commitment.Registration.CultivationRegistrationsDetails
+                    .Select(d => d.CropId)
+                    .Where(id => id != Guid.Empty)
+                    .Distinct()
+                    .ToList();
+                if (cropIdsInDetails.Count == 0)
+                    return new ServiceResult(
+                           Const.WARNING_NO_DATA_CODE,
+                           "Không lấy được vùng trồng."
+                       );
+
+                var crops = await _unitOfWork.CropRepository.GetAllAsync(
+                    predicate: c => cropIdsInDetails.Contains(c.CropId) && c.CreatedBy == farmer.FarmerId && c.IsDeleted != true,
+                    asNoTracking: true
+                );
+
+                // Lấy tất cả commitments đã được approve mà chưa hoàn thành của farmer (để tính diện tích đang được dùng)
+                var approvedCommitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                    predicate: fc => fc.FarmerId == farmer.FarmerId && fc.ApprovedAt != null && !fc.Status.Equals("Completed"),
+                    include: fc => fc.Include(fc => fc.FarmingCommitmentsDetails).ThenInclude(fc => fc.RegistrationDetail),
+                    asNoTracking: true
+                );
+
+                foreach (var cropId in cropIdsInDetails)
+                {
+                    var crop = crops.Single(c => c.CropId == cropId);
+                    // Nếu CropArea có thể null, đảm bảo gán 0
+                    double cropArea = crop.CropArea.HasValue ? (double)crop.CropArea.Value : 0.0;
+
+                    // Tổng diện tích đã dùng bởi các commitment đã approve
+                    double usedByCommitments = 0.0;
+                    if (approvedCommitments != null && approvedCommitments.Count != 0)
+                    {
+                        usedByCommitments = approvedCommitments
+                            .SelectMany(ac => ac.FarmingCommitmentsDetails ?? Enumerable.Empty<FarmingCommitmentsDetail>())
+                            .Where(d => d.RegistrationDetail.CropId == cropId)
+                            .Sum(d => (double?)d.RegistrationDetail.RegisteredArea ?? 0.0);
+                    }
+
+                    double available = cropArea - usedByCommitments;
+                    if (available < 0) available = 0;
+
+                    // Diện tích đang yêu cầu trong đơn mới cho crop này
+                    double requested = commitment.Registration.CultivationRegistrationsDetails
+                        .Where(d => d.CropId == cropId)
+                        .Sum(d => (double?)d.RegisteredArea ?? 0.0);
+                    if (requested > available && dto.Status.ToString().Equals("Rejected"))
+                    {
+                        commitment.Registration.Status = "Rejected";
+                        foreach(var detail in commitment.Registration.CultivationRegistrationsDetails)
+                        {
+                            detail.Status = "Rejected";
+                            await _unitOfWork.CultivationRegistrationsDetailRepository.UpdateAsync(detail);
+                        }
+                        await _unitOfWork.CultivationRegistrationRepository.UpdateAsync(commitment.Registration);
+                    }
+                    if (requested > available && dto.Status.ToString().Equals("Active"))
+                    {
+                        await _notify.NotifyManagerCommitmentCouldNotBeAcceptAsync(
+                            plan.CreatedByNavigation.UserId,
+                            farmer.User.UserId,
+                            farmer.User.Name,
+                            $"về cam kết {commitment.CommitmentName} nhưng vì diện tích vùng trồng đăng ký của họ đã bị đăng ký sử dụng hết hoặc gần hết. \n" +
+                            $"Cụ thể thì Diện tích vùng trồng có diện tích là {cropArea}ha, đã đăng ký sử dụng hết {usedByCommitments}ha. \n " +
+                            $"Diện tích còn lại: {available}ha, diện tích đang đăng ký: {requested}ha. \n" +
+                            $"Cam kết này không thể duyệt được nữa, nông dân sẽ phải tạo lại phiếu đăng ký và nhập diện tích của vùng trồng {crop.FarmName} ít hơn hoặc chọn vùng trồng khác."
+                            );
+
+                        return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            $"Tổng diện tích đăng ký cho vùng trồng '{crop.FarmName ?? crop.CropId.ToString()}' vượt quá diện tích còn lại.\n " +
+                            $"Diện tích vùng trồng: {cropArea}ha, đã sử dụng: {usedByCommitments}ha,\n " +
+                            $"Diện tích còn lại: {available}ha, diện tích đang đăng ký: {requested}ha. \n" +
+                            $"Cam kết này không thể duyệt được nữa, bạn hãy bấm từ chối để được cấp lại số lần tạo đơn đăng ký cho kế hoạch của cam kết này. \n" +
+                            $"Thông báo này cũng sẽ được gửi cho doanh nghiệp."
+                        );
+                    }
+                }
+
                 foreach (var detail in commitmentDetails)
                 {
                     // Nếu trạng thái là Approved thì cập nhật thông tin phê duyệt
