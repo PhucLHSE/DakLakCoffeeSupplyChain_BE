@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.FarmingCommitmentEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
@@ -54,7 +55,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ExpectedHarvestStart = detail.ExpectedHarvestStart,
                     ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
                     Status = EnumHelper.ParseEnumFromString(detail.Status, CultivationRegistrationStatus.Unknown),
-                    Note = detail.Note
+                    Note = detail.Note,
+                    Crop = new CropViewAllDto{
+                        CropId = detail.Crop?.CropId ?? Guid.Empty,
+                        CropCode = detail.Crop?.CropCode ?? "",
+                        FarmName = detail.Crop?.FarmName ?? "",
+                        Address = detail.Crop?.Address ?? "",
+                        CropArea = detail.Crop?.CropArea ?? 0
+                    }
                 })]
             };
         }
@@ -101,7 +109,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RegistrationCode = registrationCode,
                 PlanId = dto.PlanId,
                 FarmerId = farmerId,
-                RegisteredArea = dto.RegisteredArea,
+                RegisteredArea = 0,
                 TotalWantedPrice = 0, // Vì sql không có khai báo mặc định nên buộc phải khai báo ở đây
                 Status = CultivationRegistrationStatus.Pending.ToString(), // Mặc định gán vào luôn, farmer không có lựa chọn
                 Note = dto.Note,
@@ -110,6 +118,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 .Select(detail => new CultivationRegistrationsDetail
                 {
                     CultivationRegistrationDetailId = Guid.NewGuid(),
+                    CropId = detail.CropId,
+                    RegisteredArea = detail.RegisteredArea,
                     PlanDetailId = detail.PlanDetailId,
                     EstimatedYield = detail.EstimatedYield,
                     WantedPrice = detail.WantedPrice,

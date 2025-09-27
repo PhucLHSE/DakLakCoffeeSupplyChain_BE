@@ -5,6 +5,10 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 {
     public class CultivationRegistrationDetailsCreateViewDto : IValidatableObject
     {
+        [Required(ErrorMessage = "Vùng trồng chưa được chọn.")]
+        public Guid CropId { get; set; }
+        [Required(ErrorMessage = "Diện tích trồng đăng ký chưa được chọn.")]
+        public double RegisteredArea { get; set; }
         [Required(ErrorMessage = "Kế hoạch chi tiết chưa được chọn.")]
         public Guid PlanDetailId { get; set; }
         [Required(ErrorMessage = "Sản lượng cam kết không được phép để trống")]

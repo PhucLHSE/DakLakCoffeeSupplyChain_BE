@@ -1,4 +1,5 @@
-﻿using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CultivationRegistrationEnums;
 using System.Text.Json.Serialization;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
@@ -22,5 +23,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
         public CultivationRegistrationStatus Status { get; set; }
 
         public string Note { get; set; } = string.Empty;
+
+        public CropViewAllDto? Crop { get; set; }
     }
 }

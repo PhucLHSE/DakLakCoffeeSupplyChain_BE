@@ -1,12 +1,14 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
 using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using System.Numerics;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
@@ -113,6 +115,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Include(c => c.CultivationRegistrationsDetails).
                         ThenInclude(c => c.PlanDetail).
                             ThenInclude(c => c.CoffeeType).
+                    Include(c => c.CultivationRegistrationsDetails).
+                        ThenInclude(c => c.Crop).
                     Include(c => c.FarmingCommitment),
                 orderBy: c => c.OrderBy(c => c.RegistrationCode),
                 asNoTracking: true);
@@ -148,6 +152,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     Include(c => c.CultivationRegistrationsDetails).
                         ThenInclude(c => c.PlanDetail).
                             ThenInclude(c => c.CoffeeType).
+                    Include(c => c.CultivationRegistrationsDetails).
+                        ThenInclude(c => c.Crop).
                     Include(c => c.FarmingCommitment),
                 orderBy: c => c.OrderBy(c => c.RegistrationCode),
                 asNoTracking: true);
@@ -314,6 +320,75 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             "Kế hoạch thu mua được chọn không tồn tại hoặc không còn mở"
                         );
 
+                //Validate crops
+                var cropIdsInDetails = newCultivationRegistration.CultivationRegistrationsDetails
+                    .Select(d => d.CropId)
+                    .Where(id => id != Guid.Empty)
+                    .Distinct()
+                    .ToList();
+                if (cropIdsInDetails.Count == 0)
+                    return new ServiceResult(
+                           Const.WARNING_NO_DATA_CODE,
+                           "Không lấy được vùng trồng."
+                       );
+
+                var crops = await _unitOfWork.CropRepository.GetAllAsync(
+                    predicate: c => cropIdsInDetails.Contains(c.CropId) && c.CreatedBy == farmer.FarmerId && c.IsDeleted != true,
+                    asNoTracking: true
+                );
+
+                // Lấy tất cả commitments đã được approve mà chưa hoàn thành của farmer (để tính diện tích đang được dùng)
+                var approvedCommitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                    predicate: fc => fc.FarmerId == farmer.FarmerId && fc.ApprovedAt != null && !fc.Status.Equals("Completed"),
+                    include: fc => fc.Include(fc => fc.FarmingCommitmentsDetails).ThenInclude(fc => fc.RegistrationDetail),
+                    asNoTracking: true
+                );
+
+                foreach (var cropId in cropIdsInDetails)
+                {
+                    var crop = crops.Single(c => c.CropId == cropId);
+                    // Nếu CropArea có thể null, đảm bảo gán 0
+                    double cropArea = crop.CropArea.HasValue ? (double)crop.CropArea.Value : 0.0;
+
+                    // Tổng diện tích đã dùng bởi các commitment đã approve
+                    double usedByCommitments = 0.0;
+                    if (approvedCommitments != null && approvedCommitments.Count != 0)
+                    {
+                        usedByCommitments = approvedCommitments
+                            .SelectMany(ac => ac.FarmingCommitmentsDetails ?? Enumerable.Empty<FarmingCommitmentsDetail>())
+                            .Where(d => d.RegistrationDetail.CropId == cropId)
+                            .Sum(d => (double?)d.RegistrationDetail.RegisteredArea ?? 0.0);
+                    }
+
+                    // Tổng diện tích đã "đang được giữ" bởi các registration khác (status != Rejected)
+                    //double usedByRegistrations = 0.0;
+                    //if (existingRegistrations != null && existingRegistrations.Any())
+                    //{
+                    //    usedByRegistrations = existingRegistrations
+                    //        .SelectMany(r => r.CultivationRegistrationsDetails ?? Enumerable.Empty<CultivationRegistrationDetail>())
+                    //        .Where(d => d.CropId == cropId)
+                    //        .Sum(d => (double?)d.RegisteredArea ?? 0.0);
+                    //}
+
+                    double available = cropArea - usedByCommitments;
+                    if (available < 0) available = 0;
+
+                    // Diện tích đang yêu cầu trong đơn mới cho crop này
+                    double requested = newCultivationRegistration.CultivationRegistrationsDetails
+                        .Where(d => d.CropId == cropId)
+                        .Sum(d => (double?)d.RegisteredArea ?? 0.0);
+
+                    if (requested > available)
+                    {
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE,
+                            $"Tổng diện tích đăng ký cho vùng trồng '{crop.FarmName ?? crop.CropId.ToString()}' vượt quá diện tích còn lại.\n " +
+                            $"Diện tích vùng trồng: {cropArea}ha, đã sử dụng: {usedByCommitments}ha,\n " +
+                            $"Diện tích còn lại: {available}ha, diện tích đang đăng ký: {requested}ha."
+                        );
+                    }
+                }
+
                 // Lấy các plan detail id từ plan mẹ được chọn trong hệ thống
                 var planDetailIds = selectedProcurementPlan.ProcurementPlansDetails.Select(d => d.PlanDetailsId);
 
@@ -414,6 +489,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                     // Tổng hợp lại toàn bộ các mức giá mong muốn của từng chi tiết đơn
                     newCultivationRegistration.TotalWantedPrice += detail.WantedPrice;
+
+                    // Tổng hợp lại toàn bộ diện tích đăng ký của từng chi tiết đơn
+                    newCultivationRegistration.RegisteredArea += detail.RegisteredArea;
                 }
 
                 // Tạo người dùng ở repository
@@ -499,7 +577,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Farmer khác nếu truy cập được api này vẫn có thể update được nhưng phía UI không cho có support chuyện đó
                 // Cách này tối ưu vòng lặp nhưng dở ở logic một xíu
                 if (registrationDetail.Registration.Farmer.UserId == userId
-                        && !registrationDetail.Status.Equals("Cancelled"))
+                        //&& !registrationDetail.Status.Equals("Cancelled")
+                   )
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         "Bạn không có quyền hạn này."
@@ -515,6 +594,50 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
                         "Bạn không có quyền hạn này."
+                    );
+                }
+
+                var crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                    predicate: c => c.CropId == registrationDetail.CropId && c.IsDeleted != true,
+                    asNoTracking: true
+                );
+                if (crop == null)
+                    return new ServiceResult(
+                            Const.FAIL_UPDATE_CODE,
+                            "Không tìm thấy crop."
+                        );
+
+                // Lấy tất cả commitments đã được approve mà chưa hoàn thành của farmer (để tính diện tích đang được dùng)
+                var approvedCommitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
+                    predicate: fc => fc.FarmerId == registrationDetail.Registration.FarmerId && fc.ApprovedAt != null && !fc.Status.Equals("Completed"),
+                    include: fc => fc.Include(fc => fc.FarmingCommitmentsDetails).ThenInclude(fc => fc.RegistrationDetail),
+                    asNoTracking: true
+                );
+
+                double cropArea = crop.CropArea.HasValue ? (double)crop.CropArea.Value : 0.0;
+
+                // Tổng diện tích đã dùng bởi các commitment đã approve
+                double usedByCommitments = 0.0;
+                if (approvedCommitments != null && approvedCommitments.Count != 0)
+                {
+                    usedByCommitments = approvedCommitments
+                        .SelectMany(ac => ac.FarmingCommitmentsDetails ?? Enumerable.Empty<FarmingCommitmentsDetail>())
+                        .Where(d => d.RegistrationDetail.CropId == crop.CropId)
+                        .Sum(d => (double?)d.RegistrationDetail.RegisteredArea ?? 0.0);
+                }
+                double available = cropArea - usedByCommitments;
+                if (available < 0) available = 0;
+
+                // Diện tích đang yêu cầu trong đơn mới cho crop này
+                double? requested = registrationDetail.RegisteredArea;
+
+                if (requested > available && dto.Status.ToString().Equals("Approved"))
+                {
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        $"Tổng diện tích đăng ký cho vùng trồng '{crop.FarmName ?? crop.CropId.ToString()}' vượt quá diện tích còn lại.\n " +
+                        $"Diện tích vùng trồng: {cropArea}ha, đã sử dụng: {usedByCommitments}ha,\n " +
+                        $"Diện tích còn lại: {available}ha, diện tích đang đăng ký: {requested}ha."
                     );
                 }
 
