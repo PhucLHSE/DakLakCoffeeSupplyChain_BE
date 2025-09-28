@@ -10,12 +10,11 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 {
     public interface ICropService
     {
-        Task<IServiceResult> GetAll(Guid userId);
-        Task<IServiceResult> GetById(Guid cropId, Guid userId);
-        Task<IServiceResult> Create(CropCreateDto dto, Guid userId);
-        Task<IServiceResult> Update(CropUpdateDto dto, Guid userId);
-        Task<IServiceResult> Delete(Guid cropId, Guid userId);
-        Task<IServiceResult> TransitionStatus(Guid cropId, string targetStatus);
-        Task<IServiceResult> AutoTransitionStatus(Guid cropId);
+        Task<IServiceResult> GetAllCrops(Guid farmerUserId);
+        Task<IServiceResult> GetCropById(Guid cropId, Guid farmerUserId);
+        Task<IServiceResult> CreateCrop(CropCreateDto cropCreateDto, Guid farmerUserId);
+        Task<IServiceResult> UpdateCrop(CropUpdateDto cropUpdateDto, Guid farmerUserId);
+        Task<IServiceResult> SoftDeleteCrop(Guid cropId, Guid farmerUserId);
+        Task<IServiceResult> HardDeleteCrop(Guid cropId, Guid farmerUserId);
     }
 }

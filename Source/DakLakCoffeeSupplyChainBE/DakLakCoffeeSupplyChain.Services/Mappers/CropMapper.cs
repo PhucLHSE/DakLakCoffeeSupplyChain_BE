@@ -1,8 +1,11 @@
 ﻿using DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.ContractEnums;
 using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,6 +17,12 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         // Mapper Crop -> CropViewAllDto
         public static CropViewAllDto MapToCropViewAllDto(this Crop crop)
         {
+            // Parse Status string to enum
+            CropStatus status = Enum.TryParse<CropStatus>
+                (crop.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : CropStatus.Inactive;
+
             return new CropViewAllDto
             {
                 CropId = crop.CropId,
@@ -21,13 +30,19 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = crop.Address ?? string.Empty,
                 FarmName = crop.FarmName ?? string.Empty,
                 CropArea = crop.CropArea,
-                Status = crop.Status ?? "Active"
+                Status = status
             };
         }
 
         // Mapper Crop -> CropViewDetailsDto
         public static CropViewDetailsDto MapToCropViewDetailsDto(this Crop crop)
         {
+            // Parse Status string to enum
+            CropStatus status = Enum.TryParse<CropStatus>
+                (crop.Status, ignoreCase: true, out var parsedStatus)
+                ? parsedStatus
+                : CropStatus.Inactive;
+
             return new CropViewDetailsDto
             {
                 CropId = crop.CropId,
@@ -35,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = crop.Address ?? string.Empty,
                 FarmName = crop.FarmName ?? string.Empty,
                 CropArea = crop.CropArea,
-                Status = crop.Status ?? "Active",
+                Status = status,
                 CreatedAt = crop.CreatedAt,
                 UpdatedAt = crop.UpdatedAt,
                 CreatedBy = crop.CreatedBy,
@@ -56,9 +71,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = dto.Address,
                 FarmName = dto.FarmName,
                 CropArea = dto.CropArea,
-                Status = "Active", // Auto set Active khi tạo mới
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                Status = dto.Status.ToString(), // Auto set Active khi tạo mới
+                CreatedAt = DateHelper.NowVietnamTime(),
+                UpdatedAt = DateHelper.NowVietnamTime(),
                 CreatedBy = createdBy,
                 UpdatedBy = createdBy,
                 IsDeleted = false
@@ -74,7 +89,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             crop.CropArea = dto.CropArea;
             // Status không update thủ công, auto transition theo workflow
             // crop.Status = dto.Status;
-            crop.UpdatedAt = DateTime.UtcNow;
+            crop.UpdatedAt = DateHelper.NowVietnamTime();
             crop.UpdatedBy = updatedBy;
         }
     }
