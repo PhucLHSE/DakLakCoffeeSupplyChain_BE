@@ -1,7 +1,10 @@
-﻿using System;
+﻿using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
@@ -18,6 +21,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         public decimal? CropArea { get; set; }
 
-        public string Status { get; set; } = "Active";
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CropStatus Status { get; set; } = CropStatus.Inactive;
     }
 }

@@ -40,7 +40,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
 
             var result = await _cropService
-                .GetAll(userId);
+                .GetAllCrops(userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -51,10 +51,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // GET: api/<CropsController>/{id}
-        [HttpGet("{id}")]
+        // GET: api/<CropsController>/{cropId}
+        [HttpGet("{cropId}")]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> GetCropByIdAsync(Guid id)
+        public async Task<IActionResult> GetCropByIdAsync(Guid cropId)
         {
             Guid userId;
 
@@ -67,7 +67,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
             }
 
-            var result = await _cropService.GetById(id, userId);
+            var result = await _cropService.GetCropById(cropId, userId);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
                 return Ok(result.Data);
@@ -99,7 +99,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
             }
 
-            var result = await _cropService.Create(dto, userId);
+            var result = await _cropService.CreateCrop(dto, userId);
 
             if (result.Status == Const.SUCCESS_CREATE_CODE)
                 return Ok(result.Data);
@@ -110,19 +110,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // PUT: api/<CropsController>/{id}
-        [HttpPut("{id}")]
+        // PUT: api/<CropsController>/{cropId}
+        [HttpPut("{cropId}")]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> UpdateCropAsync(Guid id, [FromBody] CropUpdateDto dto)
+        public async Task<IActionResult> UpdateCropAsync(Guid cropId, [FromBody] CropUpdateDto dto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != dto.CropId)
+            if (cropId != dto.CropId)
             {
-                return BadRequest("ID trong URL không khớp với ID trong body.");
+                return BadRequest("Crop ID trong URL không khớp với Crop ID trong body.");
             }
 
             Guid userId;
@@ -136,7 +136,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
             }
 
-            var result = await _cropService.Update(dto, userId);
+            var result = await _cropService.UpdateCrop(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
                 return Ok(result.Data);
@@ -150,10 +150,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             return StatusCode(500, result.Message);
         }
 
-        // DELETE: api/<CropsController>/{id}
-        [HttpDelete("{id}")]
+        // DELETE: api/<CropsController>/{cropId}/soft
+        [HttpDelete("{cropId}/softDelete")]
         [Authorize(Roles = "Farmer")]
-        public async Task<IActionResult> DeleteCropAsync(Guid id)
+        public async Task<IActionResult> SoftDeleteCropAsync(Guid cropId)
         {
             Guid userId;
 
@@ -166,10 +166,40 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
             }
 
-            var result = await _cropService.Delete(id, userId);
+            var result = await _cropService.SoftDeleteCrop(cropId, userId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return NoContent();
+                return Ok(new { message = result.Message });
+
+            if (result.Status == Const.WARNING_NO_DATA_CODE)
+                return NotFound(result.Message);
+
+            if (result.Status == Const.ERROR_EXCEPTION)
+                return BadRequest(result.Message);
+
+            return StatusCode(500, result.Message);
+        }
+
+        // DELETE: api/<CropsController>/{cropId}/hard
+        [HttpDelete("{cropId}/hardDelete")]
+        [Authorize(Roles = "Farmer")]
+        public async Task<IActionResult> HardDeleteCropAsync(Guid cropId)
+        {
+            Guid userId;
+
+            try
+            {
+                userId = User.GetUserId();
+            }
+            catch
+            {
+                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+            }
+
+            var result = await _cropService.HardDeleteCrop(cropId, userId);
+
+            if (result.Status == Const.SUCCESS_DELETE_CODE)
+                return Ok(new { message = result.Message });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);

@@ -14,13 +14,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _uow;
         private readonly ICropSeasonService _cropSeasonService;
-        private readonly ICropService _cropService;
 
-        public CropSeasonDetailService(IUnitOfWork uow, ICropSeasonService cropSeasonService, ICropService cropService)
+        public CropSeasonDetailService(IUnitOfWork uow, ICropSeasonService cropSeasonService)
         {
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
             _cropSeasonService = cropSeasonService ?? throw new ArgumentNullException(nameof(cropSeasonService));
-            _cropService = cropService ?? throw new ArgumentNullException(nameof(cropService));
         }
 
         public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false)
@@ -274,11 +272,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var saved = await _uow.SaveChangesAsync();
             await _cropSeasonService.AutoUpdateCropSeasonStatusAsync(d.CropSeasonId);
 
-            // Auto transition Crop status when crop season detail is completed
-            if (newStatus == CropDetailStatus.Completed)
-            {
-                await AutoTransitionCropStatusAsync(d.DetailId);
-            }
 
             return saved > 0
                 ? new ServiceResult(Const.SUCCESS_UPDATE_CODE, $"Cập nhật trạng thái vùng trồng thành công: {newStatus}")
@@ -342,11 +335,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     // Auto update CropSeason status
                     await _cropSeasonService.AutoUpdateCropSeasonStatusAsync(detail.CropSeasonId);
 
-                    // Auto transition Crop status when crop season detail is completed
-                    if (newStatus == CropDetailStatus.Completed)
-                    {
-                        await AutoTransitionCropStatusAsync(detail.DetailId);
-                    }
 
                     return new ServiceResult(Const.SUCCESS_UPDATE_CODE, 
                         $"Cập nhật trạng thái vùng trồng thành công: {newStatus}");
@@ -360,29 +348,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        // Auto update crop status khi detail hoàn thành
-        private async Task AutoTransitionCropStatusAsync(Guid cropSeasonDetailId)
-        {
-            try
-            {
-                // Get crop ID từ detail
-                var cropSeasonDetail = await _uow.CropSeasonDetailRepository.GetByIdAsync(
-                    predicate: d => d.DetailId == cropSeasonDetailId && !d.IsDeleted,
-                    include: q => q.Include(d => d.Crop),
-                    asNoTracking: true
-                );
-
-                if (cropSeasonDetail?.Crop == null) return;
-
-                // Auto update crop status
-                await _cropService.AutoTransitionStatus(cropSeasonDetail.Crop.CropId);
-            }
-            catch (Exception ex)
-            {
-                // Log lỗi nhưng không throw để không ảnh hưởng operations khác
-                Console.WriteLine($"Error auto transitioning crop status: {ex.Message}");
-            }
-        }
 
         private bool IsValidDetailStatusTransition(CropDetailStatus current, CropDetailStatus next)
         {

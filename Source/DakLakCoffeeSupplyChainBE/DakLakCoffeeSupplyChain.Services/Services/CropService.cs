@@ -24,16 +24,46 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             _unitOfWork = unitOfWork
                 ?? throw new ArgumentNullException(nameof(unitOfWork));
+
             _codeGenerator = codeGenerator
                 ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
-        public async Task<IServiceResult> GetAll(Guid userId)
+        private bool IsDakLakAddress(string address)
         {
-            // Get farmer from userId
+            if (string.IsNullOrWhiteSpace(address))
+                return false;
+
+            var lowerAddress = address.ToLower();
+            
+            // Check for Đắk Lắk region keywords
+            var dakLakKeywords = new[]
+            {
+                "đắk lắk", "dak lak", "buôn ma thuột", "buon ma thuot",
+                "ea ", "krông", "krong", "cư ", "cu ", "lắk", "lak",
+                "m'drắk", "mdrak", "ea h'leo", "ea kar", "ea súp",
+                "ea drăng", "ea hiao", "ea wy", "ea khăl", "ea rốk",
+                "ea bung", "ea wer", "ea nuôl", "ea kiết", "ea tul",
+                "ea m'droh", "ea drông", "ea knốp", "ea păl", "ea ô",
+                "ea riêng", "ea trang", "ea kly", "ea phê", "ea knuếc",
+                "ea ning", "ea ktur", "ea na", "krông năng", "krông pắc",
+                "krông búk", "krông ana", "krông bông", "krông nô", "krông á",
+                "cư m'gar", "cư jút", "cư yang", "cư prao", "cư m'ta",
+                "cư pui", "cư pơng", "cư bao", "đắk mil", "đắk r'lấp",
+                "đắk song", "đắk glong", "đắk liêng", "đắk phơi", "lắk",
+                "m'drắk", "tuy đức", "buôn đôn", "dang kang", "yang mao",
+                "hòa sơn", "liên sơn lắk", "nam ka", "dray bhăng", "dur kmăl"
+            };
+
+            return dakLakKeywords.Any(keyword => lowerAddress.Contains(keyword));
+        }
+
+        public async Task<IServiceResult> GetAllCrops(Guid farmerUserId)
+        {
+            // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>
-                   f.UserId == userId &&
+                   f.UserId == farmerUserId &&
                    !f.IsDeleted,
                 asNoTracking: true
             );
@@ -80,12 +110,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetById(Guid cropId, Guid userId)
+        public async Task<IServiceResult> GetCropById(Guid cropId, Guid farmerUserId)
         {
-            // Get farmer from userId
+            // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>
-                   f.UserId == userId &&
+                   f.UserId == farmerUserId &&
                    !f.IsDeleted,
                 asNoTracking: true
             );
@@ -124,12 +154,78 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
         }
 
-        public async Task<IServiceResult> Create(CropCreateDto dto, Guid userId)
+        public async Task<IServiceResult> CreateCrop(CropCreateDto cropCreateDto, Guid farmerUserId)
         {
-            // Get farmer from userId
+            // Validate input data
+            if (string.IsNullOrWhiteSpace(cropCreateDto.Address))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ trang trại là bắt buộc"
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(cropCreateDto.FarmName))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại là bắt buộc"
+                );
+            }
+
+            // Validate address length
+            if (cropCreateDto.Address.Trim().Length < 10 || cropCreateDto.Address.Trim().Length > 200)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ phải từ 10-200 ký tự"
+                );
+            }
+
+            // Validate farm name length
+            if (cropCreateDto.FarmName.Trim().Length < 3 || cropCreateDto.FarmName.Trim().Length > 100)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại phải từ 3-100 ký tự"
+                );
+            }
+
+            // Validate farm name characters
+            var farmNameRegex = new System.Text.RegularExpressions.Regex(@"^[a-zA-ZÀ-ỹ0-9\s\-_.,()]+$");
+            if (!farmNameRegex.IsMatch(cropCreateDto.FarmName.Trim()))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại chỉ được chứa chữ cái, số, dấu cách và các ký tự: - _ . , ( )"
+                );
+            }
+
+            // Validate crop area if provided
+            if (cropCreateDto.CropArea.HasValue)
+            {
+                if (cropCreateDto.CropArea.Value < 0.01m || cropCreateDto.CropArea.Value > 10000m)
+                {
+                    return new ServiceResult(
+                        Const.ERROR_EXCEPTION,
+                        "Diện tích phải từ 0.01-10,000 ha"
+                    );
+                }
+            }
+
+            // Validate Đắk Lắk address
+            if (!IsDakLakAddress(cropCreateDto.Address))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ phải thuộc khu vực Đắk Lắk. Vui lòng chọn từ danh sách gợi ý."
+                );
+            }
+
+            // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>
-                   f.UserId == userId &&
+                   f.UserId == farmerUserId &&
                    !f.IsDeleted,
                 asNoTracking: false
             );
@@ -145,7 +241,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Check if address already exists for this farmer
             var existingCrop = await _unitOfWork.CropRepository.GetByIdAsync(
                 predicate: c => 
-                    c.Address == dto.Address && 
+                    c.Address == cropCreateDto.Address && 
                     c.CreatedBy == farmer.FarmerId && 
                     (c.IsDeleted == null || c.IsDeleted == false),
                 asNoTracking: true
@@ -163,7 +259,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var cropCode = await _codeGenerator.GenerateCropCodeAsync();
 
             // Create new crop
-            var newCrop = dto.MapToCrop(farmer.FarmerId, cropCode);
+            var newCrop = cropCreateDto.MapToCrop(farmer.FarmerId, cropCode);
 
             await _unitOfWork.CropRepository.CreateAsync(newCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -177,12 +273,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
         }
 
-        public async Task<IServiceResult> Update(CropUpdateDto dto, Guid userId)
+        public async Task<IServiceResult> UpdateCrop(CropUpdateDto cropUpdateDto, Guid farmerUserId)
         {
-            // Get farmer from userId
+            // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>
-                   f.UserId == userId &&
+                   f.UserId == farmerUserId &&
                    !f.IsDeleted,
                 asNoTracking: false
             );
@@ -198,7 +294,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Get current crop and check ownership
             var existingCrop = await _unitOfWork.CropRepository.GetByIdAsync(
                 predicate: c =>
-                   c.CropId == dto.CropId &&
+                   c.CropId == cropUpdateDto.CropId &&
                    c.IsDeleted == false &&
                    c.CreatedBy == farmer.FarmerId,
                 asNoTracking: false
@@ -213,13 +309,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             // Check if new address already exists for this farmer (excluding current crop)
-            if (existingCrop.Address != dto.Address)
+            if (existingCrop.Address != cropUpdateDto.Address)
             {
                 var duplicateCrop = await _unitOfWork.CropRepository.GetByIdAsync(
                     predicate: c => 
-                        c.Address == dto.Address && 
+                        c.Address == cropUpdateDto.Address && 
                         c.CreatedBy == farmer.FarmerId && 
-                        c.CropId != dto.CropId &&
+                        c.CropId != cropUpdateDto.CropId &&
                         (c.IsDeleted == null || c.IsDeleted == false),
                     asNoTracking: true
                 );
@@ -234,7 +330,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             // Update crop
-            dto.MapToCrop(existingCrop, farmer.FarmerId);
+            cropUpdateDto.MapToCrop(existingCrop, farmer.FarmerId);
 
             await _unitOfWork.CropRepository.UpdateAsync(existingCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -248,12 +344,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
         }
 
-        public async Task<IServiceResult> Delete(Guid cropId, Guid userId)
+        public async Task<IServiceResult> SoftDeleteCrop(Guid cropId, Guid farmerUserId)
         {
-            // Get farmer from userId
+            // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>
-                   f.UserId == userId &&
+                   f.UserId == farmerUserId &&
                    !f.IsDeleted,
                 asNoTracking: false
             );
@@ -293,139 +389,51 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
             return new ServiceResult(
                 Const.SUCCESS_DELETE_CODE,
-                Const.SUCCESS_DELETE_MSG
+                "Xóa mềm vùng trồng thành công"
             );
         }
 
-        // Chuyển đổi status crop theo yêu cầu
-        public async Task<IServiceResult> TransitionStatus(Guid cropId, string targetStatus)
+        public async Task<IServiceResult> HardDeleteCrop(Guid cropId, Guid farmerUserId)
         {
-            try
-            {
-                // Get crop
-                var crop = await _unitOfWork.CropRepository.GetByIdAsync(
-                    predicate: c => c.CropId == cropId && (!c.IsDeleted.HasValue || !c.IsDeleted.Value),
-                    asNoTracking: false
-                );
+            // Get farmer from farmerUserId
+            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                predicate: f =>
+                   f.UserId == farmerUserId,
+                asNoTracking: false
+            );
 
-                if (crop == null)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không tìm thấy crop hoặc crop đã bị xóa."
-                    );
-                }
-
-                // Check transition logic
-                if (!CanTransitionTo(crop.Status, targetStatus))
-                {
-                    return new ServiceResult(
-                        Const.ERROR_EXCEPTION,
-                        $"Không thể chuyển từ {crop.Status} sang {targetStatus}."
-                    );
-                }
-
-                // Update status
-                var oldStatus = crop.Status;
-                crop.Status = targetStatus;
-                crop.UpdatedAt = DateTime.UtcNow;
-
-                await _unitOfWork.CropRepository.UpdateAsync(crop);
-                await _unitOfWork.SaveChangesAsync();
-
-                return new ServiceResult(
-                    Const.SUCCESS_UPDATE_CODE,
-                    $"Đã chuyển status từ {oldStatus} sang {targetStatus} thành công."
-                );
-            }
-            catch (Exception ex)
+            if (farmer == null)
             {
                 return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                    $"Lỗi khi chuyển đổi status: {ex.Message}"
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Farmer tương ứng với tài khoản."
                 );
             }
-        }
 
-        // Kiểm tra logic chuyển đổi status
-        private bool CanTransitionTo(string currentStatus, string targetStatus)
-        {
-            return currentStatus switch
-            {
-                "Active" => targetStatus == "Harvested" || targetStatus == "Inactive",
-                "Inactive" => targetStatus == "Active",
-                "Harvested" => targetStatus == "Processed" || targetStatus == "Active",
-                "Processed" => targetStatus == "Sold" || targetStatus == "Active",
-                "Sold" => targetStatus == "Active",
-                "Other" => targetStatus == "Active",
-                _ => false
-            };
-        }
+            // Get current crop and check ownership (including soft-deleted ones)
+            var existingCrop = await _unitOfWork.CropRepository.GetByIdAsync(
+                predicate: c =>
+                   c.CropId == cropId &&
+                   c.CreatedBy == farmer.FarmerId,
+                asNoTracking: false
+            );
 
-        // Tự động chuyển status theo workflow
-        public async Task<IServiceResult> AutoTransitionStatus(Guid cropId)
-        {
-            try
-            {
-                // Get crop
-                var crop = await _unitOfWork.CropRepository.GetByIdAsync(
-                    predicate: c => c.CropId == cropId && (!c.IsDeleted.HasValue || !c.IsDeleted.Value),
-                    asNoTracking: false
-                );
-
-                if (crop == null)
-                {
-                    return new ServiceResult(
-                        Const.WARNING_NO_DATA_CODE,
-                        "Không tìm thấy crop hoặc crop đã bị xóa."
-                    );
-                }
-
-                // Get next status
-                var nextStatus = GetNextStatus(crop.Status);
-                if (nextStatus == null)
-                {
-                    return new ServiceResult(
-                        Const.ERROR_EXCEPTION,
-                        $"Không thể auto transition từ status {crop.Status}."
-                    );
-                }
-
-                // Update status
-                var oldStatus = crop.Status;
-                crop.Status = nextStatus;
-                crop.UpdatedAt = DateTime.UtcNow;
-
-                await _unitOfWork.CropRepository.UpdateAsync(crop);
-                await _unitOfWork.SaveChangesAsync();
-
-                return new ServiceResult(
-                    Const.SUCCESS_UPDATE_CODE,
-                        $"Đã auto transition status từ {oldStatus} sang {nextStatus} thành công."
-                );
-            }
-            catch (Exception ex)
+            if (existingCrop == null)
             {
                 return new ServiceResult(
-                    Const.ERROR_EXCEPTION,
-                        $"Lỗi khi auto transition status: {ex.Message}"
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Crop hoặc bạn không có quyền xóa."
                 );
             }
-        }
 
-        // Lấy status tiếp theo
-        private string GetNextStatus(string currentStatus)
-        {
-            return currentStatus switch
-            {
-                "Active" => "Harvested",
-                "Harvested" => "Processed", 
-                "Processed" => "Sold",
-                "Sold" => "Active",
-                "Inactive" => "Active",
-                "Other" => "Active",
-                _ => null
-            };
+            // Hard delete crop (permanently remove from database)
+            await _unitOfWork.CropRepository.RemoveAsync(existingCrop);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResult(
+                Const.SUCCESS_DELETE_CODE,
+                "Xóa vĩnh viễn vùng trồng thành công"
+            );
         }
     }
 }
