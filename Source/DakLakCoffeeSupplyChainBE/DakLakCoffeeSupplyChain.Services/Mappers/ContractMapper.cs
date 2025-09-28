@@ -143,7 +143,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 StartDate = dto.StartDate ?? default,
                 EndDate = dto.EndDate ?? default,
                 SignedAt = dto.SignedAt,
-                Status = dto.Status.ToString(), // enum → string
+                Status = dto.Status.ToString(), // enum -> string
                 CancelReason = dto.CancelReason,
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),

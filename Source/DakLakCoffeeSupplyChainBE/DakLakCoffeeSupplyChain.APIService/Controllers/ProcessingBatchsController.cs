@@ -41,7 +41,7 @@
                 var isExpert = User.IsInRole("AgriculturalExpert");
 
                 var result = await _processingbatchservice
-                .GetAllByUserId(userId, isAdmin, isManager, isExpert);
+                    .GetAllByUserId(userId, isAdmin, isManager, isExpert);
 
                 if (result.Status == Const.SUCCESS_READ_CODE)
                     return Ok(result.Data);
