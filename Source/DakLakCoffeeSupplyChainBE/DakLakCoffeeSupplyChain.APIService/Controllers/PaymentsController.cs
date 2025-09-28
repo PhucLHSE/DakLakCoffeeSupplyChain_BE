@@ -311,7 +311,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         [Authorize(Roles = "BusinessManager,BusinessStaff,Farmer,Admin")]
         public async Task<IActionResult> CreateWalletTopupVnPayUrl([FromBody] WalletTopupVnPayRequest req)
         {
-            // Validate VNPay configuration
             var tmnCode = _config["VnPay:TmnCode"] ?? string.Empty;
             var secret = _config["VnPay:HashSecret"] ?? string.Empty;
             var baseUrl = _config["VnPay:BaseUrl"] ?? _config["VnPay:PaymentUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
@@ -320,25 +319,23 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             if (string.IsNullOrWhiteSpace(tmnCode) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(returnUrl))
                 return BadRequest("VNPay chưa cấu hình đầy đủ.");
 
-            // Create VNPay parameters using helper
-            var amount = (long)req.Amount * 100; // VNPay requires amount * 100
-            var txnRef = PaymentHelper.GenerateWalletTxnRef(); // Use helper for transaction reference
+            var amountX100 = (long)req.Amount * 100;
+            var txnRef = PaymentHelper.GenerateWalletTxnRef(); // 32 chars
             var ipAddress = _paymentService.GetClientIpAddress();
 
+            // (Tuỳ chọn) Đổi OrderInfo để log rõ wallet: $"WalletTopup:{req.WalletId}"
             var vnpParameters = PaymentHelper.CreateVnPayParameters(
-                tmnCode, amount, txnRef, $"WalletTopup:{txnRef}", returnUrl, ipAddress, req.Locale ?? "vn");
+                tmnCode, amountX100, txnRef, $"WalletTopup:{txnRef}", returnUrl, ipAddress, req.Locale ?? "vn");
 
-            // Create VNPay URL using helper
             var url = PaymentHelper.CreateVnPayUrl(baseUrl, vnpParameters, secret);
 
-            // Get user information using service
             var (userEmail, userId) = _paymentService.GetCurrentUserInfo();
-
-            // Create and save payment record using service
             await _paymentService.CreateWalletTopupPaymentAsync(req.WalletId, req.Amount, txnRef, userEmail, userId);
 
-            return Ok(new VnPayCreateResponse { Url = url });
+            // 👉 Trả kèm TransactionId để FE có thể hiển thị/tracking
+            return Ok(new VnPayCreateResponse { Url = url, PaymentId = txnRef });
         }
+
         [HttpGet("{planId}/payment-status")]
         [Authorize(Roles = "BusinessManager,Admin")]
         public async Task<IActionResult> GetPaymentStatus(Guid planId)
