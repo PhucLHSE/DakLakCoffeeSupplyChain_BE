@@ -32,14 +32,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             _codeGenerator = codeGenerator;
         }
 
-        private ServiceResult CreateValidationError(string errorKey, Dictionary<string, object> parameters = null)
+        private ServiceResult CreateValidationError(
+            string errorKey, Dictionary<string, object> parameters = null)
         {
-            return new ServiceResult(Const.ERROR_VALIDATION_CODE, errorKey, parameters);
+            return new ServiceResult(
+                Const.ERROR_VALIDATION_CODE, 
+                errorKey, 
+                parameters
+            );
         }
 
-        private bool HasPermissionToAccess(ProcessingBatch batch, Guid userId, bool isAdmin, bool isManager)
+        private bool HasPermissionToAccess(
+            ProcessingBatch batch, 
+            Guid userId, 
+            bool isAdmin, 
+            bool isManager)
         {
-            if (isAdmin || isManager) return true;
+            if (isAdmin || isManager) 
+                return true;
+
             return batch.Farmer?.UserId == userId;
         }
 
@@ -47,7 +58,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var batches = await _unitOfWork.ProcessingBatchRepository.GetAll();
 
-            if (batches == null || !batches.Any())
+            if (batches == null || 
+                !batches.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
@@ -64,7 +76,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 dtoList
             );
         }
-        public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager, bool isExpert = false)
+
+        public async Task<IServiceResult> GetAllByUserId(
+            Guid userId,
+            bool isAdmin, 
+            bool isManager, 
+            bool isExpert = false)
         {
             List<ProcessingBatch> batches;
 
@@ -74,8 +91,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: x => !x.IsDeleted,
                     include: query => query
                         .Include(x => x.Method)
-                        .Include(x => x.CropSeason)  // ← Bỏ ThenInclude(cs => cs.Commitment)
-                        .Include(x => x.Farmer).ThenInclude(f => f.User),  // ← Bỏ include ProcessingBatchProgresses
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer)
+                           .ThenInclude(f => f.User),
                     orderBy: q => q.OrderByDescending(x => x.CreatedAt),
                     asNoTracking: true
                 );
@@ -98,8 +116,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         x.CropSeason.Commitment.ApprovedBy == managerId,
                     include: query => query
                         .Include(x => x.Method)
-                        .Include(x => x.CropSeason)  // ← Bỏ ThenInclude(cs => cs.Commitment)
-                        .Include(x => x.Farmer).ThenInclude(f => f.User),  // ← Bỏ include ProcessingBatchProgresses
+                        .Include(x => x.CropSeason)
+                        .Include(x => x.Farmer)
+                           .ThenInclude(f => f.User),
                     orderBy: q => q.OrderByDescending(x => x.CreatedAt),
                     asNoTracking: true
                 );
@@ -130,7 +149,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 // Kiểm tra xem user có phải là Farmer không
-                var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+                var farmer = await _unitOfWork.FarmerRepository
+                    .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
 
                 if (farmer == null)
                 {
@@ -138,7 +158,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
-                    predicate: x => !x.IsDeleted && x.FarmerId == farmer.FarmerId,
+                    predicate: x => 
+                       !x.IsDeleted &&
+                       x.FarmerId == farmer.FarmerId,
                     include: query => query
                         .Include(x => x.Method)
                         .Include(x => x.CropSeason)
@@ -153,22 +175,35 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
-            return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, dtoList);
+
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE,
+                Const.SUCCESS_READ_MSG,
+                dtoList
+            );
         }
-        public async Task<IServiceResult> CreateAsync(ProcessingBatchCreateDto dto, Guid userId)
+        public async Task<IServiceResult> CreateAsync(
+            ProcessingBatchCreateDto dto, 
+            Guid userId)
         {
             // 1. Không cho BusinessManager tạo lô
-            var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+            var manager = await _unitOfWork.BusinessManagerRepository
+                .GetByIdAsync(m => m.UserId == userId && !m.IsDeleted);
+
             if (manager != null)
                 return CreateValidationError("BusinessManagerCannotCreateBatch");
 
             // 2. Kiểm tra vai trò Farmer
-            var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+            var farmer = await _unitOfWork.FarmerRepository
+                .FindByUserIdAsync(userId);
+
             if (farmer == null)
                 return CreateValidationError("OnlyFarmerCanCreateBatch");
 
             // 3. Kiểm tra mùa vụ
-            var cropSeason = await _unitOfWork.CropSeasonRepository.GetByIdAsync(dto.CropSeasonId);
+            var cropSeason = await _unitOfWork.CropSeasonRepository
+                .GetByIdAsync(dto.CropSeasonId);
+
             if (cropSeason == null || cropSeason.IsDeleted)
                 return CreateValidationError("InvalidCropSeason");
 
@@ -205,12 +240,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var methodId = planDetail.ProcessMethodId.Value;
             
             // Kiểm tra phương pháp sơ chế có tồn tại không
-            var method = await _unitOfWork.ProcessingMethodRepository.GetByIdAsync(methodId);
+            var method = await _unitOfWork.ProcessingMethodRepository
+                .GetByIdAsync(methodId);
+
             if (method == null)
                 return CreateValidationError("InvalidProcessingMethodFromPlan");
 
             // 6. Kiểm tra khối lượng đầu ra kỳ vọng
             var actualYield = cropDetail.ActualYield ?? 0;
+
             if (actualYield <= 0)
                 return CreateValidationError("NoActualYieldForCoffeeType");
 
@@ -249,6 +287,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             };
 
             await _unitOfWork.ProcessingBatchRepository.CreateAsync(batch);
+
             var saveResult = await _unitOfWork.SaveChangesAsync();
 
             if (saveResult <= 0)
@@ -260,7 +299,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 include: q => q
                     .Include(x => x.Method)
                     .Include(x => x.CropSeason)
-                    .Include(x => x.Farmer).ThenInclude(f => f.User),
+                    .Include(x => x.Farmer)
+                       .ThenInclude(f => f.User),
                 asNoTracking: true
             );
 
@@ -268,17 +308,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return CreateValidationError("CannotRetrieveCreatedBatch");
 
             var responseDto = created.MapToProcessingBatchViewDto();
-            return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo lô sơ chế thành công.", responseDto);
+
+            return new ServiceResult(
+                Const.SUCCESS_CREATE_CODE, 
+                "Tạo lô sơ chế thành công.", 
+                responseDto
+            );
         }
 
 
-        public async Task<IServiceResult> GetAvailableProcessingDataAsync(Guid userId, Guid? cropSeasonId = null)
+        public async Task<IServiceResult> GetAvailableProcessingDataAsync(
+            Guid userId,
+            Guid? cropSeasonId = null)
         {
             // Lấy thông tin nông hộ từ UserId
             var farmer = await _unitOfWork.FarmerRepository
                 .GetByIdAsync(f => f.UserId == userId && !f.IsDeleted);
+
             if (farmer == null)
                 return CreateValidationError("FarmerNotFound");
+
             var farmerId = farmer.FarmerId;
 
             // Lấy tất cả crop seasons có plan yêu cầu sơ chế
@@ -310,7 +359,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             );
 
             // Nhóm theo CropSeason và tạo danh sách crop seasons có plan yêu cầu sơ chế
-            // CHỈ hiển thị mùa vụ có ít nhất 1 loại cà phê chưa có lô sơ chế
+            // Chỉ hiển thị mùa vụ có ít nhất 1 loại cà phê chưa có lô sơ chế
             var availableCropSeasons = cropSeasonsWithProcessingPlans
                 .GroupBy(d => d.CropSeasonId)
                 .Where(g => g.Any(d => 
@@ -454,12 +503,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 ? $"Lấy thành công. Đã loại trừ {excludedCropSeasonsCount} mùa vụ có tất cả loại cà phê đều đã có lô sơ chế."
                 : "Lấy thành công";
 
-            return new ServiceResult(Const.SUCCESS_READ_CODE, message, response);
+            return new ServiceResult(
+                Const.SUCCESS_READ_CODE, 
+                message,
+                response
+            );
         }
 
-        public async Task<IServiceResult> UpdateAsync(ProcessingBatchUpdateDto dto, Guid userId, bool isAdmin, bool isManager)
+        public async Task<IServiceResult> UpdateAsync(
+            ProcessingBatchUpdateDto dto, 
+            Guid userId, 
+            bool isAdmin,
+            bool isManager)
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(dto.BatchId);
+
             if (batch == null || batch.IsDeleted)
                 return CreateValidationError("ProcessingBatchNotFound");
 
@@ -475,6 +533,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             batch.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
@@ -482,11 +541,19 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : CreateValidationError("UpdateBatchFailed");
         }
 
-        public async Task<IServiceResult> SoftDeleteAsync(Guid id, Guid userId, bool isAdmin, bool isManager)
+        public async Task<IServiceResult> SoftDeleteAsync(
+            Guid id,
+            Guid userId, 
+            bool isAdmin, 
+            bool isManager)
         {
             var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                predicate: b => b.BatchId == id && !b.IsDeleted,
-                include: q => q.Include(b => b.Farmer).ThenInclude(f => f.User)
+                predicate: b => 
+                   b.BatchId == id && 
+                   !b.IsDeleted,
+                include: q => q
+                   .Include(b => b.Farmer)
+                      .ThenInclude(f => f.User)
             );
 
             if (batch == null)
@@ -499,6 +566,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             batch.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.ProcessingBatchRepository.UpdateAsync(batch);
+
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
@@ -506,13 +574,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 : CreateValidationError("SoftDeleteBatchFailed");
         }
 
-        public async Task<IServiceResult> HardDeleteAsync(Guid batchId, Guid userId, bool isAdmin, bool isManager)
+        public async Task<IServiceResult> HardDeleteAsync(
+            Guid batchId, 
+            Guid userId, 
+            bool isAdmin, 
+            bool isManager)
         {
             try
             {
                 var batch = await _unitOfWork.ProcessingBatchRepository.GetByIdAsync(
-                    predicate: x => x.BatchId == batchId && !x.IsDeleted,
-                    include: q => q.Include(x => x.Farmer).ThenInclude(f => f.User)
+                    predicate: x => 
+                       x.BatchId == batchId && 
+                       !x.IsDeleted,
+                    include: q => q
+                       .Include(x => x.Farmer)
+                          .ThenInclude(f => f.User)
                 );
 
                 if (batch == null)
@@ -522,6 +598,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     return CreateValidationError("CannotDeleteOthersProcessingBatch");
 
                 await _unitOfWork.ProcessingBatchRepository.RemoveAsync(batch);
+
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 return result > 0
@@ -530,9 +607,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.Message
+                );
             }
         }
+
         public async Task<IServiceResult> GetFullDetailsAsync(
          Guid batchId,
          Guid userId,
@@ -586,20 +667,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 if (batch == null)
                     return CreateValidationError("ProcessingBatchNotFoundForDetails");
 
-                // ✅ Lấy toàn bộ UpdatedById từ progresses
+                // Lấy toàn bộ UpdatedById từ progresses
                 var updatedByIds = batch.ProcessingBatchProgresses
                     .Where(p => p.UpdatedBy != null)
                     .Select(p => p.UpdatedBy)
                     .Distinct()
                     .ToList();
 
-                // ✅ Lấy danh sách Farmer tương ứng và tạo dictionary tên
+                // Lấy danh sách Farmer tương ứng và tạo dictionary tên
                 var farmers = await _unitOfWork.FarmerRepository.GetAllAsync(
                     f => updatedByIds.Contains(f.FarmerId),
                     include: q => q.Include(f => f.User)
                 );
 
-                var farmerNameDict = farmers.ToDictionary(f => f.FarmerId, f => f.User?.Name ?? "N/A");
+                var farmerNameDict = farmers
+                    .ToDictionary(f => f.FarmerId, f => f.User?.Name ?? "N/A");
 
                 var progresses = new List<ProcessingProgressWithStageDto>();
 
@@ -653,12 +735,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         ProgressDate = p.ProgressDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.MinValue,
                         OutputQuantity = p.OutputQuantity ?? 0,
 
-                        // ✅ UpdatedByName dùng từ dictionary
+                        // UpdatedByName dùng từ dictionary
                         UpdatedByName = p.UpdatedBy != null && farmerNameDict.ContainsKey(p.UpdatedBy)
                             ? farmerNameDict[p.UpdatedBy]
                             : "N/A",
 
-                        StageId = p.StageId, // ✅ Giữ nguyên int, không convert sang string
+                        StageId = p.StageId, // Giữ nguyên int, không convert sang string
                         StageName = p.Stage?.StageName ?? "N/A",
                         StageDescription = p.StageDescription,
 
@@ -676,15 +758,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     progresses
                 );
 
-                return new ServiceResult(Const.SUCCESS_READ_CODE, "Lấy chi tiết thành công", resultDto);
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE,
+                    "Lấy chi tiết thành công", 
+                    resultDto
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    $"Lỗi: {ex.Message}"
+                );
             }
         }
 
-        public async Task<IServiceResult> GetFarmersWithBatchesForBusinessManagerAsync(Guid managerUserId)
+        public async Task<IServiceResult> GetFarmersWithBatchesForBusinessManagerAsync(
+            Guid managerUserId)
         {
             try
             {
@@ -699,16 +789,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Lấy tất cả FarmingCommitment được approved bởi manager này (chỉ đọc dữ liệu)
                 var commitments = await _unitOfWork.FarmingCommitmentRepository.GetAllAsync(
-                    predicate: fc => !fc.IsDeleted && fc.ApprovedBy == manager.ManagerId,
-                    include: q => q.Include(fc => fc.CropSeasons)
+                    predicate: fc => 
+                       !fc.IsDeleted && 
+                       fc.ApprovedBy == manager.ManagerId,
+                    include: q => q
+                       .Include(fc => fc.CropSeasons)
                 );
-
-                // Debug: Log số lượng commitment và farmer
-                Console.WriteLine($"🔍 Business Manager {manager.ManagerId} có {commitments.Count} commitment được approved");
-                foreach (var commitment in commitments)
-                {
-                    Console.WriteLine($"📋 Commitment {commitment.CommitmentId}: Farmer {commitment.FarmerId}");
-                }
 
                 if (!commitments.Any())
                 {
@@ -722,13 +808,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .Select(cs => cs.CropSeasonId)
                     .ToList();
 
-                // Debug: Log crop seasons
-                Console.WriteLine($"🌾 Có {cropSeasonIds.Count} crop seasons từ commitments:");
-                foreach (var cropSeasonId in cropSeasonIds)
-                {
-                    Console.WriteLine($"   - CropSeason: {cropSeasonId}");
-                }
-
                 if (!cropSeasonIds.Any())
                 {
                     return CreateValidationError("NoCropSeasonsFromCommitments");
@@ -736,18 +815,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Lấy tất cả ProcessingBatch trong các crop season này
                 var batches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
-                    predicate: pb => !pb.IsDeleted && cropSeasonIds.Contains(pb.CropSeasonId),
+                    predicate: pb => 
+                       !pb.IsDeleted && cropSeasonIds.Contains(pb.CropSeasonId),
                     include: query => query
-                        .Include(x => x.Farmer).ThenInclude(f => f.User),
+                        .Include(x => x.Farmer)
+                           .ThenInclude(f => f.User),
                     asNoTracking: true
                 );
-
-                // Debug: Log batches
-                Console.WriteLine($"📦 Có {batches.Count} batches trong các crop seasons:");
-                foreach (var batch in batches)
-                {
-                    Console.WriteLine($"   - Batch {batch.BatchId}: Farmer {batch.FarmerId} ({batch.Farmer?.User?.Name}) - CropSeason {batch.CropSeasonId}");
-                }
 
                 if (!batches.Any())
                 {
@@ -766,17 +840,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     .OrderBy(f => f.FarmerName)
                     .ToList();
 
-                return new ServiceResult(Const.SUCCESS_READ_CODE, 
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE, 
                     $"Đã tìm thấy {farmers.Count} nông dân có lô sơ chế", 
-                    farmers);
+                    farmers
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    $"Lỗi: {ex.Message}"
+                );
             }
         }
 
-        public async Task<IServiceResult> GetBatchesByFarmerForBusinessManagerAsync(Guid managerUserId, Guid farmerId)
+        public async Task<IServiceResult> GetBatchesByFarmerForBusinessManagerAsync(
+            Guid managerUserId,
+            Guid farmerId)
         {
             try
             {
@@ -803,7 +884,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     predicate: fc => !fc.IsDeleted && 
                                    fc.FarmerId == farmerId && 
                                    fc.ApprovedBy == manager.ManagerId,
-                    include: q => q.Include(fc => fc.CropSeasons)
+                    include: q => q
+                       .Include(fc => fc.CropSeasons)
                 );
 
                 if (!commitments.Any())
@@ -812,7 +894,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         ["farmerName"] = farmer.User?.Name ?? farmer.FarmerCode
                     };
-                    return CreateValidationError("NoCommitmentsForFarmerByManager", parameters);
+
+                    return CreateValidationError(
+                        "NoCommitmentsForFarmerByManager", 
+                        parameters
+                    );
                 }
 
                 // Lấy tất cả CropSeasonId từ các commitment
@@ -847,30 +933,40 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     {
                         ["farmerName"] = farmer.User?.Name ?? farmer.FarmerCode
                     };
-                    return CreateValidationError("FarmerNoProcessingBatchesInCommittedSeasons", parameters);
+
+                    return CreateValidationError(
+                        "FarmerNoProcessingBatchesInCommittedSeasons",
+                        parameters
+                    );
                 }
 
                 var dtoList = batches.Select(b => b.MapToProcessingBatchViewDto()).ToList();
+
                 return new ServiceResult(Const.SUCCESS_READ_CODE, 
                     $"Đã tìm thấy {dtoList.Count} lô sơ chế của farmer {farmer.User?.Name ?? farmer.FarmerCode}", 
                     dtoList);
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    $"Lỗi: {ex.Message}"
+                );
             }
         }
 
-        public async Task<IServiceResult> GetAvailableBatchesForWarehouseRequestAsync(Guid userId)
+        public async Task<IServiceResult> GetAvailableBatchesForWarehouseRequestAsync(
+            Guid userId)
         {
             try
             {
                 // Lấy thông tin farmer
                 var farmer = await _unitOfWork.FarmerRepository.FindByUserIdAsync(userId);
+
                 if (farmer == null)
                     return CreateValidationError("FarmerNotFoundForWarehouseRequest");
 
-                // ✅ THÊM: Lấy tất cả batch đã hoàn tất của farmer này VÀ có ràng buộc với công ty
+                // Lấy tất cả batch đã hoàn tất của farmer này VÀ có ràng buộc với công ty
                 var completedBatches = await _unitOfWork.ProcessingBatchRepository.GetAllAsync(
                     predicate: b => !b.IsDeleted && 
                                    b.FarmerId == farmer.FarmerId &&
@@ -899,21 +995,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Tính toán available quantity cho mỗi batch
                 var result = new List<object>();
+
                 foreach (var batch in completedBatches)
                 {
-                    // 🔧 FIX: Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
+                    // Lấy OutputQuantity của bước cuối cùng (StepIndex cao nhất)
                     // Vì bước cuối mới là sản lượng thực tế cuối cùng
                     var finalProgress = batch.ProcessingBatchProgresses
                         .Where(p => p.OutputQuantity.HasValue && p.OutputQuantity.Value > 0)
                         .OrderByDescending(p => p.StepIndex)  // Tìm StepIndex cao nhất
                         .FirstOrDefault();
-                    var maxOutputQuantity = finalProgress?.OutputQuantity ?? 0;
 
-                    // 🔍 DEBUG: Log thông tin để kiểm tra
-                    Console.WriteLine($"DEBUG GetAvailableBatchesForWarehouseRequest: Batch {batch.BatchCode}");
-                    Console.WriteLine($"  - Total progresses: {batch.ProcessingBatchProgresses.Count}");
-                    Console.WriteLine($"  - Final progress: StepIndex={finalProgress?.StepIndex}, OutputQuantity={finalProgress?.OutputQuantity}");
-                    Console.WriteLine($"  - MaxOutputQuantity: {maxOutputQuantity}");
+                    var maxOutputQuantity = finalProgress?.OutputQuantity ?? 0;
 
                     // Lấy tất cả inbound requests đã được xử lý
                     var allRequests = await _unitOfWork.WarehouseInboundRequests.GetAllAsync(
@@ -925,20 +1017,15 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .Where(r => r.Status == "Completed" || r.Status == "Pending" || r.Status == "Approved")
                         .Sum(r => r.RequestedQuantity ?? 0);
 
-                    // 🔍 DEBUG: Log thông tin requests
-                    Console.WriteLine($"  - Total requests: {allRequests.Count}");
-                    Console.WriteLine($"  - Total requested quantity: {totalRequested}");
-                    Console.WriteLine($"  - Available quantity: {maxOutputQuantity - totalRequested}");
-
                     // Tính available quantity
                     double availableQuantity = Math.Max(0, maxOutputQuantity - totalRequested);
 
                     // Chỉ trả về batch có available quantity > 0
                     if (availableQuantity > 0)
                     {
-                                            // ✅ THÊM: Lấy thông tin công ty từ Plan.CreatedBy (BusinessManager tạo plan)
-                    var companyName = batch.CropSeason?.Commitment?.Plan?.CreatedByNavigation?.CompanyName ?? "N/A";
-                    var companyId = batch.CropSeason?.Commitment?.Plan?.CreatedBy ?? Guid.Empty;
+                        // Lấy thông tin công ty từ Plan.CreatedBy (BusinessManager tạo plan)
+                        var companyName = batch.CropSeason?.Commitment?.Plan?.CreatedByNavigation?.CompanyName ?? "N/A";
+                        var companyId = batch.CropSeason?.Commitment?.Plan?.CreatedBy ?? Guid.Empty;
                         
                         result.Add(new
                         {
@@ -950,17 +1037,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             totalRequested = totalRequested,
                             availableQuantity = availableQuantity,
                             availableQuantityText = $"{availableQuantity} kg",
-                            // ✅ THÊM: Thông tin công ty
+                            // Thông tin công ty
                             companyId = companyId,
                             companyName = companyName,
                             commitmentId = batch.CropSeason?.Commitment?.CommitmentId ?? Guid.Empty
                         });
-                        
-                        Console.WriteLine($"  ✅ Added to result: {availableQuantity}kg available for company: {companyName}");
                     }
                     else
                     {
-                        Console.WriteLine($"  ❌ Skipped: {availableQuantity}kg available (<= 0)");
                     }
                 }
 
@@ -970,9 +1054,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi: {ex.Message}");
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    $"Lỗi: {ex.Message}"
+                );
             }
         }
-
     }
 }

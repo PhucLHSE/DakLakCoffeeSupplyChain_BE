@@ -17,8 +17,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public AgriculturalExpertService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator 
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
         }
 
         // Lấy tất cả chuyên gia (ViewAll)
@@ -26,7 +29,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             var experts = await _unitOfWork.AgriculturalExpertRepository.GetAllAsync(
                 predicate: e => !e.IsDeleted,
-                include: query => query.Include(e => e.User),
+                include: query => query
+                   .Include(e => e.User),
                 orderBy: q => q.OrderBy(e => e.ExpertCode),
                 asNoTracking: true
             );
@@ -55,8 +59,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetByIdAsync(Guid expertId)
         {
             var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(
-                predicate: e => e.ExpertId == expertId && !e.IsDeleted,
-                include: query => query.Include(e => e.User),
+                predicate: e => 
+                   e.ExpertId == expertId && 
+                   !e.IsDeleted,
+                include: query => query
+                   .Include(e => e.User),
                 asNoTracking: true
             );
 
@@ -81,7 +88,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         // Lấy chuyên gia theo UserId
         public async Task<IServiceResult> GetByUserIdAsync(Guid userId)
         {
-            var expert = await _unitOfWork.AgriculturalExpertRepository.GetByUserIdAsync(userId);
+            var expert = await _unitOfWork.AgriculturalExpertRepository
+                .GetByUserIdAsync(userId);
 
             if (expert == null)
             {
@@ -109,7 +117,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Lấy thông tin người dùng theo userId
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                     predicate: u => u.UserId == userId,
-                    include: query => query.Include(u => u.Role),
+                    include: query => query
+                       .Include(u => u.Role),
                     asNoTracking: true
                 );
 
@@ -181,7 +190,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         // Cập nhật chuyên gia
-        public async Task<IServiceResult> UpdateAsync(AgriculturalExpertUpdateDto dto, Guid userId, string userRole)
+        public async Task<IServiceResult> UpdateAsync(
+            AgriculturalExpertUpdateDto dto, 
+            Guid userId, 
+            string userRole)
         {
             try
             {
@@ -327,7 +339,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         }
 
         // Xóa mềm chuyên gia
-        public async Task<IServiceResult> SoftDeleteAsync(Guid expertId, Guid userId, string userRole)
+        public async Task<IServiceResult> SoftDeleteAsync(
+            Guid expertId, 
+            Guid userId,
+            string userRole)
         {
             try
             {
@@ -449,7 +464,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // 1. Kiểm tra chuyên gia có tồn tại không
-                var expert = await _unitOfWork.AgriculturalExpertRepository.GetByIdAsync(expertId);
+                var expert = await _unitOfWork.AgriculturalExpertRepository
+                    .GetByIdAsync(expertId);
+
                 if (expert == null || expert.IsDeleted)
                 {
                     return new ServiceResult(
@@ -460,13 +477,18 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // 2. Kiểm tra admin có quyền không
                 var adminUser = await _unitOfWork.UserAccountRepository.GetAllAsync(
-                    predicate: u => u.UserId == adminUserId && !u.IsDeleted,
-                    include: query => query.Include(u => u.Role),
+                    predicate: u => 
+                       u.UserId == adminUserId && 
+                       !u.IsDeleted,
+                    include: query => query
+                       .Include(u => u.Role),
                     asNoTracking: true
                 );
                 
                 var admin = adminUser.FirstOrDefault();
-                if (admin == null || admin.Role?.RoleName != "Admin")
+
+                if (admin == null || 
+                    admin.Role?.RoleName != "Admin")
                 {
                     return new ServiceResult(
                         Const.FAIL_UPDATE_CODE,
@@ -484,7 +506,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // 4. Trả về thông tin đã cập nhật
                 var updatedExpert = await _unitOfWork.AgriculturalExpertRepository.GetAllAsync(
                     predicate: e => e.ExpertId == expertId,
-                    include: query => query.Include(e => e.User),
+                    include: query => query
+                       .Include(e => e.User),
                     asNoTracking: true
                 );
 

@@ -43,14 +43,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = entity.CreatedAt ?? DateTime.MinValue
             };
         }
+
         public static ProcessingBatchDetailFullDto MapToFullDetailDto(
-    this ProcessingBatch batch,
-    string farmerName,
-    string coffeeTypeName,
-    string cropSeasonName,
-    string methodName,
-    List<ProcessingProgressWithStageDto> progresses
-)
+            this ProcessingBatch batch,
+            string farmerName,
+            string coffeeTypeName,
+            string cropSeasonName,
+            string methodName,
+            List<ProcessingProgressWithStageDto> progresses)
         {
             return new ProcessingBatchDetailFullDto
             {
