@@ -27,7 +27,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: d => !d.IsDeleted && (isAdmin || d.CropSeason.Farmer.UserId == userId),
                 include: q => q
                     .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail)
-                    .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User),
+                    .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User)
+                    .Include(d => d.Crop),
                 asNoTracking: true
             );
 
@@ -44,7 +45,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: x => x.DetailId == detailId && !x.IsDeleted,
                 include: q => q
                     .Include(x => x.CommitmentDetail).ThenInclude(cd => cd.PlanDetail)
-                    .Include(x => x.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User),
+                    .Include(x => x.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User)
+                    .Include(x => x.Crop),
                 asNoTracking: true
             );
             if (d == null) return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy chi tiết mùa vụ.");
@@ -108,6 +110,12 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 entity.EstimatedYield = registrationDetail.EstimatedYield.Value;
             }
             
+            // Cập nhật CropId từ RegistrationDetail
+            if (registrationDetail?.CropId.HasValue == true)
+            {
+                entity.CropId = registrationDetail.CropId.Value;
+            }
+            
             entity.CreatedAt = DateHelper.NowVietnamTime();
             entity.UpdatedAt = entity.CreatedAt;
             await _uow.CropSeasonDetailRepository.CreateAsync(entity);
@@ -119,7 +127,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 d => d.DetailId == entity.DetailId,
                 include: q => q
                     .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(p => p.CoffeeType)
-                    .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User),
+                    .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User)
+                    .Include(d => d.Crop),
                 asNoTracking: true
             );
 

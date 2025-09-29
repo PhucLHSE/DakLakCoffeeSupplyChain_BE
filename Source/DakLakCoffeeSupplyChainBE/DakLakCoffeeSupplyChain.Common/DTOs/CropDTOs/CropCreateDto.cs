@@ -29,6 +29,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         // Status auto set "Active" khi tạo mới
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public CropStatus Status { get; set; } = CropStatus.Inactive;
+        public CropStatus Status { get; set; } = CropStatus.Active;
     }
 }
