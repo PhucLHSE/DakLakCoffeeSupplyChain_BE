@@ -1,10 +1,13 @@
 using DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
+using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Services.IServices;
+using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Linq;
 
 namespace DakLakCoffeeSupplyChain.APIService.Controllers
 {
@@ -334,6 +337,29 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             // 👉 Trả kèm TransactionId để FE có thể hiển thị/tracking
             return Ok(new VnPayCreateResponse { Url = url, PaymentId = txnRef });
+        }
+
+        [HttpGet("history")]
+        [Authorize]
+        public async Task<IActionResult> GetPaymentHistory()
+        {
+            var (_, userId) = _paymentService.GetCurrentUserInfo();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return BadRequest("User is not authenticated.");
+            }
+
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return BadRequest("User ID is not in the correct format.");
+            }
+
+            var payments = await _paymentService.GetPaymentHistoryAsync(userGuid);
+            var histories = payments
+                .Select(payment => payment.ToPaymentHistoryDto())
+                .ToList();
+
+            return Ok(histories);
         }
 
         [HttpGet("{planId}/payment-status")]
