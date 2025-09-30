@@ -715,5 +715,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 return (false, $"Lỗi xử lý thanh toán: {ex.Message}", null);
             }
         }
+        public async Task<IEnumerable<Payment>> GetPaymentHistoryAsync(Guid userId)
+        {
+            var payments = await _unitOfWork.PaymentRepository.GetAllAsync(
+                predicate: p => p.UserId==userId&&!p.IsDeleted,
+                orderBy: query => query.OrderByDescending(p => p.CreatedAt),
+                asNoTracking: true
+            );
+            return payments;
+        }
+
+        //public async Task<IEnumerable<Payment>> GetPlanPaymentHistoryAsync(Guid planId)
+        //{
+        //    var payments = await _unitOfWork.PaymentRepository.GetAllAsync(
+        //        predicate: p => p.RelatedEntityId==planId&&!p.IsDeleted,
+        //        orderBy: query => query.OrderByDescending(p => p.CreatedAt),
+        //        asNoTracking: true
+        //    );
+        //    return payments;
+        //}
     }
 }

@@ -8,7 +8,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs
 {
     public class PaymentResponseDto
     {
-        public Guid PaymentID { get; set; }
+        public Guid PaymentID { get; set; }     
         public string Email { get; set; }
         public string PaymentPurpose { get; set; }
         public string PaymentStatus { get; set; }
