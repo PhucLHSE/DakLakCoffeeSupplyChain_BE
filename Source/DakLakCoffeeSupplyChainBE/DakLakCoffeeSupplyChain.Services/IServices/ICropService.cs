@@ -16,5 +16,6 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task<IServiceResult> UpdateCrop(CropUpdateDto cropUpdateDto, Guid farmerUserId);
         Task<IServiceResult> SoftDeleteCrop(Guid cropId, Guid farmerUserId);
         Task<IServiceResult> HardDeleteCrop(Guid cropId, Guid farmerUserId);
+        Task AutoUpdateCropStatusAsync(Guid cropId);
     }
 }

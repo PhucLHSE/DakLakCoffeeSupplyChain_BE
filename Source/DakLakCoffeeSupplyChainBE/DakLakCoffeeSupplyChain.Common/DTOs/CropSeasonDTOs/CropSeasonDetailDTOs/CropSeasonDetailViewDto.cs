@@ -28,5 +28,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropDetailStatus Status { get; set; }
+
+        // Crop information
+        public Guid? CropId { get; set; }
+        public string CropCode { get; set; } = string.Empty;
+        public string FarmName { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public double? CropArea { get; set; }
     }
 }

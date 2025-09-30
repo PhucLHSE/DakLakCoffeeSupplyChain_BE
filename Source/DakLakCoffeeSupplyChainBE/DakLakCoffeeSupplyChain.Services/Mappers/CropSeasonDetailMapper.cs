@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
         {
             var planDetail = entity.CommitmentDetail?.PlanDetail;
             var coffeeType = planDetail?.CoffeeType;
+            var crop = entity.Crop;
 
             return new CropSeasonDetailViewDto
             {
@@ -29,7 +30,14 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Status = Enum.TryParse<CropDetailStatus>(entity.Status, true, out var parsedStatus)
                             ? parsedStatus : CropDetailStatus.Planned,
                 FarmerId = entity.CropSeason?.FarmerId ?? Guid.Empty,
-                FarmerName = entity.CropSeason?.Farmer?.User?.Name ?? "Không rõ"
+                FarmerName = entity.CropSeason?.Farmer?.User?.Name ?? "Không rõ",
+                
+                // Crop information
+                CropId = crop?.CropId,
+                CropCode = crop?.CropCode ?? string.Empty,
+                FarmName = crop?.FarmName ?? string.Empty,
+                Address = crop?.Address ?? string.Empty,
+                CropArea = (double?)crop?.CropArea
             };
         }
 

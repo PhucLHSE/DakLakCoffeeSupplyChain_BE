@@ -1,5 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs;
+using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
@@ -79,7 +81,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Get crops from repository
             var crops = await _unitOfWork.CropRepository.GetAllAsync(
                 predicate: c => 
-                   c.IsDeleted == false && 
+                   (c.IsDeleted == null || (c.IsDeleted == null || c.IsDeleted == false)) && 
                    c.CreatedBy == farmer.FarmerId,
                 orderBy: query => query.OrderBy(c => c.CreatedAt),
                 asNoTracking: true
@@ -132,7 +134,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var crop = await _unitOfWork.CropRepository.GetByIdAsync(
                 predicate: c =>
                    c.CropId == cropId &&
-                   c.IsDeleted == false &&
+                   (c.IsDeleted == null || c.IsDeleted == false) &&
                    c.CreatedBy == farmer.FarmerId,
                 asNoTracking: true
             );
@@ -243,7 +245,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 predicate: c => 
                     c.Address == cropCreateDto.Address && 
                     c.CreatedBy == farmer.FarmerId && 
-                    (c.IsDeleted == null || c.IsDeleted == false),
+                    (c.IsDeleted == null || (c.IsDeleted == null || c.IsDeleted == false)),
                 asNoTracking: true
             );
 
@@ -295,7 +297,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var existingCrop = await _unitOfWork.CropRepository.GetByIdAsync(
                 predicate: c =>
                    c.CropId == cropUpdateDto.CropId &&
-                   c.IsDeleted == false &&
+                   (c.IsDeleted == null || c.IsDeleted == false) &&
                    c.CreatedBy == farmer.FarmerId,
                 asNoTracking: false
             );
@@ -316,7 +318,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         c.Address == cropUpdateDto.Address && 
                         c.CreatedBy == farmer.FarmerId && 
                         c.CropId != cropUpdateDto.CropId &&
-                        (c.IsDeleted == null || c.IsDeleted == false),
+                        (c.IsDeleted == null || (c.IsDeleted == null || c.IsDeleted == false)),
                     asNoTracking: true
                 );
 
@@ -366,7 +368,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var existingCrop = await _unitOfWork.CropRepository.GetByIdAsync(
                 predicate: c =>
                    c.CropId == cropId &&
-                   c.IsDeleted == false &&
+                   (c.IsDeleted == null || c.IsDeleted == false) &&
                    c.CreatedBy == farmer.FarmerId,
                 asNoTracking: false
             );
@@ -434,6 +436,89 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Const.SUCCESS_DELETE_CODE,
                 "Xóa vĩnh viễn vùng trồng thành công"
             );
+        }
+
+        public async Task AutoUpdateCropStatusAsync(Guid cropId)
+        {
+            try
+            {
+                var crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                    predicate: c => c.CropId == cropId && (c.IsDeleted == null || (c.IsDeleted == null || c.IsDeleted == false)),
+                    include: q => q.Include(c => c.CropSeasonDetails),
+                    asNoTracking: true
+                );
+
+                if (crop == null) return;
+
+                // Lấy tất cả CropSeason thông qua CropSeasonDetail
+                var cropSeasons = await _unitOfWork.CropSeasonRepository.GetAllAsync(
+                    predicate: cs => cs.CropSeasonDetails.Any(csd => csd.CropId == cropId && !csd.IsDeleted) && !cs.IsDeleted,
+                    asNoTracking: true
+                );
+
+                if (!cropSeasons.Any())
+                {
+                    // Không có CropSeason nào liên kết với Crop này -> Inactive
+                    await UpdateCropStatusAsync(cropId, CropStatus.Inactive);
+                    return;
+                }
+
+                // Đếm số lượng CropSeason theo trạng thái
+                var activeCount = cropSeasons.Count(cs => cs.Status == "Active");
+                var completedCount = cropSeasons.Count(cs => cs.Status == "Completed");
+                var cancelledCount = cropSeasons.Count(cs => cs.Status == "Cancelled");
+                var totalCount = cropSeasons.Count();
+
+                CropStatus newStatus;
+
+                // Logic xác định trạng thái mới:
+                if (activeCount > 0)
+                {
+                    // Có ít nhất 1 CropSeason đang Active -> Crop Active
+                    newStatus = CropStatus.Active;
+                }
+                else if (completedCount == totalCount)
+                {
+                    // Tất cả CropSeason đã Completed -> Crop Active (vẫn có thể tạo mùa mới)
+                    newStatus = CropStatus.Active;
+                }
+                else if (cancelledCount == totalCount)
+                {
+                    // Tất cả CropSeason bị Cancelled -> Crop Inactive
+                    newStatus = CropStatus.Inactive;
+                }
+                else
+                {
+                    // Mix trạng thái -> Crop Active
+                    newStatus = CropStatus.Active;
+                }
+
+                // Cập nhật status nếu có thay đổi
+                var currentStatus = Enum.TryParse<CropStatus>(crop.Status, out var parsedStatus) 
+                    ? parsedStatus 
+                    : CropStatus.Inactive;
+
+                if (newStatus != currentStatus)
+                {
+                    await UpdateCropStatusAsync(cropId, newStatus);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to avoid affecting the main operation
+                // TODO: Replace with proper logging framework
+                System.Diagnostics.Debug.WriteLine($"AutoUpdateCropStatusAsync failed for crop {cropId}: {ex.Message}");
+
+            }
+        }
+
+        private async Task UpdateCropStatusAsync(Guid cropId, CropStatus newStatus)
+        {
+            await _unitOfWork.CropRepository.GetAllQueryable()
+                .Where(c => c.CropId == cropId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.Status, newStatus.ToString())
+                    .SetProperty(c => c.UpdatedAt, DateHelper.NowVietnamTime()));
         }
     }
 }

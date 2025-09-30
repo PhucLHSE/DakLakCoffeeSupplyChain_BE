@@ -7,6 +7,7 @@ using DakLakCoffeeSupplyChain.Repositories.Models;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Services.Base;
 using DakLakCoffeeSupplyChain.Services.Generators;
+using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -17,11 +18,13 @@ namespace DakLakCoffeeSupplyChain.Services.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICodeGenerator _codeGenerator;
+        private readonly ICropService _cropService;
 
-        public CropSeasonService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator)
+        public CropSeasonService(IUnitOfWork unitOfWork, ICodeGenerator codeGenerator, ICropService cropService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
+            _cropService = cropService ?? throw new ArgumentNullException(nameof(cropService));
         }
 
         public async Task<IServiceResult> GetAllByUserId(Guid userId, bool isAdmin, bool isManager)
@@ -190,7 +193,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Lỗi khi tạo CropSeason: {ex.Message}");
+                    // TODO: Replace with proper logging framework
                     return new ServiceResult(Const.FAIL_CREATE_CODE, $"Lỗi khi tạo mùa vụ: {ex.Message}");
                 }
 
@@ -209,6 +212,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             DetailId = Guid.NewGuid(),
                             CropSeasonId = cropSeason.CropSeasonId,
                             CommitmentDetailId = detail.CommitmentDetailId,
+                            CropId = detail.RegistrationDetail?.CropId, // Set CropId từ RegistrationDetail
                             ExpectedHarvestStart = detail.RegistrationDetail?.ExpectedHarvestStart ?? detail.EstimatedDeliveryStart ?? dto.StartDate,  
                             ExpectedHarvestEnd = detail.RegistrationDetail?.ExpectedHarvestEnd ?? detail.EstimatedDeliveryEnd ?? dto.EndDate,     
                             AreaAllocated = 0,
@@ -225,7 +229,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Lỗi khi tạo CropSeasonDetail: {ex.Message}");
+                        // TODO: Replace with proper logging framework
                         // Tiếp tục tạo các detail khác, không fail toàn bộ operation
                     }
                 }
@@ -243,7 +247,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Lỗi khi lưu thay đổi: {ex.Message}");
+                    // TODO: Replace with proper logging framework
                     return new ServiceResult(Const.FAIL_CREATE_CODE, $"Lỗi khi lưu dữ liệu: {ex.Message}");
                 }
 
@@ -261,9 +265,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     }
                     catch (Exception ex)
                     {
-                        // Log lỗi để debug
-                        Console.WriteLine($"Lỗi khi lấy entity sau khi tạo CropSeason: {ex.Message}");
-                        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                        // TODO: Replace with proper logging framework
                     }
 
                     // Nếu không lấy được entity đầy đủ, trả về thông tin cơ bản
@@ -285,10 +287,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
-                // Log lỗi để debug
-                Console.WriteLine($"Lỗi khi tạo CropSeason: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                
+                // TODO: Replace with proper logging framework
                 return new ServiceResult(Const.ERROR_EXCEPTION, $"Lỗi hệ thống: {ex.Message}");
             }
         }
@@ -497,12 +496,23 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .ExecuteUpdateAsync(s => s
                             .SetProperty(cs => cs.Status, newStatus.ToString())
                             .SetProperty(cs => cs.UpdatedAt, DateHelper.NowVietnamTime()));
+
+                    // Auto update Crop status cho tất cả Crop liên kết với CropSeason này
+                    var cropIds = cropSeason.CropSeasonDetails
+                        .Where(csd => csd.CropId.HasValue && !csd.IsDeleted)
+                        .Select(csd => csd.CropId.Value)
+                        .Distinct();
+                    
+                    foreach (var cropId in cropIds)
+                    {
+                        await _cropService.AutoUpdateCropStatusAsync(cropId);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 // Log error but don't throw to avoid affecting the main operation
-                Console.WriteLine($"Error in AutoUpdateCropSeasonStatusAsync: {ex.Message}");
+                // TODO: Replace with proper logging framework
             }
         }
 
