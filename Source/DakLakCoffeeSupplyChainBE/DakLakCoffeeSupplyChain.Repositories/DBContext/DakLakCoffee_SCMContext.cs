@@ -1263,6 +1263,10 @@ public partial class DakLakCoffee_SCMContext : DbContext
             entity.Property(e => e.ConfigId)
                 .HasDefaultValueSql("(newid())")
                 .HasColumnName("ConfigID");
+            entity.Property(e => e.ConfigName)
+                .IsRequired()
+                .HasMaxLength(200)
+                .HasDefaultValue("");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");

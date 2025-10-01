@@ -66,6 +66,9 @@ CREATE TABLE PaymentConfigurations (
   RoleID INT NOT NULL,                                           -- Vai trò áp dụng (Farmer, BusinessManager...)
   FeeType NVARCHAR(50) NOT NULL,                                 -- Loại phí: 'Registration', 'MonthlyFee', ...
   Amount FLOAT NOT NULL,                                         -- Số tiền
+  MinTons FLOAT NULL,                                            -- Áp dụng từ số tấn
+  MaxTons FLOAT NULL,                                            -- Đến số tấn (NULL = không giới hạn)
+  ConfigName NVARCHAR(200) NOT NULL,                             -- Tên cấu hình
   Description NVARCHAR(500),                                     -- Mô tả thêm (nếu có)
   EffectiveFrom DATE NOT NULL,                                   -- Hiệu lực từ ngày
   EffectiveTo DATE,                                              -- Hết hiệu lực (null nếu chưa biết)
@@ -4629,3 +4632,18 @@ VALUES
 -- 10) Hạt còn vỏ trấu (parchment) ≤ 0.5%
 ('PB.ParchmentRate', N'Tỉ lệ hạt còn vỏ trấu tối đa', NULL, 0.50, N'%', 1, GETDATE(),
  'ProcessingBatch', 'ParchmentRate', '<=', 'Global', NULL, 'Hard', 'Defects', 1);
+
+-- Thêm thuộc tính cho bảng PaymentConfigurations
+ALTER TABLE PaymentConfigurations
+ADD ConfigName NVARCHAR(100) NOT NULL DEFAULT N'',
+    MinTons FLOAT NULL,
+    MaxTons FLOAT NULL;
+
+-- Insert PaymentConfigurations
+INSERT INTO PaymentConfigurations
+(RoleID, FeeType, Amount, MinTons, MaxTons, ConfigName, Description, EffectiveFrom)
+VALUES
+(2, N'PurchasePlanPosting', 100000, 0, 5,   N'Phí đăng kế hoạch 0-5 tấn',   N'Áp dụng cho kế hoạch thu mua 0-5 tấn',   '2025-01-01'),
+(2, N'PurchasePlanPosting', 200000, 5, 20,  N'Phí đăng kế hoạch 5-20 tấn',  N'Áp dụng cho kế hoạch thu mua 5-20 tấn',  '2025-01-01'),
+(2, N'PurchasePlanPosting', 500000, 20, 50, N'Phí đăng kế hoạch 20-50 tấn', N'Áp dụng cho kế hoạch thu mua 20-50 tấn', '2025-01-01'),
+(2, N'PurchasePlanPosting', 800000, 50, NULL, N'Phí đăng kế hoạch 50+ tấn', N'Áp dụng cho kế hoạch thu mua từ 50 tấn trở lên', '2025-01-01');
