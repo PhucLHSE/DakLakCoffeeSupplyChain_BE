@@ -28,7 +28,8 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="roleId">ID của role</param>
         /// <param name="feeType">Loại phí</param>
         /// <returns>PaymentConfiguration phù hợp hoặc null nếu không tìm thấy</returns>
-        Task<PaymentConfiguration?> GetPaymentConfigurationByContext(int roleId, string feeType);
+        Task<PaymentConfiguration?> GetPaymentConfigurationByContext(int roleId, string feeType, Guid planId);
+
 
         /// <summary>
         /// Tạo Payment record
@@ -39,7 +40,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="userId">User ID</param>
         /// <returns>Payment object</returns>
         Payment CreatePaymentRecord(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId);
-        
+
         /// <summary>
         /// Tạo Payment record với txnRef cụ thể
         /// </summary>
@@ -49,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         /// <param name="userId">User ID</param>
         /// <param name="txnRef">Transaction reference</param>
         /// <returns>Payment object</returns>
-        Payment CreatePaymentRecordWithTxnRef(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId, string txnRef);
+        Task<Payment> CreateOrUpdatePaymentRecordWithTxnRef(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId, string txnRef);
 
         /// <summary>
         /// Lưu Payment vào database
