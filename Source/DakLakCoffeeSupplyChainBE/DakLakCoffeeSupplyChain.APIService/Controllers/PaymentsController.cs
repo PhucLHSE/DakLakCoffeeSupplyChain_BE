@@ -37,11 +37,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
 
         /// <summary>
-        /// Lấy thông tin phí thanh toán cho PlanPosting
+        /// Lấy thông tin phí thanh toán cho PlanPosting theo khối lượng kế hoạch
         /// </summary>
-        [HttpGet("plan-posting-fee")]
+        [HttpGet("plan-posting-fee/{planId}")]
         [Authorize(Roles = "BusinessManager,Admin")]
-        public async Task<IActionResult> GetPlanPostingFee()
+        public async Task<IActionResult> GetPlanPostingFee(Guid planId)
         {
             var userRoleId = _paymentService.GetCurrentUserRoleId();
             if (userRoleId == null)
@@ -49,7 +49,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return BadRequest("Không thể xác định vai trò của người dùng.");
             }
 
-            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting");
+            // Truyền planId để check MinTons/MaxTons
+            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting", planId);
             if (paymentConfig == null)
             {
                 return BadRequest("Không tìm thấy cấu hình phí cho việc đăng ký kế hoạch thu mua.");
@@ -64,53 +65,56 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
 
+
         [HttpPost("vnpay/create-url")]
         [Authorize(Roles = "BusinessManager,Admin")]
         public async Task<IActionResult> CreateVnPayUrl([FromBody] VnPayCreateRequest req)
         {
-            // Validate VNPay configuration
             var tmnCode = _config["VnPay:TmnCode"] ?? string.Empty;
             var secret = _config["VnPay:HashSecret"] ?? string.Empty;
-            var baseUrl = _config["VnPay:BaseUrl"] ?? _config["VnPay:PaymentUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+            var baseUrl = _config["VnPay:BaseUrl"]
+                       ?? _config["VnPay:PaymentUrl"]
+                       ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
             var returnUrl = req.ReturnUrl ?? _config["VnPay:ReturnUrl"] ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(tmnCode) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(returnUrl))
                 return BadRequest("VNPay chưa cấu hình đầy đủ.");
 
-            // Get user information
             var (userEmail, userId) = _paymentService.GetCurrentUserInfo();
             var userRoleId = _paymentService.GetCurrentUserRoleId();
-
             if (userRoleId == null)
             {
                 return BadRequest("Không thể xác định vai trò của người dùng.");
             }
 
-            // Get payment configuration
-            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting");
+            // ✅ Truyền planId để lấy phí đúng theo MinTons/MaxTons
+            var paymentConfig = await _paymentService.GetPaymentConfigurationByContext(userRoleId.Value, "PlanPosting", req.PlanId);
             if (paymentConfig == null)
             {
                 return BadRequest("Không tìm thấy cấu hình phí cho việc đăng ký kế hoạch thu mua.");
             }
 
-            // Create VNPay parameters
             var paymentAmount = (int)paymentConfig.Amount;
-            var amount = (long)paymentAmount * 100; // VNPay requires amount * 100
+            var amount = (long)paymentAmount * 100;
             var txnRef = PaymentHelper.GenerateTxnRef(req.PlanId);
             var ipAddress = _paymentService.GetClientIpAddress();
 
             var vnpParameters = PaymentHelper.CreateVnPayParameters(
                 tmnCode, amount, txnRef, $"PlanPosting:{txnRef}", returnUrl, ipAddress, req.Locale ?? "vn");
 
-            // Create VNPay URL
             var url = PaymentHelper.CreateVnPayUrl(baseUrl, vnpParameters, secret);
 
-            // Create and save payment record with the same txnRef
-            var payment = _paymentService.CreatePaymentRecordWithTxnRef(req.PlanId, paymentConfig, userEmail, userId, txnRef);
-            await _paymentService.SavePaymentAsync(payment);
+            var payment = await _paymentService.CreateOrUpdatePaymentRecordWithTxnRef(
+                req.PlanId, paymentConfig, userEmail, userId, txnRef);
 
-            return Ok(new VnPayCreateResponse { Url = url, PaymentId = payment.PaymentId.ToString() });
+            return Ok(new VnPayCreateResponse
+            {
+                Url = url,
+                PaymentId = payment.PaymentId.ToString()
+            });
         }
+
+
 
 
 
