@@ -75,9 +75,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var baseUrl = _config["VnPay:BaseUrl"]
                        ?? _config["VnPay:PaymentUrl"]
                        ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-            var returnUrl = req.ReturnUrl;
+            var returnUrl = req.ReturnUrl ?? _config["VnPay:ReturnUrl"] ?? string.Empty;
+
             if (string.IsNullOrWhiteSpace(tmnCode) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(returnUrl))
-                return BadRequest("VNPay chưa cấu hình đầy đủ hoặc thiếu returnUrl từ FE.");
+                return BadRequest("VNPay chưa cấu hình đầy đủ.");
 
             var (userEmail, userId) = _paymentService.GetCurrentUserInfo();
             var userRoleId = _paymentService.GetCurrentUserRoleId();
