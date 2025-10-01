@@ -11,14 +11,9 @@ using System.Threading.Tasks;
 
 namespace DakLakCoffeeSupplyChain.Repositories.Repositories
 {
-    public class ProcessingMethodRepository : GenericRepository<ProcessingMethod>, IProcessingMethodRepository
+    public class ProcessingMethodRepository(DakLakCoffee_SCMContext context) : GenericRepository<ProcessingMethod>(context), IProcessingMethodRepository
     {
-        private readonly DakLakCoffee_SCMContext _context;
-
-        public ProcessingMethodRepository(DakLakCoffee_SCMContext context) : base(context)
-        {
-            _context = context;
-        }
+        private readonly DakLakCoffee_SCMContext _context = context;
 
         public async Task<bool> SoftDeleteAsync(int methodId)
         {
