@@ -27,6 +27,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RoleName = config.Role?.RoleName ?? "N/A",
                 FeeType = feeType,
                 Amount = config.Amount,
+                MinTons = config.MinTons,
+                MaxTons = config.MaxTons,
+                ConfigName = config.ConfigName ?? string.Empty,
                 IsActive = config.IsActive,
                 EffectiveFrom = config.EffectiveFrom,
                 EffectiveTo = config.EffectiveTo
