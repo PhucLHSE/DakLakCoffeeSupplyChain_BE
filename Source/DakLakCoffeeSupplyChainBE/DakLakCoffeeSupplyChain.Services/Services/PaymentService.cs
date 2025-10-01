@@ -191,7 +191,7 @@
                 // Cập nhật lại phí theo cấu hình mới
                 existingPayment.ConfigId = paymentConfig.ConfigId;
                 existingPayment.PaymentAmount = (int)paymentConfig.Amount;
-
+                existingPayment.PaymentCode = paymentCode;
                 existingPayment.PaymentStatus = "Pending";
                 existingPayment.PaymentTime = null;
                 existingPayment.UpdatedAt = now;
