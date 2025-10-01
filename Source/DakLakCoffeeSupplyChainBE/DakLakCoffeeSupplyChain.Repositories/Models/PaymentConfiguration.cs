@@ -17,6 +17,12 @@ public partial class PaymentConfiguration
 
     public double Amount { get; set; }
 
+    public string ConfigName { get; set; }
+
+    public double? MinTons { get; set; }
+
+    public double? MaxTons { get; set; }
+
     public string Description { get; set; }
 
     public DateOnly EffectiveFrom { get; set; }

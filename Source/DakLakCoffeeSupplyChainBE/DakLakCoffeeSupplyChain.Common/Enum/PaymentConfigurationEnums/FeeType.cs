@@ -12,7 +12,7 @@ namespace DakLakCoffeeSupplyChain.Common.Enum.PaymentConfigurationEnums
         MonthlyMaintenance = 2,   // Phí duy trì tháng
         QuarterlyMaintenance = 3, // Phí duy trì quý
         YearlyMaintenance = 4,    // Phí duy trì năm
-        PurchasePlanPosting = 5,  // Phí đăng kế hoạch thu mua
+        PlanPosting = 5,          // Phí đăng kế hoạch thu mua
         Other = 99                // Phí khác
     }
 }
