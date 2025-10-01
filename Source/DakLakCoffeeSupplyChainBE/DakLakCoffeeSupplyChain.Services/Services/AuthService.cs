@@ -18,7 +18,14 @@ using System.Text;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
-    public class AuthService(IUnitOfWork unitOfWork, IConfiguration config, IMemoryCache cache, IPasswordHasher passwordHasher, ICodeGenerator codeGenerator, IEmailService emailService) : IAuthService
+    public class AuthService(
+        IUnitOfWork unitOfWork, 
+        IConfiguration config, 
+        IMemoryCache cache, 
+        IPasswordHasher passwordHasher, 
+        ICodeGenerator codeGenerator, 
+        IEmailService emailService
+        ) : IAuthService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IConfiguration _config = config;
@@ -30,25 +37,42 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> LoginAsync(LoginRequestDto request)
         {
             // 1. Tìm user theo email
-            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
+            var user = await _unitOfWork.UserAccountRepository
+                .GetUserAccountByEmailAsync(request.Email);
+
             if (user == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Email hoặc mật khẩu không đúng."
+                );
 
             // 2. So sánh mật khẩu bằng hasher
             if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
-                return new ServiceResult(Const.FAIL_READ_CODE, "Email hoặc mật khẩu không đúng.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Email hoặc mật khẩu không đúng."
+                );
 
             // 3. Kiểm tra xác minh isVerify
             if (!(user.IsVerified ?? false))
-                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Tài khoản chưa được duyệt."
+                );
 
             // 4. Kiểm tra xác minh email
             if (!(user.EmailVerified ?? false))
-                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa xác minh email.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE,
+                    "Tài khoản chưa xác minh email."
+                );
 
             // 5. Kiểm tra duyệt
             if (user.Status?.ToLower() != "active")
-                return new ServiceResult(Const.FAIL_READ_CODE, "Tài khoản chưa được duyệt hoặc đã bị khóa.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Tài khoản chưa được duyệt hoặc đã bị khóa."
+                );
 
             // 6. Tạo token
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -73,7 +97,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
-            return new ServiceResult(Const.SUCCESS_LOGIN_CODE, "Đăng nhập thành công", new { token = tokenString });
+            return new ServiceResult(
+                Const.SUCCESS_LOGIN_CODE, 
+                "Đăng nhập thành công", 
+                new { token = tokenString }
+            );
         }
 
         public async Task<IServiceResult> RegisterAccount(SignUpRequestDto request)
@@ -81,7 +109,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra email đã tồn tại chưa
-                var emailExists = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
+                var emailExists = await _unitOfWork.UserAccountRepository
+                    .GetUserAccountByEmailAsync(request.Email);
 
                 if (emailExists != null)
                 {
@@ -94,7 +123,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Kiểm tra phone đã tồn tại chưa
                 if (!string.IsNullOrWhiteSpace(request.Phone))
                 {
-                    var phoneExists = await _unitOfWork.UserAccountRepository.GetUserAccountByPhoneAsync(request.Phone);
+                    var phoneExists = await _unitOfWork.UserAccountRepository
+                        .GetUserAccountByPhoneAsync(request.Phone);
 
                     if (phoneExists != null)
                     {
@@ -122,20 +152,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 // Phân role
                 var role = await _unitOfWork.RoleRepository.GetByIdAsync(request.RoleId);
+
                 if (role.RoleName == "Farmer")
                 {
                     string farmerCode = await _codeGenerator.GenerateFarmerCodeAsync();
+
                     Farmer newFarmer = new()
                     {
                         FarmerId = Guid.NewGuid(),
                         FarmerCode = farmerCode,
                         UserId = newUser.UserId
                     };
+
                     await _unitOfWork.FarmerRepository.CreateAsync(newFarmer);
                 }
                 else if (role.RoleName == "BusinessManager")
                 {
                     string managerCode = await _codeGenerator.GenerateManagerCodeAsync();
+
                     BusinessManager newBusinessManager = new()
                     {
                         ManagerId = Guid.NewGuid(),
@@ -145,13 +179,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         BusinessLicenseUrl = request.BusinessLicenseURl,
                         UserId = newUser.UserId
                     };
+
                     await _unitOfWork.BusinessManagerRepository.CreateAsync(newBusinessManager);
                 }
                 else
                     return new ServiceResult(
-                            Const.FAIL_CREATE_CODE,
-                            "Role không hợp lệ"
-                        );
+                        Const.FAIL_CREATE_CODE,
+                        "Role không hợp lệ"
+                    );
 
 
                 // Lưu thay đổi vào database
@@ -163,7 +198,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var responseDto = newUser.MapToUserAccountViewDetailsDto();
 
                     // Gửi email xác minh
-                    _emailService.SendEmailAsync(newUser.Email, "Xác minh tài khoản", $"Click vào đường link này để xác minh tài khoản của bạn: <b>{verifyUrl}</b>");
+                    _emailService.SendEmailAsync(
+                        newUser.Email, 
+                        "Xác minh tài khoản", 
+                        $"Click vào đường link này để xác minh tài khoản của bạn: <b>{verifyUrl}</b>"
+                    );
 
                     return new ServiceResult(
                         Const.SUCCESS_CREATE_CODE,
@@ -192,6 +231,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             var random = new Random();
+
             return new string([.. Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)])]);
         }
 
@@ -200,27 +240,43 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // 1. Tìm người dùng
-                var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
+                var user = await _unitOfWork.UserAccountRepository
+                    .GetByIdAsync(userId);
+
                 if (user == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        Const.WARNING_NO_DATA_MSG
+                    );
 
                 // 2. Kiểm tra đã xác minh chưa
                 if (user.IsVerified == true)
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã được xác minh trước đó.");
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE, 
+                        "Tài khoản đã được xác minh trước đó."
+                    );
 
                 // 3. Lấy mã xác minh từ cache
                 var cacheKey = $"email-verify:{userId}";
+
                 if (!_cache.TryGetValue(cacheKey, out string cachedCode))
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Mã xác minh đã hết hạn hoặc không tồn tại.");
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE, 
+                        "Mã xác minh đã hết hạn hoặc không tồn tại."
+                    );
 
                 // 4. So sánh mã
                 if (cachedCode != code)
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Mã xác minh không hợp lệ.");
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE, 
+                        "Mã xác minh không hợp lệ."
+                    );
 
                 // 5. Cập nhật trạng thái người dùng
                 user.IsVerified = true;
                 user.EmailVerified = true;
                 user.Status = "active";
+
                 await _unitOfWork.UserAccountRepository.UpdateAsync(user);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -233,73 +289,126 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 //Đường link trong tương lai phải trả về trang chủ đăng nhập của FE, tạm thời chưa có FE
                 var businessManager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: p => p.UserId == userId,
-                    include: p => p.Include(p => p.User).ThenInclude(p => p.Role),
+                    include: p => p
+                       .Include(p => p.User)
+                          .ThenInclude(p => p.Role),
                     asNoTracking: true
-                    );
+                );
 
-                if (businessManager != null && businessManager.User.Role.RoleName == "BusinessManager")
+                if (businessManager != null && 
+                    businessManager.User.Role.RoleName == "BusinessManager")
                 {
                     var businessURL = $"{_config["Jwt:Issuer"]}/api/BusinessManagers/{businessManager.ManagerId}";
-                    _emailService.SendEmailAsync("xuandang854@gmail.com", $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>");
+
+                    _emailService.SendEmailAsync(
+                        "xuandang854@gmail.com", 
+                        $"[DLC]Duyệt tài khoản doanh nghiệp {businessManager.CompanyName}", 
+                        $"Click vào đường link này để xem và duyệt tài khoản của doanh nghiệp: <b>{businessURL}</b>"
+                    );
                 }
 
-                return new ServiceResult(Const.SUCCESS_VERIFY_OTP_CODE, "Xác minh email thành công.");
+                return new ServiceResult(
+                    Const.SUCCESS_VERIFY_OTP_CODE, 
+                    "Xác minh email thành công."
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
             }
         }
-        public async Task<IServiceResult> VerifyBusinessManagerAcount(Guid managerId, VerifyAccountByAdminDto dto, Guid userId)
+
+        public async Task<IServiceResult> VerifyBusinessManagerAcount(
+            Guid managerId, 
+            VerifyAccountByAdminDto dto, 
+            Guid userId)
         {
             try
             {
                 // Kiểm tra admin
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
-                    predicate: u => u.UserId == userId && !u.IsDeleted && u.Role.RoleName.Equals("Admin"),
+                    predicate: u => 
+                       u.UserId == userId && 
+                       !u.IsDeleted && 
+                       u.Role.RoleName.Equals("Admin"),
                     asNoTracking: true
-                    );
+                );
+
                 if (user == null)
-                    return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền hạn này");
+                    return new ServiceResult(
+                        Const.FAIL_READ_CODE, 
+                        "Bạn không có quyền hạn này"
+                    );
 
                 // Tìm người dùng
                 var manager = await _unitOfWork.BusinessManagerRepository.GetByIdAsync(
                     predicate: b => b.ManagerId == managerId,
-                    include: b => b.Include(b => b.User));
+                    include: b => b
+                       .Include(b => b.User)
+                );
+
                 if (manager == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        Const.WARNING_NO_DATA_MSG
+                    );
 
                 // Kiểm tra đã xác minh chưa
                 if (manager.IsCompanyVerified == true)
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã được xác minh trước đó.");
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE,
+                        "Tài khoản đã được xác minh trước đó."
+                    );
 
                 // Cập nhật trạng thái người dùng
                 if (dto.Action == true)
                 {
                     manager.IsCompanyVerified = true;
                     manager.UpdatedAt = DateHelper.NowVietnamTime();
-                    _emailService.SendEmailAsync(manager.User.Email, $"[DLC]Tài khoản của bạn đã được quản trị viên của nền tảng phân phối chuỗi" +
-                        $" cung ứng cà phê Đắk Lắk duyệt", "Bây giờ bạn đã có thể truy cập các tính năng nền tảng.");
+
+                    _emailService.SendEmailAsync(
+                        manager.User.Email, 
+                        $"[DLC]Tài khoản của bạn đã được quản trị viên của nền tảng phân phối chuỗi" +
+                        $" cung ứng cà phê Đắk Lắk duyệt", "Bây giờ bạn đã có thể truy cập các tính năng nền tảng."
+                    );
                 }
                 else
                 {
-                    _emailService.SendEmailAsync(manager.User.Email, $"[DLC]Tài khoản của bạn đã bị quản trị viên của nền tảng phân phối chuỗi" +
-                        $" cung ứng cà phê Đắk Lắk từ chối", dto.Reason);
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã bị từ chối");
+                    _emailService.SendEmailAsync(
+                        manager.User.Email,
+                        $"[DLC]Tài khoản của bạn đã bị quản trị viên của nền tảng phân phối chuỗi" +
+                        $" cung ứng cà phê Đắk Lắk từ chối",
+                        dto.Reason
+                    );
+
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE, 
+                        "Tài khoản đã bị từ chối"
+                    );
                 }
 
                 await _unitOfWork.BusinessManagerRepository.UpdateAsync(manager);
                 await _unitOfWork.SaveChangesAsync();
 
-                return new ServiceResult(Const.SUCCESS_VERIFY_OTP_CODE, "Xác minh tài khoản thành công.");
+                return new ServiceResult(
+                    Const.SUCCESS_VERIFY_OTP_CODE, 
+                    "Xác minh tài khoản thành công."
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.ToString()
+                );
             }
         }
 
-        public async Task<IServiceResult> ResendVerificationEmail(ResendEmailVerificationRequestDto emailDto)
+        public async Task<IServiceResult> ResendVerificationEmail(
+            ResendEmailVerificationRequestDto emailDto)
         {
             try
             {
@@ -307,16 +416,24 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(
                     predicate: u => u.Email == emailDto.Email,
                     asNoTracking: true
-                    );
+                );
+
                 if (user == null)
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Tài khoản không tồn tại.");
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Tài khoản không tồn tại."
+                    );
 
                 // 2. Kiểm tra đã xác minh chưa
                 if (user.IsVerified == true)
-                    return new ServiceResult(Const.FAIL_VERIFY_OTP_CODE, "Tài khoản đã được xác minh trước đó.");
+                    return new ServiceResult(
+                        Const.FAIL_VERIFY_OTP_CODE, 
+                        "Tài khoản đã được xác minh trước đó."
+                    );
 
                 // 3. Kiểm tra xem đã có mã xác minh trong cache chưa
                 var cacheKey = $"email-verify:{user.UserId}";
+
                 if (_cache.TryGetValue(cacheKey, out string existingCode))
                 {
                     var verifyUrlExisting = $"{_config["Jwt:Issuer"]}/api/Auth/verify-email/userId={user.UserId}&code={existingCode}";
@@ -328,7 +445,10 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         $"Mã xác minh trước đó vẫn còn hiệu lực. Vui lòng click vào link sau để xác minh tài khoản của bạn: <b>{verifyUrlExisting}</b>"
                     );
 
-                    return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE    , "Đã gửi lại email xác minh (mã cũ vẫn còn hiệu lực).");
+                    return new ServiceResult(
+                        Const.SUCCESS_SEND_OTP_CODE, 
+                        "Đã gửi lại email xác minh (mã cũ vẫn còn hiệu lực)."
+                    );
                 }
 
                 // 4. Nếu chưa có mã, tạo mã mới và lưu vào cache
@@ -344,20 +464,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     $"Click vào đường link sau để xác minh tài khoản của bạn: <b>{verifyUrlNew}</b>"
                 );
 
-                return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE, "Đã tạo và gửi email xác minh mới.");
+                return new ServiceResult(
+                    Const.SUCCESS_SEND_OTP_CODE, 
+                    "Đã tạo và gửi email xác minh mới."
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    ex.ToString()
+                );
             }
         }
 
         // Phương thức gửi email với mã OTP reset mật khẩu
-        public async Task<IServiceResult> ForgotPasswordAsync(ForgotPasswordRequestDto request)
+        public async Task<IServiceResult> ForgotPasswordAsync(
+            ForgotPasswordRequestDto request)
         {
-            var user = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(request.Email);
+            var user = await _unitOfWork.UserAccountRepository
+                .GetUserAccountByEmailAsync(request.Email);
+
             if (user == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Email không tồn tại.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Email không tồn tại."
+                );
 
             var resetToken = GenerateResetToken(); // Tạo mã reset
             _cache.Set($"password-reset:{user.UserId}", resetToken, TimeSpan.FromMinutes(30)); // Lưu mã trong cache
@@ -413,42 +545,65 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     </div>
                 </div>";
 
-            await _emailService.SendEmailAsync(user.Email, "🔄 Đặt lại mật khẩu - DakLak Coffee", emailBody);
+            await _emailService.SendEmailAsync(
+                user.Email, 
+                "🔄 Đặt lại mật khẩu - DakLak Coffee", 
+                emailBody
+            );
 
-            return new ServiceResult(Const.SUCCESS_SEND_OTP_CODE, "Mã OTP đã được gửi qua email.");
+            return new ServiceResult(
+                Const.SUCCESS_SEND_OTP_CODE, 
+                "Mã OTP đã được gửi qua email."
+            );
         }
 
         // Phương thức kiểm tra mã token và thay đổi mật khẩu
-        public async Task<IServiceResult> ResetPasswordAsync(Guid userId, string token, ResetPasswordRequestDto request)
+        public async Task<IServiceResult> ResetPasswordAsync(
+            Guid userId, 
+            string token, 
+            ResetPasswordRequestDto request)
         {
             var cacheKey = $"password-reset:{userId}";
+
             if (!_cache.TryGetValue(cacheKey, out string cachedToken) || cachedToken != token)
             {
-                return new ServiceResult(Const.FAIL_RESET_PASSWORD_CODE, "Mã reset không hợp lệ hoặc đã hết hạn.");
+                return new ServiceResult(
+                    Const.FAIL_RESET_PASSWORD_CODE, 
+                    "Mã reset không hợp lệ hoặc đã hết hạn."
+                );
             }
 
             // Cập nhật mật khẩu mới
             var user = await _unitOfWork.UserAccountRepository.GetByIdAsync(userId);
+
             if (user == null)
-                return new ServiceResult(Const.FAIL_READ_CODE, "Người dùng không tồn tại.");
+                return new ServiceResult(
+                    Const.FAIL_READ_CODE, 
+                    "Người dùng không tồn tại."
+                );
 
             string passwordHash = _passwordHasher.Hash(request.NewPassword);
             user.PasswordHash = passwordHash;
+
             await _unitOfWork.UserAccountRepository.UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
             // Xóa mã token sau khi đổi mật khẩu
             _cache.Remove(cacheKey);
 
-            return new ServiceResult(Const.SUCCESS_RESET_PASSWORD_CODE, "Mật khẩu đã được thay đổi.");
+            return new ServiceResult(
+                Const.SUCCESS_RESET_PASSWORD_CODE, 
+                "Mật khẩu đã được thay đổi."
+            );
         }
-
 
         // Phương thức tạo mã reset ngẫu nhiên
         public static string GenerateResetToken(int length = 6)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
             var random = new Random();
+
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }

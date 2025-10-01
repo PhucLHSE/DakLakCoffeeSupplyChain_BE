@@ -22,6 +22,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.PaymentConfigurationDTOs
 
         public double Amount { get; set; }
 
+        public double? MinTons { get; set; }
+
+        public double? MaxTons { get; set; }
+
+        public string ConfigName { get; set; } = string.Empty;
+
         public string Description { get; set; } = string.Empty;
 
         public DateOnly EffectiveFrom { get; set; }
