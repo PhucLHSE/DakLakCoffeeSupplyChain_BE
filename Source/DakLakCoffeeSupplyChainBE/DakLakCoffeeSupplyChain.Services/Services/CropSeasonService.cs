@@ -72,6 +72,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         .ThenInclude(d => d.CommitmentDetail)
                             .ThenInclude(cd => cd.PlanDetail)
                                 .ThenInclude(pd => pd.CoffeeType)
+                    .Include(cs => cs.CropSeasonDetails)
+                        .ThenInclude(d => d.Crop)
                     .Include(cs => cs.Commitment)
                         .ThenInclude(c => c.Registration)
                             .ThenInclude(r => r.CultivationRegistrationsDetails),
@@ -212,11 +214,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             DetailId = Guid.NewGuid(),
                             CropSeasonId = cropSeason.CropSeasonId,
                             CommitmentDetailId = detail.CommitmentDetailId,
-                            CropId = detail.RegistrationDetail?.CropId,
+                            CropId = detail.RegistrationDetail?.CropId, // Set CropId từ RegistrationDetail
                             ExpectedHarvestStart = detail.RegistrationDetail?.ExpectedHarvestStart ?? detail.EstimatedDeliveryStart ?? dto.StartDate,  
                             ExpectedHarvestEnd = detail.RegistrationDetail?.ExpectedHarvestEnd ?? detail.EstimatedDeliveryEnd ?? dto.EndDate,     
-                            AreaAllocated = detail.RegistrationDetail?.RegisteredArea ?? 0, 
-                            EstimatedYield = detail.RegistrationDetail?.EstimatedYield ?? 0, 
+                            AreaAllocated = detail.RegistrationDetail?.RegisteredArea ?? 0,
+                            EstimatedYield = detail.RegistrationDetail?.EstimatedYield ?? 0,
                             PlannedQuality = null,
                             QualityGrade = null,
                             Status = CropDetailStatus.Planned.ToString(),
