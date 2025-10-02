@@ -88,62 +88,45 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                Console.WriteLine($"CropProgressService.Create called with:");
-                Console.WriteLine($"  DTO: {dto?.CropSeasonDetailId}, StageId: {dto?.StageId}, ProgressDate: {dto?.ProgressDate}");
-                Console.WriteLine($"  UserId: {userId}");
                 
                 // Validate input
                 if (dto == null)
                 {
-                    Console.WriteLine("DTO is null");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Dữ liệu đầu vào không hợp lệ.");
                 }
 
                 // Validate stage
-                Console.WriteLine($"Validating stage with ID: {dto.StageId}");
                 var stage = await _unitOfWork.CropStageRepository.GetByIdAsync(dto.StageId);
                 if (stage == null)
                 {
-                    Console.WriteLine($"Stage not found with ID: {dto.StageId}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Giai đoạn không tồn tại.");
                 }
-                Console.WriteLine($"Stage found: {stage.StageName} ({stage.StageCode})");
 
                 // Validate crop season detail
-                Console.WriteLine($"Validating crop season detail with ID: {dto.CropSeasonDetailId}");
                 var detail = await _unitOfWork.CultivationRegistrationRepository
                     .GetCropSeasonDetailByIdAsync(dto.CropSeasonDetailId);
                 if (detail == null)
                 {
-                    Console.WriteLine($"Crop season detail not found with ID: {dto.CropSeasonDetailId}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Chi tiết mùa vụ không tồn tại.");
                 }
-                Console.WriteLine($"Crop season detail found: {detail.DetailId}");
 
                 // Validate user permission
-                Console.WriteLine($"Validating user permission - Detail Farmer UserId: {detail.CropSeason?.Farmer?.UserId}, Current UserId: {userId}");
                 if (detail.CropSeason?.Farmer?.UserId != userId)
                 {
-                    Console.WriteLine($"Permission denied - User mismatch");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Bạn không có quyền ghi nhận tiến độ cho vùng trồng này.");
                 }
-                Console.WriteLine($"User permission validated");
 
                 // Validate progress date
-                Console.WriteLine($"Validating progress date: {dto.ProgressDate}");
                 if (!dto.ProgressDate.HasValue)
                 {
-                    Console.WriteLine("Progress date is null");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Vui lòng chọn ngày ghi nhận.");
                 }
 
                 var today = DateOnly.FromDateTime(DateHelper.NowVietnamTime());
-                Console.WriteLine($"Today: {today}, Progress Date: {dto.ProgressDate.Value}");
                 
                 // Không cho phép ngày trong tương lai
                 if (dto.ProgressDate.Value > today)
                 {
-                    Console.WriteLine($"Progress date is in future: {dto.ProgressDate.Value} > {today}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được lớn hơn hôm nay.");
                 }
                 
@@ -151,32 +134,25 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 var minDate = today.AddDays(-365);
                 if (dto.ProgressDate.Value < minDate)
                 {
-                    Console.WriteLine($"Progress date is too far in past: {dto.ProgressDate.Value} < {minDate}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được quá xa trong quá khứ (tối đa 1 năm trước).");
                 }
-                Console.WriteLine("Progress date validation passed");
                 
                 // Kiểm tra ngày có hợp lý với mùa vụ không
                 var cropSeason = detail.CropSeason;
-                Console.WriteLine($"Crop season dates - Start: {cropSeason?.StartDate}, End: {cropSeason?.EndDate}");
                 if (cropSeason?.StartDate.HasValue == true && cropSeason?.EndDate.HasValue == true)
                 {
                     if (dto.ProgressDate.Value < cropSeason.StartDate.Value)
                     {
-                        Console.WriteLine($"Progress date before crop season start: {dto.ProgressDate.Value} < {cropSeason.StartDate.Value}");
                         return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được trước ngày bắt đầu mùa vụ.");
                     }
                     
                     if (dto.ProgressDate.Value > cropSeason.EndDate.Value.AddDays(30))
                     {
-                        Console.WriteLine($"Progress date too far after crop season end: {dto.ProgressDate.Value} > {cropSeason.EndDate.Value.AddDays(30)}");
                         return new ServiceResult(Const.FAIL_CREATE_CODE, "Ngày ghi nhận không được quá xa sau ngày kết thúc mùa vụ.");
                     }
                 }
-                Console.WriteLine("Crop season date validation passed");
 
                 // Check for duplicates
-                Console.WriteLine("Checking for duplicates...");
                 var duplicate = await _unitOfWork.CropProgressRepository.GetAllAsync(p =>
                     !p.IsDeleted &&
                     p.CropSeasonDetailId == dto.CropSeasonDetailId &&
@@ -185,27 +161,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
                 if (duplicate.Any())
                 {
-                    Console.WriteLine($"Duplicate found - Count: {duplicate.Count()}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, "Tiến trình đã tồn tại với ngày và giai đoạn này.");
                 }
-                Console.WriteLine("No duplicates found");
 
                 // Validate stage order - check if this is the next valid stage
-                Console.WriteLine("Validating stage order...");
                 var existingProgress = await _unitOfWork.CropProgressRepository
                     .GetByCropSeasonDetailIdWithIncludesAsync(dto.CropSeasonDetailId, userId);
                 
-                Console.WriteLine($"Existing progress count: {existingProgress.Count}");
                 var nextValidStage = GetNextValidStage(existingProgress);
-                Console.WriteLine($"Next valid stage: {nextValidStage?.StageName} (ID: {nextValidStage?.StageId})");
                 
                 if (nextValidStage != null && dto.StageId != nextValidStage.StageId)
                 {
-                    Console.WriteLine($"Stage order validation failed - Expected: {nextValidStage.StageId}, Actual: {dto.StageId}");
                     return new ServiceResult(Const.FAIL_CREATE_CODE, 
                         $"Vui lòng tạo tiến độ theo đúng thứ tự giai đoạn. Giai đoạn tiếp theo cần tạo là: {nextValidStage.StageName}");
                 }
-                Console.WriteLine("Stage order validation passed");
                 
                 // Validate date order - check if current progress date is after previous progress date
                 Console.WriteLine("Validating date order...");
