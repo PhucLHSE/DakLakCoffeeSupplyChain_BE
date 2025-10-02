@@ -230,9 +230,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                         seasonDetails.Add(seasonDetail);
                     }
                     catch (Exception ex)
-                    {
-                        // TODO: Replace with proper logging framework
-                        // Tiếp tục tạo các detail khác, không fail toàn bộ operation
+                    { 
+                        _ = ex;
                     }
                 }
 
@@ -268,6 +267,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     catch (Exception ex)
                     {
                         // TODO: Replace with proper logging framework
+                        _ = ex; // Suppress unused variable warning
                     }
 
                     // Nếu không lấy được entity đầy đủ, trả về thông tin cơ bản
@@ -515,6 +515,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             {
                 // Log error but don't throw to avoid affecting the main operation
                 // TODO: Replace with proper logging framework
+                _ = ex;
             }
         }
 

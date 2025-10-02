@@ -11,6 +11,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropSeasonDetailDTOs
         public Guid DetailId { get; set; }
         public Guid CommitmentDetailId { get; set; }
         public string CommitmentDetailCode { get; set; } = string.Empty;
+        public Guid CropSeasonId { get; set; }
 
         public Guid CoffeeTypeId { get; set; }
         public string TypeName { get; set; } = string.Empty;
