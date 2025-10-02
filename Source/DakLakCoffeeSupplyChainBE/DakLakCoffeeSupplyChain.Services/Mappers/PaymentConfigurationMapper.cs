@@ -74,6 +74,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 RoleId = dto.RoleId,
                 FeeType = dto.FeeType.ToString(), // enum to string
                 Amount = dto.Amount,
+                ConfigName = dto.ConfigName,
+                MinTons = dto.MinTons,
+                MaxTons = dto.MaxTons,
                 Description = dto.Description,
                 EffectiveFrom = dto.EffectiveFrom,
                 EffectiveTo = dto.EffectiveTo,
@@ -92,6 +95,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             paymentConfiguration.RoleId = dto.RoleId;
             paymentConfiguration.FeeType = dto.FeeType.ToString(); // enum to string
             paymentConfiguration.Amount = dto.Amount;
+            paymentConfiguration.ConfigName = dto.ConfigName;
+            paymentConfiguration.MinTons = dto.MinTons;
+            paymentConfiguration.MaxTons = dto.MaxTons;
             paymentConfiguration.Description = dto.Description;
             paymentConfiguration.EffectiveFrom = dto.EffectiveFrom;
             paymentConfiguration.EffectiveTo = dto.EffectiveTo;

@@ -5,8 +5,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class BusinessStaffMapper
     {
-        // ✅ Overload mới đúng với cách gọi: (dto, userId, staffCode)
-        public static BusinessStaff MapToNewBusinessStaff(this BusinessStaffCreateDto dto, Guid userId, string staffCode, Guid supervisorId)
+        public static BusinessStaff MapToNewBusinessStaff(
+            this BusinessStaffCreateDto dto, 
+            Guid userId, 
+            string staffCode,
+            Guid supervisorId)
         {
             return new BusinessStaff
             {
@@ -22,7 +25,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateTime.UtcNow
             };
         }
-        public static BusinessStaffDetailDto MapToDetailDto(this BusinessStaff staff)
+
+        public static BusinessStaffDetailDto MapToDetailDto(
+            this BusinessStaff staff)
         {
             return new BusinessStaffDetailDto
             {
@@ -37,7 +42,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = staff.CreatedAt
             };
         }
-        public static BusinessStaffListDto MapToListDto(this BusinessStaff staff)
+
+        public static BusinessStaffListDto MapToListDto(
+            this BusinessStaff staff)
         {
             return new BusinessStaffListDto
             {
@@ -49,7 +56,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Department = staff.Department
             };
         }
-        public static void MapToUpdateBusinessStaff(this BusinessStaffUpdateDto dto, BusinessStaff entity)
+        public static void MapToUpdateBusinessStaff(
+            this BusinessStaffUpdateDto dto,
+            BusinessStaff entity)
         {
             entity.Position = dto.Position;
             entity.Department = dto.Department;
@@ -57,7 +66,5 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             entity.IsActive = dto.IsActive;
             entity.UpdatedAt = DateTime.UtcNow;
         }
-
-
     }
 }

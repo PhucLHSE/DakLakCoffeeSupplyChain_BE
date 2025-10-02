@@ -12,10 +12,13 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             var planDetail = entity.CommitmentDetail?.PlanDetail;
             var coffeeType = planDetail?.CoffeeType;
             var crop = entity.Crop;
+            var registrationDetail = entity.CommitmentDetail?.RegistrationDetail;
+
 
             return new CropSeasonDetailViewDto
             {
                 DetailId = entity.DetailId,
+                CropSeasonId = entity.CropSeasonId,
                 AreaAllocated = entity.AreaAllocated ?? 0,
                 CoffeeTypeId = planDetail?.CoffeeTypeId ?? Guid.Empty,
                 TypeName = coffeeType?.TypeName ?? "Không rõ",
@@ -23,7 +26,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CommitmentDetailCode = entity.CommitmentDetail?.CommitmentDetailCode ?? "",
                 ExpectedHarvestStart = entity.ExpectedHarvestStart,
                 ExpectedHarvestEnd = entity.ExpectedHarvestEnd,
-                EstimatedYield = entity.EstimatedYield,
+                EstimatedYield = entity.EstimatedYield ?? registrationDetail?.EstimatedYield,
                 ActualYield = entity.ActualYield ?? 0,
                 PlannedQuality = entity.PlannedQuality ?? string.Empty,
                 QualityGrade = entity.QualityGrade ?? "Chưa đánh giá",

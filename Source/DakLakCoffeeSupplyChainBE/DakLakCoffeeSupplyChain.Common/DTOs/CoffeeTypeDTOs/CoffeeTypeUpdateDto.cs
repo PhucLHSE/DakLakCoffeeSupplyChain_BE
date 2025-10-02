@@ -13,10 +13,15 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs
         [Required(ErrorMessage = "Tên khoa học là bắt buộc.")]
         [StringLength(150, ErrorMessage = "Tên khoa học không được vượt quá 150 ký tự.")]
         public string BotanicalName { get; set; } = string.Empty;
+
         public string Description { get; set; } = string.Empty;
+
         public string TypicalRegion { get; set; } = string.Empty;
+
         public string SpecialtyLevel { get; set; } = string.Empty;
+
         public string CoffeeTypeCategory { get; set; } = string.Empty;
+
         public Guid? CoffeeTypeParentId { get; set; }
     }
 }

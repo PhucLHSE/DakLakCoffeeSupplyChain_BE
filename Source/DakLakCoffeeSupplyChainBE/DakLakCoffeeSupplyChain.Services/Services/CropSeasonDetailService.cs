@@ -26,7 +26,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var details = await _uow.CropSeasonDetailRepository.GetAllAsync(
                 predicate: d => !d.IsDeleted && (isAdmin || d.CropSeason.Farmer.UserId == userId),
                 include: q => q
-                    .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail)
+                    .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
+                    .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.RegistrationDetail) // ✅ Add RegistrationDetail
                     .Include(d => d.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User)
                     .Include(d => d.Crop),
                 asNoTracking: true
@@ -44,7 +45,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var d = await _uow.CropSeasonDetailRepository.GetByIdAsync(
                 predicate: x => x.DetailId == detailId && !x.IsDeleted,
                 include: q => q
-                    .Include(x => x.CommitmentDetail).ThenInclude(cd => cd.PlanDetail)
+                    .Include(x => x.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
+                    .Include(x => x.CommitmentDetail).ThenInclude(cd => cd.RegistrationDetail) // ✅ Add RegistrationDetail
                     .Include(x => x.CropSeason).ThenInclude(cs => cs.Farmer).ThenInclude(f => f.User)
                     .Include(x => x.Crop),
                 asNoTracking: true
@@ -392,16 +394,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     asNoTracking: true
                 );
 
-                // ✅ DEBUG: Log thông tin để kiểm tra
-                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Total completed details: {completedDetails.Count}");
-                foreach (var detail in completedDetails.Take(5))
-                {
-                    Console.WriteLine($"DEBUG Detail {detail.DetailId}: " +
-                        $"Status={detail.Status}, " +
-                        $"ActualYield={detail.ActualYield}, " +
-                        $"ProcessMethodId={detail.CommitmentDetail?.PlanDetail?.ProcessMethodId}, " +
-                        $"CoffeeType={detail.CommitmentDetail?.PlanDetail?.CoffeeType?.TypeName}");
-                }
 
                 // ✅ THÊM: Phân loại theo ràng buộc hợp đồng
                 var freshCoffeeDetails = completedDetails.Where(d => 
@@ -414,8 +406,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     d.CommitmentDetail.PlanDetail.ProcessMethodId.Value > 0
                 ).ToList();
 
-                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Fresh coffee details: {freshCoffeeDetails.Count}");
-                Console.WriteLine($"DEBUG GetAvailableForWarehouseRequestAsync: Processed coffee details: {processedCoffeeDetails.Count}");
 
                 // ✅ THÊM: Thông báo rõ ràng cho từng trường hợp
                 if (!completedDetails.Any())

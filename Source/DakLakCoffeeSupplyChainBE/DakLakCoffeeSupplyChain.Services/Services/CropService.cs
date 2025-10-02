@@ -505,10 +505,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
             catch (Exception ex)
             {
-                // Log error but don't throw to avoid affecting the main operation
-                // TODO: Replace with proper logging framework
-                System.Diagnostics.Debug.WriteLine($"AutoUpdateCropStatusAsync failed for crop {cropId}: {ex.Message}");
-
+                _ = ex;
+                return;
             }
         }
 

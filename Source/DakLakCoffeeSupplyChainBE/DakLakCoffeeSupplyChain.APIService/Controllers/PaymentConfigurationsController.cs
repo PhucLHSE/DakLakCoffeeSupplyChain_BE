@@ -81,7 +81,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT api/<PaymentConfigurationsController>/{configId}
         [HttpPut("{configId}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateOrderAsync(
+        public async Task<IActionResult> UpdatePaymentConfigurationAsync(
             Guid configId,
             [FromBody] PaymentConfigurationUpdateDto paymentConfigurationUpdateDto)
         {

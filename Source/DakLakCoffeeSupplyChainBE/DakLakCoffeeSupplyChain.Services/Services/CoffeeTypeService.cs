@@ -20,7 +20,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Truy vấn tất cả coffee type từ repository
             var coffeeTypes = await _unitOfWork.CoffeeTypeRepository.GetAllAsync(
                 predicate: u => u.IsDeleted != true,
-                include: c => c.Include(c => c.CoffeeTypeParent),
+                include: c => c
+                   .Include(c => c.CoffeeTypeParent),
                 orderBy: u => u.OrderBy(u => u.TypeCode),
                 asNoTracking: true
             );
@@ -54,7 +55,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             // Tìm tài coffee type theo ID
             var type = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(
                 predicate: u => u.CoffeeTypeId == typeId,
-                include: c => c.Include ( c => c.CoffeeTypeParent),
+                include: c => c
+                   .Include ( c => c.CoffeeTypeParent),
                 asNoTracking: true
             );
 
@@ -239,7 +241,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra coffee type tồn tại
-                var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(coffeeTypeDto.CoffeeTypeId);
+                var coffeeType = await _unitOfWork.CoffeeTypeRepository
+                    .GetByIdAsync(coffeeTypeDto.CoffeeTypeId);
 
                 if (coffeeType == null)
                 {
@@ -295,7 +298,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             try
             {
                 // Kiểm tra coffee type tồn tại
-                var coffeeType = await _unitOfWork.CoffeeTypeRepository.GetByIdAsync(coffeeTypeDto.CoffeeTypeId);
+                var coffeeType = await _unitOfWork.CoffeeTypeRepository
+                    .GetByIdAsync(coffeeTypeDto.CoffeeTypeId);
 
                 if (coffeeType == null)
                 {
