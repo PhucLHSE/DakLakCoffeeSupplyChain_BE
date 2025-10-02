@@ -118,6 +118,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
+
         // PATCH api/BusinessStaffs/soft-delete/{staffId}
         [HttpPatch("soft-delete/{staffId}")]
         [Authorize(Roles = "BusinessManager")]
@@ -137,7 +138,6 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             return StatusCode(500, result.Message);
         }
-
 
         // DELETE api/BusinessStaffs/{staffId}
         [HttpDelete("{staffId}")]
