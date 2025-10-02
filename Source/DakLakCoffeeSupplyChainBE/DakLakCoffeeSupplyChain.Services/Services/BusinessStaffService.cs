@@ -23,44 +23,71 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             ICodeGenerator codeGenerator,
             IPasswordHasher passwordHasher)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _codeGenerator = codeGenerator ?? throw new ArgumentNullException(nameof(codeGenerator));
-            _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+            _unitOfWork = unitOfWork 
+                ?? throw new ArgumentNullException(nameof(unitOfWork));
+
+            _codeGenerator = codeGenerator 
+                ?? throw new ArgumentNullException(nameof(codeGenerator));
+
+            _passwordHasher = passwordHasher 
+                ?? throw new ArgumentNullException(nameof(passwordHasher));
         }
 
-        public async Task<IServiceResult> Create(BusinessStaffCreateDto dto, Guid supervisorId)
+        public async Task<IServiceResult> Create(
+            BusinessStaffCreateDto dto,
+            Guid supervisorId)
         {
             try
             {
                 // 1. Kiểm tra email đã tồn tại
-                var existingUser = await _unitOfWork.UserAccountRepository.GetUserAccountByEmailAsync(dto.Email);
+                var existingUser = await _unitOfWork.UserAccountRepository
+                    .GetUserAccountByEmailAsync(dto.Email);
+
                 if (existingUser != null)
                 {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Email đã được đăng ký.");
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE,
+                        "Email đã được đăng ký."
+                    );
                 }
 
                 // 2. Kiểm tra số điện thoại nếu có
                 if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                 {
-                    var existingPhone = await _unitOfWork.UserAccountRepository.GetUserAccountByPhoneAsync(dto.PhoneNumber);
+                    var existingPhone = await _unitOfWork.UserAccountRepository
+                        .GetUserAccountByPhoneAsync(dto.PhoneNumber);
+
                     if (existingPhone != null)
                     {
-                        return new ServiceResult(Const.FAIL_CREATE_CODE, "Số điện thoại đã được đăng ký.");
+                        return new ServiceResult(
+                            Const.FAIL_CREATE_CODE, 
+                            "Số điện thoại đã được đăng ký."
+                        );
                     }
                 }
 
                 // 3. Kiểm tra supervisor (BusinessManager) có hợp lệ không
-                var supervisor = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(supervisorId);
+                var supervisor = await _unitOfWork.BusinessManagerRepository
+                    .FindByUserIdAsync(supervisorId);
+
                 if (supervisor == null || supervisor.IsDeleted)
                 {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Supervisor không hợp lệ.");
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE, 
+                        "Supervisor không hợp lệ."
+                    );
                 }
 
                 // 4. Lấy vai trò "BusinessStaff"
-                var role = await _unitOfWork.RoleRepository.GetRoleByNameAsync("BusinessStaff");
+                var role = await _unitOfWork.RoleRepository
+                    .GetRoleByNameAsync("BusinessStaff");
+
                 if (role == null)
                 {
-                    return new ServiceResult(Const.FAIL_CREATE_CODE, "Không tìm thấy vai trò BusinessStaff.");
+                    return new ServiceResult(
+                        Const.FAIL_CREATE_CODE, 
+                        "Không tìm thấy vai trò BusinessStaff."
+                    );
                 }
 
                 // 5. Tạo mã người dùng + hash mật khẩu
@@ -97,21 +124,32 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (result > 0)
                 {
-                    return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Tạo nhân viên thành công.", newStaff.StaffId);
+                    return new ServiceResult(
+                        Const.SUCCESS_CREATE_CODE, 
+                        "Tạo nhân viên thành công.", 
+                        newStaff.StaffId
+                    );
                 }
 
-                return new ServiceResult(Const.FAIL_CREATE_CODE, "Tạo nhân viên thất bại.");
+                return new ServiceResult(
+                    Const.FAIL_CREATE_CODE, 
+                    "Tạo nhân viên thất bại."
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.ToString());
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.ToString()
+                );
             }
         }
         public async Task<IServiceResult> GetByIdAsync(Guid staffId)
         {
             try
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdWithUserAsync(staffId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .GetByIdWithUserAsync(staffId);
 
                 if (staff == null)
                 {
@@ -122,6 +160,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
 
                 var dto = staff.MapToDetailDto();
+
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
                     Const.SUCCESS_READ_MSG,
@@ -140,61 +179,104 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
-                var supervisor = await _unitOfWork.BusinessManagerRepository.FindByUserIdAsync(userId);
+                var supervisor = await _unitOfWork.BusinessManagerRepository
+                    .FindByUserIdAsync(userId);
+
                 if (supervisor == null || supervisor.IsDeleted)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Supervisor không hợp lệ hoặc không tồn tại.");
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        "Supervisor không hợp lệ hoặc không tồn tại."
+                    );
                 }
 
-                var staffs = await _unitOfWork.BusinessStaffRepository.GetBySupervisorIdAsync(supervisor.ManagerId);
+                var staffs = await _unitOfWork.BusinessStaffRepository
+                    .GetBySupervisorIdAsync(supervisor.ManagerId);
+
                 if (staffs == null || !staffs.Any())
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, Const.WARNING_NO_DATA_MSG);
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE,
+                        Const.WARNING_NO_DATA_MSG
+                    );
                 }
 
                 var list = staffs.Select(s => s.MapToListDto()).ToList();
-                return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, list);
+
+                return new ServiceResult(
+                    Const.SUCCESS_READ_CODE, 
+                    Const.SUCCESS_READ_MSG,
+                    list
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.Message
+                );
             }
         }
+
         public async Task<IServiceResult> Update(BusinessStaffUpdateDto dto)
         {
             try
             {
-                var staff = await _unitOfWork.BusinessStaffRepository.GetByIdWithUserAsync(dto.StaffId);
+                var staff = await _unitOfWork.BusinessStaffRepository
+                    .GetByIdWithUserAsync(dto.StaffId);
+
                 if (staff == null || staff.IsDeleted)
                 {
-                    return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy nhân viên.");
+                    return new ServiceResult(
+                        Const.WARNING_NO_DATA_CODE, 
+                        "Không tìm thấy nhân viên."
+                    );
                 }
 
                 dto.MapToUpdateBusinessStaff(staff);
                 await _unitOfWork.BusinessStaffRepository.UpdateAsync(staff);
 
                 var result = await _unitOfWork.SaveChangesAsync();
+
                 if (result > 0)
                 {
-                    return new ServiceResult(Const.SUCCESS_UPDATE_CODE, Const.SUCCESS_UPDATE_MSG, staff.StaffId);
+                    return new ServiceResult(
+                        Const.SUCCESS_UPDATE_CODE, 
+                        Const.SUCCESS_UPDATE_MSG, 
+                        staff.StaffId
+                    );
                 }
 
-                return new ServiceResult(Const.FAIL_UPDATE_CODE, Const.FAIL_UPDATE_MSG);
+                return new ServiceResult(
+                    Const.FAIL_UPDATE_CODE, 
+                    Const.FAIL_UPDATE_MSG
+                );
             }
             catch (Exception ex)
             {
-                return new ServiceResult(Const.ERROR_EXCEPTION, ex.Message);
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION, 
+                    ex.Message
+                );
             }
         }
+
         public async Task<IServiceResult> SoftDeleteAsync(Guid staffId)
         {
-            var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(staffId);
+            var staff = await _unitOfWork.BusinessStaffRepository
+                .GetByIdAsync(staffId);
+
             if (staff == null || staff.IsDeleted)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Staff not found or already deleted");
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Staff not found or already deleted"
+                );
 
             staff.IsDeleted = true;
             staff.UpdatedAt = DateTime.UtcNow;
+
             await _unitOfWork.BusinessStaffRepository.UpdateAsync(staff);
+
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
@@ -204,21 +286,22 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> HardDeleteAsync(Guid staffId)
         {
-            var staff = await _unitOfWork.BusinessStaffRepository.GetByIdAsync(staffId);
+            var staff = await _unitOfWork.BusinessStaffRepository
+                .GetByIdAsync(staffId);
+
             if (staff == null)
-                return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Staff not found");
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE, 
+                    "Staff not found"
+                );
 
             await _unitOfWork.BusinessStaffRepository.RemoveAsync(staff);
+
             var result = await _unitOfWork.SaveChangesAsync();
 
             return result > 0
                 ? new ServiceResult(Const.SUCCESS_DELETE_CODE, "Hard delete success")
                 : new ServiceResult(Const.FAIL_DELETE_CODE, "Hard delete failed");
         }
-
-
-
-
-
     }
 }
