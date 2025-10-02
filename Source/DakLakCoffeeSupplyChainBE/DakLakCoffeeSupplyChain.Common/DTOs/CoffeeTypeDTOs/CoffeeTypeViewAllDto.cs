@@ -22,6 +22,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs
         public string CoffeeTypeCategory { get; set; } = string.Empty;
 
         public Guid? CoffeeTypeParentId { get; set; }
+
         public string? CoffeeTypeParentName { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]

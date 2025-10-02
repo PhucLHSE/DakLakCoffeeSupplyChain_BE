@@ -8,7 +8,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
     public static class CoffeeTypeMapper
     {
         // Mapper CoffeeTypeViewAllDto
-        public static CoffeeTypeViewAllDto MapToCoffeeTypeViewAllDto(this CoffeeType entity)
+        public static CoffeeTypeViewAllDto MapToCoffeeTypeViewAllDto(
+            this CoffeeType entity)
         {
             return new CoffeeTypeViewAllDto
             {
@@ -25,8 +26,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeParentName = entity.CoffeeTypeParent?.TypeName
             };
         }
+
         // Mapper CoffeeTypeCreateDto
-        public static CoffeeType MapToCofeeTypeCreateDto(this CoffeeTypeCreateDto dto, string typeCode)
+        public static CoffeeType MapToCofeeTypeCreateDto(
+            this CoffeeTypeCreateDto dto, 
+            string typeCode)
         {
             return new CoffeeType
             {
@@ -42,8 +46,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CoffeeTypeParentId = dto.CoffeeTypeParentId,
             };
         }
+
         // Mapper CoffeeTypeUpdateDto
-        public static void MapToUpdateCoffeeType(this CoffeeTypeUpdateDto dto, CoffeeType ct)
+        public static void MapToUpdateCoffeeType(
+            this CoffeeTypeUpdateDto dto,
+            CoffeeType ct)
         {
             ct.TypeName = dto.TypeName;
             ct.BotanicalName = dto.BotanicalName;
