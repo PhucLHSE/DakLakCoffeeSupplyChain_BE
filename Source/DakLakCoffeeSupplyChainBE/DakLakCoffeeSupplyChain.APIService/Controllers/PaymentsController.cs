@@ -1,4 +1,4 @@
-using DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs;
+﻿using DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.UnitOfWork;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -341,6 +341,41 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
 
             // 👉 Trả kèm TransactionId để FE có thể hiển thị/tracking
             return Ok(new VnPayCreateResponse { Url = url, PaymentId = txnRef });
+        }
+
+        /// <summary>
+        /// ✅ Tái tạo VNPay URL cho payment pending (tiếp tục thanh toán WalletTopup)
+        /// </summary>
+        [HttpPost("wallet-topup/vnpay/recreate-url")]
+        [Authorize(Roles = "BusinessManager,BusinessStaff,Farmer,Admin")]
+        public async Task<IActionResult> RecreateWalletTopupVnPayUrl([FromBody] RecreateWalletTopupRequest req)
+        {
+            var tmnCode = _config["VnPay:TmnCode"] ?? string.Empty;
+            var secret = _config["VnPay:HashSecret"] ?? string.Empty;
+            var baseUrl = _config["VnPay:BaseUrl"] ?? _config["VnPay:PaymentUrl"] ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+            var returnUrl = req.ReturnUrl ?? _config["VnPay:ReturnUrl"] ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(tmnCode) || string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(returnUrl))
+                return BadRequest("VNPay chưa cấu hình đầy đủ.");
+
+            var (userEmail, userId) = _paymentService.GetCurrentUserInfo();
+            
+            // ✅ Tái tạo payment với txnRef mới
+            var (success, newTxnRef, message) = await _paymentService.RecreateWalletTopupPaymentAsync(req.PaymentId, userEmail, userId);
+            
+            if (!success)
+                return BadRequest(message);
+
+            // Tạo VNPay URL mới
+            var amountX100 = (long)req.Amount * 100;
+            var ipAddress = _paymentService.GetClientIpAddress();
+
+            var vnpParameters = PaymentHelper.CreateVnPayParameters(
+                tmnCode, amountX100, newTxnRef, $"WalletTopup:{newTxnRef}", returnUrl, ipAddress, req.Locale ?? "vn");
+
+            var url = PaymentHelper.CreateVnPayUrl(baseUrl, vnpParameters, secret);
+
+            return Ok(new VnPayCreateResponse { Url = url, PaymentId = req.PaymentId.ToString() });
         }
 
         [HttpGet("history")]

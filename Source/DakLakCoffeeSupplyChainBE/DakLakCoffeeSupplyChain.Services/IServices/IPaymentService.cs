@@ -79,6 +79,15 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
         Task CreateWalletTopupPaymentAsync(Guid walletId, int amount, string txnRef, string userEmail, string userId);
 
         /// <summary>
+        /// ✅ Tái tạo VNPay URL cho payment pending (tiếp tục thanh toán)
+        /// </summary>
+        /// <param name="paymentId">Payment ID</param>
+        /// <param name="userEmail">User email</param>
+        /// <param name="userId">User ID</param>
+        /// <returns>Tuple (Success, NewTxnRef, Message)</returns>
+        Task<(bool Success, string NewTxnRef, string Message)> RecreateWalletTopupPaymentAsync(Guid paymentId, string userEmail, string userId);
+
+        /// <summary>
         /// Xử lý MockIpn - tạo hoặc cập nhật payment record
         /// </summary>
         /// <param name="planId">Plan ID</param>
