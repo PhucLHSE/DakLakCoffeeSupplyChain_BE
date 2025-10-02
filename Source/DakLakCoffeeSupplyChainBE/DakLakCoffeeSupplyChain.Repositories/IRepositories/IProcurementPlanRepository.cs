@@ -6,5 +6,6 @@ namespace DakLakCoffeeSupplyChain.Repositories.IRepositories
     public interface IProcurementPlanRepository : IGenericRepository<ProcurementPlan>
     {
         Task<int> CountProcurementPlansInYearAsync(int year);
+        Task<ProcurementPlan?> GetByIdWithDetailsAsync(Guid planId);
     }
 }

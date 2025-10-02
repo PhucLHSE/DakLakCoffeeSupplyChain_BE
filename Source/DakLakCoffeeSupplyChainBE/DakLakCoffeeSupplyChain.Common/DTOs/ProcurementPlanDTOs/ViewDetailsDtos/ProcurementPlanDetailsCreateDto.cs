@@ -11,7 +11,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
 
         [Required(ErrorMessage = "Sản lượng mong muốn không được để trống.")]
         public double TargetQuantity { get; set; }
-        public string? TargetRegion { get; set; }
+        //public string? TargetRegion { get; set; }
+        public ICollection<string>? TargetRegions { get; set; }
 
         [Required(ErrorMessage = "Sản lượng tối thiểu không được để trống.")]
         [Range(100, double.MaxValue, ErrorMessage = "Sản lượng tối thiểu phải từ 100kg trở lên.")]

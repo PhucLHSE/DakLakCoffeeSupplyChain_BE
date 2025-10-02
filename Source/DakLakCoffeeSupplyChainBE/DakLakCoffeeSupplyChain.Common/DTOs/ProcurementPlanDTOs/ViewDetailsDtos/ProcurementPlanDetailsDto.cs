@@ -20,6 +20,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs.ViewDetailsDto
         public double? TargetQuantity { get; set; }
 
         public string TargetRegion { get; set; } = string.Empty;
+        public List<string> TargetRegions { get; set; } = [];
 
         public double? MinimumRegistrationQuantity { get; set; }
 

@@ -1,6 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.PaymentDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
+using DakLakCoffeeSupplyChain.Common.DTOs.RegionsDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.ProcurementPlanEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Repositories.Models;
@@ -11,6 +12,7 @@ using DakLakCoffeeSupplyChain.Services.IServices;
 using DakLakCoffeeSupplyChain.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace DakLakCoffeeSupplyChain.Services.Services
 {
@@ -46,7 +48,38 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var procurementPlansDtos = procurementPlans
-                    .Select(procurementPlans => procurementPlans.MapToProcurementPlanViewAllAvailableDto())
+                    .Select(procurementPlans =>
+                    {
+                        var dto = procurementPlans.MapToProcurementPlanViewAllAvailableDto();
+
+                        if (dto.ProcurementPlansDetails != null)
+                        {
+                            foreach (var detailDto in dto.ProcurementPlansDetails)
+                            {
+                                detailDto.RegisteredQuantity = detailDto.TargetQuantity * detailDto.ProgressPercentage / 100;
+
+                                if (!string.IsNullOrEmpty(detailDto.TargetRegion))
+                                {
+                                    try
+                                    {
+                                        // Decode JSON string thành List<string>
+                                        var wrapper = JsonSerializer.Deserialize<TargetRegionWrapper>(detailDto.TargetRegion);
+                                        detailDto.TargetRegions = wrapper?.TargetRegions ?? [];
+                                    }
+                                    catch
+                                    {
+                                        detailDto.TargetRegions = [];
+                                    }
+                                }
+                                else
+                                {
+                                    detailDto.TargetRegions = [];
+                                }
+                            }
+                        }
+
+                        return dto;
+                    })
                     .ToList();
 
                 return new ServiceResult(
@@ -93,7 +126,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             else
             {
                 var procurementPlansDtos = procurementPlans
-                    .Select(procurementPlans => procurementPlans.MapToProcurementPlanViewAllDto())
+                    .Select(plan => plan.MapToProcurementPlanViewAllDto())
                     .ToList();
 
                 return new ServiceResult(
@@ -130,7 +163,29 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (planDto.ProcurementPlansDetails != null)
                     foreach (var detailDto in planDto.ProcurementPlansDetails)
+                    {
                         detailDto.RegisteredQuantity = detailDto.TargetQuantity * detailDto.ProgressPercentage / 100;
+
+                        if (!string.IsNullOrEmpty(detailDto.TargetRegion))
+                        {
+                            try
+                            {
+                                // Decode JSON string thành List<string>
+                                //detailDto.TargetRegions = JsonSerializer.Deserialize<List<string>>(detailDto.TargetRegion);
+                                //detailDto.TargetRegion = JsonSerializer.Deserialize<string>(detailDto.TargetRegion);
+                                var wrapper = JsonSerializer.Deserialize<TargetRegionWrapper>(detailDto.TargetRegion);
+                                detailDto.TargetRegions = wrapper?.TargetRegions ?? [];
+                            }
+                            catch
+                            {
+                                detailDto.TargetRegions = [];
+                            }
+                        }
+                        else
+                        {
+                            detailDto.TargetRegions = [];
+                        }
+                    }
 
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
@@ -167,7 +222,27 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 if (planDto.ProcurementPlansDetails != null)
                     foreach (var detailDto in planDto.ProcurementPlansDetails)
+                    {
                         detailDto.RegisteredQuantity = detailDto.TargetQuantity * detailDto.ProgressPercentage / 100;
+
+                        if (!string.IsNullOrEmpty(detailDto.TargetRegion))
+                        {
+                            try
+                            {
+                                // Decode JSON string thành List<string>
+                                var wrapper = JsonSerializer.Deserialize<TargetRegionWrapper>(detailDto.TargetRegion);
+                                detailDto.TargetRegions = wrapper?.TargetRegions ?? [];
+                            }
+                            catch
+                            {
+                                detailDto.TargetRegions = [];
+                            }
+                        }
+                        else
+                        {
+                            detailDto.TargetRegions = [];
+                        }
+                    }
 
                 return new ServiceResult(
                     Const.SUCCESS_READ_CODE,
@@ -229,6 +304,21 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     item.PlanDetailCode = $"PLD-{DateTime.UtcNow.Year}-{count:D4}";
                     count++;
                     newPlan.TotalQuantity += item.TargetQuantity;
+
+                    // Xử lý TargetRegion
+                    var regions = new List<object>();
+                    foreach (var itemDto in procurementPlanDto.ProcurementPlansDetails)
+                    {
+                        if (itemDto.CoffeeTypeId == item.CoffeeTypeId && itemDto.ProcessMethodId == item.ProcessMethodId)
+                        {
+                            if (itemDto.TargetRegions != null && itemDto.TargetRegions.Count > 0)
+                            {
+                                regions.AddRange(itemDto.TargetRegions);
+                                item.TargetRegion = JsonSerializer.Serialize(new { targetRegions = regions });
+                            }
+                            break; 
+                        }
+                    }
                 }
 
                 // Save data to database
@@ -456,13 +546,20 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     var existingPlanDetail = plan.ProcurementPlansDetails.
                         FirstOrDefault(p => p.PlanDetailsId == itemDto.PlanDetailsId);
 
+                    var regions = new List<object>();
+
                     if (existingPlanDetail != null)
                     {
                         plan.TotalQuantity = plan.TotalQuantity - existingPlanDetail.TargetQuantity + (itemDto.TargetQuantity ?? 0);
                         existingPlanDetail.CoffeeTypeId = itemDto.CoffeeTypeId != Guid.Empty ? itemDto.CoffeeTypeId : existingPlanDetail.CoffeeTypeId;
                         existingPlanDetail.ProcessMethodId = itemDto.ProcessMethodId;
                         existingPlanDetail.TargetQuantity = itemDto.TargetQuantity.HasValue ? itemDto.TargetQuantity : existingPlanDetail.TargetQuantity;
-                        existingPlanDetail.TargetRegion = itemDto.TargetRegion.HasValue() ? itemDto.TargetRegion : existingPlanDetail.TargetRegion;
+                        if (itemDto.TargetRegions != null && itemDto.TargetRegions.Count > 0)
+                        {
+                            regions.AddRange(itemDto.TargetRegions);
+                            existingPlanDetail.TargetRegion = JsonSerializer.Serialize(new { targetRegions = regions });
+                        }
+                        //existingPlanDetail.TargetRegion = itemDto.TargetRegion.HasValue() ? itemDto.TargetRegion : existingPlanDetail.TargetRegion;
                         existingPlanDetail.MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity.HasValue ? itemDto.MinimumRegistrationQuantity : existingPlanDetail.MinimumRegistrationQuantity;
                         existingPlanDetail.MinPriceRange = itemDto.MinPriceRange.HasValue ? itemDto.MinPriceRange : existingPlanDetail.MinPriceRange;
                         existingPlanDetail.MaxPriceRange = itemDto.MaxPriceRange.HasValue ? itemDto.MaxPriceRange : existingPlanDetail.MaxPriceRange;
@@ -487,7 +584,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             CoffeeTypeId = itemDto.CoffeeTypeId,
                             ProcessMethodId = itemDto.ProcessMethodId,
                             TargetQuantity = itemDto.TargetQuantity,
-                            TargetRegion = itemDto.TargetRegion,
+                            //TargetRegion = itemDto.TargetRegion,
                             MinimumRegistrationQuantity = itemDto.MinimumRegistrationQuantity,
                             MinPriceRange = itemDto.MinPriceRange,
                             MaxPriceRange = itemDto.MaxPriceRange,
@@ -499,44 +596,17 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                             UpdatedAt = now
                         };
 
+                        if (itemDto.TargetRegions != null && itemDto.TargetRegions.Count > 0)
+                        {
+                            regions.AddRange(itemDto.TargetRegions);
+                            newDetail.TargetRegion = JsonSerializer.Serialize(new { targetRegions = regions });
+                        }
+
                         count++;
                         plan.TotalQuantity += itemDto.TargetQuantity;
                         plan.ProcurementPlansDetails.Add(newDetail);
                         await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
                     }
-
-                    // Tạo plan detail mới nếu có
-                    //if (dto.ProcurementPlansDetailsCreateDto.Count > 0)
-                    //{
-                    //    string procurementPlanDetailsCode = await _planCode.GenerateProcurementPlanDetailsCodeAsync();
-                    //    var count = GeneratedCodeHelpler.GetGeneratedCodeLastNumber(procurementPlanDetailsCode);
-                    //    foreach (var detailDto in dto.ProcurementPlansDetailsCreateDto)
-                    //    {
-                    //        var newDetail = new ProcurementPlansDetail
-                    //        {
-                    //            PlanDetailsId = Guid.NewGuid(),
-                    //            PlanDetailCode = $"PLD-{now.Year}-{count:D4}",
-                    //            CoffeeTypeId = detailDto.CoffeeTypeId,
-                    //            ProcessMethodId = detailDto.ProcessMethodId,
-                    //            TargetQuantity = detailDto.TargetQuantity,
-                    //            TargetRegion = detailDto.TargetRegion,
-                    //            MinimumRegistrationQuantity = detailDto.MinimumRegistrationQuantity,
-                    //            MinPriceRange = detailDto.MinPriceRange,
-                    //            MaxPriceRange = detailDto.MaxPriceRange,
-                    //            ExpectedYieldPerHectare = detailDto.ExpectedYieldPerHectare,
-                    //            Note = detailDto.Note,
-                    //            Status = ProcurementPlanDetailsStatus.Active.ToString(),
-                    //            ContractItemId = detailDto.ContractItemId,
-                    //            CreatedAt = now,
-                    //            UpdatedAt = now
-                    //        };
-
-                    //        count++;
-                    //        plan.ProcurementPlansDetails.Add(newDetail);
-                    //        plan.TotalQuantity += detailDto.TargetQuantity;
-
-                    //        await _unitOfWork.ProcurementPlanDetailsRepository.CreateAsync(newDetail);
-                    //    }
                 }
 
                 // Save data to database

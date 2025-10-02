@@ -19,5 +19,11 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                    p.StartDate.Value.Year == year
                 );
         }
+        public async Task<ProcurementPlan?> GetByIdWithDetailsAsync(Guid planId)
+        {
+            return await _context.ProcurementPlans
+                .Include(p => p.ProcurementPlansDetails)
+                .FirstOrDefaultAsync(p => p.PlanId == planId && !p.IsDeleted);
+        }
     }
 }
