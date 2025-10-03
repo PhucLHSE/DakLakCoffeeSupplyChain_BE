@@ -279,9 +279,17 @@ CREATE TABLE Crops (
     -- Thông tin nguồn gốc bổ sung
     FarmName NVARCHAR(200),                                   -- Tên trang trại
     CropArea DECIMAL(10,2),                                   -- Diện tích crop (ha)
+    Note NVARCHAR(MAX) NULL,
     
     -- Trạng thái
     Status NVARCHAR(50) DEFAULT 'Active',                     -- Active, Inactive, Harvested, Processed, Sold
+
+    -- Admin duyệt
+    IsApproved BIT DEFAULT 0,
+    ApprovedAt DATETIME,
+    ApprovedBy UNIQUEIDENTIFIER NULL,
+    RejectReason NVARCHAR(MAX) NULL,
+    
 
     -- Metadata
     CreatedAt DATETIME DEFAULT GETDATE(),
@@ -295,7 +303,10 @@ CREATE TABLE Crops (
         FOREIGN KEY (CreatedBy) REFERENCES Farmers(FarmerID),
 
     CONSTRAINT FK_Crops_UpdatedBy 
-        FOREIGN KEY (UpdatedBy) REFERENCES Farmers(FarmerID)
+        FOREIGN KEY (UpdatedBy) REFERENCES Farmers(FarmerID),
+
+    CONSTRAINT FK_Crops_ApprovedBy 
+        FOREIGN KEY (ApprovedBy) REFERENCES UserAccounts(UserID)
 );
 
 GO

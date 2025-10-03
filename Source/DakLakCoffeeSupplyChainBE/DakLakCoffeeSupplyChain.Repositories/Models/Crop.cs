@@ -18,7 +18,17 @@ public partial class Crop
 
     public decimal? CropArea { get; set; }
 
+    public string Note { get; set; }
+
     public string Status { get; set; }
+
+    public bool? IsApproved { get; set; }
+
+    public DateTime? ApprovedAt { get; set; }
+
+    public Guid? ApprovedBy { get; set; }
+
+    public string RejectReason { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
@@ -29,6 +39,8 @@ public partial class Crop
     public Guid? UpdatedBy { get; set; }
 
     public bool? IsDeleted { get; set; }
+
+    public virtual UserAccount ApprovedByNavigation { get; set; }
 
     public virtual Farmer CreatedByNavigation { get; set; }
 
