@@ -10,7 +10,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
 {
     public static class InventoryMapper
     {
-        public static InventoryListItemDto ToListItemDto(this Inventory inv)
+        public static InventoryListItemDto ToListItemDto(
+            this Inventory inv)
         {
             return new InventoryListItemDto
             {
@@ -46,7 +47,11 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static InventoryListItemDto ToListItemDto(this Inventory inv, int fifoPriority = 0, bool isRecommended = false, string fifoRecommendation = "")
+        public static InventoryListItemDto ToListItemDto(
+            this Inventory inv, 
+            int fifoPriority = 0,
+            bool isRecommended = false, 
+            string fifoRecommendation = "")
         {
             return new InventoryListItemDto
             {
@@ -82,7 +87,8 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             };
         }
 
-        public static InventoryDetailDto ToDetailDto(this Inventory inv)
+        public static InventoryDetailDto ToDetailDto(
+            this Inventory inv)
         {
             // Xác định loại cà phê dựa trên BatchId và DetailId
             bool isProcessedCoffee = inv.BatchId.HasValue && inv.BatchId != Guid.Empty;
@@ -91,6 +97,39 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             // Lấy thông tin từ Farmer và ProcessingBatchEvaluations
             var farmer = inv.Batch?.Farmer;
             var evaluation = inv.Batch?.ProcessingBatchEvaluations?.FirstOrDefault();
+
+            // Lấy thông tin vùng trồng từ Crop thay vì địa chỉ nông dân
+            string growingRegion = "";
+
+            if (isFreshCoffee && inv.Detail?.Crop != null)
+            {
+                // Ưu tiên địa chỉ vùng trồng từ Crop (cho cà phê tươi)
+                growingRegion = inv.Detail.Crop.Address ?? "";
+                
+                // Nếu Crop.Address null, fallback về Farmer.FarmLocation
+                if (string.IsNullOrEmpty(growingRegion) && 
+                    inv.Detail?.CropSeason?.Farmer != null)
+                {
+                    growingRegion = inv.Detail.CropSeason.Farmer.FarmLocation ?? "";
+                }
+            }
+            else if (isProcessedCoffee && inv.Batch?.CropSeason != null)
+            {
+                // Cho cà phê sơ chế, lấy từ CropSeason -> CropSeasonDetails -> Crop -> Address
+                var cropSeasonDetails = inv.Batch.CropSeason.CropSeasonDetails?.FirstOrDefault();
+
+                if (cropSeasonDetails?.Crop != null)
+                {
+                    growingRegion = cropSeasonDetails.Crop.Address ?? "";
+                }
+                
+                // Nếu không có Crop.Address, fallback về Farmer.FarmLocation
+                if (string.IsNullOrEmpty(growingRegion) && 
+                    inv.Batch?.CropSeason?.Farmer != null)
+                {
+                    growingRegion = inv.Batch.CropSeason.Farmer.FarmLocation ?? "";
+                }
+            }
 
             return new InventoryDetailDto
             {
@@ -132,12 +171,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedAt = inv.CreatedAt,
                 UpdatedAt = inv.UpdatedAt,
 
-                // Map thông tin từ Farmer và ProcessingBatchEvaluations
+                // Sử dụng vùng trồng
                 FarmerId = farmer?.FarmerId,
                 FarmerName = farmer?.User.Name,
-                FarmLocation = farmer?.FarmLocation,
+                FarmLocation = growingRegion, // Thay đổi từ farmer?.FarmLocation thành growingRegion
                 EvaluationResult = evaluation?.EvaluationResult,
-                TotalScore = evaluation?.TotalScore
+                TotalScore = evaluation?.TotalScore,
+                // CropId để frontend có thể gọi Crop API
+                CropId = isFreshCoffee 
+                    ? inv.Detail?.CropId 
+                    : (isProcessedCoffee 
+                        ? inv.Batch?.CropSeason?.CropSeasonDetails?.FirstOrDefault()?.CropId 
+                        : null)
             };
         }
     }
