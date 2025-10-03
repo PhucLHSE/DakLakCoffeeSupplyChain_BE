@@ -19,7 +19,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         }
 
         public async Task<Inventory?> FindByWarehouseAndBatchAsync(
-            Guid warehouseId, Guid batchId)
+            Guid warehouseId, 
+            Guid batchId)
         {
             return await _context.Inventories
                 .FirstOrDefaultAsync(inv =>
@@ -29,7 +30,8 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
         }
 
         public async Task<Inventory?> FindByWarehouseAndDetailAsync(
-            Guid warehouseId, Guid detailId)
+            Guid warehouseId, 
+            Guid detailId)
         {
             return await _context.Inventories
                 .FirstOrDefaultAsync(inv =>
@@ -54,12 +56,18 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                     .ThenInclude(b => b.CoffeeType) // Lấy loại cà phê
                 .Include(i => i.Batch)
                     .ThenInclude(b => b.Products)   //  Nếu vẫn cần productName
+                .Include(i => i.Batch)  // Load CropSeason cho processed coffee
+                    .ThenInclude(b => b.CropSeason)
+                        .ThenInclude(cs => cs.CropSeasonDetails)
+                            .ThenInclude(csd => csd.Crop)
                 .Include(i => i.Detail)  // Thêm Detail cho cà phê tươi
                     .ThenInclude(d => d.CropSeason)
                 .Include(i => i.Detail)
                     .ThenInclude(d => d.CommitmentDetail)
                         .ThenInclude(cd => cd.PlanDetail)
                             .ThenInclude(pd => pd.CoffeeType)
+                .Include(i => i.Detail)  // Load Crop để lấy địa chỉ vùng trồng
+                    .ThenInclude(d => d.Crop)
                 .ToListAsync();
         }
 
@@ -80,12 +88,18 @@ namespace DakLakCoffeeSupplyChain.Repositories.Repositories
                  .Include(i => i.Batch)
                    .ThenInclude(b => b.Farmer)
                       .ThenInclude(f => f.User)
+                 .Include(i => i.Batch)  // Load CropSeason cho processed coffee
+                   .ThenInclude(b => b.CropSeason)
+                      .ThenInclude(cs => cs.CropSeasonDetails)
+                          .ThenInclude(csd => csd.Crop)
                 .Include(i => i.Detail)  // Thêm Detail cho cà phê tươi
                     .ThenInclude(d => d.CropSeason)
                 .Include(i => i.Detail)
                     .ThenInclude(d => d.CommitmentDetail)
                         .ThenInclude(cd => cd.PlanDetail)
                             .ThenInclude(pd => pd.CoffeeType)
+                .Include(i => i.Detail)  // Load Crop để lấy địa chỉ vùng trồng
+                    .ThenInclude(d => d.Crop)
                 .FirstOrDefaultAsync(i => 
                    i.InventoryId == id && 
                    !i.IsDeleted

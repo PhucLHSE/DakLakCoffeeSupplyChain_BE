@@ -54,5 +54,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.InventoryDTOs
         public string? EvaluationResult { get; set; }
 
         public decimal? TotalScore { get; set; }
+        
+        // CropId để frontend có thể gọi Crop API
+        public Guid? CropId { get; set; }
     }
 }
