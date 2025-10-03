@@ -1,4 +1,5 @@
 using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -34,14 +35,15 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         public bool? IsDeleted { get; set; }
 
-        public string? CreatedByName { get; set; }
-
-        public string? UpdatedByName { get; set; }
         public string? Note { get; set; }
         public bool? IsApproved { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public Guid? ApprovedBy { get; set; }
         public string? RejectReason { get; set; }
-        public string? ApprovedByName { get; set; }
+        
+        // Media files
+        public List<string>? Images { get; set; }
+        public List<string>? Videos { get; set; }
+        public List<string>? Documents { get; set; }
     }
 }

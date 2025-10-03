@@ -36,6 +36,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
 
         [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
         public string? Note { get; set; }
+        public bool? IsApproved { get; set; }
+        public string? RejectReason { get; set; }
     }
 }
 
