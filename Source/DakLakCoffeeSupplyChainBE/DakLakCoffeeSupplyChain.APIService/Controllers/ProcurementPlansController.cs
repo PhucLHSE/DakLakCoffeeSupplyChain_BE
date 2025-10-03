@@ -125,7 +125,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 .SoftDeleteById(planId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa mềm thành công.");
+                return NoContent();
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy kế hoạch.");
@@ -160,9 +160,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _procurementPlanService
                 .Create(planDto, userId);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            if (result.Status == Const.SUCCESS_CREATE_CODE && result.Data is ProcurementPlanViewDetailsSumaryDto createdDto)
                 return CreatedAtAction(nameof(GetById),
-                    new { planId = ((ProcurementPlanViewDetailsSumaryDto)result.Data).PlanId },
+                    new { planId = createdDto.PlanId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)

@@ -1,8 +1,6 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CoffeeTypeDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.UserAccountDTOs;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -59,7 +57,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 .DeleteById(typeId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa thành công.");
+                return NoContent();
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy coffee type.");
@@ -79,7 +77,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 .SoftDeleteById(typeId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa mềm thành công.");
+                return NoContent();
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy cofee type.");
@@ -102,9 +100,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _coffeeTypeService
                 .Create(typeDto);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            if (result.Status == Const.SUCCESS_CREATE_CODE && result.Data is CoffeeTypeViewAllDto createdDto)
                 return CreatedAtAction(nameof(GetById),
-                    new { typeId = ((CoffeeTypeViewAllDto)result.Data).CoffeeTypeId },
+                    new { typeId = createdDto.CoffeeTypeId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
