@@ -63,9 +63,6 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 ApprovedAt = crop.ApprovedAt,
                 ApprovedBy = crop.ApprovedBy,
                 RejectReason = crop.RejectReason ?? string.Empty,
-                ApprovedByName = crop.ApprovedByNavigation?.Name,
-                CreatedByName = crop.CreatedByNavigation?.User?.Name,
-                UpdatedByName = crop.UpdatedByNavigation?.User?.Name
             };
         }
 
@@ -75,18 +72,18 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             return new Crop
             {
                 CropId = Guid.NewGuid(),
-                CropCode = cropCode, // From service
+                CropCode = cropCode, 
                 Address = dto.Address,
                 FarmName = dto.FarmName,
                 CropArea = dto.CropArea,
-                Status = dto.Status.ToString(), // Auto set Active khi tạo mới
+                Status = dto.Status.ToString(),
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 CreatedBy = createdBy,
                 UpdatedBy = createdBy,
-                IsDeleted = false,
+                IsDeleted = null,
                 Note = dto.Note ?? string.Empty,
-                IsApproved = false,  
+                IsApproved = null, // Chưa có quyết định từ admin  
             };
         }
 
@@ -97,11 +94,17 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
             crop.Address = dto.Address;
             crop.FarmName = dto.FarmName;
             crop.CropArea = dto.CropArea;
-            // Status không update thủ công, auto transition theo workflow
-            // crop.Status = dto.Status;
             crop.UpdatedAt = DateHelper.NowVietnamTime();
             crop.UpdatedBy = updatedBy;
             crop.Note = dto.Note ?? string.Empty;
+            crop.IsApproved = dto.IsApproved;
+            crop.RejectReason = dto.RejectReason ?? string.Empty;
+
+            if (dto.IsApproved.HasValue)
+            {
+                crop.ApprovedAt = DateHelper.NowVietnamTime();
+                crop.ApprovedBy = updatedBy;
+            }
         }
     }
 }
