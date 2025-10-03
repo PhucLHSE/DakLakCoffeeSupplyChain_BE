@@ -1,9 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.FarmingCommitmentDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -137,9 +135,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service
                 .Create(commitment);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            if (result.Status == Const.SUCCESS_CREATE_CODE && result.Data is FarmingCommitmentViewDetailsDto createdDto)
                 return CreatedAtAction(nameof(GetById), new { 
-                    commitmentId = ((FarmingCommitmentViewDetailsDto)result.Data).CommitmentId 
+                    commitmentId = createdDto.CommitmentId 
                 }, result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)
@@ -149,27 +147,27 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         }
 
         // POST api/<FarmingCommitment>
-        [HttpPost("BulkCreate")]
-        [Authorize(Roles = "BusinessManager")]
-        public async Task<IActionResult> BulkCreate(
-            [FromBody] FarmingCommitmentBulkCreateDto commitments)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
-            }
+        //[HttpPost("BulkCreate")]
+        //[Authorize(Roles = "BusinessManager")]
+        //public async Task<IActionResult> BulkCreate(
+        //    [FromBody] FarmingCommitmentBulkCreateDto commitments)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(ModelState); // Trả lỗi nếu dữ liệu không hợp lệ
+        //    }
 
-            var result = await _service
-                .BulkCreate(commitments);
+        //    var result = await _service
+        //        .BulkCreate(commitments);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
-                return Ok(result.Data);
+        //    if (result.Status == Const.SUCCESS_CREATE_CODE)
+        //        return Ok(result.Data);
 
-            if (result.Status == Const.FAIL_CREATE_CODE)
-                return Conflict(result.Message);
+        //    if (result.Status == Const.FAIL_CREATE_CODE)
+        //        return Conflict(result.Message);
 
-            return StatusCode(500, result.Message);
-        }
+        //    return StatusCode(500, result.Message);
+        //}
 
         // PATCH api/FarmingCommitment/UpdateStatusByFarmer/{commitmentId}
         [HttpPatch("UpdateStatusByFarmer/{commitmentId}")]
