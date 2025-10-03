@@ -215,6 +215,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
 
+            // Validate Note length if provided
+            if (!string.IsNullOrWhiteSpace(cropCreateDto.Note) &&
+                cropCreateDto.Note.Length > 1000)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Ghi chú không được vượt quá 1000 ký tự"
+                );
+            }
+
             // Validate Đắk Lắk address
             if (!IsDakLakAddress(cropCreateDto.Address))
             {
@@ -261,7 +271,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var cropCode = await _codeGenerator.GenerateCropCodeAsync();
 
             // Create new crop
-            var newCrop = cropCreateDto.MapToCrop(farmer.FarmerId, cropCode);
+            var newCrop = cropCreateDto.MapToCreateCrop(farmer.FarmerId, cropCode);
 
             await _unitOfWork.CropRepository.CreateAsync(newCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -332,7 +342,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             // Update crop
-            cropUpdateDto.MapToCrop(existingCrop, farmer.FarmerId);
+            cropUpdateDto.MapToUpdateCrop(existingCrop, farmer.FarmerId);
 
             await _unitOfWork.CropRepository.UpdateAsync(existingCrop);
             await _unitOfWork.SaveChangesAsync();

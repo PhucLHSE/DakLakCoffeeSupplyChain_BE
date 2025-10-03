@@ -20,6 +20,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public string FarmName { get; set; } = string.Empty;
 
         public decimal? CropArea { get; set; }
+        public string? Note { get; set; }
+        public bool? IsApproved { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropStatus Status { get; set; } = CropStatus.Inactive;

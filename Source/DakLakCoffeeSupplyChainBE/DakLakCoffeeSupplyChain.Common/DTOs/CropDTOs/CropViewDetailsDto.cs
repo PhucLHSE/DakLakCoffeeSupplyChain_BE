@@ -37,5 +37,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public string? CreatedByName { get; set; }
 
         public string? UpdatedByName { get; set; }
+        public string? Note { get; set; }
+        public bool? IsApproved { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public Guid? ApprovedBy { get; set; }
+        public string? RejectReason { get; set; }
+        public string? ApprovedByName { get; set; }
     }
 }
