@@ -15,6 +15,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         {
             try
             {
+                
                 var client = new SmtpClient(_smtpServer, _port)
                 {
                     Credentials = new NetworkCredential(_fromEmail, _appPassword),
@@ -26,14 +27,11 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     IsBodyHtml = true
                 };
 
-                Console.WriteLine($"🚀 Đang gửi email tới: {toEmail}");
                 await client.SendMailAsync(mail);
-                Console.WriteLine("✅ Email đã gửi thành công.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("❌ Lỗi khi gửi email: " + ex.Message);
-                throw;
+                throw new InvalidOperationException($"Lỗi khi gửi email đến {toEmail}: {ex.Message}", ex);
             }
         }
     }

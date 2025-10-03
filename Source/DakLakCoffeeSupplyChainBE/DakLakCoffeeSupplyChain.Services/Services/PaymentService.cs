@@ -19,10 +19,6 @@
                 _httpContextAccessor = httpContextAccessor;
             }
 
-            /// <summary>
-            /// Lấy RoleId từ JWT token của user hiện tại
-            /// </summary>
-            /// <returns>RoleId hoặc null nếu không tìm thấy</returns>
             public int? GetCurrentUserRoleId()
             {
                 var httpContext = _httpContextAccessor.HttpContext;
@@ -42,10 +38,7 @@
                 };
             }
 
-            /// <summary>
-            /// Lấy thông tin user từ JWT token
-            /// </summary>
-            /// <returns>Tuple chứa (email, userId)</returns>
+           
             public (string email, string userId) GetCurrentUserInfo()
             {
                 var httpContext = _httpContextAccessor.HttpContext;
@@ -57,19 +50,14 @@
                 return (email, userId);
             }
 
-            /// <summary>
-            /// Lấy IP address của client
-            /// </summary>
-            /// <returns>IP address</returns>
+          
             public string GetClientIpAddress()
             {
                 var httpContext = _httpContextAccessor.HttpContext;
                 return httpContext?.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
             }
 
-        /// <summary>
-        /// Lấy PaymentConfiguration dựa vào RoleId và FeeType + Sản lượng của kế hoạch
-        /// </summary>
+      
         public async Task<PaymentConfiguration?> GetPaymentConfigurationByContext(
             int roleId, string feeType, Guid planId)
         {
@@ -122,14 +110,7 @@
 
 
 
-        /// <summary>
-        /// Tạo Payment record
-        /// </summary>
-        /// <param name="planId">Plan ID</param>
-        /// <param name="paymentConfig">Payment configuration</param>
-        /// <param name="userEmail">User email</param>
-        /// <param name="userId">User ID</param>
-        /// <returns>Payment object</returns>
+        
         public Payment CreatePaymentRecord(Guid planId, PaymentConfiguration paymentConfig, string userEmail, string userId)
             {
                 var now = DateTime.UtcNow;
@@ -156,15 +137,6 @@
                 };
             }
 
-        /// <summary>
-        /// Tạo Payment record với txnRef cụ thể
-        /// </summary>
-        /// <param name="planId">Plan ID</param>
-        /// <param name="paymentConfig">Payment configuration</param>
-        /// <param name="userEmail">User email</param>
-        /// <param name="userId">User ID</param>
-        /// <param name="txnRef">Transaction reference</param>
-        /// <returns>Payment object</returns>
         public async Task<Payment> CreateOrUpdatePaymentRecordWithTxnRef(
  Guid planId,
  PaymentConfiguration paymentConfig,
@@ -327,23 +299,13 @@
 
 
 
-            /// <summary>
-            /// Lưu Payment vào database
-            /// </summary>
-            /// <param name="payment">Payment object</param>
-            /// <returns>Task</returns>
+         
             public async Task SavePaymentAsync(Payment payment)
             {
                 await _unitOfWork.PaymentRepository.CreateAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            /// <summary>
-            /// Kiểm tra kế hoạch có tồn tại và thuộc về user không
-            /// </summary>
-            /// <param name="planId">Plan ID</param>
-            /// <param name="userId">User ID</param>
-            /// <returns>ProcurementPlan hoặc null</returns>
             public async Task<ProcurementPlan?> ValidatePlanOwnership(Guid planId, string userId)
             {
                 var plan = await _unitOfWork.ProcurementPlanRepository.GetByIdAsync(
@@ -360,15 +322,7 @@
                 return plan;
             }
 
-            /// <summary>
-            /// Tạo Payment record cho wallet topup
-            /// </summary>
-            /// <param name="walletId">Wallet ID</param>
-            /// <param name="amount">Amount</param>
-            /// <param name="txnRef">Transaction reference</param>
-            /// <param name="userEmail">User email</param>
-            /// <param name="userId">User ID</param>
-            /// <returns>Task</returns>
+         
             public async Task CreateWalletTopupPaymentAsync(Guid walletId, int amount, string txnRef, string userEmail, string userId)
             {
                 var cfg = (await _unitOfWork.PaymentConfigurationRepository.GetAllAsync()).FirstOrDefault();
@@ -398,9 +352,7 @@
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            /// <summary>
-            /// ✅ Tái tạo VNPay URL cho payment pending (tiếp tục thanh toán)
-            /// </summary>
+          
             public async Task<(bool Success, string NewTxnRef, string Message)> RecreateWalletTopupPaymentAsync(Guid paymentId, string userEmail, string userId)
             {
                 // 1. Tìm payment pending
@@ -430,10 +382,7 @@
                 return (true, newTxnRef, "Payment đã được cập nhật để tiếp tục thanh toán.");
             }
 
-            /// <summary>
-            /// Lấy hoặc tạo ví System (Admin wallet)
-            /// </summary>
-            /// <returns>System wallet</returns>
+       
             public async Task<Wallet> GetOrCreateSystemWalletAsync()
             {
                 // Tìm ví System (UserID = null, WalletType = "System")
@@ -464,13 +413,7 @@
                 return systemWallet;
             }
 
-            /// <summary>
-            /// Cộng tiền vào ví System khi thanh toán phí thành công
-            /// </summary>
-            /// <param name="paymentId">Payment ID</param>
-            /// <param name="amount">Số tiền</param>
-            /// <param name="description">Mô tả</param>
-            /// <returns>Task</returns>
+       
             public async Task AddToSystemWalletAsync(Guid paymentId, double amount, string description)
             {
                 // Lấy ví System
@@ -499,15 +442,7 @@
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            /// <summary>
-            /// Tạo Wallet Transaction cho Admin khi thanh toán phí đăng ký kế hoạch qua VNPay
-            /// </summary>
-            /// <param name="paymentId">Payment ID</param>
-            /// <param name="amount">Số tiền</param>
-            /// <param name="userId">User ID của người trả phí</param>
-            /// <param name="planId">Plan ID</param>
-            /// <param name="description">Mô tả</param>
-            /// <returns>Task</returns>
+        
             public async Task CreatePlanPostingFeeTransactionsAsync(Guid paymentId, double amount, Guid userId, Guid planId, string description)
             {
                 var now = DateTime.UtcNow;
@@ -539,15 +474,7 @@
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            /// <summary>
-            /// Tạo Wallet Transaction cho cả Admin và User khi thanh toán phí bằng ví
-            /// </summary>
-            /// <param name="paymentId">Payment ID</param>
-            /// <param name="amount">Số tiền</param>
-            /// <param name="userId">User ID của người trả phí</param>
-            /// <param name="planId">Plan ID</param>
-            /// <param name="description">Mô tả</param>
-            /// <returns>Task</returns>
+        
             public async Task CreatePlanPostingFeeTransactionsFromWalletAsync(Guid paymentId, double amount, Guid userId, Guid planId, string description)
             {
                 var now = DateTime.UtcNow;
@@ -599,16 +526,7 @@
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            /// <summary>
-            /// Tạo Wallet Transaction dựa trên loại thanh toán
-            /// </summary>
-            /// <param name="paymentId">Payment ID</param>
-            /// <param name="amount">Số tiền</param>
-            /// <param name="userId">User ID của người trả phí</param>
-            /// <param name="planId">Plan ID</param>
-            /// <param name="description">Mô tả</param>
-            /// <param name="paymentMethod">Phương thức thanh toán (VNPay, Wallet, etc.)</param>
-            /// <returns>Task</returns>
+        
             public async Task CreatePlanPostingFeeTransactionsByMethodAsync(Guid paymentId, double amount, Guid userId, Guid planId, string description, string paymentMethod)
             {
                 if (paymentMethod?.ToLower() == "vnpay")
@@ -623,11 +541,7 @@
                 }
             }
 
-            /// <summary>
-            /// Lấy hoặc tạo ví của User
-            /// </summary>
-            /// <param name="userId">User ID</param>
-            /// <returns>User wallet</returns>
+         
             public async Task<Wallet> GetOrCreateUserWalletAsync(Guid userId)
             {
                 // Tìm ví của user
@@ -656,9 +570,6 @@
                 return userWallet;
             }
 
-            /// <summary>
-            /// Xử lý thanh toán qua ví nội bộ
-            /// </summary>
             public async Task<(bool Success, string Message, string? TransactionId)> ProcessWalletPaymentAsync(Guid planId, double amount, Guid userId, string? description = null)
             {
                 try
