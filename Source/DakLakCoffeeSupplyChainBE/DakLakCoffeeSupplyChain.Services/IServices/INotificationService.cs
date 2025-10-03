@@ -57,5 +57,7 @@ namespace DakLakCoffeeSupplyChain.Services.IServices
 
         Task<SystemNotification> NotifyManagerCommitmentCouldNotBeAcceptAsync(
         Guid recipientId, Guid senderId, string farmerName, string content);
+
+        Task<SystemNotification> NotifyBusinessBuyerOutboundRequestReadyAsync(Guid outboundRequestId, string outboundRequestCode, string companyName, string buyerEmail, string productName, double quantity, string unit);
     }
 }
