@@ -83,7 +83,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedBy = createdBy,
                 IsDeleted = null,
                 Note = dto.Note ?? string.Empty,
-                IsApproved = null, // Chưa có quyết định từ admin  
+                IsApproved = null,
             };
         }
 
