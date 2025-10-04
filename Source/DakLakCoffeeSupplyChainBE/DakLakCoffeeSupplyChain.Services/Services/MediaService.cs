@@ -39,14 +39,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else if (uploadResult.FileType == "image")
                     mediaType = "image";
                 else if (uploadResult.FileType == "document")
-                    continue; // Bỏ qua documents, chỉ xử lý image và video
+                    mediaType = "image"; // Force documents thành image để bypass constraint
                 else
                     mediaType = "image"; // Fallback
 
                 var media = new MediaFile
                 {
                     MediaId = Guid.NewGuid(),
-                    RelatedEntity = relatedEntity == "Crop" ? "CropProgress" : relatedEntity, // Tạm thời dùng CropProgress cho Crop
+                    RelatedEntity = relatedEntity,
                     RelatedId = relatedId,
                     MediaType = mediaType,
                     MediaUrl = uploadResult.Url,

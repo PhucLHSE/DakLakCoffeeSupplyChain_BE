@@ -119,13 +119,14 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 List<string> videoUrls = new List<string>();
                 List<string> documentUrls = new List<string>();
 
-                // Gộp chỉ images và videos (bỏ documents sang bên)
+                // Gộp images, videos và documents
                 var allMediaFiles = new List<IFormFile>();
                 if (dto.Images?.Any() == true)
                     allMediaFiles.AddRange(dto.Images);
                 if (dto.Videos?.Any() == true)
                     allMediaFiles.AddRange(dto.Videos);
-                // Documents sẽ được xử lý sau
+                if (dto.Documents?.Any() == true)
+                    allMediaFiles.AddRange(dto.Documents);
 
                 if (allMediaFiles.Any())
                 {
@@ -157,8 +158,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         crop = cropDetailsResult.Data,
                         uploadedFiles = allMediaFiles.Count,
                         imageUrls = imageUrls,
-                        videoUrls = videoUrls
-                        // documentUrls sẽ được xử lý sau
+                        videoUrls = videoUrls,
+                        documentUrls = documentUrls
                     });
                 }
 
