@@ -24,7 +24,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
         public async Task<IServiceResult> GetAll(Guid userId, bool isAdmin = false, bool isManager = false)
         {
             var details = await _uow.CropSeasonDetailRepository.GetAllAsync(
-                predicate: d => !d.IsDeleted && (isAdmin || d.CropSeason.Farmer.UserId == userId),
+                predicate: d => !d.IsDeleted && (isAdmin || isManager || d.CropSeason.Farmer.UserId == userId),
                 include: q => q
                     .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.PlanDetail).ThenInclude(pd => pd.CoffeeType)
                     .Include(d => d.CommitmentDetail).ThenInclude(cd => cd.RegistrationDetail) // ✅ Add RegistrationDetail
@@ -52,7 +52,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 asNoTracking: true
             );
             if (d == null) return new ServiceResult(Const.WARNING_NO_DATA_CODE, "Không tìm thấy chi tiết mùa vụ.");
-            if (!isAdmin && d.CropSeason?.Farmer?.UserId != userId)
+            if (!isAdmin && !isManager && d.CropSeason?.Farmer?.UserId != userId)
                 return new ServiceResult(Const.FAIL_READ_CODE, "Bạn không có quyền xem chi tiết này.");
 
             return new ServiceResult(Const.SUCCESS_READ_CODE, Const.SUCCESS_READ_MSG, d.MapToCropSeasonDetailViewDto());
