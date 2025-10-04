@@ -114,25 +114,5 @@ namespace DakLakCoffeeSupplyChain.Common.Helpers
             return true;
         }
 
-        /// <summary>
-        /// Lấy danh sách các giai đoạn chế biến phổ biến
-        /// </summary>
-        /// <returns>Dictionary chứa tên giai đoạn và tỷ lệ waste tối đa</returns>
-        public static Dictionary<string, double> GetCommonProcessingStages()
-        {
-            return new Dictionary<string, double>
-            {
-                { "Thu hoạch", 20.0 },
-                { "Phơi", 15.0 },
-                { "Xay vỏ", 10.0 },
-                { "Phân loại", 8.0 },
-                { "Sàng lọc", 12.0 },
-                { "Làm sạch", 8.0 },
-                { "Rang", 5.0 },
-                { "Nghiền", 3.0 },
-                { "Đóng gói", 5.0 },
-                { "Đóng gói sản phẩm", 2.0 }
-            };
-        }
     }
 }
