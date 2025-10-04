@@ -33,6 +33,11 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropStatus Status { get; set; } = CropStatus.Inactive;
+
+        [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
+        public string? Note { get; set; }
+        public bool? IsApproved { get; set; }
+        public string? RejectReason { get; set; }
     }
 }
 

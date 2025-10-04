@@ -690,6 +690,74 @@ public class NotificationService : INotificationService
         return notification;
     }
 
+    public async Task<SystemNotification> NotifyBusinessBuyerOutboundRequestReadyAsync(Guid outboundRequestId, string outboundRequestCode, string companyName, string buyerEmail, string productName, double quantity, string unit)
+    {
+        var title = "📦 Hàng đã sẵn sàng để lấy";
+        var message = $"Kính gửi quý công ty {companyName},\n\nHàng hóa đã được chuẩn bị sẵn sàng và có thể đến lấy tại kho của chúng tôi.\n\nThông tin chi tiết:\n- Mã phiếu xuất kho: {outboundRequestCode}\n- Sản phẩm: {productName}\n- Số lượng: {quantity:n0} {unit}\n\nVui lòng liên hệ với chúng tôi để sắp xếp thời gian đến lấy hàng.\n\nTrân trọng,\nĐội ngũ DakLak Coffee Supply Chain";
+
+        var notification = new SystemNotification
+        {
+            NotificationId = Guid.NewGuid(),
+            NotificationCode = await _codeGenerator.GenerateNotificationCodeAsync(),
+            Title = title,
+            Message = message,
+            Type = "BusinessBuyerOutboundReady",
+            CreatedAt = DateHelper.NowVietnamTime(),
+            CreatedBy = null
+        };
+
+        await _unitOfWork.SystemNotificationRepository.CreateAsync(notification);
+
+        // Gửi email cho business buyer
+        if (!string.IsNullOrWhiteSpace(buyerEmail))
+        {
+            var emailSubject = $"🚚 Thông báo hàng sẵn sàng lấy - Phiếu xuất kho {outboundRequestCode}";
+            var emailBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                    <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
+                        <h2 style='color: #2c5530; border-bottom: 2px solid #2c5530; padding-bottom: 10px;'>
+                            🚚 Thông báo hàng sẵn sàng lấy
+                        </h2>
+                        
+                        <p>Kính gửi quý công ty <strong>{companyName}</strong>,</p>
+                        
+                        <p>Chúng tôi xin thông báo rằng hàng hóa đã được chuẩn bị sẵn sàng và có thể đến lấy tại kho của chúng tôi.</p>
+                        
+                        <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                            <h3 style='color: #2c5530; margin-top: 0;'>📋 Thông tin chi tiết:</h3>
+                            <ul style='margin: 0; padding-left: 20px;'>
+                                <li><strong>Mã phiếu xuất kho:</strong> {outboundRequestCode}</li>
+                                <li><strong>Sản phẩm:</strong> {productName}</li>
+                                <li><strong>Số lượng:</strong> {quantity:n0} {unit}</li>
+                            </ul>
+                        </div>
+                        
+                        <div style='background-color: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0;'>
+                            <p style='margin: 0;'><strong>⚠️ Lưu ý:</strong> Vui lòng liên hệ với chúng tôi để sắp xếp thời gian đến lấy hàng phù hợp.</p>
+                        </div>
+                        
+                        <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua hệ thống hoặc số điện thoại đã cung cấp.</p>
+                        
+                        <p>Trân trọng,<br>
+                        <strong>Đội ngũ DakLak Coffee Supply Chain</strong></p>
+                        
+                        <hr style='border: none; border-top: 1px solid #eee; margin: 30px 0;'>
+                        <p style='font-size: 12px; color: #666; text-align: center;'>
+                            Email này được gửi tự động từ hệ thống DakLak Coffee Supply Chain Management
+                        </p>
+                    </div>
+                </body>
+                </html>";
+
+            await _emailService.SendEmailAsync(buyerEmail, emailSubject, emailBody);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return notification;
+    }
+
     // Thêm các phương thức để Frontend gọi
     public async Task<IServiceResult> GetUserNotificationsAsync(Guid userId, int page, int pageSize)
     {

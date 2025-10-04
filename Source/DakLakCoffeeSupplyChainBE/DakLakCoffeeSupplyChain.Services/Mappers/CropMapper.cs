@@ -30,7 +30,9 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 Address = crop.Address ?? string.Empty,
                 FarmName = crop.FarmName ?? string.Empty,
                 CropArea = crop.CropArea,
-                Status = status
+                Status = status,
+                Note = crop.Note?? string.Empty,
+                IsApproved = crop.IsApproved,
             };
         }
 
@@ -56,41 +58,53 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 CreatedBy = crop.CreatedBy,
                 UpdatedBy = crop.UpdatedBy,
                 IsDeleted = crop.IsDeleted,
-                CreatedByName = crop.CreatedByNavigation?.User?.Name,
-                UpdatedByName = crop.UpdatedByNavigation?.User?.Name
+                Note = crop.Note ?? string.Empty,
+                IsApproved = crop.IsApproved,
+                ApprovedAt = crop.ApprovedAt,
+                ApprovedBy = crop.ApprovedBy,
+                RejectReason = crop.RejectReason ?? string.Empty,
             };
         }
 
         // Mapper CropCreateDto -> Crop
-        public static Crop MapToCrop(this CropCreateDto dto, Guid createdBy, string cropCode)
+        public static Crop MapToCreateCrop(this CropCreateDto dto, Guid createdBy, string cropCode)
         {
             return new Crop
             {
                 CropId = Guid.NewGuid(),
-                CropCode = cropCode, // From service
+                CropCode = cropCode, 
                 Address = dto.Address,
                 FarmName = dto.FarmName,
                 CropArea = dto.CropArea,
-                Status = dto.Status.ToString(), // Auto set Active khi tạo mới
+                Status = dto.Status.ToString(),
                 CreatedAt = DateHelper.NowVietnamTime(),
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 CreatedBy = createdBy,
                 UpdatedBy = createdBy,
-                IsDeleted = false
+                IsDeleted = null,
+                Note = dto.Note ?? string.Empty,
+                IsApproved = null,
             };
         }
 
         // Mapper CropUpdateDto -> Crop (for update)
-        public static void MapToCrop(this CropUpdateDto dto, Crop crop, Guid updatedBy)
+        public static void MapToUpdateCrop(this CropUpdateDto dto, Crop crop, Guid updatedBy)
         {
             crop.CropCode = dto.CropCode;
             crop.Address = dto.Address;
             crop.FarmName = dto.FarmName;
             crop.CropArea = dto.CropArea;
-            // Status không update thủ công, auto transition theo workflow
-            // crop.Status = dto.Status;
             crop.UpdatedAt = DateHelper.NowVietnamTime();
             crop.UpdatedBy = updatedBy;
+            crop.Note = dto.Note ?? string.Empty;
+            crop.IsApproved = dto.IsApproved;
+            crop.RejectReason = dto.RejectReason ?? string.Empty;
+
+            if (dto.IsApproved.HasValue)
+            {
+                crop.ApprovedAt = DateHelper.NowVietnamTime();
+                crop.ApprovedBy = updatedBy;
+            }
         }
     }
 }

@@ -1,9 +1,7 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
 using DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs;
-using DakLakCoffeeSupplyChain.Common.DTOs.ProcurementPlanDTOs;
 using DakLakCoffeeSupplyChain.Common.Helpers;
 using DakLakCoffeeSupplyChain.Services.IServices;
-using DakLakCoffeeSupplyChain.Services.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -107,7 +105,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 .DeleteById(registrationId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa thành công.");
+                return NoContent();
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy cultivation registration.");
@@ -127,7 +125,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 .SoftDeleteById(registrationId);
 
             if (result.Status == Const.SUCCESS_DELETE_CODE)
-                return Ok("Xóa mềm thành công.");
+                return NoContent();
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound("Không tìm thấy cultivation registration.");
@@ -162,9 +160,9 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _service
                 .Create(registration, userId);
 
-            if (result.Status == Const.SUCCESS_CREATE_CODE)
+            if (result.Status == Const.SUCCESS_CREATE_CODE && result.Data is CultivationRegistrationViewSumaryDto createdDto)
                 return CreatedAtAction(nameof(GetById),
-                    new { registrationId = ((CultivationRegistrationViewSumaryDto)result.Data).RegistrationId },
+                    new { registrationId = createdDto.RegistrationId },
                     result.Data);
 
             if (result.Status == Const.FAIL_CREATE_CODE)

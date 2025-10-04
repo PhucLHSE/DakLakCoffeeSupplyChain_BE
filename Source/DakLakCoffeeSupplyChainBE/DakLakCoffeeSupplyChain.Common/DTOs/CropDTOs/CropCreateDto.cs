@@ -1,4 +1,5 @@
 using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -30,5 +31,12 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropStatus Status { get; set; } = CropStatus.Active;
+        [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
+        public string? Note { get; set; }
+
+        // Media files
+        public List<IFormFile>? Images { get; set; }
+        public List<IFormFile>? Videos { get; set; }
+        public List<IFormFile>? Documents { get; set; }
     }
 }

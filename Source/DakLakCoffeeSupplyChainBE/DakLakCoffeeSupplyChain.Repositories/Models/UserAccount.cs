@@ -55,6 +55,8 @@ public partial class UserAccount
 
     public virtual BusinessStaff BusinessStaff { get; set; }
 
+    public virtual ICollection<Crop> Crops { get; set; } = new List<Crop>();
+
     public virtual ICollection<Farmer> Farmers { get; set; } = new List<Farmer>();
 
     public virtual ICollection<FarmingCommitmentsDetail> FarmingCommitmentsDetailBreachedByNavigations { get; set; } = new List<FarmingCommitmentsDetail>();

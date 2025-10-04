@@ -39,7 +39,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 else if (uploadResult.FileType == "image")
                     mediaType = "image";
                 else if (uploadResult.FileType == "document")
-                    mediaType = "image"; // Database chỉ cho phép 'image' và 'video', document files sẽ được xử lý như 'image'
+                    mediaType = "image"; // Force documents thành image để bypass constraint
                 else
                     mediaType = "image"; // Fallback
 

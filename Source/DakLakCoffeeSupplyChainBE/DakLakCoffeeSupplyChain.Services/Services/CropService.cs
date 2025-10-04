@@ -60,41 +60,76 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             return dakLakKeywords.Any(keyword => lowerAddress.Contains(keyword));
         }
 
-        public async Task<IServiceResult> GetAllCrops(Guid farmerUserId)
+        public async Task<IServiceResult> GetAllCrops(Guid userId, string userRole)
         {
-            // Get farmer from farmerUserId
-            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
-                predicate: f =>
-                   f.UserId == farmerUserId &&
-                   !f.IsDeleted,
-                asNoTracking: true
-            );
-
-            if (farmer == null)
+            // Kiểm tra quyền truy cập
+            if (userRole != "Admin" && userRole != "Farmer")
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
-                    "Không tìm thấy Farmer tương ứng với tài khoản."
+                    $"Người dùng có role '{userRole}' không có quyền truy cập. Chỉ Farmer và Admin mới được phép.",
+                    new List<CropViewAllDto>()
                 );
             }
 
-            // Get crops from repository
-            var crops = await _unitOfWork.CropRepository.GetAllAsync(
-                predicate: c => 
-                   (c.IsDeleted == null || (c.IsDeleted == null || c.IsDeleted == false)) && 
-                   c.CreatedBy == farmer.FarmerId,
-                orderBy: query => query.OrderBy(c => c.CreatedAt),
-                asNoTracking: true
-            );
+            // Get farmer if user is farmer
+            Farmer farmer = null;
+            if (userRole == "Farmer")
+            {
+                farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: f => f.UserId == userId && !f.IsDeleted,
+                    asNoTracking: true
+                );
+                // Note: farmer có thể null nếu chưa có Farmer record
+            }
+
+            // Get crops based on role
+            List<Crop> crops;
+            
+            if (userRole == "Admin")
+            {
+                // Admin can see all crops
+                crops = await _unitOfWork.CropRepository.GetAllAsync(
+                    predicate: c => (c.IsDeleted == null || c.IsDeleted == false),
+                    orderBy: query => query.OrderBy(c => c.CreatedAt),
+                    asNoTracking: true
+                );
+            }
+            else if (userRole == "Farmer")
+            {
+                if (farmer != null)
+                {
+                    // Farmer có Farmer record - xem crops của mình
+                    crops = await _unitOfWork.CropRepository.GetAllAsync(
+                        predicate: c => (c.IsDeleted == null || c.IsDeleted == false) && 
+                                        c.CreatedBy == farmer.FarmerId,
+                        orderBy: query => query.OrderBy(c => c.CreatedAt),
+                        asNoTracking: true
+                    );
+                }
+                else
+                {
+                    // Farmer chưa có Farmer record - không có crops nào
+                    crops = new List<Crop>();
+                }
+            }
+            else
+            {
+                // User không phải Admin và không phải Farmer
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Người dùng không có quyền truy cập.",
+                    new List<CropViewAllDto>()
+                );
+            }
 
             // Check if no data
-            if (crops == null ||
-                !crops.Any())
+            if (crops == null || !crops.Any())
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
                     Const.WARNING_NO_DATA_MSG,
-                    new List<CropViewAllDto>()  // Return empty list
+                    new List<CropViewAllDto>()
                 );
             }
             else
@@ -112,32 +147,66 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
         }
 
-        public async Task<IServiceResult> GetCropById(Guid cropId, Guid farmerUserId)
+        public async Task<IServiceResult> GetCropById(Guid cropId, Guid userId, string userRole)
         {
-            // Get farmer from farmerUserId
-            var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
-                predicate: f =>
-                   f.UserId == farmerUserId &&
-                   !f.IsDeleted,
-                asNoTracking: true
-            );
-
-            if (farmer == null)
+            // Kiểm tra quyền truy cập
+            if (userRole != "Admin" && userRole != "Farmer")
             {
                 return new ServiceResult(
                     Const.WARNING_NO_DATA_CODE,
-                    "Không tìm thấy Farmer tương ứng với tài khoản."
+                    $"Người dùng có role '{userRole}' không có quyền truy cập. Chỉ Farmer và Admin mới được phép."
                 );
             }
 
+            // Get farmer if user is farmer
+            Farmer farmer = null;
+            if (userRole == "Farmer")
+            {
+                farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
+                    predicate: f => f.UserId == userId && !f.IsDeleted,
+                    asNoTracking: true
+                );
+                // Note: farmer có thể null nếu chưa có Farmer record
+            }
+
             // Get crop by ID and check ownership
-            var crop = await _unitOfWork.CropRepository.GetByIdAsync(
-                predicate: c =>
-                   c.CropId == cropId &&
-                   (c.IsDeleted == null || c.IsDeleted == false) &&
-                   c.CreatedBy == farmer.FarmerId,
-                asNoTracking: true
-            );
+            Crop crop;
+            
+            if (userRole == "Admin")
+            {
+                // Admin can see any crop
+                crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                    predicate: c => c.CropId == cropId &&
+                                   (c.IsDeleted == null || c.IsDeleted == false),
+                    asNoTracking: true
+                );
+            }
+            else if (userRole == "Farmer")
+            {
+                if (farmer != null)
+                {
+                    // Farmer có Farmer record - xem crop của mình
+                    crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                        predicate: c => c.CropId == cropId &&
+                                       (c.IsDeleted == null || c.IsDeleted == false) &&
+                                       c.CreatedBy == farmer.FarmerId,
+                        asNoTracking: true
+                    );
+                }
+                else
+                {
+                    // Farmer chưa có Farmer record - không có crop nào
+                    crop = null;
+                }
+            }
+            else
+            {
+                // User không phải Admin và không phải Farmer
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Người dùng không có quyền truy cập."
+                );
+            }
 
             if (crop == null)
             {
@@ -148,6 +217,26 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             var cropDto = crop.MapToCropViewDetailsDto();
+
+            // Lấy media files cho crop
+            try
+            {
+                var mediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
+                    m => !m.IsDeleted && m.RelatedEntity == "Crop" && m.RelatedId == cropId,
+                    orderBy: q => q.OrderByDescending(m => m.UploadedAt)
+                );
+
+                cropDto.Images = mediaFiles.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                cropDto.Videos = mediaFiles.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                cropDto.Documents = mediaFiles.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không fail toàn bộ request
+                cropDto.Images = new List<string>();
+                cropDto.Videos = new List<string>();
+                cropDto.Documents = new List<string>();
+            }
 
             return new ServiceResult(
                 Const.SUCCESS_READ_CODE,
@@ -215,6 +304,16 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
 
+            // Validate Note length if provided
+            if (!string.IsNullOrWhiteSpace(cropCreateDto.Note) &&
+                cropCreateDto.Note.Length > 1000)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Ghi chú không được vượt quá 1000 ký tự"
+                );
+            }
+
             // Validate Đắk Lắk address
             if (!IsDakLakAddress(cropCreateDto.Address))
             {
@@ -261,7 +360,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             var cropCode = await _codeGenerator.GenerateCropCodeAsync();
 
             // Create new crop
-            var newCrop = cropCreateDto.MapToCrop(farmer.FarmerId, cropCode);
+            var newCrop = cropCreateDto.MapToCreateCrop(farmer.FarmerId, cropCode);
 
             await _unitOfWork.CropRepository.CreateAsync(newCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -332,7 +431,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
             }
 
             // Update crop
-            cropUpdateDto.MapToCrop(existingCrop, farmer.FarmerId);
+            cropUpdateDto.MapToUpdateCrop(existingCrop, farmer.FarmerId);
 
             await _unitOfWork.CropRepository.UpdateAsync(existingCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -517,6 +616,98 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(c => c.Status, newStatus.ToString())
                     .SetProperty(c => c.UpdatedAt, DateHelper.NowVietnamTime()));
+        }
+
+        public async Task<IServiceResult> ApproveCropAsync(Guid cropId, CropApproveDto dto, Guid adminUserId)
+        {
+            // Kiểm tra crop tồn tại và chưa được duyệt
+            var crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                predicate: c => c.CropId == cropId && 
+                               (c.IsDeleted == null || c.IsDeleted == false),
+                asNoTracking: false
+            );
+
+            if (crop == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Crop hoặc Crop đã bị xóa."
+                );
+            }
+
+            // Kiểm tra đã được duyệt chưa
+            if (crop.IsApproved == true)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Crop này đã được duyệt rồi."
+                );
+            }
+
+            // Duyệt crop
+            crop.IsApproved = true;
+            crop.ApprovedAt = DateHelper.NowVietnamTime();
+            crop.ApprovedBy = adminUserId;
+            crop.RejectReason = null; // Xóa lý do từ chối nếu có
+            crop.UpdatedAt = DateHelper.NowVietnamTime();
+            // Note: Không set UpdatedBy vì Admin không phải Farmer
+
+            await _unitOfWork.CropRepository.UpdateAsync(crop);
+            await _unitOfWork.SaveChangesAsync();
+
+            var cropDto = crop.MapToCropViewDetailsDto();
+
+            return new ServiceResult(
+                Const.SUCCESS_UPDATE_CODE,
+                "Duyệt Crop thành công",
+                cropDto
+            );
+        }
+
+        public async Task<IServiceResult> RejectCropAsync(Guid cropId, CropRejectDto dto, Guid adminUserId)
+        {
+            // Kiểm tra crop tồn tại và chưa được duyệt
+            var crop = await _unitOfWork.CropRepository.GetByIdAsync(
+                predicate: c => c.CropId == cropId && 
+                               (c.IsDeleted == null || c.IsDeleted == false),
+                asNoTracking: false
+            );
+
+            if (crop == null)
+            {
+                return new ServiceResult(
+                    Const.WARNING_NO_DATA_CODE,
+                    "Không tìm thấy Crop hoặc Crop đã bị xóa."
+                );
+            }
+
+            // Kiểm tra đã được duyệt chưa
+            if (crop.IsApproved == true)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Crop này đã được duyệt rồi, không thể từ chối."
+                );
+            }
+
+            // Từ chối crop
+            crop.IsApproved = false;
+            crop.ApprovedAt = DateHelper.NowVietnamTime();
+            crop.ApprovedBy = adminUserId;
+            crop.RejectReason = dto.RejectReason;
+            crop.UpdatedAt = DateHelper.NowVietnamTime();
+            // Note: Không set UpdatedBy vì Admin không phải Farmer
+
+            await _unitOfWork.CropRepository.UpdateAsync(crop);
+            await _unitOfWork.SaveChangesAsync();
+
+            var cropDto = crop.MapToCropViewDetailsDto();
+
+            return new ServiceResult(
+                Const.SUCCESS_UPDATE_CODE,
+                "Từ chối Crop thành công",
+                cropDto
+            );
         }
     }
 }
