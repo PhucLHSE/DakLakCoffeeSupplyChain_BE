@@ -81,7 +81,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                 UpdatedAt = DateHelper.NowVietnamTime(),
                 CreatedBy = createdBy,
                 UpdatedBy = createdBy,
-                IsDeleted = null,
+                IsDeleted = null,   
                 Note = dto.Note ?? string.Empty,
                 IsApproved = null,
             };
