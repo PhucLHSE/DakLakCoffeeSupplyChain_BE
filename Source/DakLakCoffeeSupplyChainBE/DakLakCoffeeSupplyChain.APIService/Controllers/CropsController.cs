@@ -122,17 +122,11 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             {
                 var cropData = (CropViewAllDto)result.Data;
                 List<string> imageUrls = new List<string>();
-                List<string> videoUrls = new List<string>();
-                List<string> documentUrls = new List<string>();
 
-                // Gộp images, videos và documents
+                // Chỉ xử lý images
                 var allMediaFiles = new List<IFormFile>();
                 if (dto.Images?.Any() == true)
                     allMediaFiles.AddRange(dto.Images);
-                if (dto.Videos?.Any() == true)
-                    allMediaFiles.AddRange(dto.Videos);
-                if (dto.Documents?.Any() == true)
-                    allMediaFiles.AddRange(dto.Documents);
 
                 if (allMediaFiles.Any())
                 {
@@ -145,10 +139,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                             uploadedBy: userId.ToString()
                         );
 
-                        // Lấy tất cả URLs của mỗi loại media (ẩn documents)
+                        // Chỉ lấy URLs của images
                         imageUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
-                        videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
-                        // documentUrls = mediaList.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList(); // Ẩn documents
                     }
                     catch (Exception ex)
                     {
@@ -165,9 +157,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         message = "Tạo vùng trồng thành công",
                         crop = cropDetailsResult.Data,
                         uploadedFiles = allMediaFiles.Count,
-                        imageUrls = imageUrls,
-                        videoUrls = videoUrls
-                        // documentUrls = documentUrls // Ẩn documents
+                        imageUrls = imageUrls
                     });
                 }
 
@@ -183,7 +173,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT: api/<CropsController>/{cropId}
         [HttpPut("{cropId}")]
         [Authorize(Roles = "Farmer,Admin")]
-        public async Task<IActionResult> UpdateCropAsync(Guid cropId, [FromBody] CropUpdateDto dto)
+        public async Task<IActionResult> UpdateCropAsync(Guid cropId, [FromForm] CropUpdateDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -223,7 +213,37 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _cropService.UpdateCrop(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(new { message = "Cập nhật vùng trồng thành công", data = result.Data });
+            {
+                var cropData = (CropViewAllDto)result.Data;
+                List<string> imageUrls = new List<string>();
+
+                // Xử lý images nếu có
+                if (dto.Images?.Any() == true)
+                {
+                    try
+                    {
+                        var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                            files: dto.Images,
+                            relatedEntity: "Crop",
+                            relatedId: cropData.CropId,
+                            uploadedBy: userId.ToString()
+                        );
+
+                        imageUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error nhưng vẫn trả về success với crop đã cập nhật
+                    }
+                }
+
+                return Ok(new { 
+                    message = "Cập nhật vùng trồng thành công", 
+                    data = result.Data,
+                    uploadedImages = imageUrls.Count,
+                    imageUrls = imageUrls
+                });
+            }
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(new { message = result.Message });

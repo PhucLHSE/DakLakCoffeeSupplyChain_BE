@@ -34,9 +34,7 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
         public string? Note { get; set; }
 
-        // Media files
+        // Media files - chỉ cho phép ảnh
         public List<IFormFile>? Images { get; set; }
-        public List<IFormFile>? Videos { get; set; }
-        public List<IFormFile>? Documents { get; set; }
     }
 }
