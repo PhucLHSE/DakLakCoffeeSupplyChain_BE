@@ -56,6 +56,7 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ExpectedHarvestEnd = detail.ExpectedHarvestEnd,
                     Status = EnumHelper.ParseEnumFromString(detail.Status, CultivationRegistrationStatus.Unknown),
                     Note = detail.Note,
+                    RegisteredArea = detail.RegisteredArea,
                     Crop = new CropViewAllDto{
                         CropId = detail.Crop?.CropId ?? Guid.Empty,
                         CropCode = detail.Crop?.CropCode ?? "",
@@ -95,7 +96,16 @@ namespace DakLakCoffeeSupplyChain.Services.Mappers
                     ExpectedHarvestStart = c.ExpectedHarvestStart,
                     ExpectedHarvestEnd = c.ExpectedHarvestEnd,
                     Status = EnumHelper.ParseEnumFromString(c.Status, CultivationRegistrationStatus.Unknown),
-                    Note = c.Note
+                    Note = c.Note,
+                    RegisteredArea = c.RegisteredArea,
+                    Crop = new CropViewAllDto
+                    {
+                        CropId = c.Crop?.CropId ?? Guid.Empty,
+                        CropCode = c.Crop?.CropCode ?? "",
+                        FarmName = c.Crop?.FarmName ?? "",
+                        Address = c.Crop?.Address ?? "",
+                        CropArea = c.Crop?.CropArea ?? 0
+                    }
                 }).ToList() ?? []
             };
         }

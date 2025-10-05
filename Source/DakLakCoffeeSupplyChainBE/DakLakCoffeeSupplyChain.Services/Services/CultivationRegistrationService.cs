@@ -188,6 +188,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Include(c => c.CultivationRegistrationsDetails).
                     ThenInclude(c => c.PlanDetail).
                         ThenInclude( c => c.CoffeeType).
+                Include(c => c.CultivationRegistrationsDetails).
+                        ThenInclude(c => c.Crop).
                 Include(c => c.Farmer).
                     ThenInclude(c => c.User),
                 asNoTracking: true
