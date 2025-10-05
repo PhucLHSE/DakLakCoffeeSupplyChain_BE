@@ -14,23 +14,23 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         [Required(ErrorMessage = "CropId là bắt buộc")]
         public Guid CropId { get; set; }
 
-        [Required(ErrorMessage = "CropCode là bắt buộc")]
+        // CropCode không cho phép edit, chỉ để hiển thị
         [StringLength(20, ErrorMessage = "CropCode không được vượt quá 20 ký tự")]
         public string CropCode { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Address là bắt buộc")]
-        [StringLength(500, ErrorMessage = "Address không được vượt quá 500 ký tự")]
+        [Required(ErrorMessage = "Địa chỉ trang trại là bắt buộc")]
+        [StringLength(200, MinimumLength = 10, ErrorMessage = "Địa chỉ phải từ 10-200 ký tự")]
         public string Address { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "FarmName là bắt buộc")]
-        [StringLength(200, ErrorMessage = "FarmName không được vượt quá 200 ký tự")]
+        [Required(ErrorMessage = "Tên trang trại là bắt buộc")]
+        [StringLength(100, MinimumLength = 3, ErrorMessage = "Tên trang trại phải từ 3-100 ký tự")]
+        [RegularExpression(@"^[a-zA-ZÀ-ỹ0-9\s\-_.,()]+$", ErrorMessage = "Tên trang trại chỉ được chứa chữ cái, số, dấu cách và các ký tự: - _ . , ( )")]
         public string FarmName { get; set; } = string.Empty;
 
-        [Range(0.01, double.MaxValue, ErrorMessage = "CropArea phải lớn hơn 0")]
+        [Range(0.01, 10000, ErrorMessage = "Diện tích phải từ 0.01-10,000 ha")]
         public decimal? CropArea { get; set; }
 
         // Status auto transition theo workflow, không cho edit thủ công
-        [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CropStatus Status { get; set; } = CropStatus.Inactive;
 
