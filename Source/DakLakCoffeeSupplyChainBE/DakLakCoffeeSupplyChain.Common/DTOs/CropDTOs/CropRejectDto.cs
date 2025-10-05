@@ -9,3 +9,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public string RejectReason { get; set; } = string.Empty;
     }
 }
+
