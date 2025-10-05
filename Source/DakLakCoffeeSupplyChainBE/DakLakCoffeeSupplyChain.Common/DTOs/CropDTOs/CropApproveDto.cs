@@ -8,3 +8,4 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public string? Note { get; set; }
     }
 }
+
