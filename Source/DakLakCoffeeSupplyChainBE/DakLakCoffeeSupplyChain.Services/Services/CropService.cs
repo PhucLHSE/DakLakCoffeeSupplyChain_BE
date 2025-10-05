@@ -228,14 +228,14 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
                 cropDto.Images = mediaFiles.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
                 cropDto.Videos = mediaFiles.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
-                cropDto.Documents = mediaFiles.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
+                // cropDto.Documents = mediaFiles.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList(); // Ẩn documents
             }
             catch (Exception ex)
             {
                 // Log lỗi nhưng không fail toàn bộ request
                 cropDto.Images = new List<string>();
                 cropDto.Videos = new List<string>();
-                cropDto.Documents = new List<string>();
+                // cropDto.Documents = new List<string>(); // Ẩn documents
             }
 
             return new ServiceResult(
