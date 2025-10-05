@@ -24,6 +24,8 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CultivationRegistrationDTOs
 
         public string Note { get; set; } = string.Empty;
 
+        public double? RegisteredArea { get; set; }
+
         public CropViewAllDto? Crop { get; set; }
     }
 }
