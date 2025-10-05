@@ -692,8 +692,13 @@ public class NotificationService : INotificationService
 
     public async Task<SystemNotification> NotifyBusinessBuyerOutboundRequestReadyAsync(Guid outboundRequestId, string outboundRequestCode, string companyName, string buyerEmail, string productName, double quantity, string unit)
     {
+        // Lấy thông tin thời gian từ database
+        var outboundRequest = await _unitOfWork.WarehouseOutboundRequests.GetByIdAsync(outboundRequestId);
+        var currentTime = DateHelper.NowVietnamTime();
+        var outboundCreatedDate = outboundRequest?.CreatedAt ?? currentTime;
+        
         var title = "📦 Hàng đã sẵn sàng để lấy";
-        var message = $"Kính gửi quý công ty {companyName},\n\nHàng hóa đã được chuẩn bị sẵn sàng và có thể đến lấy tại kho của chúng tôi.\n\nThông tin chi tiết:\n- Mã phiếu xuất kho: {outboundRequestCode}\n- Sản phẩm: {productName}\n- Số lượng: {quantity:n0} {unit}\n\nVui lòng liên hệ với chúng tôi để sắp xếp thời gian đến lấy hàng.\n\nTrân trọng,\nĐội ngũ DakLak Coffee Supply Chain";
+        var message = $"Kính gửi quý công ty {companyName},\n\nHàng hóa đã được chuẩn bị sẵn sàng và có thể đến lấy tại kho của chúng tôi.\n\nThông tin chi tiết:\n- Mã phiếu xuất kho: {outboundRequestCode}\n- Sản phẩm: {productName}\n- Số lượng: {quantity:n0} {unit}\n- Ngày tạo phiếu xuất kho: {outboundCreatedDate:dd/MM/yyyy HH:mm}\n- Thời gian gửi thông báo: {currentTime:dd/MM/yyyy HH:mm}\n\nVui lòng liên hệ với chúng tôi để sắp xếp thời gian đến lấy hàng.\n\nTrân trọng,\nĐội ngũ DakLak Coffee Supply Chain";
 
         var notification = new SystemNotification
         {
@@ -730,6 +735,8 @@ public class NotificationService : INotificationService
                                 <li><strong>Mã phiếu xuất kho:</strong> {outboundRequestCode}</li>
                                 <li><strong>Sản phẩm:</strong> {productName}</li>
                                 <li><strong>Số lượng:</strong> {quantity:n0} {unit}</li>
+                                <li><strong>Ngày tạo phiếu xuất kho:</strong> {outboundCreatedDate:dd/MM/yyyy HH:mm}</li>
+                                <li><strong>Thời gian gửi thông báo:</strong> {currentTime:dd/MM/yyyy HH:mm}</li>
                             </ul>
                         </div>
                         
