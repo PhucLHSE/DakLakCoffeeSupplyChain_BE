@@ -242,7 +242,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Log lỗi nhưng không fail toàn bộ request
                 cropDto.Images = new List<string>();
                 cropDto.Videos = new List<string>();
-                cropDto.Documents = new List<string>();
+                cropDto.Documents = new List<DocumentInfoDto>();
             }
 
             return new ServiceResult(
