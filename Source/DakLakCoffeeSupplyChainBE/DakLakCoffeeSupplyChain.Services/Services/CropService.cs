@@ -235,7 +235,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 // Log lỗi nhưng không fail toàn bộ request
                 cropDto.Images = new List<string>();
                 cropDto.Videos = new List<string>();
-                cropDto.Documents = new List<DocumentInfoDto>();
+                cropDto.Documents = new List<string>();
             }
 
             return new ServiceResult(
@@ -264,7 +264,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Validate address length
+            // Validate address length (đã được validate bởi DataAnnotations nhưng double-check)
             if (cropCreateDto.Address.Trim().Length < 10 || cropCreateDto.Address.Trim().Length > 200)
             {
                 return new ServiceResult(
@@ -273,7 +273,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Validate farm name length
+            // Validate farm name length (đã được validate bởi DataAnnotations nhưng double-check)
             if (cropCreateDto.FarmName.Trim().Length < 3 || cropCreateDto.FarmName.Trim().Length > 100)
             {
                 return new ServiceResult(
@@ -282,7 +282,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Validate farm name characters
+            // Validate farm name characters (đã được validate bởi DataAnnotations nhưng double-check)
             var farmNameRegex = new System.Text.RegularExpressions.Regex(@"^[a-zA-ZÀ-ỹ0-9\s\-_.,()]+$");
             if (!farmNameRegex.IsMatch(cropCreateDto.FarmName.Trim()))
             {
@@ -292,7 +292,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 );
             }
 
-            // Validate crop area if provided
+            // Validate crop area if provided (đã được validate bởi DataAnnotations nhưng double-check)
             if (cropCreateDto.CropArea.HasValue)
             {
                 if (cropCreateDto.CropArea.Value < 0.01m || cropCreateDto.CropArea.Value > 10000m)
@@ -376,6 +376,82 @@ namespace DakLakCoffeeSupplyChain.Services.Services
 
         public async Task<IServiceResult> UpdateCrop(CropUpdateDto cropUpdateDto, Guid farmerUserId)
         {
+            // Validate input data
+            if (string.IsNullOrWhiteSpace(cropUpdateDto.Address))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ trang trại là bắt buộc"
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(cropUpdateDto.FarmName))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại là bắt buộc"
+                );
+            }
+
+            // Validate address length
+            if (cropUpdateDto.Address.Trim().Length < 10 || cropUpdateDto.Address.Trim().Length > 200)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ phải từ 10-200 ký tự"
+                );
+            }
+
+            // Validate farm name length
+            if (cropUpdateDto.FarmName.Trim().Length < 3 || cropUpdateDto.FarmName.Trim().Length > 100)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại phải từ 3-100 ký tự"
+                );
+            }
+
+            // Validate farm name characters
+            var farmNameRegex = new System.Text.RegularExpressions.Regex(@"^[a-zA-ZÀ-ỹ0-9\s\-_.,()]+$");
+            if (!farmNameRegex.IsMatch(cropUpdateDto.FarmName.Trim()))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Tên trang trại chỉ được chứa chữ cái, số, dấu cách và các ký tự: - _ . , ( )"
+                );
+            }
+
+            // Validate crop area if provided
+            if (cropUpdateDto.CropArea.HasValue)
+            {
+                if (cropUpdateDto.CropArea.Value < 0.01m || cropUpdateDto.CropArea.Value > 10000m)
+                {
+                    return new ServiceResult(
+                        Const.ERROR_EXCEPTION,
+                        "Diện tích phải từ 0.01-10,000 ha"
+                    );
+                }
+            }
+
+            // Validate Note length if provided
+            if (!string.IsNullOrWhiteSpace(cropUpdateDto.Note) &&
+                cropUpdateDto.Note.Length > 1000)
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Ghi chú không được vượt quá 1000 ký tự"
+                );
+            }
+
+            // Validate Đắk Lắk address
+            if (!IsDakLakAddress(cropUpdateDto.Address))
+            {
+                return new ServiceResult(
+                    Const.ERROR_EXCEPTION,
+                    "Địa chỉ phải thuộc khu vực Đắk Lắk. Vui lòng chọn từ danh sách gợi ý."
+                );
+            }
+
             // Get farmer from farmerUserId
             var farmer = await _unitOfWork.FarmerRepository.GetByIdAsync(
                 predicate: f =>

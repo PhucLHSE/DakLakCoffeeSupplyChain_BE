@@ -43,19 +43,19 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService
                 .GetAllCrops(userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+                return Ok(new { message = "Lấy danh sách vùng trồng thành công", data = result.Data });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // GET: api/<CropsController>/{cropId}
@@ -73,18 +73,18 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.GetCropById(cropId, userId, userRole);
 
             if (result.Status == Const.SUCCESS_READ_CODE)
-                return Ok(result.Data);
+                return Ok(new { message = "Lấy thông tin vùng trồng thành công", data = result.Data });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // POST: api/<CropsController>
@@ -94,7 +94,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new { message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             Guid userId;
@@ -107,7 +113,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.CreateCrop(dto, userId);
@@ -142,11 +148,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         // Lấy tất cả URLs của mỗi loại media
                         imageUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
                         videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
-                        // Documents sẽ được xử lý sau
+                        documentUrls = mediaList.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
                     }
                     catch (Exception ex)
                     {
-                        // Log error silently
+                        // Log error nhưng vẫn trả về success với crop đã tạo
+                        // Frontend có thể upload media sau
                     }
                 }
 
@@ -155,6 +162,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 if (cropDetailsResult.Status == Const.SUCCESS_READ_CODE)
                 {
                     return Ok(new { 
+                        message = "Tạo vùng trồng thành công",
                         crop = cropDetailsResult.Data,
                         uploadedFiles = allMediaFiles.Count,
                         imageUrls = imageUrls,
@@ -163,13 +171,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                     });
                 }
 
-                return Ok(result.Data);
+                return Ok(new { message = "Tạo vùng trồng thành công", data = result.Data });
             }
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // PUT: api/<CropsController>/{cropId}
@@ -179,37 +187,51 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new { message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             if (cropId != dto.CropId)
             {
-                return BadRequest("Crop ID trong URL không khớp với Crop ID trong body.");
+                return BadRequest(new { message = "Crop ID trong URL không khớp với Crop ID trong body." });
             }
 
             Guid userId;
+            string userRole;
 
             try
             {
                 userId = User.GetUserId();
+                userRole = User.GetRole();
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
+            }
+
+            // Kiểm tra quyền: chỉ Farmer sở hữu crop mới được update
+            if (userRole != "Admin" && userRole != "Farmer")
+            {
+                return Forbid("Không có quyền cập nhật crop.");
             }
 
             var result = await _cropService.UpdateCrop(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(result.Data);
+                return Ok(new { message = "Cập nhật vùng trồng thành công", data = result.Data });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // DELETE: api/<CropsController>/{cropId}/soft
@@ -225,7 +247,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.SoftDeleteCrop(cropId, userId);
@@ -234,12 +256,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok(new { message = result.Message });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // DELETE: api/<CropsController>/{cropId}/hard
@@ -255,7 +277,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.HardDeleteCrop(cropId, userId);
@@ -264,12 +286,12 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                 return Ok(new { message = result.Message });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // PUT: api/crops/{cropId}/approve
@@ -279,7 +301,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new { message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             Guid adminUserId;
@@ -290,21 +318,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.ApproveCropAsync(cropId, dto, adminUserId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(result.Data);
+                return Ok(new { message = "Duyệt vùng trồng thành công", data = result.Data });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
 
         // PUT: api/crops/{cropId}/reject
@@ -314,7 +342,13 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new { message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             Guid adminUserId;
@@ -325,21 +359,21 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             }
             catch
             {
-                return Unauthorized(ERROR_USER_ID_NOT_FOUND_MSG);
+                return Unauthorized(new { message = ERROR_USER_ID_NOT_FOUND_MSG });
             }
 
             var result = await _cropService.RejectCropAsync(cropId, dto, adminUserId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
-                return Ok(result.Data);
+                return Ok(new { message = "Từ chối vùng trồng thành công", data = result.Data });
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
-                return NotFound(result.Message);
+                return NotFound(new { message = result.Message });
 
             if (result.Status == Const.ERROR_EXCEPTION)
-                return BadRequest(result.Message);
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(500, result.Message);
+            return StatusCode(500, new { message = result.Message });
         }
     }
 }
