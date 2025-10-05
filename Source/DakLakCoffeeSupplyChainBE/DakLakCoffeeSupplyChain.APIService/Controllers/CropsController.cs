@@ -145,10 +145,10 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                             uploadedBy: userId.ToString()
                         );
 
-                        // Lấy tất cả URLs của mỗi loại media
+                        // Lấy tất cả URLs của mỗi loại media (ẩn documents)
                         imageUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
                         videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
-                        documentUrls = mediaList.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
+                        // documentUrls = mediaList.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList(); // Ẩn documents
                     }
                     catch (Exception ex)
                     {
@@ -166,8 +166,8 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
                         crop = cropDetailsResult.Data,
                         uploadedFiles = allMediaFiles.Count,
                         imageUrls = imageUrls,
-                        videoUrls = videoUrls,
-                        documentUrls = documentUrls
+                        videoUrls = videoUrls
+                        // documentUrls = documentUrls // Ẩn documents
                     });
                 }
 

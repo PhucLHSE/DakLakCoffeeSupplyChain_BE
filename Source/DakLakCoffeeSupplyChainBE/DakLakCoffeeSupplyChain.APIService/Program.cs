@@ -226,7 +226,22 @@ builder.Services.AddCors(options =>
         {
             policy.AllowAnyOrigin()
                   .AllowAnyMethod()
-                  .AllowAnyHeader();
+                  .AllowAnyHeader()
+                  .SetIsOriginAllowed(origin => true); // Cho phép mọi origin
+        });
+    
+    // Specific policy for production domains
+    options.AddPolicy("ProductionOrigins",
+        policy =>
+        {
+            policy.WithOrigins(
+                    "https://dak-lak-coffee-supply-chain.vercel.app",
+                    "http://localhost:3000",
+                    "https://localhost:3000"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
 });
 
@@ -242,7 +257,35 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 // Áp dụng CORS cho toàn bộ hệ thống (áp dụng policy phía trên)
-app.UseCors("AllowAllOrigins");
+// Sử dụng ProductionOrigins cho production, AllowAllOrigins cho development
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowAllOrigins");
+}
+else
+{
+    app.UseCors("ProductionOrigins");
+}
+
+// Handle preflight requests
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers["Origin"].FirstOrDefault();
+    Console.WriteLine($"CORS Request from origin: {origin}");
+    
+    // Handle preflight requests
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.Headers.Add("Access-Control-Allow-Origin", origin ?? "*");
+        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+        context.Response.Headers.Add("Access-Control-Max-Age", "86400");
+        context.Response.StatusCode = 200;
+        return;
+    }
+    
+    await next();
+});
 
 app.UseAuthentication();
 
