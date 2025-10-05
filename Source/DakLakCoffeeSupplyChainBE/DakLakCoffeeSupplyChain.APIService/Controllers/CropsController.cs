@@ -175,7 +175,7 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
         // PUT: api/<CropsController>/{cropId}
         [HttpPut("{cropId}")]
         [Authorize(Roles = "Farmer,Admin")]
-        public async Task<IActionResult> UpdateCropAsync(Guid cropId, [FromBody] CropUpdateDto dto)
+        public async Task<IActionResult> UpdateCropAsync(Guid cropId, [FromForm] CropUpdateDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -201,7 +201,59 @@ namespace DakLakCoffeeSupplyChain.APIService.Controllers
             var result = await _cropService.UpdateCrop(dto, userId);
 
             if (result.Status == Const.SUCCESS_UPDATE_CODE)
+            {
+                var cropData = (CropViewAllDto)result.Data;
+                List<string> imageUrls = new List<string>();
+                List<string> videoUrls = new List<string>();
+                List<string> documentUrls = new List<string>();
+
+                // Xử lý media files nếu có
+                var allMediaFiles = new List<IFormFile>();
+                if (dto.Images?.Any() == true)
+                    allMediaFiles.AddRange(dto.Images);
+                if (dto.Videos?.Any() == true)
+                    allMediaFiles.AddRange(dto.Videos);
+                if (dto.Documents?.Any() == true)
+                    allMediaFiles.AddRange(dto.Documents);
+
+                if (allMediaFiles.Any())
+                {
+                    try
+                    {
+                        var mediaList = await _mediaService.UploadAndSaveMediaAsync(
+                            allMediaFiles,
+                            relatedEntity: "Crop",
+                            relatedId: cropData.CropId,
+                            uploadedBy: userId.ToString()
+                        );
+
+                        // Lấy URLs của media mới
+                        imageUrls = mediaList.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
+                        videoUrls = mediaList.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
+                        documentUrls = mediaList.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error silently
+                    }
+                }
+
+                // Fetch updated crop details với media files
+                string userRole = User.GetRole();
+                var cropDetailsResult = await _cropService.GetCropById(cropData.CropId, userId, userRole);
+                if (cropDetailsResult.Status == Const.SUCCESS_READ_CODE)
+                {
+                    return Ok(new { 
+                        crop = cropDetailsResult.Data,
+                        uploadedFiles = allMediaFiles.Count,
+                        imageUrls = imageUrls,
+                        videoUrls = videoUrls,
+                        documentUrls = documentUrls
+                    });
+                }
+
                 return Ok(result.Data);
+            }
 
             if (result.Status == Const.WARNING_NO_DATA_CODE)
                 return NotFound(result.Message);
