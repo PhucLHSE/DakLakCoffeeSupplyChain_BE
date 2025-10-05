@@ -1,5 +1,4 @@
 using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
-using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -39,16 +38,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         public string? Note { get; set; }
         public bool? IsApproved { get; set; }
         public string? RejectReason { get; set; }
-
-        // Media files for update
-        public List<IFormFile>? Images { get; set; }
-        public List<IFormFile>? Videos { get; set; }
-        public List<IFormFile>? Documents { get; set; }
-
-        // Existing media URLs to keep (comma-separated strings)
-        public string? ExistingImages { get; set; }
-        public string? ExistingVideos { get; set; }
-        public string? ExistingDocuments { get; set; }
     }
 }
 
