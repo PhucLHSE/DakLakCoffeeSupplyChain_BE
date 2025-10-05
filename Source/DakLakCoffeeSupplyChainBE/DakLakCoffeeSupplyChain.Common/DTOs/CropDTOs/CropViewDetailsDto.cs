@@ -44,6 +44,6 @@ namespace DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs
         // Media files
         public List<string>? Images { get; set; }
         public List<string>? Videos { get; set; }
-        public List<DocumentInfoDto>? Documents { get; set; }
+        public List<string>? Documents { get; set; }
     }
 }

@@ -50,7 +50,7 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     RelatedId = relatedId,
                     MediaType = mediaType,
                     MediaUrl = uploadResult.Url,
-                    Caption = uploadResult.FileType == "document" ? file.FileName : null,
+                    Caption = null,
                     UploadedAt = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,

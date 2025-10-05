@@ -1,5 +1,4 @@
 ﻿using DakLakCoffeeSupplyChain.Common;
-using DakLakCoffeeSupplyChain.Common.DTOs.MediaDTOs;
 using DakLakCoffeeSupplyChain.Common.DTOs.CropDTOs;
 using DakLakCoffeeSupplyChain.Common.Enum.CropEnums;
 using DakLakCoffeeSupplyChain.Common.Helpers;
@@ -227,15 +226,9 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                     orderBy: q => q.OrderByDescending(m => m.UploadedAt)
                 );
 
-                // Phân biệt images và documents dựa trên Caption
-                // Documents có Caption != null (chứa fileName), Images có Caption == null
-                cropDto.Images = mediaFiles.Where(m => m.MediaType == "image" && string.IsNullOrEmpty(m.Caption)).Select(m => m.MediaUrl).ToList();
+                cropDto.Images = mediaFiles.Where(m => m.MediaType == "image").Select(m => m.MediaUrl).ToList();
                 cropDto.Videos = mediaFiles.Where(m => m.MediaType == "video").Select(m => m.MediaUrl).ToList();
-                cropDto.Documents = mediaFiles.Where(m => m.MediaType == "image" && !string.IsNullOrEmpty(m.Caption)).Select(m => new DocumentInfoDto
-                {
-                    FileName = m.Caption,
-                    Url = m.MediaUrl
-                }).ToList();
+                cropDto.Documents = mediaFiles.Where(m => m.MediaType == "document").Select(m => m.MediaUrl).ToList();
             }
             catch (Exception ex)
             {
@@ -437,11 +430,8 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 }
             }
 
-            // Update crop basic info
+            // Update crop
             cropUpdateDto.MapToUpdateCrop(existingCrop, farmer.FarmerId);
-
-            // Xử lý media files nếu có thay đổi
-            await HandleMediaFilesUpdate(cropUpdateDto, existingCrop.CropId);
 
             await _unitOfWork.CropRepository.UpdateAsync(existingCrop);
             await _unitOfWork.SaveChangesAsync();
@@ -453,59 +443,6 @@ namespace DakLakCoffeeSupplyChain.Services.Services
                 Const.SUCCESS_UPDATE_MSG,
                 cropDto
             );
-        }
-
-        private async Task HandleMediaFilesUpdate(CropUpdateDto cropUpdateDto, Guid cropId)
-        {
-            try
-            {
-                // Lấy danh sách media files hiện tại
-                var existingMediaFiles = await _unitOfWork.MediaFileRepository.GetAllAsync(
-                    m => !m.IsDeleted && m.RelatedEntity == "Crop" && m.RelatedId == cropId,
-                    asNoTracking: false
-                );
-
-                // Parse existing media URLs to keep
-                var existingImages = ParseMediaUrls(cropUpdateDto.ExistingImages);
-                var existingVideos = ParseMediaUrls(cropUpdateDto.ExistingVideos);
-                var existingDocuments = ParseMediaUrls(cropUpdateDto.ExistingDocuments);
-
-                // Xóa media files không còn được giữ lại
-                var mediaToDelete = existingMediaFiles.Where(m => 
-                    !existingImages.Contains(m.MediaUrl) && 
-                    !existingVideos.Contains(m.MediaUrl) && 
-                    !existingDocuments.Contains(m.MediaUrl)
-                ).ToList();
-
-                foreach (var media in mediaToDelete)
-                {
-                    media.IsDeleted = true;
-                    media.UpdatedAt = DateTime.UtcNow;
-                    await _unitOfWork.MediaFileRepository.UpdateAsync(media);
-                }
-
-                // Lưu changes cho media deletions
-                if (mediaToDelete.Any())
-                {
-                    await _unitOfWork.SaveChangesAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't fail the update
-                Console.WriteLine($"Error handling media files update: {ex.Message}");
-            }
-        }
-
-        private List<string> ParseMediaUrls(string? urlsString)
-        {
-            if (string.IsNullOrWhiteSpace(urlsString))
-                return new List<string>();
-
-            return urlsString.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                           .Select(url => url.Trim())
-                           .Where(url => !string.IsNullOrEmpty(url))
-                           .ToList();
         }
 
         public async Task<IServiceResult> SoftDeleteCrop(Guid cropId, Guid farmerUserId)
