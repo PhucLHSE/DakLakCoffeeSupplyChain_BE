@@ -737,7 +737,7 @@ public class NotificationService : INotificationService
                             <p style='margin: 0;'><strong>⚠️ Lưu ý:</strong> Vui lòng liên hệ với chúng tôi để sắp xếp thời gian đến lấy hàng phù hợp.</p>
                         </div>
                         
-                        <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua hệ thống hoặc số điện thoại đã cung cấp.</p>
+                        <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua hệ thống hoặc số điện thoại đã cung cấp .</p>
                         
                         <p>Trân trọng,<br>
                         <strong>Đội ngũ DakLak Coffee Supply Chain</strong></p>
